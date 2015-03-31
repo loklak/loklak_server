@@ -32,6 +32,14 @@ loklak. With loklak you can do:
 
 - ant (just this, type "ant" - without quotes - and hit enter)
 
+*** I do not have ant installed, How can I install it ?
+
+- Mac OS X Systems
+	- brew update
+	- brew install ant
+
+- Ubuntu
+	- sudo apt-get install ant
 
 *** How do I run loklak?
 
