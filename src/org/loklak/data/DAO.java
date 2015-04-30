@@ -64,6 +64,7 @@ import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.indices.IndexAlreadyExistsException;
 import org.elasticsearch.indices.IndexMissingException;
 import org.elasticsearch.node.Node;
@@ -308,6 +309,11 @@ public class DAO {
         }
     }
     
+    public static boolean getConfig(String key, boolean default_val) {
+        String value = config.getProperty(key);
+        return value == null ? default_val : value.equals("true") || value.equals("on") || value.equals("1");
+    }
+    
     public static void transmitTimeline(Timeline tl) {
         newMessageTimelines.add(tl);
     }
@@ -499,20 +505,34 @@ public class DAO {
      * @param sort_field - the field name to sort the result list, i.e. "query_first"
      * @param sort_order - the sort order (you want to use SortOrder.DESC here)
      */
-    public static List<QueryEntry> SearchLocalQueries(String q, int resultCount, String sort_field, SortOrder sort_order) {
+    public static List<QueryEntry> SearchLocalQueries(final String q, final int resultCount, final String sort_field, final SortOrder sort_order, final Date since, final Date until, final String range_field) {
         List<QueryEntry> queries = new ArrayList<>();
         try {
             // prepare request
-            BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
+            BoolQueryBuilder suggest = QueryBuilders.boolQuery();
             if (q != null && q.length() > 0) {
-                queryBuilder.should(QueryBuilders.fuzzyLikeThisQuery("query").likeText(q).fuzziness(Fuzziness.fromEdits(2)));
-                queryBuilder.should(QueryBuilders.moreLikeThisQuery("query").likeText(q));
-                queryBuilder.should(QueryBuilders.matchPhrasePrefixQuery("query", q));
-                if (q.indexOf('*') >= 0 || q.indexOf('?') >= 0) queryBuilder.should(QueryBuilders.wildcardQuery("query", q));
+                suggest.should(QueryBuilders.fuzzyLikeThisQuery("query").likeText(q).fuzziness(Fuzziness.fromEdits(2)));
+                suggest.should(QueryBuilders.moreLikeThisQuery("query").likeText(q));
+                suggest.should(QueryBuilders.matchPhrasePrefixQuery("query", q));
+                if (q.indexOf('*') >= 0 || q.indexOf('?') >= 0) suggest.should(QueryBuilders.wildcardQuery("query", q));
             }
+
+            BoolQueryBuilder query;
+            
+            if (range_field != null && range_field.length() > 0 && (since != null || until != null)) {
+                query = QueryBuilders.boolQuery();
+                if (q.length() > 0) query.must(suggest);
+                RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(range_field);
+                rangeQuery.from(since == null ? 0 : since.getTime());
+                rangeQuery.to(until == null ? Long.MAX_VALUE : until.getTime());
+                query.must(rangeQuery);
+            } else {
+                query = suggest;
+            }
+            
             SearchRequestBuilder request = elasticsearch_client.prepareSearch(QUERIES_INDEX_NAME)
                     .setSearchType(SearchType.QUERY_THEN_FETCH)
-                    .setQuery(queryBuilder)
+                    .setQuery(query)
                     .setFrom(0)
                     .setSize(resultCount)
                     .addSort(sort_field, sort_order);
@@ -525,8 +545,7 @@ public class DAO {
             SearchHit[] hits = response.getHits().getHits();
             for (SearchHit hit: hits) {
                 Map<String, Object> map = hit.getSource();
-                QueryEntry query = new QueryEntry(map);
-                queries.add(query);
+                queries.add(new QueryEntry(map));
             }
             
         } catch (IndexMissingException e) {}
@@ -537,19 +556,6 @@ public class DAO {
         // retrieve messages from remote server
         String[] remote = DAO.getConfig("frontpeers", new String[0], ",");        
         Timeline remoteMessages = remote.length > 0 ? searchOnOtherPeers(remote, q, 100, timezoneOffset, "twitter", SearchClient.frontpeer_hash) : TwitterScraper.search(q);
-        
-        // record the query
-        QueryEntry qe = queries.read(q);
-        if (qe == null) {
-            qe = new QueryEntry(q, timezoneOffset, remoteMessages, SourceType.TWITTER, byUserQuery);
-        } else {
-            qe.update(remoteMessages, byUserQuery);
-        }
-        try {
-            queries.writeEntry(q, SourceType.TWITTER.name(), qe);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         
         // identify new tweets
         Timeline newMessages = new Timeline(); // we store new tweets here to be able to transmit them to peers
@@ -568,6 +574,25 @@ public class DAO {
             }
             DAO.transmitTimeline(newMessages);
         }
+
+        // record the query
+        boolean recording =  q.indexOf("id:") < 0;
+        if (recording) {
+            QueryEntry qe = queries.read(q);
+            if (qe == null) {
+                // a new query occurred
+                qe = new QueryEntry(q, timezoneOffset, remoteMessages, SourceType.TWITTER, byUserQuery);
+            } else {
+                // existing queries are updated
+                qe.update(newMessages, byUserQuery);
+            }
+            try {
+                queries.writeEntry(q, SourceType.TWITTER.name(), qe);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        
         return new Timeline[]{remoteMessages, newMessages};
     }
     

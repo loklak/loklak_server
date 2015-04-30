@@ -55,8 +55,9 @@ import org.loklak.tools.DateParser;
 public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
     
     private final static long DAY_MILLIS = 1000L * 60L * 60L * 24L;
-    private final static int MINIMUM_PERIOD = 1000; // for single messages; used to calculate retrieval_next times
-
+    private final static int MINIMUM_PERIOD = 10000; // for single messages; used to calculate retrieval_next times
+    private final static int RETRIEVAL_CONSTANT = 20; // the number of messages that we get with each retrieval at maximum
+    
     public static double ttl_factor = 0.5d;
     
     protected String query;           // the query in the exact way as the user typed it in
@@ -70,8 +71,10 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
     protected Date expected_next;     // the estimated next time when one single message will appear
     protected int query_count;        // the number of queries by the user of that query done so far
     protected int retrieval_count;    // the number of retrievals of that query done so far to the external system
-    protected long message_period;     // the estimated period length between two messages
+    protected long message_period;    // the estimated period length between two messages
     protected int messages_per_day;   // a message frequency based on the last query
+    protected long score_retrieval;   // score for the retrieval order
+    protected long score_suggest;     // score for the suggest order
 
     /**
      * This initializer can only be used for first-time creation of a query track.
@@ -87,6 +90,10 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
         this.timezoneOffset = timezoneOffset;
         this.source_type = source_type;
         this.retrieval_count = 0; // will be set to 1 with first update
+        this.message_period = 0; // means: unknown
+        this.messages_per_day = 0; // means: unknown
+        this.score_retrieval = 0;
+        this.score_suggest = 0;
         update(timeline, byUserQuery);
         this.query_first = retrieval_last;
     }
@@ -110,6 +117,8 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
         this.retrieval_count = (int) DAO.noNULL((Number) map.get("retrieval_count"));
         this.message_period = DAO.noNULL((Number) map.get("message_period"));
         this.messages_per_day = (int) DAO.noNULL((Number) map.get("messages_per_day"));
+        this.score_retrieval = (int) DAO.noNULL((Number) map.get("score_retrieval"));
+        this.score_suggest = (int) DAO.noNULL((Number) map.get("score_suggest"));
     }
     
     /**
@@ -124,11 +133,24 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
             this.query_count++;
             this.query_last = this.retrieval_last;
         }
-        this.message_period = timeline.period();
-        this.messages_per_day = (int) (DAY_MILLIS / this.message_period); // this is an interpolation based on the last tweet list, can be 0!
+        long new_message_period = timeline.period(); // can be Long.MAX_VALUE if less than 2 messages are in timeline!
+        int new_messages_per_day = (int) (DAY_MILLIS / new_message_period); // this is an interpolation based on the last tweet list, can be 0!
+        if (new_message_period == Long.MAX_VALUE || new_messages_per_day == 0) {
+            this.message_period = this.message_period == 0 ? DAY_MILLIS : Math.min(DAY_MILLIS, this.message_period * 2);
+        } else {
+            this.message_period = this.message_period == 0 ? new_message_period : (this.message_period + new_message_period) / 2;
+        }
+        this.messages_per_day = (int) (DAY_MILLIS / this.message_period);
         this.expected_next = new Date(this.retrieval_last.getTime() + ((long) (ttl_factor *  this.message_period)));
-        this.retrieval_next = new Date(this.retrieval_last.getTime() + ((long) (ttl_factor * timeline.size() * Math.max(MINIMUM_PERIOD, this.message_period))));
+        long strategic_period =   // if the period is far below the minimum, we apply a penalty
+                 (this.message_period < MINIMUM_PERIOD ?
+                MINIMUM_PERIOD + 1000 * (long) Math.pow((MINIMUM_PERIOD - this.message_period) / 1000, 3) :
+                this.message_period);
+        long waitingtime = Math.min(DAY_MILLIS, (long) (ttl_factor * RETRIEVAL_CONSTANT * strategic_period));
+        this.retrieval_next = new Date(this.retrieval_last.getTime() + waitingtime);
     }
+    // to check the retrieval order created by the update method, call
+    // http://localhost:9100/api/suggest.json?orderby=retrieval_next&order=asc
     
     /**
      * A 'blind' update can be done if the user submits a query but there are rules which prevent that the target system is queried
@@ -204,6 +226,8 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
             m.field("retrieval_count", this.retrieval_count);
             m.field("message_period", this.message_period);
             m.field("messages_per_day", this.messages_per_day);
+            m.field("score_retrieval", this.score_retrieval);
+            m.field("score_suggest", this.score_suggest);
             m.endObject();
         } catch (IOException e) {
         }
@@ -257,6 +281,7 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
             if (text.length() > 0) query.must(QueryBuilders.matchQuery("text", text));
             for (String user: users) query.must(QueryBuilders.termQuery("mentions", user));
             for (String hashtag: hashtags) query.must(QueryBuilders.termQuery("hashtags", hashtag.toLowerCase()));
+            if (modifier.containsKey("id")) query.must(QueryBuilders.termQuery("id_str", modifier.get("id")));
             if (modifier.containsKey("from")) query.must(QueryBuilders.termQuery("screen_name", modifier.get("from")));
             if (modifier.containsKey("near")) {
                 BoolQueryBuilder nearquery = QueryBuilders.boolQuery()
