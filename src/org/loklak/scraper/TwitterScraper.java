@@ -135,7 +135,7 @@ public class TwitterScraper {
                 parsing_favourite = true;
                 continue;
             }
-            if ((p = input.indexOf("class=\"js-tweet-text")) > 0) {
+            if ((p = input.indexOf("class=\"TweetTextSize")) > 0) {
                 props.put("tweettext", new prop("tweettext", input, p, null));
                 continue;
             }
@@ -309,7 +309,7 @@ public class TwitterScraper {
                     }
                 } catch (Throwable e) {
                     e.printStackTrace();
-                    continue;
+                    break;
                 }
                 try {
                     Matcher m = timeline_embed_pattern.matcher(this.text);
@@ -321,7 +321,7 @@ public class TwitterScraper {
                     }
                 } catch (Throwable e) {
                     e.printStackTrace();
-                    continue;
+                    break;
                 }
                 try {
                     Matcher m = emoji_pattern.matcher(this.text);
@@ -332,7 +332,7 @@ public class TwitterScraper {
                     }
                 } catch (Throwable e) {
                     e.printStackTrace();
-                    continue;
+                    break;
                 }
                 break;
             }
