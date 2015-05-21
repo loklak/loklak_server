@@ -24,11 +24,11 @@ import java.nio.charset.Charset;
 import java.util.Date;
 import java.util.Map;
 
-import org.elasticsearch.common.joda.time.format.ISODateTimeFormat;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.joda.time.format.ISODateTimeFormat;
 
 public class UserEntry extends AbstractIndexEntry implements IndexEntry {
     
@@ -88,7 +88,8 @@ public class UserEntry extends AbstractIndexEntry implements IndexEntry {
     public Date getAppearanceLatest() {
         return appearance_latest;
     }
-    
+
+    @Override
     public void toJSON(XContentBuilder m) {
         try {
             m.startObject(); // object name for this should be 'user'

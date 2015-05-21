@@ -31,8 +31,9 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.elasticsearch.common.joda.time.format.ISODateTimeFormat;
+import org.joda.time.format.ISODateTimeFormat;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.loklak.harvester.SourceType;
 
 public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
     
@@ -290,6 +291,10 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
 
     public String[] getHashtags() {
         return this.hashtags;
+    }
+
+    public String[] getLinks() {
+        return this.links;
     }
 
     public ArrayList<String> getImages() {

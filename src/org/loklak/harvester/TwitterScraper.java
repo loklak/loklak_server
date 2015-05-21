@@ -17,7 +17,7 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.loklak.scraper;
+package org.loklak.harvester;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -34,10 +34,9 @@ import java.util.concurrent.Semaphore;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.loklak.api.ClientHelper;
+import org.loklak.api.client.ClientHelper;
 import org.loklak.data.DAO;
 import org.loklak.data.ProviderType;
-import org.loklak.data.SourceType;
 import org.loklak.data.Timeline;
 import org.loklak.data.MessageEntry;
 import org.loklak.data.UserEntry;
