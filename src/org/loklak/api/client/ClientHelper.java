@@ -28,7 +28,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Map;
 
-import org.loklak.Main;
+import org.loklak.LoklakServer;
+import org.loklak.tools.UTF8;
 
 /**
  * Helper class to provide BufferedReader Objects for get and post connections
@@ -47,11 +48,11 @@ public class ClientHelper {
         con.setConnectTimeout(15000 /* milliseconds */);
         con.setRequestMethod("GET");
         con.setDoInput(true);
-        con.setRequestProperty("User-Agent", Main.USER_AGENT);
+        con.setRequestProperty("User-Agent", LoklakServer.USER_AGENT);
         con.connect();
         int status = con.getResponseCode();
         if (status == HttpURLConnection.HTTP_OK) {
-            return new BufferedReaderConnection(new InputStreamReader(con.getInputStream(), CHARSET), con);
+            return new BufferedReaderConnection(new InputStreamReader(con.getInputStream(), UTF8.charset), con);
         } else {
             throw new IOException("server fail: " + status + ": " + con.getResponseMessage());
         }
@@ -69,7 +70,7 @@ public class ClientHelper {
         con.setUseCaches(false);
         con.setDoOutput(true);
         con.setDoInput(true);
-        con.setRequestProperty("User-Agent", Main.USER_AGENT);
+        con.setRequestProperty("User-Agent", LoklakServer.USER_AGENT);
         con.setRequestProperty("Connection", "Keep-Alive");
         con.setRequestProperty("Cache-Control", "no-cache");
         con.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + BOUNDARY);

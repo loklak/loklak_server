@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
+import java.io.StringWriter;
 import java.text.SimpleDateFormat;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -46,6 +47,7 @@ import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.Deflater;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -58,8 +60,6 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.ImmutableSettings.Builder;
 import org.elasticsearch.common.unit.Fuzziness;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.index.query.BoolQueryBuilder;
@@ -82,6 +82,10 @@ import org.loklak.harvester.TwitterScraper;
 import org.loklak.tools.DateParser;
 import org.loklak.tools.UTF8;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.util.MinimalPrettyPrinter;
+
 /**
  * The Data Access Object for the message project.
  * This provides only static methods because the class methods shall be available for
@@ -89,19 +93,23 @@ import org.loklak.tools.UTF8;
  */
 public class DAO {
 
+    public final static JsonFactory jsonFactory = new JsonFactory();
     public final static String MESSAGE_DUMP_FILE_PREFIX = "messages_";
+    public final static String ACCOUNT_DUMP_FILE_PREFIX = "accounts_";
     public final static String QUERIES_INDEX_NAME = "queries";
     public final static String MESSAGES_INDEX_NAME = "messages";
     public final static String USERS_INDEX_NAME = "users";
+    public final static String ACCOUNTS_INDEX_NAME = "accounts";
     public final static int CACHE_MAXSIZE = 10000;
     
     public  static File conf_dir;
     private static File message_dump_dir, message_dump_dir_own, message_dump_dir_import, message_dump_dir_imported;
     private static File settings_dir, customized_config;
-    private static RandomAccessFile messagelog;
+    private static RandomAccessFile messagelog, accountlog;
     private static Node elasticsearch_node;
     private static Client elasticsearch_client;
     private static UserFactory users;
+    private static AccountFactory accounts;
     private static MessageFactory messages;
     private static QueryFactory queries;
     private static BlockingQueue<Timeline> newMessageTimelines = new LinkedBlockingQueue<Timeline>();
@@ -134,7 +142,10 @@ public class DAO {
                 w.write("Each dump file must start with the prefix '" + MESSAGE_DUMP_FILE_PREFIX + "' to be recognized.\n");
                 w.close();
             }
-            messagelog = new RandomAccessFile(getCurrentDump(message_dump_dir_own), "rw");
+            messagelog = new RandomAccessFile(getCurrentDump(message_dump_dir_own, MESSAGE_DUMP_FILE_PREFIX), "rw");
+            File account_dump_dir = new File(datadir, "accounts");
+            account_dump_dir.mkdirs();
+            accountlog = new RandomAccessFile(getCurrentDump(account_dump_dir, ACCOUNT_DUMP_FILE_PREFIX), "rw");
             
             // load the config file(s);
             conf_dir = new File("conf");
@@ -163,45 +174,48 @@ public class DAO {
             elasticsearch_client = elasticsearch_node.client();
             
             // define the index factories
-            users = new UserFactory(elasticsearch_client, USERS_INDEX_NAME, CACHE_MAXSIZE);
             messages = new MessageFactory(elasticsearch_client, MESSAGES_INDEX_NAME, CACHE_MAXSIZE);
+            users = new UserFactory(elasticsearch_client, USERS_INDEX_NAME, CACHE_MAXSIZE);
+            accounts = new AccountFactory(elasticsearch_client, ACCOUNTS_INDEX_NAME, CACHE_MAXSIZE);
             queries = new QueryFactory(elasticsearch_client, QUERIES_INDEX_NAME, CACHE_MAXSIZE);
             
             // set mapping (that shows how 'elastic' elasticsearch is: it's always good to define data types)
             try {
-                elasticsearch_client.admin().indices().prepareCreate(QUERIES_INDEX_NAME).execute().actionGet();
                 elasticsearch_client.admin().indices().prepareCreate(MESSAGES_INDEX_NAME).execute().actionGet();
                 elasticsearch_client.admin().indices().prepareCreate(USERS_INDEX_NAME).execute().actionGet();
+                elasticsearch_client.admin().indices().prepareCreate(ACCOUNTS_INDEX_NAME).execute().actionGet();
+                elasticsearch_client.admin().indices().prepareCreate(QUERIES_INDEX_NAME).execute().actionGet();
             } catch (IndexAlreadyExistsException ee) {}; // existing indexes are simply ignored, not re-created
-            elasticsearch_client.admin().indices().preparePutMapping(QUERIES_INDEX_NAME).setSource(queries.getMapping()).setType("_default_").execute().actionGet();
             elasticsearch_client.admin().indices().preparePutMapping(MESSAGES_INDEX_NAME).setSource(messages.getMapping()).setType("_default_").execute().actionGet();
             elasticsearch_client.admin().indices().preparePutMapping(USERS_INDEX_NAME).setSource(users.getMapping()).setType("_default_").execute().actionGet();
+            elasticsearch_client.admin().indices().preparePutMapping(ACCOUNTS_INDEX_NAME).setSource(accounts.getMapping()).setType("_default_").execute().actionGet();
+            elasticsearch_client.admin().indices().preparePutMapping(QUERIES_INDEX_NAME).setSource(queries.getMapping()).setType("_default_").execute().actionGet();
         } catch (Throwable e) {
             e.printStackTrace();
         }
     }
     
-    private static File getCurrentDump(File path) {
+    private static File getCurrentDump(File path, String prefix) {
         SimpleDateFormat formatYearMonth = new SimpleDateFormat("yyyyMM", Locale.US);
         formatYearMonth.setTimeZone(TimeZone.getTimeZone("GMT"));
         String currentDatePart = formatYearMonth.format(new Date());
         
         // if there is already a dump, use it
         String[] existingDumps = path.list();
-        for (String d: existingDumps) {
-            if (d.startsWith(MESSAGE_DUMP_FILE_PREFIX + currentDatePart) && d.endsWith(".txt")) {
+        if (existingDumps != null) for (String d: existingDumps) {
+            if (d.startsWith(prefix + currentDatePart) && d.endsWith(".txt")) {
                 return new File(path, d);
             }
             
             // in case the file is a dump file but ends with '.txt', we compress it here on-the-fly
-            if (d.startsWith(MESSAGE_DUMP_FILE_PREFIX) && d.endsWith(".txt")) {
+            if (d.startsWith(prefix) && d.endsWith(".txt")) {
                 final File source = new File(path, d);
                 final File dest = new File(path, d + ".gz");
                 new Thread() {
                     public void run() {
                         byte[] buffer = new byte[2^20];
                         try {
-                            GZIPOutputStream out = new GZIPOutputStream(new FileOutputStream(dest), 2^20);
+                            GZIPOutputStream out = new GZIPOutputStream(new FileOutputStream(dest), 65536){{def.setLevel(Deflater.BEST_COMPRESSION);}};
                             FileInputStream in = new FileInputStream(source);
                             int l; while ((l = in.read(buffer)) > 0) out.write(buffer, 0, l);
                             in.close(); out.finish(); out.close();
@@ -213,7 +227,7 @@ public class DAO {
         }
         // create a new one, use a random number. The random is used to make it possible to join many different dumps from different locations without renaming them
         String random = (Long.toString(Math.abs(new Random(System.currentTimeMillis()).nextLong())) + "00000000").substring(0, 8);
-        return new File(path, MESSAGE_DUMP_FILE_PREFIX + currentDatePart + "_" + random + ".txt");
+        return new File(path, prefix + currentDatePart + "_" + random + ".txt");
     }
 
     public static File[] getOwnDumps() {
@@ -246,17 +260,21 @@ public class DAO {
             BufferedReader br = null;
             try {
                 if (dumpFile.getName().endsWith(".gz")) is = new GZIPInputStream(is);
-                br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+                br = new BufferedReader(new InputStreamReader(is, UTF8.charset));
                 while((line = br.readLine()) != null) {
-                    XContentParser parser = JsonXContent.jsonXContent.createParser(line);
-                    Map<String, Object> tweet = parser == null ? null : parser.map();
-                    if (tweet == null) continue;
-                    @SuppressWarnings("unchecked") Map<String, Object> user = (Map<String, Object>) tweet.remove("user");
-                    if (user == null) continue;
-                    UserEntry u = new UserEntry(user);
-                    MessageEntry t = new MessageEntry(tweet);
-                    boolean newtweet = DAO.writeMessage(t, u, false);
-                    if (newtweet) newTweet++;
+                    try {
+                        XContentParser parser = JsonXContent.jsonXContent.createParser(line);
+                        Map<String, Object> tweet = parser == null ? null : parser.map();
+                        if (tweet == null) continue;
+                        @SuppressWarnings("unchecked") Map<String, Object> user = (Map<String, Object>) tweet.remove("user");
+                        if (user == null) continue;
+                        UserEntry u = new UserEntry(user);
+                        MessageEntry t = new MessageEntry(tweet);
+                        boolean newtweet = DAO.writeMessage(t, u, false);
+                        if (newtweet) newTweet++;
+                    } catch (Throwable e) {
+                        Log.getLog().warn("cannot parse line \"" + line + "\"", e);
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -362,16 +380,49 @@ public class DAO {
 
             // record tweet into text file
             if (dump) {
-                XContentBuilder logline = XContentFactory.jsonBuilder();
+                final StringWriter s = new StringWriter();
+                JsonGenerator logline = DAO.jsonFactory.createGenerator(s);
+                logline.setPrettyPrinter(new MinimalPrettyPrinter());
                 t.toJSON(logline, u, false);
+                logline.close();
                 messagelog.seek(messagelog.length()); // go to end of file
-                messagelog.write(UTF8.getBytes(logline.string()));
+                messagelog.write(UTF8.getBytes(s.toString()));
                 messagelog.writeByte('\n');
                 logline.close();
             }
 
             // record tweet into search index
             messages.writeEntry(t.getIdStr(), t.getSourceType().name(), t);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return true;
+    }
+    
+    /**
+     * Store an account together with a user into the search index
+     * This method is synchronized to prevent concurrent IO caused by this call.
+     * @param a an account 
+     * @param u a user
+     * @return true if the record was stored because it did not exist, false if it was not stored because the record existed already
+     */
+    public synchronized static boolean writeAccount(AccountEntry a, boolean dump) {
+        try {
+            // record account into text file
+            if (dump) {
+                final StringWriter s = new StringWriter();
+                JsonGenerator logline = DAO.jsonFactory.createGenerator(s);
+                logline.setPrettyPrinter(new MinimalPrettyPrinter());
+                a.toJSON(logline);
+                logline.close();
+                accountlog.seek(accountlog.length()); // go to end of file
+                accountlog.write(UTF8.getBytes(s.toString()));
+                accountlog.writeByte('\n');
+                logline.close();
+            }
+
+            // record tweet into search index
+            accounts.writeEntry(a.getScreenName(), a.getSourceType().name(), a);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -388,6 +439,10 @@ public class DAO {
 
     public static long countLocalQueries() {
         return countLocal(QUERIES_INDEX_NAME);
+    }
+    
+    public static long countLocalAccounts() {
+        return countLocal(ACCOUNTS_INDEX_NAME);
     }
     
     private static long countLocal(String index) {
@@ -461,11 +516,16 @@ public class DAO {
                 for (SearchHit hit: hits) {
                     Map<String, Object> map = hit.getSource();
                     MessageEntry tweet = new MessageEntry(map);
-                    UserEntry user = users.read(tweet.getUserScreenName());
-                    assert user != null;
-                    if (user != null) {
-                        timeline.addTweet(tweet);
-                        timeline.addUser(user);
+                    try {
+                        UserEntry user = users.read(tweet.getUserScreenName());
+                        assert user != null;
+                        if (user != null) {
+                            timeline.addTweet(tweet);
+                            timeline.addUser(user);
+                        }
+                    } catch (IOException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
                     }
                 }
                 
@@ -516,6 +576,58 @@ public class DAO {
         }
     }
 
+    /**
+     * Search the local user cache using a elasticsearch query.
+     * @param screen_name - the user id
+     */
+    public static UserEntry searchLocalUser(final String screen_name) {
+        try {
+            return users.read(screen_name);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+        /*
+        if (screen_name == null || screen_name.length() == 0) return null;
+        try {
+            // prepare request
+            BoolQueryBuilder query = QueryBuilders.boolQuery();
+            query.must(QueryBuilders.termQuery("screen_name", screen_name));
+
+            SearchRequestBuilder request = elasticsearch_client.prepareSearch(QUERIES_INDEX_NAME)
+                    .setSearchType(SearchType.QUERY_THEN_FETCH)
+                    .setQuery(query)
+                    .setFrom(0)
+                    .setSize(1);
+
+            // get response
+            SearchResponse response = request.execute().actionGet();
+
+            // evaluate search result
+            //long totalHitCount = response.getHits().getTotalHits();
+            SearchHit[] hits = response.getHits().getHits();
+            if (hits.length == 0) return null;
+            assert hits.length == 1;
+            Map<String, Object> map = hits[1].getSource();
+            return new UserEntry(map);            
+        } catch (IndexMissingException e) {}
+        return null;
+        */
+    }
+
+    /**
+     * Search the local account cache using a elasticsearch query.
+     * @param screen_name - the user id
+     */
+    public static AccountEntry searchLocalAccount(final String screen_name) {
+        try {
+            return accounts.read(screen_name);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
     /**
      * Search the local message cache using a elasticsearch query.
      * @param q - the query, can be empty for a matchall-query
@@ -603,7 +715,12 @@ public class DAO {
         }
 
         // record the query
-        QueryEntry qe = queries.read(q);
+        QueryEntry qe = null;
+        try {
+            qe = queries.read(q);
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
         if (Caretaker.acceptQuery4Retrieval(q)) {
             if (qe == null) {
                 // a new query occurred
@@ -649,8 +766,4 @@ public class DAO {
         Log.getLog().info(line);
     }
 
-    public static String noNULL(String s) {return s == null ? "" : s;}
-    public static long noNULL(Number n) {return n == null ? 0 : n.longValue();}
-    public static ArrayList<String> noNULL(ArrayList<String> l) {return l == null ? new ArrayList<String>(0) : l;}
-    
 }

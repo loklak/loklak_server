@@ -61,7 +61,7 @@ public class TwitterScraper {
             }
             String q = t.length() == 0 ? "*" : t.substring(1);
             //https://twitter.com/search?q=from:yacy_search&src=typd
-            https_url = "https://twitter.com/search?q=" + URLEncoder.encode(q, "UTF-8") + "&src=typd&f=realtime";
+            https_url = "https://twitter.com/search?q=" + URLEncoder.encode(q, "UTF-8") + "&src=typd&vertical=default&f=tweets";
         } catch (UnsupportedEncodingException e) {}
         Timeline timeline = null;
         try {
@@ -85,12 +85,17 @@ public class TwitterScraper {
         };
         
         // wait until all messages in the timeline are ready
-        for (MessageEntry m: timeline) {
-            if (m instanceof TwitterTweet) {
-                ((TwitterTweet) m).waitReady();
+        if (timeline == null) {
+            // timeout occurred
+            timeline = new Timeline();
+        } else {
+            // wait until messages are ready (i.e. unshortening of shortlinks)
+            for (MessageEntry m: timeline) {
+                if (m instanceof TwitterTweet) {
+                    ((TwitterTweet) m).waitReady();
+                }
             }
         }
-        
         return timeline;
     }
     

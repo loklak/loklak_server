@@ -19,10 +19,9 @@
 
 package org.loklak.api.server;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.text.ParseException;
@@ -109,9 +108,10 @@ public class RemoteAccess {
             String XRealIP = request.getHeader("X-Real-IP");
             if (XRealIP != null && XRealIP.length() > 0) this.clientHost = XRealIP; // get IP through nginx config "proxy_set_header X-Real-IP $remote_addr;"
             this.access_time = System.currentTimeMillis();
+            boolean localhost = isLocalhostAccess();
             this.time_since_last_access = this.access_time - RemoteAccess.latestVisit(this.clientHost);
-            this.DoS_blackout = this.time_since_last_access < DAO.getConfig("DoS.blackout", 100) || sleeping4clients.contains(this.clientHost);
-            this.DoS_servicereduction = this.time_since_last_access < DAO.getConfig("DoS.servicereduction", 1000);
+            this.DoS_blackout = !localhost && this.time_since_last_access < DAO.getConfig("DoS.blackout", 100) || sleeping4clients.contains(this.clientHost);
+            this.DoS_servicereduction = !localhost && this.time_since_last_access < DAO.getConfig("DoS.servicereduction", 1000);
         }
         public String getClientHost() {
             return this.clientHost;
@@ -238,22 +238,21 @@ public class RemoteAccess {
                 try {map.put(param.substring(0, p), URLDecoder.decode(param.substring(p + 1), "UTF-8"));} catch (UnsupportedEncodingException e) {}
         }  
         return map;  
-    }  
+    }
     
-    public static Map<String, String> getPostMap(HttpServletRequest request) {
-        Map<String, String> map = new HashMap<String, String>();
+    public static Map<String, byte[]> getPostMap(HttpServletRequest request) {
+        Map<String, byte[]> map = new HashMap<>();
         try {
-            final char[] buffer = new char[1024];
+            final byte[] b = new byte[1024];
             for (Part part: request.getParts()) {
                 String name = part.getName();
                 InputStream is = part.getInputStream();
-                final StringBuilder out = new StringBuilder();
-                final Reader in = new InputStreamReader(is, "UTF-8");
+                final ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 int c;
-                try {while ((c = in.read(buffer, 0, buffer.length)) > 0) {
-                    out.append(buffer, 0, c);
+                try {while ((c = is.read(b, 0, b.length)) > 0) {
+                    baos.write(b, 0, c);
                 }} finally {is.close();}
-                map.put(name, out.toString());
+                map.put(name, baos.toByteArray());
             }
         } catch (IOException e) {
         } catch (ServletException e) {
