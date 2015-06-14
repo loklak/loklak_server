@@ -1,6 +1,6 @@
 /**
- *  SuggestServlet
- *  Copyright 29.04.2015 by Michael Peter Christen, @0rb1t3r
+ *  AccountServlet
+ *  Copyright 27.05.2015 by Michael Peter Christen, @0rb1t3r
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -57,10 +57,15 @@ public class AccountServlet extends HttpServlet {
      
         // manage DoS
         if (post.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;}
+        if (!post.isLocalhostAccess()) {response.sendError(503, "access only allowed from localhost"); return;}
         
+        // security
+        boolean local = post.isLocalhostAccess();
+        if (!local) {response.sendError(503, "access from localhost only"); return;}
+        
+        // parameters
         String callback = post.get("callback", "");
         boolean jsonp = callback != null && callback.length() > 0;
-        boolean local = post.isLocalhostAccess();
         boolean minified = post.get("minified", false);
         boolean update = local && "update".equals(post.get("action", ""));
         String screen_name = post.get("screen_name", "");
@@ -73,12 +78,11 @@ public class AccountServlet extends HttpServlet {
              }
         
             // parse the json data
-            int recordCount = 0, newCount = 0, knownCount = 0;
             try {
                 XContentParser parser = JsonXContent.jsonXContent.createParser(data);
                 Map<String, Object> map = parser == null ? null : parser.map();
                 Object accounts_obj = map.get("accounts");
-                @SuppressWarnings("unchecked") List<Map<String, Object>> accounts;
+                List<Map<String, Object>> accounts;
                 if (accounts_obj instanceof List<?>) {
                     accounts = (List<Map<String, Object>>) accounts_obj;
                 } else {
@@ -87,11 +91,9 @@ public class AccountServlet extends HttpServlet {
                 }
                 for (Map<String, Object> account: accounts) {
                     if (account == null) continue;
-                    recordCount++;
                     try {
                         AccountEntry a = new AccountEntry(account);
-                        boolean newtweet = DAO.writeAccount(a, true);
-                        if (newtweet) newCount++; else knownCount++;
+                        DAO.writeAccount(a, true);
                     } catch (IOException e) {
                         response.sendError(400, "submitted data is not well-formed: " + e.getMessage());
                         e.printStackTrace();

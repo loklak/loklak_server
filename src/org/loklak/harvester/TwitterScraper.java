@@ -21,6 +21,7 @@ package org.loklak.harvester;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -28,18 +29,20 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Semaphore;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.loklak.api.client.ClientHelper;
+import org.loklak.api.client.ClientConnection;
 import org.loklak.data.DAO;
 import org.loklak.data.ProviderType;
 import org.loklak.data.Timeline;
 import org.loklak.data.MessageEntry;
 import org.loklak.data.UserEntry;
+import org.loklak.tools.UTF8;
 
 public class TwitterScraper {
 
@@ -65,18 +68,15 @@ public class TwitterScraper {
         } catch (UnsupportedEncodingException e) {}
         Timeline timeline = null;
         try {
-            BufferedReader br = ClientHelper.getConnection(https_url);
-            if (br == null) return null;
+            ClientConnection connection = new ClientConnection(https_url);
+            if (connection.inputStream == null) return null;
             try {
+                BufferedReader br = new BufferedReader(new InputStreamReader(connection.inputStream, UTF8.charset));
                 timeline = search(br);
             } catch (IOException e) {
                e.printStackTrace();
             } finally {
-                try {
-                    br.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                connection.close();
             }
         } catch (IOException e) {
             // this could mean that twitter rejected the connection (DoS protection?)
@@ -103,7 +103,8 @@ public class TwitterScraper {
         Timeline timeline = new Timeline();
         String input;
         Map<String, prop> props = new HashMap<String, prop>();
-        List<prop> images = new ArrayList<prop>();
+        Set<String> images = new LinkedHashSet<>();
+        Set<String> videos = new LinkedHashSet<>();
         String place_id = "", place_name = "";
         boolean parsing_favourite = false, parsing_retweet = false;
         while ((input = br.readLine()) != null){
@@ -111,24 +112,24 @@ public class TwitterScraper {
             //System.out.println(input); // uncomment temporary to debug or add new fields
             int p;
             if ((p = input.indexOf("class=\"avatar")) > 0) {
-                props.put("useravatarurl", new prop("useravatarurl", input, p, "src"));
+                props.put("useravatarurl", new prop(input, p, "src"));
                 continue;
             }
             if ((p = input.indexOf("class=\"fullname")) > 0) {
-                props.put("userfullname", new prop("userfullname", input, p, null));
+                props.put("userfullname", new prop(input, p, null));
                 continue;
             }
             if ((p = input.indexOf("class=\"username")) > 0) {
-                props.put("usernickname", new prop("usernickname", input, p, null));
+                props.put("usernickname", new prop(input, p, null));
                 continue;
             }
             if ((p = input.indexOf("class=\"tweet-timestamp")) > 0) {
-                props.put("tweetstatusurl", new prop("tweetstatusurl", input, 0, "href"));
-                props.put("tweettimename", new prop("tweettimename", input, p, "title"));
+                props.put("tweetstatusurl", new prop(input, 0, "href"));
+                props.put("tweettimename", new prop(input, p, "title"));
                 // don't continue here because "class=\"_timestamp" is in the same line 
             }
             if ((p = input.indexOf("class=\"_timestamp")) > 0) {
-                props.put("tweettimems", new prop("tweettimems", input, p, "data-time-ms"));
+                props.put("tweettimems", new prop(input, p, "data-time-ms"));
                 continue;
             }
             if ((p = input.indexOf("class=\"ProfileTweet-action--retweet")) > 0) {
@@ -140,32 +141,46 @@ public class TwitterScraper {
                 continue;
             }
             if ((p = input.indexOf("class=\"TweetTextSize")) > 0) {
-                props.put("tweettext", new prop("tweettext", input, p, null));
+                props.put("tweettext", new prop(input, p, null));
                 continue;
             }
             if ((p = input.indexOf("class=\"ProfileTweet-actionCount")) > 0) {
                 if (parsing_retweet) {
-                    props.put("tweetretweetcount", new prop("tweetretweetcount", input, p, "data-tweet-stat-count"));
+                    props.put("tweetretweetcount", new prop(input, p, "data-tweet-stat-count"));
                     parsing_retweet = false;
                 }
                 if (parsing_favourite) {
-                    props.put("tweetfavouritecount", new prop("tweetfavouritecount", input, p, "data-tweet-stat-count"));
+                    props.put("tweetfavouritecount", new prop(input, p, "data-tweet-stat-count"));
                     parsing_favourite = false;
                 }
                 continue;
             }
+            // get images
             if ((p = input.indexOf("class=\"media media-thumbnail twitter-timeline-link media-forward is-preview")) > 0 ||
                 (p = input.indexOf("class=\"multi-photo")) > 0) {
-                images.add(new prop("preview", input, p, "data-resolved-url-large"));
+                images.add(new prop(input, p, "data-resolved-url-large").value);
                 continue;
             }
+            // we have two opportunities to get video thumbnails == more images; images in the presence of video content should be treated as thumbnail for the video
+            if ((p = input.indexOf("class=\"animated-gif-thumbnail\"")) > 0) {
+                images.add(new prop(input, 0, "src").value);
+                continue;
+            }
+            if ((p = input.indexOf("class=\"animated-gif\"")) > 0) {
+                images.add(new prop(input, p, "poster").value);
+                continue;
+            }
+            if ((p = input.indexOf("<source video-src")) >= 0 && input.indexOf("type=\"video/") > p) {
+                videos.add(new prop(input, p, "video-src").value);
+                continue;
+            }            
             if ((p = input.indexOf("class=\"ProfileTweet-geo")) > 0) {
-                prop place_name_prop = new prop("place_name", input, p, "title");
+                prop place_name_prop = new prop(input, p, "title");
                 place_name = place_name_prop.value;
                 continue;
             }
             if ((p = input.indexOf("class=\"ProfileTweet-actionButton u-linkClean js-nav js-geo-pivot-link")) > 0) {
-                prop place_id_prop = new prop("place_id", input, p, "data-place-id");
+                prop place_id_prop = new prop(input, p, "data-place-id");
                 place_id = place_id_prop.value;
                 continue;
             }
@@ -176,8 +191,8 @@ public class TwitterScraper {
                         props.get("useravatarurl").value,
                         props.get("userfullname").value
                         );
-                ArrayList<String> imgs = new ArrayList<String>(images.size());
-                for (prop ai: images) if (ai.value != null) imgs.add(ai.value);
+                ArrayList<String> imgs = new ArrayList<String>(images.size()); imgs.addAll(images);
+                ArrayList<String> vids = new ArrayList<String>(videos.size()); vids.addAll(videos);
                 TwitterTweet tweet = new TwitterTweet(
                         user.getScreenName(),
                         Long.parseLong(props.get("tweettimems").value),
@@ -186,7 +201,7 @@ public class TwitterScraper {
                         props.get("tweettext").value,
                         Long.parseLong(props.get("tweetretweetcount").value),
                         Long.parseLong(props.get("tweetfavouritecount").value),
-                        imgs, place_name, place_id
+                        imgs, vids, place_name, place_id
                         );
                 new Thread(tweet).start(); // todo: use thread pools
                 timeline.addUser(user);
@@ -202,9 +217,8 @@ public class TwitterScraper {
     }
     
     private static class prop {
-        public String name, key, value = null;
-        public prop(String name, String line, int start, String key) {
-            this.name = name;
+        public String key, value = null;
+        public prop(String line, int start, String key) {
             this.key = key;
             if (key == null) {
                 int p = line.indexOf('>', start);
@@ -239,7 +253,7 @@ public class TwitterScraper {
         }
         
         public String toString() {
-            return this.name + " : " + this.key + "=" + (this.value == null ? "unknown" : this.value);
+            return this.key + "=" + (this.value == null ? "unknown" : this.value);
         }
     }
     
@@ -263,12 +277,13 @@ public class TwitterScraper {
                 final long retweets,
                 final long favourites,
                 final ArrayList<String> images,
+                final ArrayList<String> videos,
                 final String place_name,
                 final String place_id) throws MalformedURLException {
             super();
             this.source_type = SourceType.TWITTER;
             this.provider_type = ProviderType.SCRAPED;
-            this.user_screen_name = user_screen_name_raw;
+            this.screen_name = user_screen_name_raw;
             this.created_at = new Date(created_at_raw);
             this.status_id_url = new URL("https://twitter.com" + status_id_url_raw);
             int p = status_id_url_raw.lastIndexOf('/');
@@ -276,6 +291,7 @@ public class TwitterScraper {
             this.retweet_count = retweets;
             this.favourites_count = favourites;
             this.images = images;
+            this.videos = videos;
             this.place_name = place_name;
             this.place_id = place_id;
 
@@ -389,7 +405,7 @@ public class TwitterScraper {
         //wget --no-check-certificate "https://twitter.com/search?q=eifel&src=typd&f=realtime"
         Timeline result = TwitterScraper.search(args[0]);
         for (MessageEntry tweet : result) {
-            System.out.println("@" + tweet.getUserScreenName() + " - " + tweet.getText());
+            System.out.println("@" + tweet.getScreenName() + " - " + tweet.getText());
         }
         System.exit(0);
     }

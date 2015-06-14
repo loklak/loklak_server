@@ -21,6 +21,7 @@ package org.loklak.api.client;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.HashMap;
@@ -32,6 +33,7 @@ import org.loklak.data.ProviderType;
 import org.loklak.data.Timeline;
 import org.loklak.data.MessageEntry;
 import org.loklak.data.UserEntry;
+import org.loklak.tools.UTF8;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -76,9 +78,10 @@ public class SearchClient {
         String urlstring = "";
         try {urlstring = protocolhostportstub + "/api/search.json?q=" + URLEncoder.encode(query.replace(' ', '+'), "UTF-8") + "&timezoneOffset=" + timezoneOffset + "&maximumRecords=" + count + "&source=" + (source == null ? "all" : source) + "&minified=true";} catch (UnsupportedEncodingException e) {}
         try {
-            BufferedReader br = ClientHelper.getConnection(urlstring);
-            if (br == null) return "";
+            ClientConnection connection = new ClientConnection(urlstring);
+            if (connection.inputStream == null) return "";
             StringBuilder sb = new StringBuilder();
+            BufferedReader br = new BufferedReader(new InputStreamReader(connection.inputStream, UTF8.charset));
             try {
                 String line;
                 while ((line = br.readLine()) != null) sb.append(line).append('\n');
@@ -87,6 +90,7 @@ public class SearchClient {
             } finally {
                 try {
                     br.close();
+                    connection.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

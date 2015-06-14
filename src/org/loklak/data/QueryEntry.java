@@ -154,7 +154,7 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
         this.retrieval_next = new Date(this.retrieval_last.getTime() + waitingtime);
     }
     // to check the retrieval order created by the update method, call
-    // http://localhost:9100/api/suggest.json?orderby=retrieval_next&order=asc
+    // http://localhost:9000/api/suggest.json?orderby=retrieval_next&order=asc
     
     /**
      * A 'blind' update can be done if the user submits a query but there are rules which prevent that the target system is queried
@@ -220,13 +220,13 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
             json.writeStartObject();
             json.writeObjectField("query", this.query);
             json.writeObjectField("query_length", this.query_length);
-            json.writeObjectField("source_type", this.source_type);
+            json.writeObjectField("source_type", this.source_type.name());
             json.writeObjectField("timezoneOffset", this.timezoneOffset);
-            writeDate(json, "query_first", this.query_first.getTime());
-            writeDate(json, "query_last", this.query_last.getTime());
-            writeDate(json, "retrieval_last", this.retrieval_last.getTime());
-            writeDate(json, "retrieval_next", this.retrieval_next.getTime());
-            writeDate(json, "expected_next", this.expected_next.getTime());
+            if (this.query_first != null) writeDate(json, "query_first", this.query_first.getTime());
+            if (this.query_last != null) writeDate(json, "query_last", this.query_last.getTime());
+            if (this.retrieval_last != null) writeDate(json, "retrieval_last", this.retrieval_last.getTime());
+            if (this.retrieval_next != null) writeDate(json, "retrieval_next", this.retrieval_next.getTime());
+            if (this.expected_next != null) writeDate(json, "expected_next", this.expected_next.getTime());
             json.writeObjectField("query_count", this.query_count);
             json.writeObjectField("retrieval_count", this.retrieval_count);
             json.writeObjectField("message_period", this.message_period);
@@ -245,6 +245,7 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
         constraintFields.put("audio","audio");
         constraintFields.put("video","videos");
         constraintFields.put("place","place_name");
+        constraintFields.put("location","location_point");
         constraintFields.put("link","links");
         constraintFields.put("mention","mentions");
         constraintFields.put("hashtag","hashtags");
@@ -252,7 +253,11 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
     
     public static String removeConstraints(String q) {
         for (String c: constraintFields.keySet()) {
-            q = q.replaceAll(" /" + c, "");
+            q = q.replaceAll(" /" + c, "").replaceAll(" -/" + c, "");
+            if (q.startsWith("/" + c) || q.startsWith("-/" + c)) {
+                int r = q.indexOf(' ');
+                if (r < 0) q = ""; else q = q.substring(0, r + 1);
+            }
         }
         return q;
     }
@@ -262,20 +267,27 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
         List<String> qe = new ArrayList<String>();
         Matcher m = tokenizerPattern.matcher(query);
         while (m.find()) qe.add(m.group(1));
-        
-        HashSet<String> constraints = new HashSet<>();
+
+        HashSet<String> constraints_positive = new HashSet<>();
+        HashSet<String> constraints_negative = new HashSet<>();
         for (String t: qe) {
-            if (t.startsWith("/")) {
-                constraints.add(t.substring(1));
-            } 
+            if (t.startsWith("/")) constraints_positive.add(t.substring(1));
+            if (t.startsWith("-/")) constraints_negative.add(t.substring(2));
         }
         Timeline tl1 = new Timeline();
         for (MessageEntry message: tl0) {
-            if (constraints.contains("image") && message.getImages().size() == 0) continue;
-            if (constraints.contains("place") && message.getPlaceName().length() == 0) continue;
-            if (constraints.contains("link") && message.getLinks().length == 0) continue;
-            if (constraints.contains("mention") && message.getMentions().length == 0) continue;
-            if (constraints.contains("hashtag") && message.getHashtags().length == 0) continue;
+            if (constraints_positive.contains("image") && message.getImages().size() == 0) continue;
+            if (constraints_negative.contains("image") && message.getImages().size() != 0) continue;
+            if (constraints_positive.contains("place") && message.getPlaceName().length() == 0) continue;
+            if (constraints_negative.contains("place") && message.getPlaceName().length() != 0) continue;
+            if (constraints_positive.contains("location") && message.getPlaceName().length() == 0) continue;
+            if (constraints_negative.contains("location") && message.getPlaceName().length() != 0) continue;
+            if (constraints_positive.contains("link") && message.getLinks().length == 0) continue;
+            if (constraints_negative.contains("link") && message.getLinks().length != 0) continue;
+            if (constraints_positive.contains("mention") && message.getMentions().length == 0) continue;
+            if (constraints_negative.contains("mention") && message.getMentions().length != 0) continue;
+            if (constraints_positive.contains("hashtag") && message.getHashtags().length == 0) continue;
+            if (constraints_negative.contains("hashtag") && message.getHashtags().length != 0) continue;
             tl1.addTweet(message);
         }
         return tl1;
@@ -296,6 +308,7 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
         
         private QueryBuilder parse(String q, int timezoneOffset) {
             // tokenize the query
+            for (int i = 1; i < q.length(); i++) if (q.charAt(i) == '-' && q.charAt(i - 1) != ' ') q = q.substring(0, i) + " " + q.substring(i + 1); 
             List<String> qe = new ArrayList<String>();
             Matcher m = tokenizerPattern.matcher(q);
             while (m.find()) qe.add(m.group(1));
@@ -312,36 +325,70 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
             //   since:2015-04-01 until:2015-04-03 - tweets within given time range
             // additional constraints:
             //   /image /audio /video /place - restrict to tweets which have attached images, audio, video or place
-            String text = "";
-            ArrayList<String> users = new ArrayList<>();
-            ArrayList<String> hashtags = new ArrayList<>();
+            ArrayList<String> text_positive_match = new ArrayList<>();
+            ArrayList<String> text_negative_match = new ArrayList<>();
+            ArrayList<String> text_positive_filter = new ArrayList<>();
+            ArrayList<String> text_negative_filter = new ArrayList<>();
+            ArrayList<String> users_positive = new ArrayList<>();
+            ArrayList<String> users_negative = new ArrayList<>();
+            ArrayList<String> hashtags_positive = new ArrayList<>();
+            ArrayList<String> hashtags_negative = new ArrayList<>();
             HashMap<String, String> modifier = new HashMap<>();
-            HashSet<String> constraints = new HashSet<>();
+            HashSet<String> constraints_positive = new HashSet<>();
+            HashSet<String> constraints_negative = new HashSet<>();
             for (String t: qe) {
                 if (t.length() == 0) continue;
                 if (t.startsWith("@")) {
-                    users.add(t.substring(1));
+                    users_positive.add(t.substring(1));
+                    continue;
+                } else if (t.startsWith("-@")) {
+                    users_negative.add(t.substring(2));
+                    continue;
                 } else if (t.startsWith("#")) {
-                    hashtags.add(t.substring(1));
-                }  else if (t.startsWith("/")) {
-                    constraints.add(t.substring(1));
+                    hashtags_positive.add(t.substring(1));
+                    continue;
+                } else if (t.startsWith("-#")) {
+                    hashtags_negative.add(t.substring(2));
+                    continue;
+                } else if (t.startsWith("/")) {
+                    constraints_positive.add(t.substring(1));
+                    continue;
+                } else if (t.startsWith("-/")) {
+                    constraints_negative.add(t.substring(2));
+                    continue;
                 } else if (t.indexOf(':') > 0) {
                     int p = t.indexOf(':');
                     modifier.put(t.substring(0, p).toLowerCase(), t.substring(p + 1));
+                    continue;
                 } else {
-                    text += t + " ";
+                    // patch characters that will confuse elasticsearch or have a different meaning
+                    boolean negative = t.startsWith("-");
+                    if (negative) t = t.substring(1);
+                    if ((t.charAt(0) == '"' && t.charAt(t.length() - 1) == '"') || (t.charAt(0) == '\'' && t.charAt(t.length() - 1) == '\'')) {
+                        t = t.substring(1, t.length() - 1);
+                        if (negative) text_negative_filter.add(t); else text_positive_filter.add(t);
+                    } else {
+                        if (negative) text_negative_match.add(t); else text_positive_match.add(t);
+                    }
+                    continue;
                 }
             }
-            if (modifier.containsKey("to")) users.add(modifier.get("to"));
-            text = text.trim();
+            if (modifier.containsKey("to")) users_positive.add(modifier.get("to"));
             
             // compose query
             QueryBuilder query = QueryBuilders.boolQuery();
-            if (text.length() > 0) ((BoolQueryBuilder) query).must(QueryBuilders.matchQuery("text", text));
-            for (String user: users) ((BoolQueryBuilder) query).must(QueryBuilders.termQuery("mentions", user));
-            for (String hashtag: hashtags) ((BoolQueryBuilder) query).must(QueryBuilders.termQuery("hashtags", hashtag.toLowerCase()));
+            for (String text: text_positive_match)  ((BoolQueryBuilder) query).must(QueryBuilders.matchQuery("text", text));
+            for (String text: text_negative_match) ((BoolQueryBuilder) query).mustNot(QueryBuilders.matchQuery("text", text));
+            for (String text: text_positive_filter) query = QueryBuilders.filteredQuery(query, FilterBuilders.termsFilter("text", text));
+            for (String text: text_negative_filter) query = QueryBuilders.filteredQuery(query, FilterBuilders.notFilter(FilterBuilders.termsFilter("text", text)));
+            for (String user: users_positive) query = QueryBuilders.filteredQuery(query, FilterBuilders.inFilter("mentions", user));
+            for (String user: users_negative) query = QueryBuilders.filteredQuery(query, FilterBuilders.notFilter(FilterBuilders.inFilter("mentions", user)));
+            for (String hashtag: hashtags_positive) query = QueryBuilders.filteredQuery(query, FilterBuilders.inFilter("hashtags", hashtag.toLowerCase()));
+            for (String hashtag: hashtags_negative) query = QueryBuilders.filteredQuery(query, FilterBuilders.notFilter(FilterBuilders.inFilter("hashtags", hashtag.toLowerCase())));
             if (modifier.containsKey("id")) ((BoolQueryBuilder) query).must(QueryBuilders.termQuery("id_str", modifier.get("id")));
+            if (modifier.containsKey("-id")) ((BoolQueryBuilder) query).mustNot(QueryBuilders.termQuery("id_str", modifier.get("-id")));
             if (modifier.containsKey("from")) ((BoolQueryBuilder) query).must(QueryBuilders.termQuery("screen_name", modifier.get("from")));
+            if (modifier.containsKey("-from")) ((BoolQueryBuilder) query).mustNot(QueryBuilders.termQuery("screen_name", modifier.get("-from")));
             if (modifier.containsKey("near")) {
                 BoolQueryBuilder nearquery = QueryBuilders.boolQuery()
                         .should(QueryBuilders.matchQuery("place_name", modifier.get("near")))
@@ -365,10 +412,23 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
                     this.until = new Date(Long.MAX_VALUE);
                 }
                 ((BoolQueryBuilder) query).must(rangeQuery);
+            } catch (ParseException e) {} else if (modifier.containsKey("until")) try {
+                Calendar until = DateParser.parse(modifier.get("until"), timezoneOffset);
+                if (until.get(Calendar.HOUR) == 0 && until.get(Calendar.MINUTE) == 0) {
+                    // until must be the day which is included in results.
+                    // To get the result within the same day, we must add one day.
+                    until.add(Calendar.DATE, 1);
+                }
+                this.until = until.getTime();
+                RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery("created_at").to(this.until);
+                ((BoolQueryBuilder) query).must(rangeQuery);
             } catch (ParseException e) {}
             for (Map.Entry<String, String> c: constraintFields.entrySet()) {
-                if (constraints.contains(c.getKey())) {
+                if (constraints_positive.contains(c.getKey())) {
                     query = QueryBuilders.filteredQuery(query, FilterBuilders.existsFilter(c.getValue()));
+                }
+                if (constraints_negative.contains(c.getKey())) {
+                    query = QueryBuilders.filteredQuery(query, FilterBuilders.notFilter(FilterBuilders.existsFilter(c.getValue())));
                 }
             }
             return query;

@@ -39,18 +39,23 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.servlets.GzipFilter;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.webapp.WebAppContext;
+import org.loklak.api.server.AssetServlet;
 import org.loklak.api.server.CampaignServlet;
 import org.loklak.api.server.CrawlerServlet;
 import org.loklak.api.server.DumpDownloadServlet;
 import org.loklak.api.server.HelloServlet;
 import org.loklak.api.server.PeersServlet;
+import org.loklak.api.server.ProxyServlet;
 import org.loklak.api.server.PushServlet;
 import org.loklak.api.server.SearchServlet;
+import org.loklak.api.server.SettingsServlet;
 import org.loklak.api.server.StatusServlet;
 import org.loklak.api.server.SuggestServlet;
 import org.loklak.api.server.AccountServlet;
 import org.loklak.data.DAO;
 import org.loklak.tools.Browser;
+import org.loklak.vis.server.MapServlet;
+import org.loklak.vis.server.MarkdownServlet;
 
 public class LoklakServer {
 
@@ -60,7 +65,8 @@ public class LoklakServer {
     private static Caretaker caretaker = null;
     
     public static void main(String[] args) throws Exception {
-
+        System.setProperty("java.awt.headless", "true"); // no awt used here so we can switch off that stuff
+        
         // init config, log and elasticsearch
         File data = new File(new File("."), "data");
         if (!data.exists()) data.mkdirs();
@@ -97,7 +103,7 @@ public class LoklakServer {
         LoklakServer.server = new Server();
         LoklakServer.server.setStopAtShutdown(true);
         ServerConnector connector = new ServerConnector(LoklakServer.server);
-        int httpPort = (int) DAO.getConfig("port.http", 9100);
+        int httpPort = (int) DAO.getConfig("port.http", 9000);
         connector.setPort(httpPort);
         connector.setName("httpd:" + httpPort);
         connector.setIdleTimeout(20000); // timout in ms when no bytes send / received
@@ -116,12 +122,25 @@ public class LoklakServer {
         servletHandler.addServlet(StatusServlet.class, "/api/status.json");
         servletHandler.addServlet(SearchServlet.class, "/api/search.rss");  // both have same servlet class
         servletHandler.addServlet(SearchServlet.class, "/api/search.json"); // both have same servlet class
-        servletHandler.addServlet(SuggestServlet.class, "/api/suggest.json"); 
-        servletHandler.addServlet(AccountServlet.class, "/api/account.json"); 
-        servletHandler.addServlet(CampaignServlet.class, "/api/campaign.json"); 
+        servletHandler.addServlet(SuggestServlet.class, "/api/suggest.json");
+        servletHandler.addServlet(AccountServlet.class, "/api/account.json");
+        servletHandler.addServlet(CampaignServlet.class, "/api/campaign.json");
+        servletHandler.addServlet(SettingsServlet.class, "/api/settings.json");
+        servletHandler.addServlet(ProxyServlet.class, "/api/proxy.gif");
+        servletHandler.addServlet(ProxyServlet.class, "/api/proxy.png");
+        servletHandler.addServlet(ProxyServlet.class, "/api/proxy.jpg");
         ServletHolder pushServletHolder = new ServletHolder(PushServlet.class);
         pushServletHolder.getRegistration().setMultipartConfig(new MultipartConfigElement(tmp.getAbsolutePath()));
         servletHandler.addServlet(pushServletHolder, "/api/push.json");
+        ServletHolder assetServletHolder = new ServletHolder(AssetServlet.class);
+        assetServletHolder.getRegistration().setMultipartConfig(new MultipartConfigElement(tmp.getAbsolutePath()));
+        servletHandler.addServlet(assetServletHolder, "/api/asset");
+        servletHandler.addServlet(MarkdownServlet.class, "/vis/markdown.gif");
+        servletHandler.addServlet(MarkdownServlet.class, "/vis/markdown.png");
+        servletHandler.addServlet(MarkdownServlet.class, "/vis/markdown.jpg");
+        servletHandler.addServlet(MapServlet.class, "/vis/map.gif");
+        servletHandler.addServlet(MapServlet.class, "/vis/map.png");
+        servletHandler.addServlet(MapServlet.class, "/vis/map.jpg");
         
         ResourceHandler fileHandler = new ResourceHandler();
         fileHandler.setDirectoriesListed(true);

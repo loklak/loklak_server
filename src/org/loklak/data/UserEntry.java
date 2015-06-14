@@ -19,6 +19,8 @@
 
 package org.loklak.data;
 
+import org.elasticsearch.common.Base64;
+
 import java.io.IOException;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -32,6 +34,7 @@ public class UserEntry extends AbstractIndexEntry implements IndexEntry {
     private final static String field_name = "name";
     private final static String field_profile_image_url_http = "profile_image_url_http";
     private final static String field_profile_image_url_https = "profile_image_url_https";
+    private final static String field_profile_image = "profile_image";
     private final static String field_appearance_first = "appearance_first";
     private final static String field_appearance_latest = "appearance_latest";
     
@@ -54,6 +57,10 @@ public class UserEntry extends AbstractIndexEntry implements IndexEntry {
         map.put(field_appearance_latest, parseDate(map.get(field_appearance_latest), now));
     }
     
+    public String getType() {
+        return parseString((String) this.map.get("$type"));
+    }
+    
     public String getScreenName() {
         return parseString((String) this.map.get(field_screen_name));
     }
@@ -66,6 +73,25 @@ public class UserEntry extends AbstractIndexEntry implements IndexEntry {
         Object url = this.map.get(field_profile_image_url_https);
         if (url != null) return (String) url;
         return parseString((String) this.map.get(field_profile_image_url_http));
+    }
+
+    public boolean containsProfileImage() {
+        Object image = this.map.get(field_profile_image);
+        return image != null && ((String) image).length() > 0;
+    }
+
+    public byte[] getProfileImage() {
+        Object image = this.map.get(field_profile_image);
+        if (image == null) return null;
+        try {
+            return Base64.decode((String) image);
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    public void setProfileImage(byte[] image) {
+        this.map.put(field_profile_image, Base64.encodeBytes(image));
     }
 
     public Date getAppearanceFirst() {
@@ -86,6 +112,7 @@ public class UserEntry extends AbstractIndexEntry implements IndexEntry {
             if (this.map.containsKey(field_profile_image_url_https)) json.writeObjectField(field_profile_image_url_https, this.map.get(field_profile_image_url_https));
             writeDate(json, field_appearance_first, getAppearanceFirst().getTime());
             writeDate(json, field_appearance_latest, getAppearanceLatest().getTime());
+            if (this.map.containsKey(field_profile_image)) json.writeObjectField(field_profile_image, this.map.get(field_profile_image));
             json.writeEndObject();
         } catch (IOException e) {
         }

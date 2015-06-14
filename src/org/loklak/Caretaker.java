@@ -52,7 +52,7 @@ public class Caretaker extends Thread {
     public void run() {
         // send a message to other peers that I am alive
         String[] remote = DAO.getConfig("backend", new String[0], ",");
-        HelloClient.propagate(remote, (int) DAO.getConfig("port.http", 9100), (int) DAO.getConfig("port.https", 9443), (String) DAO.getConfig("peername", "anonymous"));
+        HelloClient.propagate(remote, (int) DAO.getConfig("port.http", 9000), (int) DAO.getConfig("port.https", 9443), (String) DAO.getConfig("peername", "anonymous"));
 
         try {Thread.sleep(10000);} catch (InterruptedException e) {} // wait a bit to give elasticsearch a start-up time
         while (this.shallRun) {
@@ -81,15 +81,23 @@ public class Caretaker extends Thread {
             }
             
             // scan dump input directory to import files
-            File[] importList = DAO.getImportDumps();
+            File[] importList = DAO.getTweetImportDumps();
             for (File importFile: importList) {
                 String name = importFile.getName();
-                if (name.startsWith(DAO.MESSAGE_DUMP_FILE_PREFIX)) {
-                    DAO.log("importing file " + name);
-                    int imported = DAO.importDump(importFile);
-                    DAO.shiftProcessedDump(name);
-                    DAO.log("imported file " + name + ", " + imported + " new messages");
-                }
+                DAO.log("importing tweet dump " + name);
+                int imported = DAO.importDump(importFile);
+                DAO.shiftProcessedTweetDump(name);
+                DAO.log("imported tweet dump " + name + ", " + imported + " new messages");
+            }
+            
+            // scan spacial data import directory
+            importList = DAO.getGeoJsonImportDumps();
+            for (File importFile: importList) {
+                String name = importFile.getName();
+                DAO.log("importing geoJson " + name);
+                int imported = DAO.importGeoJson(importFile);
+                DAO.shiftProcessedGeoJsonDump(name);
+                DAO.log("imported geoJson " + name + ", " + imported + " new messages");
             }
             
             // run some crawl steps
@@ -106,7 +114,7 @@ public class Caretaker extends Thread {
                         continue;
                     }
                     Timeline[] t = DAO.scrapeTwitter(qe.getQuery(), qe.getTimezoneOffset(), false);
-                    DAO.log("retrieval of " + t[1].size() + " messages for q = \"" + qe.getQuery() + "\"");
+                    DAO.log("automatic retrieval of " + t[0].size() + " messages, " + t[1].size() + " new for q = \"" + qe.getQuery() + "\"");
                     try {Thread.sleep(1000);} catch (InterruptedException e) {} // prevent remote DoS protection handling
                 }
             }

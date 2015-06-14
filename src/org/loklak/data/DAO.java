@@ -19,6 +19,7 @@
 
 package org.loklak.data;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -31,6 +32,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 import java.io.StringWriter;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -42,6 +45,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
@@ -77,6 +81,9 @@ import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
 import org.elasticsearch.search.sort.SortOrder;
 import org.loklak.Caretaker;
 import org.loklak.api.client.SearchClient;
+import org.loklak.geo.GeoJsonReader;
+import org.loklak.geo.LocationSource;
+import org.loklak.geo.GeoJsonReader.Feature;
 import org.loklak.harvester.SourceType;
 import org.loklak.harvester.TwitterScraper;
 import org.loklak.tools.DateParser;
@@ -103,6 +110,7 @@ public class DAO {
     public final static int CACHE_MAXSIZE = 10000;
     
     public  static File conf_dir;
+    private static File external_data, geoJson_import, geoJson_imported, assets;
     private static File message_dump_dir, message_dump_dir_own, message_dump_dir_import, message_dump_dir_imported;
     private static File settings_dir, customized_config;
     private static RandomAccessFile messagelog, accountlog;
@@ -113,7 +121,7 @@ public class DAO {
     private static MessageFactory messages;
     private static QueryFactory queries;
     private static BlockingQueue<Timeline> newMessageTimelines = new LinkedBlockingQueue<Timeline>();
-    private static Properties config = new Properties();
+    private static Map<String, String> config = new HashMap<>();
     
     /**
      * initialize the DAO
@@ -122,6 +130,12 @@ public class DAO {
     public static void init(File datadir) {
         try {
             // create and document the data dump dir
+            assets = new File(datadir, "assets");
+            external_data = new File(datadir, "external");
+            geoJson_import = new File(new File(external_data, "geojson"), "import");
+            geoJson_imported = new File(new File(external_data, "geojson"), "imported");
+            geoJson_import.mkdirs();
+            geoJson_imported.mkdirs();
             message_dump_dir = new File(datadir, "dump");
             message_dump_dir_own = new File(message_dump_dir, "own");
             message_dump_dir_import = new File(message_dump_dir, "import");
@@ -149,7 +163,9 @@ public class DAO {
             
             // load the config file(s);
             conf_dir = new File("conf");
-            config.load(new FileInputStream(new File(conf_dir, "config.properties")));
+            Properties prop = new Properties();
+            prop.load(new FileInputStream(new File(conf_dir, "config.properties")));
+            for (Map.Entry<Object, Object> entry: prop.entrySet()) config.put((String) entry.getKey(), (String) entry.getValue());
             settings_dir = new File(datadir, "settings");
             settings_dir.mkdirs();
             customized_config = new File(settings_dir, "customized_config.properties");
@@ -160,13 +176,13 @@ public class DAO {
             }
             Properties customized_config_props = new Properties();
             customized_config_props.load(new FileInputStream(customized_config));
-            config.putAll(customized_config_props);
+            for (Map.Entry<Object, Object> entry: customized_config_props.entrySet()) config.put((String) entry.getKey(), (String) entry.getValue());
             
             // use all config attributes with a key starting with "elasticsearch." to set elasticsearch settings
             Builder builder = ImmutableSettings.settingsBuilder();
-            for (Map.Entry<Object, Object> entry: config.entrySet()) {
-                String key = (String) entry.getKey();
-                if (key.startsWith("elasticsearch.")) builder.put(key.substring(14), (String) entry.getValue());
+            for (Map.Entry<String, String> entry: config.entrySet()) {
+                String key = entry.getKey();
+                if (key.startsWith("elasticsearch.")) builder.put(key.substring(14), entry.getValue());
             }
 
             // start elasticsearch
@@ -193,6 +209,13 @@ public class DAO {
         } catch (Throwable e) {
             e.printStackTrace();
         }
+    }
+    
+    public static File getAssetFile(String screen_name, String id_str, String file) {
+        String letter0 = ("" + screen_name.charAt(0)).toLowerCase();
+        String letter1 = ("" + screen_name.charAt(1)).toLowerCase();
+        File storage_path = new File(new File(new File(assets, letter0), letter1), screen_name);
+        return new File(storage_path, id_str + "_" + file); // all assets for one user in one file
     }
     
     private static File getCurrentDump(File path, String prefix) {
@@ -230,25 +253,40 @@ public class DAO {
         return new File(path, prefix + currentDatePart + "_" + random + ".txt");
     }
 
-    public static File[] getOwnDumps() {
-        return getDumps(message_dump_dir_own);
+    public static File[] getTweetOwnDumps() {
+        return getDumps(message_dump_dir_own, MESSAGE_DUMP_FILE_PREFIX, null);
     }
-    public static File[] getImportDumps() {
-        return getDumps(message_dump_dir_import);
+    public static File[] getTweetImportDumps() {
+        return getDumps(message_dump_dir_import, MESSAGE_DUMP_FILE_PREFIX, null);
     }
-    public static File[] getImportedDumps() {
-        return getDumps(message_dump_dir_imported);
+    public static File[] getTweetImportedDumps() {
+        return getDumps(message_dump_dir_imported, MESSAGE_DUMP_FILE_PREFIX, null);
     }
-    private static File[] getDumps(File path) {
+    public static File[] getGeoJsonImportDumps() {
+        return getDumps(geoJson_import, null, ".json");
+    }
+    public static File[] getGeoJsonImportedDumps() {
+        return getDumps(geoJson_imported, null, ".json");
+    }
+    private static File[] getDumps(final File path, final String prefix, final String suffix) {
         String[] list = path.list();
         TreeSet<File> dumps = new TreeSet<File>(); // sort the names with a tree set
-        for (String s: list) if (s.startsWith(MESSAGE_DUMP_FILE_PREFIX)) dumps.add(new File(path, s));
+        for (String s: list) {
+            if ((prefix == null || s.startsWith(prefix)) &&
+                (suffix == null || s.endsWith(suffix))) dumps.add(new File(path, s));
+        }
         return dumps.toArray(new File[dumps.size()]);
     }
-    public static boolean shiftProcessedDump(String dumpName) {
-        File f = new File(message_dump_dir_import, dumpName);
+    public static boolean shiftProcessedTweetDump(String dumpName) {
+        return shiftProcessedDump(dumpName, message_dump_dir_import, message_dump_dir_imported);
+    }
+    public static boolean shiftProcessedGeoJsonDump(String dumpName) {
+        return shiftProcessedDump(dumpName, geoJson_import, geoJson_imported);
+    }
+    public static boolean shiftProcessedDump(String dumpName, File from, File to) {
+        File f = new File(from, dumpName);
         if (!f.exists()) return false;
-        File g = new File(message_dump_dir_imported, dumpName);
+        File g = new File(to, dumpName);
         if (g.exists()) g.delete();
         return f.renameTo(g);
     }
@@ -292,6 +330,59 @@ public class DAO {
         return 0;
     }
     
+    public static int importGeoJson(File dumpFile) {
+        try {
+            int newTweet = 0;
+            InputStream is = new BufferedInputStream(new FileInputStream(dumpFile));
+            Date commonCreationDate = new Date();
+            try {
+                GeoJsonReader reader = new GeoJsonReader(is, Runtime.getRuntime().availableProcessors() * 2 + 1);
+                new Thread(reader).start();
+                Feature feature;
+                while ((feature = reader.take()) != GeoJsonReader.POISON_FEATURE) {
+                    String screen_name = "*geojson*";
+                    String provider_hash = Integer.toHexString(dumpFile.hashCode());
+                    String id = feature.id.length() == 0 ? feature.properties.get("id") : feature.id;
+                    URL url = null;
+                    try {url = new URL(feature.properties.get("url"));} catch (MalformedURLException e) {}
+                    
+                    MessageEntry t = new MessageEntry();
+                    t.setCreatedAt(commonCreationDate);
+                    t.setSourceType(SourceType.IMPORT);
+                    t.setProviderType(ProviderType.GENERIC);
+                    t.setProviderHash(provider_hash);
+                    t.setScreenName(screen_name);
+                    t.setIdStr(provider_hash + "_" + id);
+                    t.setText(feature.properties.get("description"));
+                    if (url != null) t.setStatusIdUrl(url);
+                    t.setRetweetCount(0);
+                    t.setFavouritesCount(0);
+                    t.setImages(feature.properties.get("thumbs"));
+                    t.setPlaceId("");
+                    t.setPlaceName(feature.properties.get("title"));
+                    double lon = Double.parseDouble(feature.properties.get("geo_longitude"));
+                    double lat = Double.parseDouble(feature.properties.get("geo_latitude"));
+                    t.setLocationPoint(new double[]{lon, lat}); // coordinate order is longitude, latitude
+                    t.setLocationMark(new double[]{lon, lat}); // coordinate order is longitude, latitude
+                    t.setLocationRadius(0);
+                    t.setLocationSource(LocationSource.REPORT);
+                    t.enrich();
+                    
+                    UserEntry u = new UserEntry(screen_name, "", "");
+                    boolean newtweet = DAO.writeMessage(t, u, false);
+                    if (newtweet) newTweet++;
+                    
+                }
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+            }
+            return newTweet;
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+    
     
     /**
      * close all objects in this class
@@ -311,17 +402,17 @@ public class DAO {
      * @return
      */
     public static String getConfig(String key, String default_val) {
-        String value = config.getProperty(key);
+        String value = config.get(key);
         return value == null ? default_val : value;
     }
     
     public static String[] getConfig(String key, String[] default_val, String delim) {
-        String value = config.getProperty(key);
+        String value = config.get(key);
         return value == null || value.length() == 0 ? default_val : value.split(delim);
     }
     
     public static long getConfig(String key, long default_val) {
-        String value = config.getProperty(key);
+        String value = config.get(key);
         try {
             return value == null ? default_val : Long.parseLong(value);
         } catch (NumberFormatException e) {
@@ -330,8 +421,12 @@ public class DAO {
     }
     
     public static boolean getConfig(String key, boolean default_val) {
-        String value = config.getProperty(key);
+        String value = config.get(key);
         return value == null ? default_val : value.equals("true") || value.equals("on") || value.equals("1");
+    }
+    
+    public static Set<String> getConfigKeys() {
+        return config.keySet();
     }
     
     public static void transmitTimeline(Timeline tl) {
@@ -375,7 +470,7 @@ public class DAO {
 
             // check if user exists in index
             if (!users.exists(u.getScreenName())) {
-                users.writeEntry(u.getScreenName(), t.getSourceType().name(), u);
+                writeUser(u, t.getSourceType().name());
             }
 
             // record tweet into text file
@@ -393,6 +488,23 @@ public class DAO {
 
             // record tweet into search index
             messages.writeEntry(t.getIdStr(), t.getSourceType().name(), t);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return true;
+    }
+    
+    /**
+     * Store an user into the search index
+     * This method is synchronized to prevent concurrent IO caused by this call.
+     * @param a an account 
+     * @param u a user
+     * @return true if the record was stored because it did not exist, false if it was not stored because the record existed already
+     */
+    public synchronized static boolean writeUser(UserEntry u, String source_type) {
+        try {
+            // record user into search index
+            users.writeEntry(u.getScreenName(), source_type, u);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -517,7 +629,7 @@ public class DAO {
                     Map<String, Object> map = hit.getSource();
                     MessageEntry tweet = new MessageEntry(map);
                     try {
-                        UserEntry user = users.read(tweet.getUserScreenName());
+                        UserEntry user = users.read(tweet.getScreenName());
                         assert user != null;
                         if (user != null) {
                             timeline.addTweet(tweet);
