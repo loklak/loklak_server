@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.loklak.geo.GeoLocation;
 import org.loklak.geo.LocationSource;
 import org.loklak.harvester.SourceType;
 
@@ -251,22 +252,40 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
         this.place_id = place_id;
     }
 
+    /**
+     * @return [longitude, latitude]
+     */
     public double[] getLocationPoint() {
         return location_point;
     }
 
+    /**
+     * set the location
+     * @param location_point in the form [longitude, latitude]
+     */
     public void setLocationPoint(double[] location_point) {
         this.location_point = location_point;
     }
 
+    /**
+     * @return [longitude, latitude] which is inside of getLocationRadius() from getLocationPoint()
+     */
     public double[] getLocationMark() {
         return location_mark;
     }
 
+    /**
+     * set the location
+     * @param location_point in the form [longitude, latitude]
+     */
     public void setLocationMark(double[] location_mark) {
         this.location_mark = location_mark;
     }
 
+    /**
+     * get the radius in meter
+     * @return radius in meter around getLocationPoint() (NOT getLocationMark())
+     */
     public int getLocationRadius() {
         return location_radius;
     }
@@ -381,11 +400,35 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
         
         // more media data, analyse the links
         for (String link: this.links) {
-            if (link.endsWith(".mp4") || link.endsWith(".m4v")) {this.videos.add(link); continue;}
-            if (link.indexOf("vimeo.com") > 0) {this.videos.add(link); continue;}
-            if (link.indexOf("youtube.com") > 0 || link.indexOf("youtu.be") > 0) {this.videos.add(link); continue;}
-            if (link.endsWith(".mp3")) {this.audio.add(link); continue;}
-            if (link.indexOf("soundcloud.com") > 0) {this.audio.add(link); continue;}
+            if (link.endsWith(".mp4") || link.endsWith(".m4v") ||
+                link.indexOf("vimeo.com") > 0 ||
+                link.indexOf("youtube.com") > 0 || link.indexOf("youtu.be") > 0 ||
+                link.indexOf("vine.co") > 0 ||
+                link.indexOf("ted.com") > 0) {this.videos.add(link); continue;}
+            if (link.endsWith(".mp3") ||
+                link.indexOf("soundcloud.com") > 0) {this.audio.add(link); continue;}
+            if (link.indexOf("flickr.com") > 0 ||
+                link.indexOf("instagram.com") > 0 ||
+                link.indexOf("imgur.com") > 0 ||
+                link.indexOf("giphy.com") > 0) {this.images.add(link); continue;}
+        }
+        
+        // find location
+        if ((this.location_point == null || this.location_point.length == 0) && DAO.geoNames != null) {
+            GeoLocation loc = null;
+            if (this.place_name != null && this.place_name.length() > 0) {
+                loc = DAO.geoNames.analyse(this.place_name, 5);
+            }
+            if (loc == null) {
+                loc = DAO.geoNames.analyse(this.text, 5);
+            }
+            if (loc != null) {
+                this.place_name = loc.getName();
+                this.location_radius = 0;
+                this.location_point = new double[]{loc.lon(), loc.lat()}; //[longitude, latitude]
+                this.location_mark = new double[]{loc.lon(), loc.lat()}; //[longitude, latitude]
+                this.location_source = LocationSource.ANNOTATION;
+            }
         }
     }
     
@@ -431,9 +474,9 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
             json.writeObjectField("place_id", this.place_id);
   
             // add optional location data. This is written even if calculatedData == false if the source is from REPORT to prevent that it is lost
-            if ((calculatedData || this.location_source == LocationSource.REPORT) &&
-                this.location_point != null && this.location_mark != null) {
-                writeArray(json, "location_point", this.location_point);
+            if (this.location_point != null && this.location_point.length == 2 && this.location_mark != null && this.location_mark.length == 2) {
+                // reference for this format: https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-geo-point-type.html#_lat_lon_as_array_5
+                writeArray(json, "location_point", this.location_point); // [longitude, latitude]
                 json.writeObjectField("location_radius", this.location_radius);
                 writeArray(json, "location_mark", this.location_mark);
                 json.writeObjectField("location_source", this.location_source.name());

@@ -19,7 +19,6 @@
 
 package org.loklak.api.server;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 import javax.servlet.ServletException;
@@ -62,20 +61,23 @@ public class ProxyServlet extends HttpServlet {
         // parse arguments
         String url = post.get("url", "");
         String screen_name = post.get("screen_name", "");
+        DAO.log("PROXY: called with screen_name=" + screen_name + ", url=" + url);
+        
         if (screen_name.length() == 0 && (url.length() == 0 || screen_name.indexOf("twimg.com") < 0)) {
             response.sendError(503, "either attributes url or screen_name or both must be submitted"); return;
         }
         
-        byte[] buffer = null;
+        byte[] buffer = url.length() == 0 ? null : cache.get(url);
+        if (buffer != null) DAO.log("PROXY: got url=" + url + " content from ram cache!");
         UserEntry user = null;
         
-        if (screen_name.length() > 0) {
-            buffer = cache.get(url);
+        if (buffer == null && screen_name.length() > 0) {
             if (buffer == null && (url.length() == 0 || isProfileImage(url))) {
                 // try to read it from the user profiles
                 user = DAO.searchLocalUser(screen_name);
                 if (user != null) {
                     buffer = user.getProfileImage();
+                    if (buffer != null) DAO.log("PROXY: got url=" + url + " content from user profile bas64 cache!");
                     if (url.length() == 0) url = user.getProfileImageUrl();
                     cache.put(user.getProfileImageUrl(), buffer);
                 }
@@ -83,27 +85,26 @@ public class ProxyServlet extends HttpServlet {
         }
         
         if (buffer == null && url.length() > 0) {
-            try {
-                ClientConnection connection = new ClientConnection(url);
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                buffer = new byte[2048];
-                int count;
-                try {
-                    while ((count = connection.inputStream.read(buffer)) > 0) baos.write(buffer, 0, count);
-                } catch (IOException e) {}
-                connection.close();
-                buffer = baos.toByteArray();
-                
+            // try to download the image
+            buffer = ClientConnection.download(url);
+            String newUrl = user == null ? null : user.getProfileImageUrl();
+            if (buffer != null) {
+                DAO.log("PROXY: downloaded given url=" + url + " successfully!");
+            } else if (newUrl != null && !newUrl.equalsIgnoreCase(url)) {
+                // if this fails, then check if the stored url is different.
+                // That may happen because new user avatar images get new urls
+                buffer = ClientConnection.download(newUrl);
+                if (buffer != null) DAO.log("PROXY: downloaded url=" + url + " from user setting successfully!");
+            }
+            if (buffer != null) {
                 // write the buffer
-                if (user != null && user.getType().length() > 0 && url.equals(user.getProfileImageUrl())) {
+                if (user != null && user.getType().length() > 0) {
                     user.setProfileImage(buffer);
                     DAO.writeUser(user, user.getType());
                     if (!cache.full()) cache.put(url, buffer);
                 } else {
                     cache.put(url, buffer);
                 }
-            } catch (IOException e) {
-                response.sendError(503, "resource not available"); return;
             }
         }
         

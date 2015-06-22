@@ -24,12 +24,10 @@ package org.loklak.geo;
 
 import java.util.Comparator;
 
-import org.loklak.tools.UTF8;
-
 public class GeoLocation extends IntegerGeoPoint implements Comparable<GeoLocation>, Comparator<GeoLocation> {
 
-    private byte[] name;
-    private int population;
+    private String name;
+    private long population;
 
     public GeoLocation(double lat, double lon) {
         super(lat, lon);
@@ -39,30 +37,29 @@ public class GeoLocation extends IntegerGeoPoint implements Comparable<GeoLocati
 
     public GeoLocation(double lat, double lon, String name) {
         super(lat, lon);
-        this.name = UTF8.getBytes(name);
+        this.name = name;
     }
 
     public void setName(String name) {
-        this.name = UTF8.getBytes(name);
+        this.name = name;
     }
 
     public String getName() {
-        return UTF8.String(this.name);
+        return this.name;
     }
 
-    public void setPopulation(int population) {
-        this.population = population;
+    public void setPopulation(long population2) {
+        this.population = population2;
     }
 
-    public int getPopulation() {
+    public long getPopulation() {
         return this.population;
     }
 
     @Override
     public boolean equals(Object loc) {
         if (!(loc instanceof GeoLocation)) return false;
-        if (this.name == null || ((GeoLocation) loc).name == null) return super.equals(loc);
-        return super.equals(loc) && this.getName().toLowerCase().equals(((GeoLocation) loc).getName().toLowerCase());
+        return super.equals(loc);
     }
 
     /**
@@ -81,7 +78,7 @@ public class GeoLocation extends IntegerGeoPoint implements Comparable<GeoLocati
         return 0;
     }
 
-    private static long ph(int population) {
+    private static long ph(long population) {
         if (population > 10000) population -= 10000;
         return population;
     }
