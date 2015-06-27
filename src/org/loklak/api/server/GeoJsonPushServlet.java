@@ -244,3 +244,4 @@ public class GeoJsonPushServlet extends HttpServlet {
             is.close();
         }
     }
+}
