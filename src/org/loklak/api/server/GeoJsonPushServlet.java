@@ -94,6 +94,7 @@ public class GeoJsonPushServlet extends HttpServlet {
             }
         }
 
+        int recordCount = 0, newCount = 0, knownCount = 0;
         for (Map<String, Object> feature : features) {
             Object properties_obj = feature.get("properties");
             Map<String, Object> properties = properties_obj instanceof Map<?, ?> ? (Map<String, Object>) properties_obj : null;
@@ -128,7 +129,31 @@ public class GeoJsonPushServlet extends HttpServlet {
             // uncomment this causes NoShardAvailableException
             UserEntry userEntry = new UserEntry(/*(user != null && user.get("screen_name") != null) ? user :*/ new HashMap<String, Object>());
             boolean successful = DAO.writeMessage(messageEntry, userEntry, true, false);
+            if (successful) newCount++; else knownCount++;
+            recordCount++;
         }
+
+        post.setResponse(response, "application/javascript");
+
+        // generate json
+        XContentBuilder json = XContentFactory.jsonBuilder().prettyPrint().lfAtEnd();
+        json.startObject();
+        json.field("status", "ok");
+        json.field("records", recordCount);
+        json.field("new", newCount);
+        json.field("known", knownCount);
+        json.field("message", "pushed");
+        json.endObject(); // of root
+
+        // write json
+        ServletOutputStream sos = response.getOutputStream();
+        if (jsonp) sos.print(callback + "(");
+        sos.print(json.string());
+        if (jsonp) sos.println(");");
+        sos.println();
+
+        DAO.log(request.getServletPath() + " -> records = " + recordCount + ", new = " + newCount + ", known = " + knownCount + ", from host hash " + remoteHash);
+
     }
 
     /**
@@ -211,4 +236,3 @@ public class GeoJsonPushServlet extends HttpServlet {
             is.close();
         }
     }
-}
