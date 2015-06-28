@@ -34,14 +34,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.imageio.ImageIO;
 import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
 
+import org.elasticsearch.common.Base64;
 import org.loklak.data.DAO;
 import org.loklak.tools.DateParser;
 import org.loklak.tools.UTF8;
+import org.loklak.visualization.graphics.RasterPlotter;
 
 /**
  * Storage of a peer list which can be used for peer-to-peer communication.
@@ -53,8 +57,6 @@ public class RemoteAccess {
     public static Map<String, RemoteAccess> history = new ConcurrentHashMap<String, RemoteAccess>();
     
     public static Post evaluate(final HttpServletRequest request) {
-        String clientHost = request.getRemoteHost();
-        String XRealIP = request.getHeader("X-Real-IP"); if (XRealIP != null && XRealIP.length() > 0) clientHost = XRealIP; // get IP through nginx config "proxy_set_header X-Real-IP $remote_addr;"
         String path = request.getServletPath();
         Map<String, String> qm = getQueryMap(request.getQueryString());
         Post post = new Post(request);
@@ -65,28 +67,23 @@ public class RemoteAccess {
         Integer httpsport = httpsports == null ? null : Integer.parseInt(httpsports);
         String peername = qm == null ? request.getParameter("peername") : qm.get("peername");
         if (peername == null || peername.length() > 132) peername = "anonymous";
-        post.setRemoteAccess(init(clientHost, path, httpport, httpsport, peername));
-        return post;
-    }
-    
-    private static RemoteAccess init(final String remoteHost, final String localPath, final Integer localHTTPPort, final Integer localHTTPSPort, final String peername) {
-        RemoteAccess ra;
-        if (localHTTPPort == null || localHTTPSPort == null) {
+        final String remoteHost = post.getClientHost();
+        if (httpport == null || httpsport == null) {
             // if port configuration is omitted, just update the value if it exist
-            ra = history.get(remoteHost);
+            RemoteAccess ra = history.get(remoteHost);
             if (ra == null) {
-                history.put(remoteHost, new RemoteAccess(remoteHost, localPath, localHTTPPort, localHTTPSPort, peername));
+                history.put(remoteHost, new RemoteAccess(remoteHost, path, httpport, httpsport, peername));
             } else {
                 assert ra.remoteHost.equals(remoteHost);
-                ra.localPath = localPath;
+                ra.localPath = path;
                 ra.accessTime = System.currentTimeMillis();
             }
         } else {
             // overwrite if new port configuration is submitted
-            ra = new RemoteAccess(remoteHost, localPath, localHTTPPort, localHTTPSPort, peername);
+            RemoteAccess ra = new RemoteAccess(remoteHost, path, httpport, httpsport, peername);
             history.put(remoteHost, ra);
         }
-        return ra;
+        return post;
     }
     
     public static long latestVisit(String remoteHost) {
@@ -101,14 +98,12 @@ public class RemoteAccess {
     public static class Post {
         private HttpServletRequest request;
         private Map<String, String> qm;
-        private RemoteAccess ra;
         private String clientHost;
         private long access_time, time_since_last_access;
         private boolean DoS_blackout, DoS_servicereduction;
         public Post(final HttpServletRequest request) {
             this.qm = null;
             this.request = request;
-            this.ra = null;
             this.clientHost = request.getRemoteHost();
             String XRealIP = request.getHeader("X-Real-IP");
             if (XRealIP != null && XRealIP.length() > 0) this.clientHost = XRealIP; // get IP through nginx config "proxy_set_header X-Real-IP $remote_addr;"
@@ -153,11 +148,11 @@ public class RemoteAccess {
         }
         public int get(String key, int dflt) {
             String val = qm == null ? request.getParameter(key) : qm.get(key);
-            return val == null ? dflt : Integer.parseInt(val);
+            return val == null || val.length() == 0 ? dflt : Integer.parseInt(val);
         }
         public double get(String key, double dflt) {
             String val = qm == null ? request.getParameter(key) : qm.get(key);
-            return val == null ? dflt : Double.parseDouble(val);
+            return val == null || val.length() == 0 ? dflt : Double.parseDouble(val);
         }
         public boolean get(String key, boolean dflt) {
             String val = qm == null ? request.getParameter(key) : qm.get(key);
@@ -166,16 +161,10 @@ public class RemoteAccess {
         public Date get(String key, Date dflt, int timezoneOffset) {
             String val = qm == null ? request.getParameter(key) : qm.get(key);
             try {
-                return val == null ? dflt : DateParser.parse(val, timezoneOffset).getTime();
+                return val == null || val.length() == 0 ? dflt : DateParser.parse(val, timezoneOffset).getTime();
             } catch (ParseException e) {
                 return dflt;
             }
-        }
-        public void setRemoteAccess(final RemoteAccess ra) {
-            this.ra = ra;
-        }
-        public RemoteAccess getRemoteAccess() {
-            return this.ra;
         }
         public void setResponse(final HttpServletResponse response, final String mime) {
             response.setDateHeader("Last-Modified", this.access_time);
@@ -288,5 +277,64 @@ public class RemoteAccess {
         } catch (ServletException e) {
         }
         return map;
+    }
+
+    public static enum FileType {
+        UNKNOWN, PNG, JPG, GIF, JSON, RSS;
+    }
+    
+    public static class FileTypeEncoding {
+        public final FileType fileType;
+        public final boolean base64;
+        private FileTypeEncoding(final FileType fileType, final boolean base64) {
+            this.fileType = fileType;
+            this.base64 = base64;
+        }
+        private FileTypeEncoding(final FileType fileType) {
+            this.fileType = fileType;
+            this.base64 = false;
+        }
+    }
+    
+    public static FileTypeEncoding getFileType(HttpServletRequest request) {
+        String servletPath = request.getServletPath();
+        if (servletPath.endsWith(".gif")) return new FileTypeEncoding(FileType.GIF);
+        if (servletPath.endsWith(".gif.base64")) return new FileTypeEncoding(FileType.GIF, true);
+        if (servletPath.endsWith(".png")) return new FileTypeEncoding(FileType.PNG);
+        if (servletPath.endsWith(".png.base64")) return new FileTypeEncoding(FileType.PNG, true);
+        if (servletPath.endsWith(".jpg")) return new FileTypeEncoding(FileType.JPG);
+        if (servletPath.endsWith(".jpg.base64")) return new FileTypeEncoding(FileType.JPG, true);
+        return new FileTypeEncoding(FileType.UNKNOWN);
+    }
+    
+    public static void writeImage(final FileTypeEncoding fileType, final HttpServletResponse response, Post post, final RasterPlotter matrix) throws IOException {
+        // write image
+        ServletOutputStream sos = response.getOutputStream();
+        if (fileType.fileType == FileType.PNG) {
+            post.setResponse(response, fileType.base64 ? "application/octet-stream" : "image/png");
+            sos.write(fileType.base64 ? Base64.encodeBytes(matrix.pngEncode(1)).getBytes() : matrix.pngEncode(1));
+        }
+        if (fileType.fileType == FileType.GIF) {
+            post.setResponse(response, fileType.base64 ? "application/octet-stream" : "image/gif");
+            if (fileType.base64) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                ImageIO.write(matrix.getImage(), "gif", baos);
+                baos.close();
+                sos.write(Base64.encodeBytes(baos.toByteArray()).getBytes());
+            } else {
+                ImageIO.write(matrix.getImage(), "gif", sos);
+            }
+        }
+        if (fileType.fileType == FileType.JPG) {
+            post.setResponse(response, fileType.base64 ? "application/octet-stream" : "image/jpeg");
+            if (fileType.base64) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                ImageIO.write(matrix.getImage(), "jpg", baos);
+                baos.close();
+                sos.write(Base64.encodeBytes(baos.toByteArray()).getBytes());
+            } else {
+                ImageIO.write(matrix.getImage(), "jpg", sos);
+            }
+        }
     }
 }
