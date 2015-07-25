@@ -1,3 +1,22 @@
+/**
+ * GeoJsonPushServlet
+ * Copyright 09.04.2015 by Dang Hai An, @zyzo
+ * <p/>
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * <p/>
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * <p/>
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program in the file lgpl21.txt
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package org.loklak.api.server;
 
 import org.elasticsearch.common.joda.time.DateTime;
@@ -10,6 +29,8 @@ import org.loklak.data.DAO;
 import org.loklak.data.MessageEntry;
 import org.loklak.data.ProviderType;
 import org.loklak.data.UserEntry;
+import org.loklak.geo.LocationSource;
+import org.loklak.geo.PlaceContext;
 import org.loklak.harvester.SourceType;
 
 import javax.servlet.ServletException;
@@ -31,6 +52,7 @@ import java.util.regex.Pattern;
  * Test URLs:
  * http://localhost:9000/api/push/geojson.json?url=http://www.paris-streetart.com/test/map.geojson
  * http://localhost:9000/api/push/geojson.json?url=http://api.fossasia.net/map/ffGeoJsonp.php
+ * http://localhost:9000/api/push/geojson.json?url=http://cmap-fossasia-api.herokuapp.com/ffGeoJsonp.php&map_type=shortname:screen_name,shortname:user.screen_name&source_type=FOSSASIA_API
  */
 
 public class GeoJsonPushServlet extends HttpServlet {
@@ -41,7 +63,7 @@ public class GeoJsonPushServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         doGet(request, response);
     }
-    
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         RemoteAccess.Post post = RemoteAccess.evaluate(request);
@@ -51,7 +73,8 @@ public class GeoJsonPushServlet extends HttpServlet {
         if (post.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;}
 
         String url = post.get("url", "");
-        String mapType = post.get("mapType", "");
+        String mapType = post.get("map_type", "");
+        String sourceType = post.get("source_type", "");
         String callback = post.get("callback", "");
         boolean jsonp = callback != null && callback.length() > 0;
 
@@ -117,10 +140,16 @@ public class GeoJsonPushServlet extends HttpServlet {
             Map<String, Object> mappedProperties = convertMapRulesProperties(mapRules, properties);
             properties.putAll(mappedProperties);
 
-            properties.put("source_type", SourceType.IMPORT.name());
+            if (!"".equals(sourceType)) {
+                properties.put("source_type", sourceType);
+            } else {
+                properties.put("source_type", SourceType.IMPORT);
+            }
             properties.put("provider_type", ProviderType.GEOJSON.name());
             properties.put("provider_hash", remoteHash);
             properties.put("location_point", geometry.get("coordinates"));
+            properties.put("location_source", LocationSource.REPORT.name());
+            properties.put("place_context", PlaceContext.FROM.name());
 
             // avoid error text not found. TODO: a better strategy, e.g. require text as a mandatory field
             if (properties.get("text") == null) {
@@ -138,8 +167,7 @@ public class GeoJsonPushServlet extends HttpServlet {
             @SuppressWarnings("unchecked")
             Map<String, Object> user = (Map<String, Object>) properties.remove("user");
             MessageEntry messageEntry = new MessageEntry(properties);
-            // uncomment this causes NoShardAvailableException
-            UserEntry userEntry = new UserEntry(/*(user != null && user.get("screen_name") != null) ? user :*/ new HashMap<String, Object>());
+            UserEntry userEntry = new UserEntry((user != null && user.get("screen_name") != null) ? user : new HashMap<String, Object>());
             boolean successful = DAO.writeMessage(messageEntry, userEntry, true, false);
             if (successful) newCount++; else knownCount++;
             recordCount++;
@@ -186,7 +214,6 @@ public class GeoJsonPushServlet extends HttpServlet {
                 for (String newField : mapRules.get(key)) {
                     if (newField.contains(".")) {
                         String[] deepFields = newField.split(Pattern.quote("."));
-                        System.out.println(Arrays.toString(deepFields));
                         Map<String, Object> currentLevel = root;
                         for (int lvl = 0; lvl < deepFields.length; lvl++) {
                             if (lvl == deepFields.length - 1) {

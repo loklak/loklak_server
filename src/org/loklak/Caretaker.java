@@ -19,17 +19,22 @@
 
 package org.loklak;
 
-import java.io.File;
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 import org.eclipse.jetty.util.log.Log;
 import org.elasticsearch.search.sort.SortOrder;
 import org.loklak.api.client.HelloClient;
 import org.loklak.api.client.PushClient;
+import org.loklak.data.Classifier;
 import org.loklak.data.DAO;
 import org.loklak.data.QueryEntry;
 import org.loklak.data.Timeline;
+import org.loklak.harvester.TwitterAPI;
+
+import twitter4j.TwitterException;
 
 /**
  * The caretaker class is a concurrent thread which does peer-to-peer operations
@@ -53,14 +58,14 @@ public class Caretaker extends Thread {
         // send a message to other peers that I am alive
         String[] remote = DAO.getConfig("backend", new String[0], ",");
         HelloClient.propagate(remote, (int) DAO.getConfig("port.http", 9000), (int) DAO.getConfig("port.https", 9443), (String) DAO.getConfig("peername", "anonymous"));
-
-        try {Thread.sleep(10000);} catch (InterruptedException e) {} // wait a bit to give elasticsearch a start-up time
+        
+        // work loop
         while (this.shallRun) {
             // sleep a bit to prevent that the DoS limit fires at backend server
-            try {Thread.sleep(3000);} catch (InterruptedException e) {}
+            try {Thread.sleep(5000);} catch (InterruptedException e) {}
             
             // peer-to-peer operation
-            Timeline tl = DAO.takeTimeline(500, 3000);
+            Timeline tl = DAO.takeTimeline(Timeline.Order.CREATED_AT, 500, 3000);
             if (!this.shallRun) break;
             if (tl != null && tl.size() > 0 && remote.length > 0) {
                 // transmit the timeline
@@ -70,42 +75,26 @@ public class Caretaker extends Thread {
                     // our timeline in RAM would fill up our RAM creating a memory leak
                     retrylook: for (int retry = 0; retry < 3; retry++) {
                         // give back-end time to recover
-                        try {Thread.sleep(3000 + retry * 3);} catch (InterruptedException e) {}
                         if (PushClient.push(remote, tl)) {
                             DAO.log("success pushing to backend in " + retry + " attempt");
                             break retrylook;
                         }
+                        try {Thread.sleep(3000 + retry * 3000);} catch (InterruptedException e) {}
                     }
                     DAO.log("failed pushing " + tl.size() + " messages to backend");
                 }
             }
             
             // scan dump input directory to import files
-            File[] importList = DAO.getTweetImportDumps();
-            for (File importFile: importList) {
-                String name = importFile.getName();
-                DAO.log("importing tweet dump " + name);
-                int imported = DAO.importDump(importFile);
-                DAO.shiftProcessedTweetDump(name);
-                DAO.log("imported tweet dump " + name + ", " + imported + " new messages");
-            }
-            
-            // scan spacial data import directory
-            importList = DAO.getGeoJsonImportDumps();
-            for (File importFile: importList) {
-                String name = importFile.getName();
-                DAO.log("importing geoJson " + name);
-                int imported = DAO.importGeoJson(importFile);
-                DAO.shiftProcessedGeoJsonDump(name);
-                DAO.log("imported geoJson " + name + ", " + imported + " new messages");
-            }
+            DAO.importMessageDumps();
             
             // run some crawl steps
             for (int i = 0; i < 10; i++) {
                 if (Crawler.process() == 0) break; // this may produce tweets for the timeline push
             }
             
-            if (DAO.getConfig("retrieval.enabled", false)) {
+            // run automatic searches
+            if (DAO.getConfig("retrieval.queries.enabled", false)) {
                 // execute some queries again: look out in the suggest database for queries with outdated due-time in field retrieval_next
                 List<QueryEntry> queryList = DAO.SearchLocalQueries("", 10, "retrieval_next", SortOrder.ASC, null, new Date(), "retrieval_next");
                 for (QueryEntry qe: queryList) {
@@ -113,9 +102,21 @@ public class Caretaker extends Thread {
                         DAO.deleteQuery(qe.getQuery(), qe.getSourceType());
                         continue;
                     }
-                    Timeline[] t = DAO.scrapeTwitter(qe.getQuery(), qe.getTimezoneOffset(), false);
+                    Timeline[] t = DAO.scrapeTwitter(qe.getQuery(), Timeline.Order.CREATED_AT, qe.getTimezoneOffset(), false);
                     DAO.log("automatic retrieval of " + t[0].size() + " messages, " + t[1].size() + " new for q = \"" + qe.getQuery() + "\"");
+                    DAO.announceNewUserId(t[0]);
                     try {Thread.sleep(1000);} catch (InterruptedException e) {} // prevent remote DoS protection handling
+                }
+            }
+            
+            // retrieve user data
+            Set<Number> ids = DAO.getNewUserIdsChunk();
+            if (ids != null && DAO.getConfig("retrieval.user.enabled", false) && TwitterAPI.getAppTwitterFactory() != null) {
+                try {
+                    TwitterAPI.getScreenName(ids, 10000, false);
+                } catch (IOException | TwitterException e) {
+                    for (Number n: ids) DAO.announceNewUserId(n); // push back unread values
+                    if (e instanceof TwitterException) try {Thread.sleep(10000);} catch (InterruptedException ee) {}
                 }
             }
         }

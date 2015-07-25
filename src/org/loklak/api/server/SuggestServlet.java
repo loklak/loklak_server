@@ -20,9 +20,12 @@
 package org.loklak.api.server;
 
 import java.io.IOException;
-import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -34,10 +37,9 @@ import org.elasticsearch.search.sort.SortOrder;
 import org.loklak.data.AbstractIndexEntry;
 import org.loklak.data.DAO;
 import org.loklak.data.QueryEntry;
+import org.loklak.harvester.SourceType;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
-import com.fasterxml.jackson.core.util.MinimalPrettyPrinter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 // test suggestions with http://localhost:9000/api/suggest.json?q=beer&orderby=query_count&order=desc
 
@@ -62,58 +64,65 @@ public class SuggestServlet extends HttpServlet {
         boolean local = post.isLocalhostAccess();
         boolean minified = post.get("minified", false);
         boolean delete = post.get("delete", false);
-        int count = post.get("count", 100); // number of queries
+        int count = post.get("count", 10); // number of queries
         String query = post.get("q", ""); // to get a list of queries which match; to get all latest: leave q empty
-        String orders = post.get("order", "asc").toUpperCase();
+        String source = post.get("source", "all"); // values: all,query,geo
+        String orders = post.get("order", query.length() == 0 ? "desc" : "asc").toUpperCase();
         SortOrder order = SortOrder.valueOf(orders);        
         String orderby = post.get("orderby", query.length() == 0 ? "retrieval_next" : "query_count");
         int timezoneOffset = post.get("timezoneOffset", 0);
         Date since = post.get("since", (Date) null, timezoneOffset);
         Date until = post.get("until", (Date) null, timezoneOffset);
         String selectby = post.get("selectby", "retrieval_next");
-        List<QueryEntry> queryList = query.length() == 0 && !local ? null : DAO.SearchLocalQueries(query, count, orderby, order, since, until, selectby);
+        List<QueryEntry> queryList = new ArrayList<>();
+
+        if ((source.equals("all") || source.equals("query")) && query.length() >= 0) {
+            queryList.addAll(DAO.SearchLocalQueries(query, count, orderby, order, since, until, selectby));
+        }
         
-        if (delete && queryList != null) {
+        if (delete && local && queryList.size() > 0) {
             for (QueryEntry qe: queryList) DAO.deleteQuery(qe.getQuery(), qe.getSourceType());
-            queryList = query.length() == 0 && !local ? null : DAO.SearchLocalQueries(query, count, orderby, order, since, until, selectby);
+            queryList.clear();
+            queryList.addAll(DAO.SearchLocalQueries(query, count, orderby, order, since, until, selectby));
+        }
+        
+        if (source.equals("all") || source.equals("geo")) {
+            LinkedHashSet<String> suggestions = DAO.geoNames.suggest(query, count, 0);
+            if (suggestions.size() < count && query.length() > 2) suggestions.addAll(DAO.geoNames.suggest(query, count, 1));
+            if (suggestions.size() < count && query.length() > 5) suggestions.addAll(DAO.geoNames.suggest(query, count, 2));
+            for (String s: suggestions) {
+                QueryEntry qe = new QueryEntry(s, 0, Long.MAX_VALUE, SourceType.IMPORT, false);
+                queryList.add(qe);
+            }
         }
         
         post.setResponse(response, "application/javascript");
         
         // generate json
-
-        final StringWriter s = new StringWriter();
-        JsonGenerator json = DAO.jsonFactory.createGenerator(s);
-        json.setPrettyPrinter(minified ? new MinimalPrettyPrinter() : new DefaultPrettyPrinter());
-
-        json.writeStartObject();
+        Map<String, Object> m = new LinkedHashMap<String, Object>();
+        Map<String, Object> metadata = new LinkedHashMap<String, Object>();
+        metadata.put("count", queryList == null ? "0" : Integer.toString(queryList.size()));
+        metadata.put("query", query);
+        metadata.put("order", orders);
+        metadata.put("orderby", orderby);
+        if (since != null) metadata.put("since", AbstractIndexEntry.utcFormatter.print(since.getTime()));
+        if (until != null) metadata.put("until", AbstractIndexEntry.utcFormatter.print(until.getTime()));
+        if (since != null || until != null) metadata.put("selectby", selectby);
+        metadata.put("client", post.getClientHost());
+        m.put("search_metadata", metadata);
         
-        json.writeObjectFieldStart("search_metadata");
-        json.writeObjectField("count", queryList == null ? "0" : Integer.toString(queryList.size()));
-        json.writeObjectField("query", query);
-        json.writeObjectField("order", orders);
-        json.writeObjectField("orderby", orderby);
-        if (since != null) AbstractIndexEntry.writeDate(json, "since", since.getTime());
-        if (until != null) AbstractIndexEntry.writeDate(json, "until", until.getTime());
-        if (since != null || until != null) json.writeObjectField("selectby", selectby);
-        json.writeObjectField("client", post.getClientHost());
-        json.writeEndObject(); // of search_metadata
-        
-        json.writeArrayFieldStart("queries");
+        List<Object> queries = new ArrayList<>();
         if (queryList != null) {
             for (QueryEntry t: queryList) {
-                t.toJSON(json);
+                queries.add(t.toMap());
             }
         }
-        json.writeEndArray(); // of queries
+        m.put("queries", queries);
         
-        json.writeEndObject(); // of root
-        json.close();
-
         // write json
         ServletOutputStream sos = response.getOutputStream();
         if (jsonp) sos.print(callback + "(");
-        sos.print(s.toString());
+        sos.print(minified ? new ObjectMapper().writer().writeValueAsString(m) : new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(m));
         if (jsonp) sos.println(");");
         sos.println();
     }

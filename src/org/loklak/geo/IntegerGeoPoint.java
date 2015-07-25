@@ -19,19 +19,19 @@
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package org.loklak.geo;
 
 /**
  * GeoPoint implementation with Integer accuracy
  */
-public class IntegerGeoPoint implements GeoPoint {
+public class IntegerGeoPoint extends AbstractGeoPoint implements GeoPoint {
 
     private final long latlon; // using one variable for the coordinate pair saves some space
 
     public IntegerGeoPoint(double lat, double lon) {
         this.latlon = (((long) coord2int(lat)) << 32) | (coord2int(lon));
     }
-
 
     public IntegerGeoPoint(int lat, int lon) {
         this.latlon = (((long) coord2int(lat / 1e6d)) << 32) | (coord2int(lon / 1e6d));

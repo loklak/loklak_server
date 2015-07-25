@@ -102,7 +102,10 @@ public class RemoteAccess {
         private long access_time, time_since_last_access;
         private boolean DoS_blackout, DoS_servicereduction;
         public Post(final HttpServletRequest request) {
-            this.qm = null;
+            this.qm = new HashMap<>();
+            for (Map.Entry<String, String[]> entry: request.getParameterMap().entrySet()) {
+                this.qm.put(entry.getKey(), entry.getValue()[0]);
+            }
             this.request = request;
             this.clientHost = request.getRemoteHost();
             String XRealIP = request.getHeader("X-Real-IP");
@@ -110,7 +113,7 @@ public class RemoteAccess {
             this.access_time = System.currentTimeMillis();
             boolean localhost = isLocalhostAccess();
             this.time_since_last_access = this.access_time - RemoteAccess.latestVisit(this.clientHost);
-            this.DoS_blackout = !localhost && this.time_since_last_access < DAO.getConfig("DoS.blackout", 100) || sleeping4clients.contains(this.clientHost);
+            this.DoS_blackout = !localhost && (this.time_since_last_access < DAO.getConfig("DoS.blackout", 100) || sleeping4clients.contains(this.clientHost));
             this.DoS_servicereduction = !localhost && this.time_since_last_access < DAO.getConfig("DoS.servicereduction", 1000);
         }
         public void initGET(final Map<String, String> qm) {

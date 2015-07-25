@@ -19,17 +19,16 @@
 
 package org.loklak.data;
 
-import java.io.IOException;
-import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.eclipse.jetty.util.log.Log;
-
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * A timeline is a structure which holds tweet for the purpose of presentation
@@ -37,12 +36,36 @@ import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
  */
 public class Timeline implements Iterable<MessageEntry> {
 
+    public static enum Order {
+        CREATED_AT,
+        RETWEET_COUNT,
+        FAVOURITES_COUNT;
+            
+        public String getMessageFieldName() {
+            return this.name().toLowerCase();
+        }
+    }
+    
     private TreeMap<String, MessageEntry> tweets; // the key is the date plus id of the tweet
     private Map<String, UserEntry> users;
+    final private Order order;
     
-    public Timeline() {
+    public Timeline(Order order) {
         this.tweets = new TreeMap<String, MessageEntry>();
         this.users = new HashMap<String, UserEntry>();
+        this.order = order;
+    }
+    
+    public static Order parseOrder(String order) {
+        try {
+            return Order.valueOf(order.toUpperCase());
+        } catch (Throwable e) {
+            return Order.CREATED_AT;
+        }
+    }
+    
+    public Order getOrder() {
+        return this.order;
     }
     
     public int size() {
@@ -60,7 +83,19 @@ public class Timeline implements Iterable<MessageEntry> {
     }
     
     public void addTweet(MessageEntry tweet) {
-        this.tweets.put(Long.toHexString(tweet.getCreatedAt().getTime()) + "_" + tweet.getIdStr(), tweet);
+        String key = "";
+        if (this.order == Order.RETWEET_COUNT) {
+            key = Long.toHexString(tweet.getRetweetCount());
+            while (key.length() < 16) key = "0" + key;
+            key = key + "_" + tweet.getIdStr();
+        } else if (this.order == Order.FAVOURITES_COUNT) {
+            key = Long.toHexString(tweet.getFavouritesCount());
+            while (key.length() < 16) key = "0" + key;
+            key = key + "_" + tweet.getIdStr();
+        } else {
+            key = Long.toHexString(tweet.getCreatedAt().getTime()) + "_" + tweet.getIdStr();
+        }
+        this.tweets.put(key, tweet);
     }
 
     protected UserEntry getUser(String user_screen_name) {
@@ -72,6 +107,7 @@ public class Timeline implements Iterable<MessageEntry> {
     }
     
     public void putAll(Timeline other) {
+        assert this.order.equals(other.order);
         for (MessageEntry t: other) this.addTweet(t);
         for (Map.Entry<String, UserEntry> u: other.users.entrySet()) {
             UserEntry t = this.users.get(u.getKey());
@@ -81,47 +117,39 @@ public class Timeline implements Iterable<MessageEntry> {
         }
     }
     
-    public MessageEntry getOldestTweet() {
+    public MessageEntry getBottomTweet() {
         return this.tweets.firstEntry().getValue();
     }
     
-    public MessageEntry getLatestTweet() {
+    public MessageEntry getTopTweet() {
         return this.tweets.lastEntry().getValue();
     }
     
     public String toString() {
-        return toJSON(true);
-    }
-    
-    public String toJSON(boolean withEnrichedData) {
-        // generate json
         try {
-            final StringWriter s = new StringWriter();
-            JsonGenerator json = DAO.jsonFactory.createGenerator(s);
-            json.setPrettyPrinter(new DefaultPrettyPrinter());
-            json.writeStartObject(); // start root object
-            json.writeObjectFieldStart("search_metadata");
-            json.writeObjectField("count", Integer.toString(this.tweets.size()));
-            json.writeEndObject(); // of search_metadata
-            json.writeArrayFieldStart("statuses");
-            for (MessageEntry t: this) {
-                UserEntry u = this.users.get(t.getScreenName());
-                t.toJSON(json, u, withEnrichedData);
-            }
-            json.writeEndArray();
-            json.writeEndObject(); // of root
-            json.close(); // finish writing and close StringWriter
-            
-            // write json
-            return s.toString();
-        } catch (IOException e) {
-            Log.getLog().warn(e);
-            return null;
+            return new ObjectMapper().writer().writeValueAsString(toMap(true));
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            return "";
         }
     }
     
+    public Map<String, Object> toMap(boolean withEnrichedData) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("count", Integer.toString(this.tweets.size()));
+        m.put("search_metadata", metadata);
+        List<Object> statuses = new ArrayList<>();
+        for (MessageEntry t: this) {
+            UserEntry u = this.users.get(t.getScreenName());
+            statuses.add(t.toMap(u, withEnrichedData));
+        }
+        m.put("statuses", statuses);
+        return m;
+    }
+    
     /**
-     * the tweet iterator returns tweets in descending appearance order (latest first)
+     * the tweet iterator returns tweets in descending appearance order (top first)
      */
     @Override
     public Iterator<MessageEntry> iterator() {
@@ -133,9 +161,9 @@ public class Timeline implements Iterable<MessageEntry> {
         if (this.size() < 2) {
             // try to calculate the period time based on the current time.
             // That may fail if the current time is not set correctly!
-            long timeInterval = System.currentTimeMillis() - this.getOldestTweet().created_at.getTime();
+            long timeInterval = System.currentTimeMillis() - this.getBottomTweet().created_at.getTime();
             long p = 1 + timeInterval / this.size();
-            if (p >= 10000) return p; else return 60000;
+            return p < 4000 ? p / 4 + 3000 : p;
         }
         
         // calculate the time based on the latest 20 tweets (or less)
@@ -146,13 +174,13 @@ public class Timeline implements Iterable<MessageEntry> {
             if (first == 0) {first = messageEntry.created_at.getTime(); continue;}
             last = messageEntry.created_at.getTime();
             count++;
-            if (count >= 20) break;
+            if (count >= 19) break;
         }
 
         if (count == 0) return 60000;
         long timeInterval = first - last;
         long p = 1 + timeInterval / count;
-        if (p >= 10000) return p; else return 60000;
+        return p < 4000 ? p / 4 + 3000 : p;
     }    
     
 }

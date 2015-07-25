@@ -33,6 +33,8 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -47,25 +49,27 @@ import org.loklak.tools.UTF8;
 
 public class TwitterScraper {
 
-    public static Timeline search(String query) {
+    public static ExecutorService executor = Executors.newFixedThreadPool(20);
+    
+    public static Timeline search(final String query, final Timeline.Order order) {
         // check
         // https://twitter.com/search-advanced for a better syntax
         // https://support.twitter.com/articles/71577-how-to-use-advanced-twitter-search#
         String https_url = "";
         try {
-            query = query.replace('+', ' ');
             StringBuilder t = new StringBuilder(query.length());
-            for (String s: query.split(" ")) {
+            for (String s: query.replace('+', ' ').split(" ")) {
                 t.append(' ');
-                if (s.startsWith("@")) {
-                    t.append('(').append("from:").append(s.substring(1)).append(" OR ").append("to:").append(s.substring(1)).append(" OR ").append(s).append(')');
+                if (s.startsWith("since:") || s.startsWith("until:")) {
+                    int u = s.indexOf('_');
+                    t.append(u < 0 ? s : s.substring(0, u));
                 } else {
                     t.append(s);
                 }
             }
-            String q = t.length() == 0 ? "*" : t.substring(1);
+            String q = t.length() == 0 ? "*" : URLEncoder.encode(t.substring(1), "UTF-8");
             //https://twitter.com/search?q=from:yacy_search&src=typd
-            https_url = "https://twitter.com/search?q=" + URLEncoder.encode(q, "UTF-8") + "&src=typd&vertical=default&f=tweets";
+            https_url = "https://twitter.com/search?q=" + q + "&src=typd&vertical=default&f=tweets";
         } catch (UnsupportedEncodingException e) {}
         Timeline timeline = null;
         try {
@@ -73,7 +77,7 @@ public class TwitterScraper {
             if (connection.inputStream == null) return null;
             try {
                 BufferedReader br = new BufferedReader(new InputStreamReader(connection.inputStream, UTF8.charset));
-                timeline = search(br);
+                timeline = search(br, order);
             } catch (IOException e) {
                e.printStackTrace();
             } finally {
@@ -82,13 +86,13 @@ public class TwitterScraper {
         } catch (IOException e) {
             // this could mean that twitter rejected the connection (DoS protection?)
             e.printStackTrace();
-            if (timeline == null) timeline = new Timeline();
+            if (timeline == null) timeline = new Timeline(order);
         };
         
         // wait until all messages in the timeline are ready
         if (timeline == null) {
             // timeout occurred
-            timeline = new Timeline();
+            timeline = new Timeline(order);
         } else {
             // wait until messages are ready (i.e. unshortening of shortlinks)
             for (MessageEntry m: timeline) {
@@ -100,8 +104,8 @@ public class TwitterScraper {
         return timeline;
     }
     
-    public static Timeline search(BufferedReader br) throws IOException {
-        Timeline timeline = new Timeline();
+    private static Timeline search(final BufferedReader br, final Timeline.Order order) throws IOException {
+        Timeline timeline = new Timeline(order);
         String input;
         Map<String, prop> props = new HashMap<String, prop>();
         Set<String> images = new LinkedHashSet<>();
@@ -112,6 +116,10 @@ public class TwitterScraper {
             input = input.trim();
             //System.out.println(input); // uncomment temporary to debug or add new fields
             int p;
+            if ((p = input.indexOf("class=\"account-group")) > 0) {
+                props.put("userid", new prop(input, p, "data-user-id"));
+                continue;
+            }
             if ((p = input.indexOf("class=\"avatar")) > 0) {
                 props.put("useravatarurl", new prop(input, p, "src"));
                 continue;
@@ -174,8 +182,8 @@ public class TwitterScraper {
             if ((p = input.indexOf("<source video-src")) >= 0 && input.indexOf("type=\"video/") > p) {
                 videos.add(new prop(input, p, "video-src").value);
                 continue;
-            }            
-            if ((p = input.indexOf("class=\"ProfileTweet-geo")) > 0) {
+            }
+            if ((p = input.indexOf("class=\"Tweet-geo")) > 0) {
                 prop place_name_prop = new prop(input, p, "title");
                 place_name = place_name_prop.value;
                 continue;
@@ -185,12 +193,13 @@ public class TwitterScraper {
                 place_id = place_id_prop.value;
                 continue;
             }
-            if (props.size() == 9) {
+            if (props.size() == 10) {
                 // the tweet is complete, evaluate the result
                 UserEntry user = new UserEntry(
+                        props.get("userid").value,
                         props.get("usernickname").value,
                         props.get("useravatarurl").value,
-                        props.get("userfullname").value
+                        MessageEntry.html2utf8(props.get("userfullname").value)
                         );
                 ArrayList<String> imgs = new ArrayList<String>(images.size()); imgs.addAll(images);
                 ArrayList<String> vids = new ArrayList<String>(videos.size()); vids.addAll(videos);
@@ -204,7 +213,9 @@ public class TwitterScraper {
                         Long.parseLong(props.get("tweetfavouritecount").value),
                         imgs, vids, place_name, place_id
                         );
-                new Thread(tweet).start(); // todo: use thread pools
+                //new Thread(tweet).start(); // todo: use thread pools
+                //tweet.run(); // for debugging
+                executor.execute(tweet);
                 timeline.addUser(user);
                 timeline.addTweet(tweet);
                 images.clear();
@@ -315,9 +326,7 @@ public class TwitterScraper {
         }
 
         private void analyse() {
-            String text_raw = this.text;
-            for (int i = 0; i < text_raw.length(); i++) if (text_raw.charAt(i) < ' ') text_raw.replace(text_raw.charAt(i), ' '); // remove funny chars
-            this.text = text_raw.replaceAll("</?(s|b|strong)>", "").replaceAll("<a href=\"/hashtag.*?>", "").replaceAll("<a.*?class=\"twitter-atreply.*?>", "").replaceAll("<span.*?span>", "").replaceAll("  ", " ");
+            this.text = this.text.replaceAll("</?(s|b|strong)>", "").replaceAll("<a href=\"/hashtag.*?>", "").replaceAll("<a.*?class=\"twitter-atreply.*?>", "").replaceAll("<span.*?span>", "").replaceAll("  ", " ");
             while (true) {
                 try {
                     Matcher m = timeline_link_pattern.matcher(this.text);
@@ -365,10 +374,10 @@ public class TwitterScraper {
             try {
                 this.exists = new Boolean(DAO.existMessage(this.getIdStr()));
                 // only analyse and enrich the message if it does not actually exist in the search index because it will be abandoned otherwise anyway
-                if (!this.exists) {
+                //if (!this.exists) {
                     this.analyse();
                     this.enrich();
-                }
+                //}
             } catch (Throwable e) {
                 e.printStackTrace();
             } finally {
@@ -404,7 +413,7 @@ public class TwitterScraper {
      */
     public static void main(String[] args) {
         //wget --no-check-certificate "https://twitter.com/search?q=eifel&src=typd&f=realtime"
-        Timeline result = TwitterScraper.search(args[0]);
+        Timeline result = TwitterScraper.search(args[0], Timeline.Order.CREATED_AT);
         for (MessageEntry tweet : result) {
             System.out.println("@" + tweet.getScreenName() + " - " + tweet.getText());
         }

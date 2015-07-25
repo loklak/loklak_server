@@ -19,7 +19,6 @@
 
 package org.loklak.data;
 
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -27,20 +26,24 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
+import org.loklak.geo.GeoLocation;
+import org.loklak.geo.PlaceContext;
 import org.loklak.harvester.SourceType;
 import org.loklak.tools.DateParser;
-
-import com.fasterxml.jackson.core.JsonGenerator;
 
 /**
  * A Query is a recording of a search result based on the query.
@@ -86,7 +89,7 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
      * @param source_type
      * @throws MalformedURLException
      */
-    public QueryEntry(final String query, final int timezoneOffset, final Timeline timeline, final SourceType source_type, final boolean byUserQuery) {
+    public QueryEntry(final String query, final int timezoneOffset, final long message_period, final SourceType source_type, final boolean byUserQuery) {
         this.query = query;
         this.query_length = query.length();
         this.timezoneOffset = timezoneOffset;
@@ -96,7 +99,7 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
         this.messages_per_day = 0; // means: unknown
         this.score_retrieval = 0;
         this.score_suggest = 0;
-        update(timeline, byUserQuery);
+        update(message_period, byUserQuery);
         this.query_first = retrieval_last;
     }
 
@@ -129,14 +132,14 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
      * @param timeline the latest timeline retrieved from the target system
      * @param byUserQuery is true, if the query was submitted by the user; false if the query was submitted by an automatic system
      */
-    public void update(final Timeline timeline, final boolean byUserQuery) {
+    public void update(final long message_period, final boolean byUserQuery) {
         this.retrieval_last = new Date();
         this.retrieval_count++;
         if (byUserQuery) {
             this.query_count++;
             this.query_last = this.retrieval_last;
         }
-        long new_message_period = timeline.period(); // can be Long.MAX_VALUE if less than 2 messages are in timeline!
+        long new_message_period = message_period; // can be Long.MAX_VALUE if less than 2 messages are in timeline!
         int new_messages_per_day = (int) (DAY_MILLIS / new_message_period); // this is an interpolation based on the last tweet list, can be 0!
         if (new_message_period == Long.MAX_VALUE || new_messages_per_day == 0) {
             this.message_period = this.message_period == 0 ? DAY_MILLIS : Math.min(DAY_MILLIS, this.message_period * 2);
@@ -145,7 +148,7 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
         }
         this.messages_per_day = (int) (DAY_MILLIS / this.message_period);
         this.expected_next = new Date(this.retrieval_last.getTime() + ((long) (ttl_factor *  this.message_period)));
-        long pivot_period = DAO.getConfig("retrieval.pivotfrequency", 10000);
+        long pivot_period = DAO.getConfig("retrieval.queries.pivotfrequency", 10000);
         long strategic_period =   // if the period is far below the minimum, we apply a penalty
                  (this.message_period < pivot_period ?
                      pivot_period + 1000 * (long) Math.pow((pivot_period - this.message_period) / 1000, 3) :
@@ -215,30 +218,28 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
     }
 
     @Override
-    public void toJSON(JsonGenerator json) {
-        try {
-            json.writeStartObject();
-            json.writeObjectField("query", this.query);
-            json.writeObjectField("query_length", this.query_length);
-            json.writeObjectField("source_type", this.source_type.name());
-            json.writeObjectField("timezoneOffset", this.timezoneOffset);
-            if (this.query_first != null) writeDate(json, "query_first", this.query_first.getTime());
-            if (this.query_last != null) writeDate(json, "query_last", this.query_last.getTime());
-            if (this.retrieval_last != null) writeDate(json, "retrieval_last", this.retrieval_last.getTime());
-            if (this.retrieval_next != null) writeDate(json, "retrieval_next", this.retrieval_next.getTime());
-            if (this.expected_next != null) writeDate(json, "expected_next", this.expected_next.getTime());
-            json.writeObjectField("query_count", this.query_count);
-            json.writeObjectField("retrieval_count", this.retrieval_count);
-            json.writeObjectField("message_period", this.message_period);
-            json.writeObjectField("messages_per_day", this.messages_per_day);
-            json.writeObjectField("score_retrieval", this.score_retrieval);
-            json.writeObjectField("score_suggest", this.score_suggest);
-            json.writeEndObject();
-        } catch (IOException e) {
-        }
+    public Map<String, Object> toMap() {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("query", this.query);
+        m.put("query_length", this.query_length);
+        m.put("source_type", this.source_type.name());
+        m.put("timezoneOffset", this.timezoneOffset);
+        if (this.query_first != null) m.put("query_first", utcFormatter.print(this.query_first.getTime()));
+        if (this.query_last != null) m.put("query_last", utcFormatter.print(this.query_last.getTime()));
+        if (this.retrieval_last != null) m.put("retrieval_last", utcFormatter.print(this.retrieval_last.getTime()));
+        if (this.retrieval_next != null) m.put("retrieval_next", utcFormatter.print(this.retrieval_next.getTime()));
+        if (this.expected_next != null) m.put("expected_next", utcFormatter.print(this.expected_next.getTime()));
+        m.put("query_count", this.query_count);
+        m.put("retrieval_count", this.retrieval_count);
+        m.put("message_period", this.message_period);
+        m.put("messages_per_day", this.messages_per_day);
+        m.put("score_retrieval", this.score_retrieval);
+        m.put("score_suggest", this.score_suggest);
+        return m;
     }
 
     private final static Pattern tokenizerPattern = Pattern.compile("([^\"]\\S*|\".+?\")\\s*"); // tokenizes Strings into terms respecting quoted parts
+    
     private static enum Constraint {
         image("images"),
         audio("audio"),
@@ -247,7 +248,11 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
         location("location_point"),
         link("links"),
         mention("mentions"),
-        hashtag("hashtags");
+        source_type("source_type"),
+        hashtag("hashtags"),
+        emotion("classifier_emotion"),
+        profanity("classifier_profanity"),
+        language("classifier_language");
         protected String field_name;
         protected Pattern pattern;
         private Constraint(String field_name) {
@@ -256,55 +261,109 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
         }
     }
     
-    
-    public static String removeConstraints(String q) {
-        for (Constraint c: Constraint.values()) {
-            q = c.pattern.matcher(q).replaceAll("");
+    public static class Tokens {
+        
+        public final String original, raw;
+        public final HashSet<String> constraints_positive, constraints_negative;
+        public PlaceContext place_context;
+        public double[] bbox;
+        
+        public Tokens(final String q) {
+            this.original = q;
+            List<String> tokens = new ArrayList<String>();
+            Matcher m = tokenizerPattern.matcher(q);
+            while (m.find()) tokens.add(m.group(1));
+
+            this.constraints_positive = new HashSet<>();
+            this.constraints_negative = new HashSet<>();
+            StringBuilder rawb = new StringBuilder(q.length() + 1);
+            for (String t: tokens) {
+                if (t.startsWith("/")) this.constraints_positive.add(t.substring(1));
+                else if (t.startsWith("-/")) this.constraints_negative.add(t.substring(2));
+                else rawb.append(t).append(' ');
+            }
+            this.place_context = this.constraints_positive.remove("about") ? PlaceContext.ABOUT : PlaceContext.FROM;
+            if (this.constraints_negative.remove("about")) this.place_context = PlaceContext.FROM;
+            if (rawb.length() > 0 && rawb.charAt(rawb.length() - 1) == ' ') rawb.setLength(rawb.length() - 1);
+            this.raw = rawb.toString();
+            
+            // find bbox
+            this.bbox = null;
+            bboxsearch: for (String cs: this.constraints_positive) {
+                if (cs.startsWith(Constraint.location.name() + "=")) {
+                    String params = cs.substring(Constraint.location.name().length() + 1);
+                    String[] coord = params.split(",");
+                    if (coord.length == 4) {
+                        this.bbox = new double[4];
+                        for (int i = 0; i < 4; i++) this.bbox[i] = Double.parseDouble(coord[i]);
+                        break bboxsearch;
+                    }
+                }
+            }
         }
-        return q;
+        
+        public String translate4scraper() {
+            // check if a location constraint was given
+            if (this.bbox == null) return this.raw;
+            // find place within the bbox
+            double lon_west  = this.bbox[0];
+            double lat_south = this.bbox[1];
+            double lon_east  = this.bbox[2];
+            double lat_north = this.bbox[3];
+            assert lon_west < lon_east;
+            assert lat_north > lat_south;
+            // find largest city around to compute a 'near:' operator for twitter
+            double lon_km = 40000 / 360 * (lon_east - lon_west);
+            double lat_km = 40000 / 360 * (lat_north- lat_south);
+            double within_km = Math.max(2.0, Math.max(lon_km, lat_km) / 2);
+            double lon_border = (lon_east - lon_west) / 3;
+            double lat_border = (lat_north - lat_south) / 3;
+            GeoLocation largestCity = DAO.geoNames.getLargestCity(lon_west + lon_border, lat_south + lat_border, lon_east - lon_border, lat_north - lat_border);
+            if (largestCity == null) largestCity = DAO.geoNames.getLargestCity(lon_west, lat_south, lon_east, lat_north);
+            if (largestCity == null) largestCity = DAO.geoNames.cityNear((lat_north + lat_south) / 2.0, (lon_east + lon_west) / 2.0);
+            String q = this.raw + " near:\"" + largestCity.getNames().iterator().next() + "\" within:" + ((int) (within_km / 1.609344)) + "mi"; // stupid imperial units are stupid
+            return q;
+        }
     }
     
-    public static Timeline applyConstraint(Timeline tl0, String query) {
-        // tokenize the query
-        List<String> qe = new ArrayList<String>();
-        Matcher m = tokenizerPattern.matcher(query);
-        while (m.find()) qe.add(m.group(1));
-
-        HashSet<String> constraints_positive = new HashSet<>();
-        HashSet<String> constraints_negative = new HashSet<>();
-        for (String t: qe) {
-            if (t.startsWith("/")) constraints_positive.add(t.substring(1));
-            if (t.startsWith("-/")) constraints_negative.add(t.substring(2));
-        }
-        Timeline tl1 = new Timeline();
+    public static Timeline applyConstraint(Timeline tl0, Tokens tokens) {
+        if (tokens.constraints_positive.size() == 0 && tokens.constraints_negative.size() == 0) return tl0;
+        Timeline tl1 = new Timeline(tl0.getOrder());
         messageloop: for (MessageEntry message: tl0) {
-            if (constraints_positive.contains("image") && message.getImages().size() == 0) continue;
-            if (constraints_negative.contains("image") && message.getImages().size() != 0) continue;
-            if (constraints_positive.contains("place") && message.getPlaceName().length() == 0) continue;
-            if (constraints_negative.contains("place") && message.getPlaceName().length() != 0) continue;
-            if (constraints_positive.contains("location") && message.getLocationPoint() == null) continue;
-            if (constraints_negative.contains("location") && message.getLocationPoint() != null) continue;
-            if (constraints_positive.contains("link") && message.getLinks().length == 0) continue;
-            if (constraints_negative.contains("link") && message.getLinks().length != 0) continue;
-            if (constraints_positive.contains("mention") && message.getMentions().length == 0) continue;
-            if (constraints_negative.contains("mention") && message.getMentions().length != 0) continue;
-            if (constraints_positive.contains("hashtag") && message.getHashtags().length == 0) continue;
-            if (constraints_negative.contains("hashtag") && message.getHashtags().length != 0) continue;
-
+            if (tokens.constraints_positive.contains("image") && message.getImages().size() == 0) continue;
+            if (tokens.constraints_negative.contains("image") && message.getImages().size() != 0) continue;
+            if (tokens.constraints_positive.contains("place") && message.getPlaceName().length() == 0) continue;
+            if (tokens.constraints_negative.contains("place") && message.getPlaceName().length() != 0) continue;
+            if (tokens.constraints_positive.contains("location") && (message.getLocationPoint() == null || message.getPlaceContext() != tokens.place_context)) continue;
+            if (tokens.constraints_negative.contains("location") && message.getLocationPoint() != null) continue;
+            if (tokens.constraints_positive.contains("link") && message.getLinks().length == 0) continue;
+            if (tokens.constraints_negative.contains("link") && message.getLinks().length != 0) continue;
+            if (tokens.constraints_positive.contains("mention") && message.getMentions().length == 0) continue;
+            if (tokens.constraints_negative.contains("mention") && message.getMentions().length != 0) continue;
+            if (tokens.constraints_positive.contains("hashtag") && message.getHashtags().length == 0) continue;
+            if (tokens.constraints_negative.contains("hashtag") && message.getHashtags().length != 0) continue;
+            for (Classifier.Context context: Classifier.Context.values()) {
+                if (tokens.constraints_positive.contains(context.name()) && message.getClassifier(context) == null) continue messageloop;
+                if (tokens.constraints_negative.contains(context.name()) && message.getClassifier(context) != null) continue messageloop;
+            }
+            
             // special treatment of location and link constraint
-            constraintCheck: for (String cs: constraints_positive) {
+            constraintCheck: for (String cs: tokens.constraints_positive) {
                 if (cs.startsWith(Constraint.location.name() + "=")) {
                     if (message.getLocationPoint() == null) continue messageloop;
+                    if (message.getPlaceContext() != tokens.place_context) continue messageloop;
                     String params = cs.substring(Constraint.location.name().length() + 1);
                     String[] coord = params.split(",");
                     if (coord.length == 4) {
                         double lon = message.getLocationPoint()[0];
                         double lon_west  = Double.parseDouble(coord[0]);
                         double lon_east  = Double.parseDouble(coord[2]);
+                        assert lon_west < lon_east;
                         if (lon < lon_west || lon > lon_east) continue messageloop;
                         double lat = message.getLocationPoint()[1];
                         double lat_south = Double.parseDouble(coord[1]);
                         double lat_north = Double.parseDouble(coord[3]);
+                        assert lat_north > lat_south;
                         if (lat < lat_south || lat > lat_north) continue messageloop;
                     }
                 }
@@ -324,6 +383,30 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
         return tl1;
     }
     
+    private final static Pattern term4ORPattern = Pattern.compile("(?:^| )(\\S*(?: OR \\S*)+)(?: |$)"); // Pattern.compile("(^\\s*(?: OR ^\\s*+)+)");
+    
+    private static List<String> splitIntoORGroups(String q) {
+        // detect usage of OR junctor usage. Right now we cannot have mixed AND and OR usage. Thats a hack right now
+        q = q.replaceAll(" AND ", " "); // AND is default
+        
+        // tokenize the query
+        ArrayList<String> list = new ArrayList<>();
+        Matcher m = term4ORPattern.matcher(q);
+        while (m.find()) {
+            String d = m.group(1);
+            q = q.replace(d, "").replace("  ", " ");
+            list.add(d);
+            m = term4ORPattern.matcher(q);
+        }
+        q = q.trim();
+        if (q.length() > 0) list.add(0, q);
+        return list;
+    }
+    
+    public static void main(String[] args) {
+        splitIntoORGroups("Alpha OR Beta AND Gamma /constraint sand OR kies OR wasser skilanglauf");
+    }
+    
     public static class ElasticsearchQuery {
         
         QueryBuilder queryBuilder;
@@ -334,17 +417,31 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
             this.since = new Date(0);
             this.until = new Date(Long.MAX_VALUE);
             // parse the query
-            this.queryBuilder = parse(q, timezoneOffset);
+            this.queryBuilder = preparse(q, timezoneOffset);
+        }
+
+        private QueryBuilder preparse(String q, int timezoneOffset) {
+            // detect usage of OR connector usage.
+            q = q.replaceAll(" AND ", " "); // AND is default
+            List<String> terms = splitIntoORGroups(q);
+            if (terms.size() == 0) return QueryBuilders.matchAllQuery();
+            if (terms.size() == 1) return parse(terms.get(0), timezoneOffset);
+
+            BoolQueryBuilder aquery = QueryBuilders.boolQuery();
+            for (String t: terms) {
+                aquery.must(parse(t, timezoneOffset));
+            }
+            return aquery;
         }
         
         private QueryBuilder parse(String q, int timezoneOffset) {
-            // detect usage of OR junctor usage. Right now we cannot have mixed AND and OR usage. Thats a hack right now
+            // detect usage of OR ORconnective usage. Because of the preparse step we will have only OR or only AND here.
             q = q.replaceAll(" AND ", " "); // AND is default
-            boolean ORjunctor = q.indexOf(" OR ") >= 0;
+            boolean ORconnective = q.indexOf(" OR ") >= 0;
             q = q.replaceAll(" OR ", " "); // if we know that all terms are OR, we remove that and apply it later
             
             // tokenize the query
-            List<String> qe = new ArrayList<String>();
+            Set<String> qe = new LinkedHashSet<String>();
             Matcher m = tokenizerPattern.matcher(q);
             while (m.find()) qe.add(m.group(1));
             
@@ -414,29 +511,66 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
                 }
             }
             if (modifier.containsKey("to")) users_positive.add(modifier.get("to"));
+            if (modifier.containsKey("-to")) users_negative.add(modifier.get("-to"));
+
+            // special constraints
+            boolean constraint_about = constraints_positive.remove("about");
+            if (constraints_negative.remove("about")) constraint_about = false;
             
-            // compose query
-            BoolQueryBuilder bquery = QueryBuilders.boolQuery();
+            // compose query for text
+            List<QueryBuilder> ops = new ArrayList<>();
+            List<QueryBuilder> nops = new ArrayList<>();
             for (String text: text_positive_match)  {
-                if (ORjunctor)
-                    bquery.should(QueryBuilders.matchQuery("text", text));
-                else
-                    bquery.must(QueryBuilders.matchQuery("text", text));
+                ops.add(QueryBuilders.matchQuery("text", text));
             }
             for (String text: text_negative_match) {
                 // negation of terms in disjunctions would cause to retrieve almost all documents
                 // this cannot be the requirement of the user. It may be valid in conjunctions, but not in disjunctions
-                bquery.mustNot(QueryBuilders.matchQuery("text", text));
+                nops.add(QueryBuilders.matchQuery("text", text));
             }
-            if (modifier.containsKey("id")) bquery.must(QueryBuilders.termQuery("id_str", modifier.get("id")));
-            if (modifier.containsKey("-id")) bquery.mustNot(QueryBuilders.termQuery("id_str", modifier.get("-id")));
-            if (modifier.containsKey("from")) bquery.must(QueryBuilders.termQuery("screen_name", modifier.get("from")));
-            if (modifier.containsKey("-from")) bquery.mustNot(QueryBuilders.termQuery("screen_name", modifier.get("-from")));
+            
+            // apply modifiers
+            if (modifier.containsKey("id")) {
+                ops.add(QueryBuilders.termQuery("id_str", modifier.get("id")));
+            }
+            if (modifier.containsKey("-id")) nops.add(QueryBuilders.termQuery("id_str", modifier.get("-id")));
+
+            for (String user: users_positive) {
+                ops.add(QueryBuilders.termQuery("mentions", user));
+            }
+            for (String user: users_negative) nops.add(QueryBuilders.termQuery("mentions", user));
+            
+            for (String hashtag: hashtags_positive) {
+                ops.add(QueryBuilders.termQuery("hashtags", hashtag.toLowerCase()));
+            }
+            for (String hashtag: hashtags_negative) nops.add(QueryBuilders.termQuery("hashtags", hashtag.toLowerCase()));
+            
+            if (modifier.containsKey("from")) {
+                String screen_name = modifier.get("from");
+                if (screen_name.indexOf(',') < 0) {
+                    ops.add(QueryBuilders.termQuery("screen_name", screen_name));
+                } else {
+                    String[] screen_names = screen_name.split(",");
+                    BoolQueryBuilder disjunction = QueryBuilders.boolQuery();
+                    for (String name: screen_names) disjunction.should(QueryBuilders.termQuery("screen_name", name));
+                    ops.add(disjunction);
+                }
+            }
+            if (modifier.containsKey("-from")) {
+                String screen_name = modifier.get("-from");
+                if (screen_name.indexOf(',') < 0) {
+                    nops.add(QueryBuilders.termQuery("screen_name", screen_name));
+                } else {
+                    String[] screen_names = screen_name.split(",");
+                    for (String name: screen_names) nops.add(QueryBuilders.termQuery("screen_name", name));
+                }
+            }
             if (modifier.containsKey("near")) {
                 BoolQueryBuilder nearquery = QueryBuilders.boolQuery()
+                        .must(QueryBuilders.matchQuery("place_context", PlaceContext.FROM.name()))
                         .should(QueryBuilders.matchQuery("place_name", modifier.get("near")))
                         .should(QueryBuilders.matchQuery("text", modifier.get("near")));
-                bquery.must(nearquery);
+                if (ORconnective) ops.add(nearquery);
             }
             if (modifier.containsKey("since")) try {
                 Calendar since = DateParser.parse(modifier.get("since"), timezoneOffset);
@@ -454,7 +588,7 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
                 } else {
                     this.until = new Date(Long.MAX_VALUE);
                 }
-                bquery.must(rangeQuery);
+                ops.add(rangeQuery);
             } catch (ParseException e) {} else if (modifier.containsKey("until")) try {
                 Calendar until = DateParser.parse(modifier.get("until"), timezoneOffset);
                 if (until.get(Calendar.HOUR) == 0 && until.get(Calendar.MINUTE) == 0) {
@@ -464,48 +598,73 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
                 }
                 this.until = until.getTime();
                 RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery("created_at").to(this.until);
-                bquery.must(rangeQuery);
+                ops.add(rangeQuery);
             } catch (ParseException e) {}
+
+            // apply the ops and nops
+            QueryBuilder bquery = QueryBuilders.boolQuery();
+            if (ops.size() == 1 && nops.size() == 0)
+                bquery = ops.iterator().next();
+            else if (ops.size() == 0 && nops.size() == 1)
+                bquery = QueryBuilders.boolQuery().mustNot(ops.iterator().next());
+            else {
+                for (QueryBuilder qb: ops) {
+                    if (ORconnective) ((BoolQueryBuilder) bquery).should(qb); else ((BoolQueryBuilder) bquery).must(qb);
+                }
+                for (QueryBuilder nqb: nops) {
+                    ((BoolQueryBuilder) bquery).mustNot(nqb);
+                }
+                
+            }
             
             // apply constraints as filters
-            QueryBuilder cquery = bquery;
-            for (String text: text_positive_filter) cquery = QueryBuilders.filteredQuery(cquery, FilterBuilders.termsFilter("text", text));
-            for (String text: text_negative_filter) cquery = QueryBuilders.filteredQuery(cquery, FilterBuilders.notFilter(FilterBuilders.termsFilter("text", text)));
-            for (String user: users_positive) cquery = QueryBuilders.filteredQuery(cquery, FilterBuilders.inFilter("mentions", user));
-            for (String user: users_negative) cquery = QueryBuilders.filteredQuery(cquery, FilterBuilders.notFilter(FilterBuilders.inFilter("mentions", user)));
-            for (String hashtag: hashtags_positive) cquery = QueryBuilders.filteredQuery(cquery, FilterBuilders.inFilter("hashtags", hashtag.toLowerCase()));
-            for (String hashtag: hashtags_negative) cquery = QueryBuilders.filteredQuery(cquery, FilterBuilders.notFilter(FilterBuilders.inFilter("hashtags", hashtag.toLowerCase())));
+            List<FilterBuilder> filters = new ArrayList<>();
+            for (String text: text_positive_filter) {
+                filters.add(FilterBuilders.termsFilter("text", text));
+            }
+            for (String text: text_negative_filter) filters.add(FilterBuilders.notFilter(FilterBuilders.termsFilter("text", text)));
             for (Constraint c: Constraint.values()) {
                 if (constraints_positive.contains(c.name())) {
-                    cquery = QueryBuilders.filteredQuery(cquery, FilterBuilders.existsFilter(c.field_name));
+                    filters.add(FilterBuilders.existsFilter(c.field_name));
                 }
                 if (constraints_negative.contains(c.name())) {
-                    cquery = QueryBuilders.filteredQuery(cquery, FilterBuilders.notFilter(FilterBuilders.existsFilter(c.field_name)));
+                    filters.add(FilterBuilders.notFilter(FilterBuilders.existsFilter(c.field_name)));
                 }
             }
+            if (constraints_positive.contains("location")) {
+                filters.add(FilterBuilders.termsFilter("place_context", (constraint_about ? PlaceContext.ABOUT : PlaceContext.FROM).name()));
+            }
+            
             // special treatment of location constraints of the form /location=lon-west,lat-south,lon-east,lat-north i.e. /location=8.58,50.178,8.59,50.181
             for (String cs: constraints_positive) {
                 if (cs.startsWith(Constraint.location.name() + "=")) {
                     String params = cs.substring(Constraint.location.name().length() + 1);
                     String[] coord = params.split(",");
-                    if (coord.length == 4) {
+                    if (coord.length == 1) {
+                        filters.add(FilterBuilders.termsFilter("location_source", coord[0]));
+                    }
+                    else if (coord.length == 4 || coord.length == 5) {
                         double lon_west  = Double.parseDouble(coord[0]);
                         double lat_south = Double.parseDouble(coord[1]);
                         double lon_east  = Double.parseDouble(coord[2]);
                         double lat_north = Double.parseDouble(coord[3]);
-                        cquery = QueryBuilders.filteredQuery(cquery, FilterBuilders.existsFilter(Constraint.location.field_name));
-                        cquery = QueryBuilders.filteredQuery(cquery, FilterBuilders.geoBoundingBoxFilter("location_point")
+                        PlaceContext context = constraint_about ? PlaceContext.ABOUT : PlaceContext.FROM;
+                        filters.add(FilterBuilders.existsFilter(Constraint.location.field_name));
+                        filters.add(FilterBuilders.termsFilter("place_context", context.name()));
+                        filters.add(FilterBuilders.geoBoundingBoxFilter("location_point")
                                 .topLeft(lat_north, lon_west)
                                 .bottomRight(lat_south, lon_east));
+                        if (coord.length == 5) filters.add(FilterBuilders.termsFilter("location_source", coord[4]));
                     }
                 }
                 if (cs.startsWith(Constraint.link.name() + "=")) {
                     String regexp = cs.substring(Constraint.link.name().length() + 1);
-                    cquery = QueryBuilders.filteredQuery(cquery, FilterBuilders.existsFilter(Constraint.link.field_name));
-                    cquery = QueryBuilders.filteredQuery(cquery, FilterBuilders.regexpFilter(Constraint.link.field_name, regexp));
+                    filters.add(FilterBuilders.existsFilter(Constraint.link.field_name));
+                    filters.add(FilterBuilders.regexpFilter(Constraint.link.field_name, regexp));
                 }
             }
-            
+
+            QueryBuilder cquery = filters.size() == 0 ? bquery : QueryBuilders.filteredQuery(bquery, FilterBuilders.andFilter(filters.toArray(new FilterBuilder[filters.size()])));
             return cquery;
         }
     }

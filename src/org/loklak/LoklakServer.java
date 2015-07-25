@@ -1,5 +1,5 @@
 /**
- *  Messages
+ *  LoklakServer
  *  Copyright 22.02.2015 by Michael Peter Christen, @0rb1t3r
  *
  *  This library is free software; you can redistribute it and/or
@@ -20,7 +20,14 @@
 package org.loklak;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
 import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Set;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.MultipartConfigElement;
@@ -31,6 +38,7 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.DefaultHandler;
+import org.eclipse.jetty.server.handler.ErrorHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
@@ -43,6 +51,7 @@ import org.loklak.api.server.AssetServlet;
 import org.loklak.api.server.CampaignServlet;
 import org.loklak.api.server.CrawlerServlet;
 import org.loklak.api.server.DumpDownloadServlet;
+import org.loklak.api.server.GeocodeServlet;
 import org.loklak.api.server.HelloServlet;
 import org.loklak.api.server.PeersServlet;
 import org.loklak.api.server.ProxyServlet;
@@ -53,14 +62,29 @@ import org.loklak.api.server.SettingsServlet;
 import org.loklak.api.server.StatusServlet;
 import org.loklak.api.server.SuggestServlet;
 import org.loklak.api.server.AccountServlet;
+import org.loklak.api.server.ThreaddumpServlet;
+import org.loklak.api.server.FossasiaPushServlet;
 import org.loklak.data.DAO;
+import org.loklak.harvester.TwitterScraper;
 import org.loklak.tools.Browser;
 import org.loklak.vis.server.MapServlet;
 import org.loklak.vis.server.MarkdownServlet;
 
 public class LoklakServer {
 
-    public static String USER_AGENT = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.4; en-US; rv:1.9.2.2) Gecko/20100316 Firefox/3.6.2";
+    private final static Set<PosixFilePermission> securePerm = new HashSet<PosixFilePermission>();
+    
+    static {
+        securePerm.add(PosixFilePermission.OWNER_READ);
+        securePerm.add(PosixFilePermission.OWNER_WRITE);
+        securePerm.add(PosixFilePermission.OWNER_EXECUTE);
+    }
+    
+    public final static void protectPath(Path path) {
+        try {
+            Files.setPosixFilePermissions(path, LoklakServer.securePerm);
+        } catch (UnsupportedOperationException | IOException e) {}
+    }
     
     private static Server server = null;
     private static Caretaker caretaker = null;
@@ -69,10 +93,15 @@ public class LoklakServer {
         System.setProperty("java.awt.headless", "true"); // no awt used here so we can switch off that stuff
         
         // init config, log and elasticsearch
-        File data = new File(new File("."), "data");
-        if (!data.exists()) data.mkdirs();
-        File tmp = new File(data, "tmp");
-        if (!tmp.exists()) data.mkdirs();
+        Path data = FileSystems.getDefault().getPath("data");
+        File dataFile = data.toFile();
+        if (!dataFile.exists()) dataFile.mkdirs(); // should already be there since the start.sh script creates it
+
+        File pid = new File(dataFile, "loklak.pid");
+        if (pid.exists()) pid.deleteOnExit(); // thats a signal for the stop.sh script that loklak has terminated
+        
+        File tmp = new File(dataFile, "tmp");
+        if (!tmp.exists()) dataFile.mkdirs();
         DAO.init(data);
         
         /// https
@@ -127,6 +156,7 @@ public class LoklakServer {
         servletHandler.addServlet(AccountServlet.class, "/api/account.json");
         servletHandler.addServlet(CampaignServlet.class, "/api/campaign.json");
         servletHandler.addServlet(SettingsServlet.class, "/api/settings.json");
+        servletHandler.addServlet(GeocodeServlet.class, "/api/geocode.json");
         servletHandler.addServlet(ProxyServlet.class, "/api/proxy.gif");
         servletHandler.addServlet(ProxyServlet.class, "/api/proxy.png");
         servletHandler.addServlet(ProxyServlet.class, "/api/proxy.jpg");
@@ -136,9 +166,11 @@ public class LoklakServer {
         ServletHolder geojsonPushServletHolder = new ServletHolder(GeoJsonPushServlet.class);
         geojsonPushServletHolder.getRegistration().setMultipartConfig(new MultipartConfigElement(tmp.getAbsolutePath()));
         servletHandler.addServlet(geojsonPushServletHolder, "/api/push/geojson.json");
+        servletHandler.addServlet(FossasiaPushServlet.class, "/api/push/fossasia.json");
         ServletHolder assetServletHolder = new ServletHolder(AssetServlet.class);
         assetServletHolder.getRegistration().setMultipartConfig(new MultipartConfigElement(tmp.getAbsolutePath()));
         servletHandler.addServlet(assetServletHolder, "/api/asset");
+        servletHandler.addServlet(ThreaddumpServlet.class, "/api/threaddump.txt");
         servletHandler.addServlet(MarkdownServlet.class, "/vis/markdown.gif");
         servletHandler.addServlet(MarkdownServlet.class, "/vis/markdown.gif.base64");
         servletHandler.addServlet(MarkdownServlet.class, "/vis/markdown.png");
@@ -151,6 +183,10 @@ public class LoklakServer {
         servletHandler.addServlet(MapServlet.class, "/vis/map.png.base64");
         servletHandler.addServlet(MapServlet.class, "/vis/map.jpg");
         servletHandler.addServlet(MapServlet.class, "/vis/map.jpg.base64");
+        
+        ErrorHandler errorHandler = new ErrorHandler();
+        errorHandler.setShowStacks(true);
+        servletHandler.setErrorHandler(errorHandler);
         
         ResourceHandler fileHandler = new ResourceHandler();
         fileHandler.setDirectoriesListed(true);
@@ -186,6 +222,7 @@ public class LoklakServer {
                     LoklakServer.server.stop();
                     LoklakServer.caretaker.shutdown();
                     DAO.close();
+                    TwitterScraper.executor.shutdown();
                     Log.getLog().info("main terminated, goodby.");
                 } catch (Exception e) {
                 }

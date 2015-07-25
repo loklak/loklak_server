@@ -20,8 +20,8 @@
 package org.loklak.api.server;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -36,10 +36,11 @@ import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.loklak.data.AccountEntry;
 import org.loklak.data.DAO;
 import org.loklak.data.UserEntry;
+import org.loklak.harvester.TwitterAPI;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
-import com.fasterxml.jackson.core.util.MinimalPrettyPrinter;
+import twitter4j.TwitterException;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class AccountServlet extends HttpServlet {
    
@@ -57,18 +58,16 @@ public class AccountServlet extends HttpServlet {
      
         // manage DoS
         if (post.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;}
-        if (!post.isLocalhostAccess()) {response.sendError(503, "access only allowed from localhost"); return;}
-        
-        // security
-        boolean local = post.isLocalhostAccess();
-        if (!local) {response.sendError(503, "access from localhost only"); return;}
+        if (!post.isLocalhostAccess()) {response.sendError(503, "access only allowed from localhost"); return;} // danger! do not remove this!
         
         // parameters
         String callback = post.get("callback", "");
         boolean jsonp = callback != null && callback.length() > 0;
         boolean minified = post.get("minified", false);
-        boolean update = local && "update".equals(post.get("action", ""));
+        boolean update = "update".equals(post.get("action", ""));
         String screen_name = post.get("screen_name", "");
+        String followers = post.get("followers", "0");
+        int maxFollowers = Integer.parseInt(followers);
         
         String data = post.get("data", "");
         if (update) {
@@ -108,37 +107,40 @@ public class AccountServlet extends HttpServlet {
             }
         }
 
-        UserEntry userEntry = DAO.searchLocalUser(screen_name);
-        AccountEntry accountEntry = local ? DAO.searchLocalAccount(screen_name) : null; // DANGER! without the local we do not protet the account data
+        UserEntry userEntry = DAO.searchLocalUserByScreenName(screen_name);
+        AccountEntry accountEntry = DAO.searchLocalAccount(screen_name);
+        Map<String, Object> twitterUserEntry = null;
+        try {twitterUserEntry = TwitterAPI.getUser(screen_name);} catch (TwitterException e) {}
+        Map<String, Object> twitterFollowersEntry = null;
+        try {
+            twitterFollowersEntry = maxFollowers > 0 ? TwitterAPI.getFollowers(screen_name, maxFollowers) : null;
+        } catch (TwitterException e) {
+        }
         
         post.setResponse(response, "application/javascript");
         
         // generate json
-        final StringWriter s = new StringWriter();
-        JsonGenerator json = DAO.jsonFactory.createGenerator(s);
-        json.setPrettyPrinter(minified ? new MinimalPrettyPrinter() : new DefaultPrettyPrinter());
+        Map<String, Object> m = new LinkedHashMap<>();
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("count", userEntry == null ? "0" : "1");
+        metadata.put("client", post.getClientHost());
+        m.put("search_metadata", metadata);
 
-        json.writeStartObject();
-
-        json.writeObjectFieldStart("search_metadata");
-        json.writeObjectField("count", userEntry == null ? "0" : "1");
-        json.writeObjectField("client", post.getClientHost());
-        json.writeEndObject(); // of search_metadata
-
-        json.writeArrayFieldStart("accounts");
+        // create a list of accounts. Why a list? Because the same user may have accounts for several services.
+        List<Object> accounts = new ArrayList<>();
         if (accountEntry == null) {
-            if (userEntry != null) AccountEntry.toEmptyAccountJSON(json, userEntry);
+            if (userEntry != null) accounts.add(AccountEntry.toEmptyAccount(userEntry));
         } else {
-            accountEntry.toJSON(json, userEntry);
+            accounts.add(accountEntry.toMap(userEntry));
         }
-        json.writeEndArray(); // of users
-        json.writeEndObject(); // of root
-        json.close();
+        m.put("accounts", accounts);
+        if (twitterUserEntry != null) m.put("user", twitterUserEntry);
+        if (twitterFollowersEntry != null) m.put("topology", twitterFollowersEntry);
         
         // write json
         ServletOutputStream sos = response.getOutputStream();
         if (jsonp) sos.print(callback + "(");
-        sos.print(s.toString());
+        sos.print((minified ? new ObjectMapper().writer() : new ObjectMapper().writerWithDefaultPrettyPrinter()).writeValueAsString(m));
         if (jsonp) sos.println(");");
         sos.println();
     }
