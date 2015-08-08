@@ -27,10 +27,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.loklak.tools.JsonDump.ConcurrentReader;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+
 public class JsonDataset {
     
     private final JsonDump indexDump;
     private final Map<String, Index> index;
+    private final JsonMinifier minifier;
     
     /**
      * define a data set
@@ -42,6 +45,7 @@ public class JsonDataset {
     public JsonDataset(File dump_dir, String dump_file_prefix, String[] index_keys) throws IOException {
         this.indexDump = new JsonDump(dump_dir, dump_file_prefix, null);
         this.index = new ConcurrentHashMap<>();
+        this.minifier = new JsonMinifier();
         for (String idx: index_keys) this.index.put(idx, new Index());
         int concurrency = Runtime.getRuntime().availableProcessors();
         final ConcurrentReader reader = indexDump.getOwnDumpReader(concurrency);
@@ -55,11 +59,16 @@ public class JsonDataset {
                         try {
                             while ((obj = reader.take()) != JsonDump.POISON_JSON_MAP) {
                                 // write index to object
-                                for (Map.Entry<String, Index> idxo: JsonDataset.this.index.entrySet()) {
-                                    Object x = obj.get(idxo.getKey());
-                                    if (x != null) idxo.getValue().put(x, obj);
-                                }
                                 Object op = obj.remove(new String(JsonDump.OPERATION_KEY));
+                                try {
+                                    JsonMinifier.Capsule json = JsonDataset.this.minifier.minify(obj);
+                                    for (Map.Entry<String, Index> idxo: JsonDataset.this.index.entrySet()) {
+                                        Object x = obj.get(idxo.getKey());
+                                        if (x != null) idxo.getValue().put(x, json);
+                                    }
+                                } catch (JsonProcessingException e) {
+                                    e.printStackTrace();
+                                }
                             }
                         } catch (InterruptedException e) {
                             e.printStackTrace();
@@ -81,13 +90,14 @@ public class JsonDataset {
      * @throws IOException
      */
     public void putUnique(Map<String, Object> obj) throws IOException {
+        JsonMinifier.Capsule json = this.minifier.minify(obj);
         idxstore: for (Map.Entry<String, Index> idxo: this.index.entrySet()) {
             String idx_field = idxo.getKey();
             Object value = obj.get(idx_field);
             if (value != null) {
                 Index index = idxo.getValue();
                 if (index.containsKey(value)) continue idxstore; // we don't overwrite existing indexes
-                index.put(value, obj);
+                index.put(value, json);
             }
         }
         indexDump.write(obj, 'I');
@@ -101,9 +111,8 @@ public class JsonDataset {
         this.indexDump.close();
     }
     
-    
-    public static class Index extends ConcurrentHashMap<Object, Map<String, Object>> implements Map<Object, Map<String, Object>> {
-        private static final long serialVersionUID = 4596787150066539880L;
+    public static class Index extends ConcurrentHashMap<Object, JsonMinifier.Capsule> implements Map<Object, JsonMinifier.Capsule> {
+        private static final long serialVersionUID = 4596787150066539880L;        
     }
     
     public static void main(String[] args) {

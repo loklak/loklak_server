@@ -45,7 +45,7 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
     protected Date created_at, on, to; // created_at will allways be set, on means 'valid from' and 'to' means 'valid_until' and may not be set
     protected SourceType source_type; // where did the message come from
     protected ProviderType provider_type;  // who created the message
-    protected String provider_hash, screen_name, id_str, canonical_id, parent, text;
+    protected String provider_hash, screen_name, retweet_from, id_str, canonical_id, parent, text;
     protected URL status_id_url;
     protected long retweet_count, favourites_count;
     protected LinkedHashSet<String> images, audio, videos;
@@ -71,6 +71,7 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
         this.provider_type = ProviderType.NOONE;
         this.provider_hash = "";
         this.screen_name = "";
+        this.retweet_from = "";
         this.id_str = "";
         this.canonical_id = "";
         this.parent = "";
@@ -119,6 +120,7 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
         }
         this.provider_hash = (String) map.get("provider_hash");
         this.screen_name = (String) map.get("screen_name");
+        this.retweet_from = (String) map.get("retweet_from");
         this.id_str = (String) map.get("id_str");
         this.text = (String) map.get("text");
         try {
@@ -217,6 +219,14 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
         this.screen_name = user_screen_name;
     }
 
+    public String getRetweetFrom() {
+        return this.retweet_from;
+    }
+    
+    public void setRetweetFrom(String retweet_from) {
+        this.retweet_from = retweet_from;
+    }
+    
     public String getIdStr() {
         return id_str;
     }
@@ -449,21 +459,23 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
         // find location
         if ((this.location_point == null || this.location_point.length == 0) && DAO.geoNames != null) {
             GeoMark loc = null;
-            if (this.place_name != null && this.place_name.length() > 0 && (this.location_source == null || this.location_source != LocationSource.ANNOTATION)) {
+            if (this.place_name != null && this.place_name.length() > 0 &&
+                (this.location_source == null || this.location_source == LocationSource.ANNOTATION || this.location_source == LocationSource.PLACE)) {
                 loc = DAO.geoNames.analyse(this.place_name, null, 5, this.text.hashCode());
                 this.place_context = PlaceContext.FROM;
+                this.location_source = LocationSource.PLACE;
             }
             if (loc == null) {
                 loc = DAO.geoNames.analyse(this.text, this.hashtags, 5, this.text.hashCode());
                 this.place_context = PlaceContext.ABOUT;
+                this.location_source = LocationSource.ANNOTATION;
             }
             if (loc != null) {
-                this.place_name = loc.getNames().iterator().next();
+                if (this.place_name == null || this.place_name.length() == 0) this.place_name = loc.getNames().iterator().next();
                 this.location_radius = 0;
                 this.location_point = new double[]{loc.lon(), loc.lat()}; //[longitude, latitude]
                 this.location_mark = new double[]{loc.mlon(), loc.mlat()}; //[longitude, latitude]
-                this.location_source = LocationSource.ANNOTATION;
-                this.place_country = loc.getIO3166cc();
+                this.place_country = loc.getISO3166cc();
             }
         }
     }
@@ -489,6 +501,7 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
         if (this.on != null) m.put("on", utcFormatter.print(this.on.getTime()));
         if (this.to != null) m.put("to", utcFormatter.print(this.to.getTime()));
         m.put("screen_name", this.screen_name);
+        if (this.retweet_from != null && this.retweet_from.length() > 0) m.put("retweet_from", this.retweet_from);
         m.put("text", this.text); // the tweet
         if (this.status_id_url != null) m.put("link", this.status_id_url.toExternalForm());
         m.put("id_str", this.id_str);
@@ -507,7 +520,8 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
         m.put("place_id", this.place_id);
         if (this.place_context != null) m.put("place_context", this.place_context.name());
         if (this.place_country != null && this.place_country.length() == 2) {
-            m.put("place_country", this.place_country);
+            m.put("place_country", DAO.geoNames.getCountryName(this.place_country));
+            m.put("place_country_code", this.place_country);
             m.put("place_country_center", DAO.geoNames.getCountryCenter(this.place_country));
         }
   

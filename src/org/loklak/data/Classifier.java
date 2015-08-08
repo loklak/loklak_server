@@ -88,16 +88,20 @@ public class Classifier {
             }
         }
         public void learnPhrase(String phrase) {
-            List<String> words = normalize(phrase);
-            for (Map.Entry<Category, Set<String>> entry: categories.entrySet()) {
-                for (String word: words) {
-                    if (word.length() == 0) continue;
-                    if (entry.getValue().contains(word)) {
-                        bayes.learn(entry.getKey(), words);
+            try {
+                List<String> words = normalize(phrase);
+                for (Map.Entry<Category, Set<String>> entry: categories.entrySet()) {
+                    for (String word: words) {
+                        if (word.length() == 0) continue;
+                        if (entry.getValue().contains(word)) {
+                            bayes.learn(entry.getKey(), words);
+                        }
                     }
                 }
+                bayes.learn(NEGATIVE_FEATURE, words);
+            } catch (Throwable t) {
+                t.printStackTrace();
             }
-            bayes.learn(NEGATIVE_FEATURE, words);
         }
         public Classification<String, Category> classify(String phrase) {
             List<String> words = normalize(phrase);
@@ -127,10 +131,10 @@ public class Classifier {
         return map;
     }
     
-    public static void init(int count) {
+    public static void init(int maxsize, int initsize) {
         
         // load the context keys
-        for (Context c: Context.values()) c.init(count);
+        for (Context c: Context.values()) c.init(maxsize);
         /*
         // ensure consistency throughout the contexts: remove words which could confuse the bayesian filter
         for (Context c: Context.values()) {
@@ -143,7 +147,7 @@ public class Classifier {
          */
         
         // load a test set
-        DAO.SearchLocalMessages testset = new DAO.SearchLocalMessages("", Timeline.Order.CREATED_AT, 0, count, 0);
+        DAO.SearchLocalMessages testset = new DAO.SearchLocalMessages("", Timeline.Order.CREATED_AT, 0, initsize, 0);
         Timeline tl = testset.timeline;
         for (Context c: Context.values()) {
             //Set<String> voc = c.vocabulary();
