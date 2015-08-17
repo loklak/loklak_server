@@ -15,13 +15,18 @@ import java.util.*;
 
 public class PushServletHelper {
 
-    public static PushReport saveMessagesAndImportProfile(List<Map<String, Object>> messages, int fileHash, RemoteAccess.Post post, SourceType sourceType) throws IOException {
+    public static PushReport saveMessagesAndImportProfile(
+            List<Map<String, Object>> messages, int fileHash, RemoteAccess.Post post,
+            SourceType sourceType, String screenName) throws IOException {
         PushReport report = new PushReport();
         List<String> importedMsgIds = new ArrayList<>();
         for (Map<String, Object> message : messages) {
+            message.put("screen_name", screenName);
             Map<String, Object> user = (Map<String, Object>) message.remove("user");
+            if (user != null)
+                user.put("screen_name", screenName);
             MessageEntry messageEntry = new MessageEntry(message);
-            UserEntry userEntry = new UserEntry((user != null && user.get("screen_name") != null) ? user : new HashMap<String, Object>());
+            UserEntry userEntry = new UserEntry(user != null ? user : new HashMap<String, Object>());
             boolean successful;
             report.incrementRecordCount();
             try {
@@ -40,28 +45,25 @@ public class PushServletHelper {
         }
 
         if (report.getNewCount() > 0 ) {
-            ImportProfileEntry importProfileEntry = saveImportProfile(fileHash, post, sourceType, importedMsgIds);
+            ImportProfileEntry importProfileEntry = saveImportProfile(fileHash, post, sourceType, screenName, importedMsgIds);
             report.setImportProfile(importProfileEntry);
         }
 
         return report;
     }
 
-    protected static ImportProfileEntry saveImportProfile(int fileHash, RemoteAccess.Post post, SourceType sourceType, List<String> importedMsgIds) throws IOException {
+    protected static ImportProfileEntry saveImportProfile(int fileHash, RemoteAccess.Post post, SourceType sourceType, String screenName, List<String> importedMsgIds) throws IOException {
         ImportProfileEntry importProfileEntry ;
         Map<String, Object> profile = new HashMap<>();
         profile.put("client_host", post.getClientHost());
         profile.put("imported", importedMsgIds);
-
-        String screen_name = post.get("screen_name", "");
-        if (!"".equals(screen_name)) {
-            profile.put("screen_name", screen_name);
-        }
+        profile.put("screen_name", screenName);
         String harvesting_freq = post.get("harvesting_freq", "");
         if (!"".equals(harvesting_freq)) {
             try {
-                profile.put("harvesting_freq", HarvestingFrequency.valueOf(harvesting_freq).getFrequency());
+                profile.put("harvesting_freq", HarvestingFrequency.valueOf(Integer.parseInt(harvesting_freq)).getFrequency());
             } catch (IllegalArgumentException e) {
+                e.printStackTrace();
                 throw new IOException("Unsupported 'harvesting_freq' parameter value : " + harvesting_freq);
             }
         } else {
@@ -69,10 +71,11 @@ public class PushServletHelper {
         }
         String lifetime_str = post.get("lifetime", "");
         if (!"".equals(lifetime_str)) {
-            int lifetime;
+            long lifetime;
             try {
-                lifetime = Integer.parseInt(lifetime_str);
+                lifetime = Long.parseLong(lifetime_str);
             } catch (NumberFormatException e) {
+                e.printStackTrace();
                 throw new IOException("Invalid lifetime parameter (must be an integer) : " + lifetime_str);
             }
             profile.put("lifetime", lifetime);
@@ -130,14 +133,10 @@ public class PushServletHelper {
     private static String computeImportProfileId(Map<String, Object> importProfile, int fileHash) {
         String screen_name = (String) importProfile.get("screen_name");
         String source_url = (String) importProfile.get("source_url");
-        if (screen_name != null && !"".equals(screen_name)) {
-            return source_url + "_" + screen_name + "_" + fileHash;
-        }
-        String client_host = (String) importProfile.get("client_host");
-        return source_url + "_" + client_host + "_" + fileHash;
+        return source_url + "_" + screen_name + "_" + fileHash;
     }
 
-    public static String computeMessageId(Map<String, Object> message, Object initialId, SourceType sourceType) throws Exception {
+    public static String computeMessageId(Map<String, Object> message, SourceType sourceType) throws Exception {
         List<Object> location = (List<Object>) message.get("location_point");
         if (location == null) {
             throw new Exception("location_point not found");
@@ -161,15 +160,8 @@ public class PushServletHelper {
             message.put("mtime", mtime);
         }
 
-        // If initialId found, append it in the id. The new id has this format
-        // <source_type>_<id>_<lat>_<lon>_<mtime>
-        // otherwise, the new id is <source_type>_<lat>_<lon>_<mtime>
-        boolean hasInitialId = initialId != null && !"".equals(initialId.toString());
-        if (hasInitialId) {
-            return sourceType.name() + "_" + initialId + "_" + latitude + "_" + longitude + "_" + mtime;
-        } else {
-            return sourceType.name() + "_" + latitude + "_" + longitude + "_" + mtime;
-        }
+        // Id format : <source_type>_<lat>_<lon>_<mtime>
+        return sourceType.name() + "_" + latitude + "_" + longitude + "_" + mtime;
     }
 
 }

@@ -205,8 +205,9 @@ public class LoklakServer {
         servletHandler.addServlet(PeersServlet.class, "/api/peers.json");
         servletHandler.addServlet(CrawlerServlet.class, "/api/crawler.json");
         servletHandler.addServlet(StatusServlet.class, "/api/status.json");
-        servletHandler.addServlet(SearchServlet.class, "/api/search.rss");  // both have same servlet class
-        servletHandler.addServlet(SearchServlet.class, "/api/search.json"); // both have same servlet class
+        servletHandler.addServlet(SearchServlet.class, "/api/search.rss");
+        servletHandler.addServlet(SearchServlet.class, "/api/search.json");
+        servletHandler.addServlet(SearchServlet.class, "/api/search.txt");
         servletHandler.addServlet(SuggestServlet.class, "/api/suggest.json");
         servletHandler.addServlet(AccountServlet.class, "/api/account.json");
         servletHandler.addServlet(UserServlet.class, "/api/user.json");
@@ -273,6 +274,11 @@ public class LoklakServer {
         LoklakServer.server.start();
         LoklakServer.caretaker = new Caretaker();
         LoklakServer.caretaker.start();
+        
+        // read upgrade interval
+        Caretaker.upgradeTime = Caretaker.startupTime + DAO.getConfig("upgradeInterval", 86400000);
+        
+        // if this is not headless, we can open a browser automatically
         Browser.openBrowser("http://localhost:" + httpPort + "/");
         
         // ** services are now running **
