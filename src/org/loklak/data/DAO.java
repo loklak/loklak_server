@@ -33,13 +33,14 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.lucene.queryparser.classic.QueryParser;
 import org.eclipse.jetty.util.ConcurrentHashSet;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -61,6 +62,8 @@ import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
+import org.elasticsearch.index.query.BoolFilterBuilder;
+import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.indices.IndexAlreadyExistsException;
 import org.elasticsearch.indices.IndexMissingException;
 import org.elasticsearch.node.Node;
@@ -75,14 +78,16 @@ import org.loklak.Caretaker;
 import org.loklak.LoklakServer;
 import org.loklak.api.client.ClientConnection;
 import org.loklak.api.client.SearchClient;
+import org.loklak.api.server.RemoteAccess;
 import org.loklak.geo.GeoNames;
 import org.loklak.harvester.SourceType;
 import org.loklak.harvester.TwitterScraper;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.tools.DateParser;
-import org.loklak.tools.JsonDataset;
-import org.loklak.tools.JsonDump;
-import org.loklak.tools.JsonMinifier;
-import org.loklak.tools.JsonDataset.Index;
+import org.loklak.tools.storage.JsonDataset;
+import org.loklak.tools.storage.JsonDump;
+import org.loklak.tools.storage.JsonMinifier;
+import org.loklak.tools.storage.JsonDataset.Index;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -483,9 +488,9 @@ public class DAO {
      */
     public synchronized static boolean writeImportProfile(ImportProfileEntry i, boolean dump) {
         try {
-            // record account into text file
+            // record import profile into text file
             if (dump) import_profile_dump.write(i.toMap());
-            // record tweet into search index
+            // record import profile into search index
             importProfiles.writeEntry(i.getId(), i.getSourceType().name(), i);
         } catch (IOException e) {
             e.printStackTrace();
@@ -575,7 +580,6 @@ public class DAO {
                         request.addAggregation(AggregationBuilders.terms(field).field(field).minDocCount(1).size(aggregationLimit));
                     }
                 }
-                
                 // get response
                 SearchResponse response = request.execute().actionGet();
                 this.hits = response.getHits().getTotalHits();
@@ -771,13 +775,15 @@ public class DAO {
                     .setSearchType(SearchType.QUERY_THEN_FETCH)
                     .setFrom(0);
 
-            String queryString = "active_status:" + EntryStatus.ACTIVE.name();
+            BoolFilterBuilder bFilter = FilterBuilders.boolFilter();
+            bFilter.must(FilterBuilders.termFilter("active_status", EntryStatus.ACTIVE.name().toLowerCase()));
             for (Object o : constraints.entrySet()) {
+                @SuppressWarnings("rawtypes")
                 Map.Entry entry = (Map.Entry) o;
-                queryString += " AND " + entry.getKey() + ":" + QueryParser.escape((String) entry.getValue());
+                bFilter.must(FilterBuilders.termFilter((String) entry.getKey(), ((String) entry.getValue()).toLowerCase()));
             }
-            request.setQuery(QueryBuilders.queryStringQuery(queryString));
-
+            request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), bFilter));
+            DAO.log(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), bFilter).toString());
             // get response
             SearchResponse response = request.execute().actionGet();
 
@@ -800,8 +806,8 @@ public class DAO {
         Map<String, ImportProfileEntry> latests = new HashMap<>();
         for (ImportProfileEntry entry : rawResults) {
             String uniqueKey;
-            if (entry.getScreenName() != null) {
-                uniqueKey = entry.getSourceUrl() + entry.getScreenName();
+            if (entry.getImporter() != null) {
+                uniqueKey = entry.getSourceUrl() + entry.getImporter();
             } else {
                 uniqueKey = entry.getSourceUrl() + entry.getClientHost();
             }
@@ -818,11 +824,11 @@ public class DAO {
     
     public static Timeline[] scrapeTwitter(final String q, final Timeline.Order order, final int timezoneOffset, boolean byUserQuery) {
         // retrieve messages from remote server
-        String[] remote = DAO.getConfig("frontpeers", new String[0], ",");        
+        ArrayList<String> remote = DAO.getFrontPeers();
         Timeline remoteMessages;
-        if (remote.length > 0) {
+        if (remote.size() > 0 && (peerLatency.get(remote.get(0)) == null || peerLatency.get(remote.get(0)) < 3000)) {
             remoteMessages = searchOnOtherPeers(remote, q, order, 100, timezoneOffset, "twitter", SearchClient.frontpeer_hash);
-            if (remoteMessages.size() == 0) {
+            if (remoteMessages == null || remoteMessages.size() == 0) {
                 // maybe the remote server died, we try then ourself
                 remoteMessages = TwitterScraper.search(q, order);
             }
@@ -837,6 +843,11 @@ public class DAO {
         } else {
             // record the result; this may be moved to a concurrent process
             for (MessageEntry t: remoteMessages) {
+                // wait until messages are ready (i.e. unshortening of shortlinks)
+                if (t instanceof TwitterTweet) {
+                    ((TwitterTweet) t).waitReady();
+                }
+                // write the message to the index
                 UserEntry u = remoteMessages.getUser(t);
                 assert u != null;
                 boolean newTweet = writeMessage(t, u, true, true);
@@ -875,24 +886,94 @@ public class DAO {
         return new Timeline[]{remoteMessages, newMessages};
     }
     
-    public static Timeline searchBackend(final String q, final Timeline.Order order, final int count, final int timezoneOffset, final String where) {
-        String[] remote = DAO.getConfig("backend", new String[0], ",");
-        return searchOnOtherPeers(remote, q, order, count, timezoneOffset, where, SearchClient.backend_hash);
-    }
-    
-    public static Timeline searchOnOtherPeers(final String[] remote, final String q, final Timeline.Order order, final int count, final int timezoneOffset, final String where, final String provider_hash) {
-        Timeline tl = new Timeline(order);
-        for (String protocolhostportstub: remote) {
-            Timeline tt = SearchClient.search(protocolhostportstub, q, order, where, count, timezoneOffset, provider_hash);
-            tl.putAll(tt);
-            // record the result; this may be moved to a concurrent process
-            for (MessageEntry t: tt) {
-                UserEntry u = tt.getUser(t);
-                assert u != null;
-                writeMessage(t, u, true, false);
+    public static final Random random = new Random(System.currentTimeMillis());
+    private static final Map<String, Long> peerLatency = new HashMap<>();
+    private static ArrayList<String> getBestPeers(Collection<String> peers) {
+        ArrayList<String> best = new ArrayList<>();
+        if (peers == null || peers.size() == 0) return best;
+        // first check if any of the given peers has unknown latency
+        TreeMap<Long, String> o = new TreeMap<>();
+        for (String peer: peers) {
+            if (peerLatency.containsKey(peer)) {
+                o.put(peerLatency.get(peer) * 1000 + best.size(), peer);
+            } else {
+                best.add(peer);
             }
         }
-        return tl;
+        best.addAll(o.values());
+        return best;
+    }
+    public static void healLatency(float factor) {
+        for (Map.Entry<String, Long> entry: peerLatency.entrySet()) {
+            entry.setValue((long) (factor * entry.getValue()));
+        }
+    }
+
+    private static Set<String> frontPeerCache = new HashSet<String>();
+    private static Set<String> backendPeerCache = new HashSet<String>();
+    
+    public static void updateFrontPeerCache(RemoteAccess remoteAccess) {
+        if (remoteAccess.getLocalHTTPPort() >= 80) {
+            frontPeerCache.add("http://" + remoteAccess.getRemoteHost() + (remoteAccess.getLocalHTTPPort() == 80 ? "" : ":" + remoteAccess.getLocalHTTPPort()));
+        } else if (remoteAccess.getLocalHTTPSPort() >= 443) {
+            frontPeerCache.add("https://" + remoteAccess.getRemoteHost() + (remoteAccess.getLocalHTTPSPort() == 443 ? "" : ":" + remoteAccess.getLocalHTTPSPort()));
+        }
+    }
+    
+    /**
+     * from all known front peers, generate a list of available peers, ordered by the peer latency
+     * @return a list of front peers. only the first one shall be used, but the other are fail-over peers
+     */
+    public static ArrayList<String> getFrontPeers() {
+        ArrayList<String> testpeers = new ArrayList<>();
+        if (frontPeerCache.size() == 0) {
+            String[] remote = DAO.getConfig("frontpeers", new String[0], ",");
+            for (String peer: remote) frontPeerCache.add(peer);
+            // add dynamically all peers that contacted myself
+            for (Map.Entry<String, RemoteAccess> peer: RemoteAccess.history.entrySet()) {
+                updateFrontPeerCache(peer.getValue());
+            }
+        }
+        testpeers.addAll(frontPeerCache);
+        return getBestPeers(testpeers);
+    }
+    
+    public static List<String> getBackendPeers() {
+        List<String> testpeers = new ArrayList<>();
+        if (backendPeerCache.size() == 0) {
+            String[] remote = DAO.getConfig("backend", new String[0], ",");
+            for (String peer: remote) backendPeerCache.add(peer);
+        }
+        testpeers.addAll(backendPeerCache);
+        return getBestPeers(testpeers);
+    }
+    
+    public static Timeline searchBackend(final String q, final Timeline.Order order, final int count, final int timezoneOffset, final String where) {
+        List<String> remote = getBackendPeers();
+        if (remote.size() > 0 && (peerLatency.get(remote.get(0)) == null || peerLatency.get(remote.get(0)) < 3000)) {
+            Timeline tt = searchOnOtherPeers(remote, q, order, count, timezoneOffset, where, SearchClient.backend_hash);
+            if (tt != null) tt.writeToIndex();
+            return tt;
+        }
+        return null;
+    }
+    
+    public static Timeline searchOnOtherPeers(final Collection<String> remote, final String q, final Timeline.Order order, final int count, final int timezoneOffset, final String source, final String provider_hash) {
+        for (String peer: remote) {
+            long start = System.currentTimeMillis();
+            try {
+                Timeline tl = SearchClient.search(peer, q, order, source, count, timezoneOffset, provider_hash);
+                peerLatency.put(peer, System.currentTimeMillis() - start);
+                return tl;
+            } catch (IOException e) {
+                e.printStackTrace();
+                // the remote peer seems to be unresponsive, remove it (temporary) from the remote peer list
+                peerLatency.put(peer, System.currentTimeMillis() - start);
+                frontPeerCache.remove(peer);
+                backendPeerCache.remove(peer);
+            }
+        }
+        return null;
     }
     
     public final static Set<Number> newUserIds = new ConcurrentHashSet<>();

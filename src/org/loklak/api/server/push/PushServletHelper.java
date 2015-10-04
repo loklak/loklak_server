@@ -7,13 +7,27 @@ import org.loklak.data.DAO;
 import org.loklak.data.ImportProfileEntry;
 import org.loklak.data.MessageEntry;
 import org.loklak.data.UserEntry;
+import org.loklak.data.Timeline;
+import org.loklak.data.PrivacyStatus;
 import org.loklak.harvester.HarvestingFrequency;
 import org.loklak.harvester.SourceType;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
 
 public class PushServletHelper {
+
+    /* Fields that can be updated */
+    public static final String[] FIELDS_TO_COMPARE =
+    {
+        "link",
+        "text" // can embed rich content
+    };
 
     public static PushReport saveMessagesAndImportProfile(
             List<Map<String, Object>> messages, int fileHash, RemoteAccess.Post post,
@@ -40,7 +54,7 @@ public class PushServletHelper {
                 report.incrementNewCount();
                 importedMsgIds.add((String) message.get("id_str"));
             } else {
-                report.incrementKnownCount();
+                report.incrementKnownCount((String) message.get("id_str"));
             }
         }
 
@@ -57,8 +71,18 @@ public class PushServletHelper {
         Map<String, Object> profile = new HashMap<>();
         profile.put("client_host", post.getClientHost());
         profile.put("imported", importedMsgIds);
-        profile.put("screen_name", screenName);
+        profile.put("importer", screenName);
         String harvesting_freq = post.get("harvesting_freq", "");
+
+        // optional parameter 'public' to
+        String public_profile = post.get("public", "");
+        PrivacyStatus privacyStatus;
+        if ("".equals(public_profile) || !"true".equals(public_profile)){
+            privacyStatus = PrivacyStatus.PRIVATE;
+        } else {
+            privacyStatus = PrivacyStatus.PUBLIC;
+        }
+
         if (!"".equals(harvesting_freq)) {
             try {
                 profile.put("harvesting_freq", HarvestingFrequency.valueOf(Integer.parseInt(harvesting_freq)).getFrequency());
@@ -90,9 +114,14 @@ public class PushServletHelper {
         profile.put("created_at" , currentDate);
         profile.put("last_modified", currentDate);
         profile.put("last_harvested", currentDate);
+        profile.put("privacy_status", privacyStatus.name());
+        List<String> sharers = new ArrayList<>();
+        sharers.add(screenName);
+        profile.put("sharers", sharers);
         try {
             importProfileEntry = new ImportProfileEntry(profile);
         } catch (Exception e) {
+            e.printStackTrace();
             throw new IOException("Unable to create import profile : " + e.getMessage());
         }
         boolean success = DAO.writeImportProfile(importProfileEntry, true);
@@ -112,6 +141,7 @@ public class PushServletHelper {
         json.field("records", pushReport.getRecordCount());
         json.field("new", pushReport.getNewCount());
         json.field("known", pushReport.getKnownCount());
+        json.field("knownIds", pushReport.getKnownMessageIds());
         json.field("error", pushReport.getErrorCount());
         ImportProfileEntry importProfile = pushReport.getImportProfile();
         if (importProfile != null)
@@ -131,9 +161,39 @@ public class PushServletHelper {
     }
 
     private static String computeImportProfileId(Map<String, Object> importProfile, int fileHash) {
-        String screen_name = (String) importProfile.get("screen_name");
+        String importer = (String) importProfile.get("importer");
         String source_url = (String) importProfile.get("source_url");
-        return source_url + "_" + screen_name + "_" + fileHash;
+        return source_url + "_" + importer + "_" + fileHash;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static String checkMessageExistence(Map<String, Object> message) {
+        String source_type = (String) message.get("source_type");
+        List<Double> location_point = (List<Double>) message.get("location_point");
+        Double latitude = location_point.get(0);
+        Double longitude = location_point.get(1);
+        String query = "/source_type=" + source_type + " /location=" + latitude + "," + longitude;
+        // search only latest message
+        DAO.SearchLocalMessages search = new DAO.SearchLocalMessages(query, Timeline.Order.CREATED_AT, 0, 1, 0);
+        Iterator it = search.timeline.iterator();
+        while (it.hasNext()) {
+            MessageEntry messageEntry = (MessageEntry) it.next();
+            if (compareMessage(messageEntry.toMap(), message)) {
+                return messageEntry.getIdStr();
+            }
+        }
+        return null;
+    }
+
+    private static boolean compareMessage(Map<String, Object> m1, Map<String, Object> m2) {
+        for (String field : FIELDS_TO_COMPARE) {
+            if ((m1.get(field) == null && m2.get(field) != null)
+            || (m1.get(field) != null && m2.get(field) == null)
+            || !m1.get(field).equals(m2.get(field))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public static String computeMessageId(Map<String, Object> message, SourceType sourceType) throws Exception {

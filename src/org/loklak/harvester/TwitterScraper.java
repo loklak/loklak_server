@@ -88,18 +88,11 @@ public class TwitterScraper {
             e.printStackTrace();
             if (timeline == null) timeline = new Timeline(order);
         };
-        
+
         // wait until all messages in the timeline are ready
         if (timeline == null) {
             // timeout occurred
             timeline = new Timeline(order);
-        } else {
-            // wait until messages are ready (i.e. unshortening of shortlinks)
-            for (MessageEntry m: timeline) {
-                if (m instanceof TwitterTweet) {
-                    ((TwitterTweet) m).waitReady();
-                }
-            }
         }
         return timeline;
     }
@@ -276,7 +269,7 @@ public class TwitterScraper {
     
     public static class TwitterTweet extends MessageEntry implements Runnable {
 
-        private Semaphore ready = new Semaphore(0);
+        private Semaphore ready = null;
         private Boolean exists = null;
         
         public TwitterTweet(
@@ -321,11 +314,11 @@ public class TwitterScraper {
             }
             */
             
-            this.text = text_raw; // this MUST be analysed with analyse(); this is not done here because it should be started concurrently; run run();
+            this.text = text_raw.replaceAll("</?(s|b|strong)>", "").replaceAll("<a href=\"/hashtag.*?>", "").replaceAll("<a.*?class=\"twitter-atreply.*?>", "").replaceAll("<span.*?span>", "").replaceAll("  ", " ");
+            // this.text MUST be analysed with analyse(); this is not done here because it should be started concurrently; run run();
         }
 
         private void analyse() {
-            this.text = this.text.replaceAll("</?(s|b|strong)>", "").replaceAll("<a href=\"/hashtag.*?>", "").replaceAll("<a.*?class=\"twitter-atreply.*?>", "").replaceAll("<span.*?span>", "").replaceAll("  ", " ");
             while (true) {
                 try {
                     Matcher m = timeline_link_pattern.matcher(this.text);
@@ -370,6 +363,7 @@ public class TwitterScraper {
         
         @Override
         public void run() {
+            this.ready = new Semaphore(0);
             try {
                 this.exists = new Boolean(DAO.existMessage(this.getIdStr()));
                 // only analyse and enrich the message if it does not actually exist in the search index because it will be abandoned otherwise anyway
@@ -385,14 +379,13 @@ public class TwitterScraper {
         }
 
         public boolean isReady() {
-            return this.ready.availablePermits() > 0;
+            return this.ready == null || this.ready.availablePermits() > 0;
         }
         
         public void waitReady() {
-            try {
+            if (this.ready != null) try {
                 this.ready.acquire();
-            } catch (InterruptedException e) {
-            }
+            } catch (InterruptedException e) {}
         }
         
         /**
@@ -414,6 +407,9 @@ public class TwitterScraper {
         //wget --no-check-certificate "https://twitter.com/search?q=eifel&src=typd&f=realtime"
         Timeline result = TwitterScraper.search(args[0], Timeline.Order.CREATED_AT);
         for (MessageEntry tweet : result) {
+            if (tweet instanceof TwitterTweet) {
+                ((TwitterTweet) tweet).waitReady();
+            }
             System.out.println("@" + tweet.getScreenName() + " - " + tweet.getText());
         }
         System.exit(0);
