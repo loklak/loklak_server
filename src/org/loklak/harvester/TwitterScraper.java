@@ -36,6 +36,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -206,10 +207,24 @@ public class TwitterScraper {
                         Long.parseLong(props.get("tweetfavouritecount").value),
                         imgs, vids, place_name, place_id
                         );
-                //new Thread(tweet).start(); // todo: use thread pools
-                //tweet.run(); // for debugging
-                executor.execute(tweet);
-                timeline.add(tweet, user);
+                if (tweet.willBeTimeConsuming()) {
+                    if (DAO.getConfig("flag.replaceinsteadunshorten", false)) {
+                        // check if this tweet could be simply replaced by one from the database
+                        MessageEntry messageFromIndex = DAO.readMessage(tweet.getIdStr());
+                        if (messageFromIndex == null) {
+                            executor.execute(tweet);
+                            timeline.add(tweet, user);
+                        } else {
+                            timeline.add(messageFromIndex, user);
+                        }
+                    } else {
+                        executor.execute(tweet);
+                        timeline.add(tweet, user);
+                    }
+                } else {
+                    tweet.run();
+                    timeline.add(tweet, user);
+                }
                 images.clear();
                 props.clear();
                 continue;
@@ -265,11 +280,17 @@ public class TwitterScraper {
     final static Pattern timeline_link_pattern = Pattern.compile("<a .*?href=\"(.*?)\".*?data-expanded-url=\"(.*?)\".*?twitter-timeline-link.*title=\"(.*?)\".*?>.*?</a>");
     final static Pattern timeline_embed_pattern = Pattern.compile("<a .*?href=\"(.*?)\".*?twitter-timeline-link.*?>pic.twitter.com/(.*?)</a>");
     final static Pattern emoji_pattern = Pattern.compile("<img .*?class=\"twitter-emoji\".*?alt=\"(.*?)\".*?>");
-    
+    final static Pattern doublespace_pattern = Pattern.compile("  ");
+    final static Pattern cleanup_pattern = Pattern.compile(
+        "</?(s|b|strong)>|" +
+        "<a href=\"/hashtag.*?>|" +
+        "<a.*?class=\"twitter-atreply.*?>|" +
+        "<span.*?span>"
+    );
     
     public static class TwitterTweet extends MessageEntry implements Runnable {
 
-        private Semaphore ready = null;
+        private final Semaphore ready;
         private Boolean exists = null;
         
         public TwitterTweet(
@@ -298,7 +319,7 @@ public class TwitterScraper {
             this.place_id = place_id;
             this.images = new LinkedHashSet<>(); for (String image: images) this.images.add(image);
             this.videos = new LinkedHashSet<>(); for (String video: videos) this.videos.add(video);
-
+            this.text = text_raw;
             //Date d = new Date(timemsraw);
             //System.out.println(d);
             
@@ -313,64 +334,25 @@ public class TwitterScraper {
                 // Singapore a = 1487192992, b = 3578663936
             }
             */
-            
-            this.text = text_raw.replaceAll("</?(s|b|strong)>", "").replaceAll("<a href=\"/hashtag.*?>", "").replaceAll("<a.*?class=\"twitter-atreply.*?>", "").replaceAll("<span.*?span>", "").replaceAll("  ", " ");
+
             // this.text MUST be analysed with analyse(); this is not done here because it should be started concurrently; run run();
+
+            this.ready = new Semaphore(0);
         }
 
+        public boolean willBeTimeConsuming() {
+            return timeline_link_pattern.matcher(this.text).find() || timeline_embed_pattern.matcher(this.text).find();
+        }
+        
         private void analyse() {
-            while (true) {
-                try {
-                    Matcher m = timeline_link_pattern.matcher(this.text);
-                    if (m.find()) {
-                        //String href = m.group(1);
-                        String expanded = RedirectUnshortener.unShorten(m.group(2));
-                        //String title = m.group(3);
-                        this.text = m.replaceFirst(expanded);
-                        continue;
-                    }
-                } catch (Throwable e) {
-                    e.printStackTrace();
-                    break;
-                }
-                try {
-                    Matcher m = timeline_embed_pattern.matcher(this.text);
-                    if (m.find()) {
-                        //String href = resolveShortURL(m.group(1));
-                        String shorturl = RedirectUnshortener.unShorten(m.group(2));
-                        this.text = m.replaceFirst("https://pic.twitter.com/" + shorturl + " ");
-                        continue;
-                    }
-                } catch (Throwable e) {
-                    e.printStackTrace();
-                    break;
-                }
-                try {
-                    Matcher m = emoji_pattern.matcher(this.text);
-                    if (m.find()) {
-                        String emoji = m.group(1);
-                        this.text = m.replaceFirst(emoji);
-                        continue;
-                    }
-                } catch (Throwable e) {
-                    e.printStackTrace();
-                    break;
-                }
-                break;
-            }
-            this.text = html2utf8(this.text).replaceAll("  ", " ").trim();
+            this.text = unshorten(this.text);
         }
         
         @Override
         public void run() {
-            this.ready = new Semaphore(0);
             try {
-                this.exists = new Boolean(DAO.existMessage(this.getIdStr()));
-                // only analyse and enrich the message if it does not actually exist in the search index because it will be abandoned otherwise anyway
-                //if (!this.exists) {
-                    this.analyse();
-                    this.enrich();
-                //}
+                this.analyse();
+                this.enrich();
             } catch (Throwable e) {
                 e.printStackTrace();
             } finally {
@@ -379,13 +361,18 @@ public class TwitterScraper {
         }
 
         public boolean isReady() {
-            return this.ready == null || this.ready.availablePermits() > 0;
+            if (this.ready == null) throw new RuntimeException("isReady() should not be called if postprocessing is not started");
+            return this.ready.availablePermits() > 0;
         }
         
-        public void waitReady() {
-            if (this.ready != null) try {
-                this.ready.acquire();
-            } catch (InterruptedException e) {}
+        public boolean waitReady(long millis) {
+            if (this.ready == null) throw new RuntimeException("waitReady() should not be called if postprocessing is not started");
+            try {
+                this.ready.tryAcquire(millis, TimeUnit.MILLISECONDS);
+                return true;
+            } catch (InterruptedException e) {
+                return false;
+            }
         }
         
         /**
@@ -393,9 +380,54 @@ public class TwitterScraper {
          * @return
          */
         public Boolean exist() {
+            if (this.exists == null) this.exists = new Boolean(DAO.existMessage(this.getIdStr()));
             return this.exists;
         }
         
+    }
+    
+    public static String unshorten(String text) {
+        while (true) {
+            try {
+                Matcher m = timeline_link_pattern.matcher(text);
+                if (m.find()) {
+                    String expanded = RedirectUnshortener.unShorten(m.group(2));
+                    text = m.replaceFirst(expanded);
+                    continue;
+                }
+            } catch (Throwable e) {
+                e.printStackTrace();
+                break;
+            }
+            try {
+                Matcher m = timeline_embed_pattern.matcher(text);
+                if (m.find()) {
+                    String shorturl = RedirectUnshortener.unShorten(m.group(2));
+                    text = m.replaceFirst("https://pic.twitter.com/" + shorturl + " ");
+                    continue;
+                }
+            } catch (Throwable e) {
+                e.printStackTrace();
+                break;
+            }
+            try {
+                Matcher m = emoji_pattern.matcher(text);
+                if (m.find()) {
+                    String emoji = m.group(1);
+                    text = m.replaceFirst(emoji);
+                    continue;
+                }
+            } catch (Throwable e) {
+                e.printStackTrace();
+                break;
+            }
+            break;
+        }
+        text = cleanup_pattern.matcher(text).replaceAll("");
+        text = MessageEntry.html2utf8(text);
+        text = doublespace_pattern.matcher(text).replaceAll(" ");
+        text = text.trim(); 
+        return text;
     }
     
     /**
@@ -408,7 +440,7 @@ public class TwitterScraper {
         Timeline result = TwitterScraper.search(args[0], Timeline.Order.CREATED_AT);
         for (MessageEntry tweet : result) {
             if (tweet instanceof TwitterTweet) {
-                ((TwitterTweet) tweet).waitReady();
+                ((TwitterTweet) tweet).waitReady(10000);
             }
             System.out.println("@" + tweet.getScreenName() + " - " + tweet.getText());
         }

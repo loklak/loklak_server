@@ -34,10 +34,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.loklak.data.AccountEntry;
 import org.loklak.data.DAO;
 import org.loklak.data.UserEntry;
-import org.loklak.harvester.TwitterAPI;
-
-import twitter4j.TwitterException;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class AccountServlet extends HttpServlet {
@@ -129,6 +125,7 @@ public class AccountServlet extends HttpServlet {
         sos.print((minified ? new ObjectMapper().writer() : new ObjectMapper().writerWithDefaultPrettyPrinter()).writeValueAsString(m));
         if (jsonp) sos.println(");");
         sos.println();
+        post.finalize();
     }
     
 }

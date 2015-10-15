@@ -24,7 +24,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -41,8 +43,11 @@ import org.loklak.data.AccountEntry;
 import org.loklak.data.DAO;
 import org.loklak.data.UserEntry;
 import org.loklak.geo.GeoMark;
+import org.loklak.tools.DateParser;
+import org.loklak.tools.storage.JsonDataset;
+import org.loklak.tools.storage.JsonFactory;
 import org.loklak.tools.storage.JsonMinifier;
-import org.loklak.tools.storage.JsonDataset.Index;
+import org.loklak.tools.storage.JsonDataset.JsonFactoryIndex;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
@@ -182,12 +187,19 @@ public class TwitterAPI {
     public static int getUserRemaining() {return System.currentTimeMillis() > getUserResetTime ? getUserLimit : getUserRemaining;}
     public static Map<String, Object> getUser(String screen_name, boolean forceReload) throws TwitterException, IOException {
         if (!forceReload) {
-            JsonMinifier.Capsule mapcapsule = DAO.user_dump.getIndex("screen_name").get(screen_name);
-            if (mapcapsule == null) mapcapsule = DAO.user_dump.getIndex("id_str").get(screen_name);
+            JsonFactory mapcapsule = DAO.user_dump.get("screen_name",screen_name);
+            if (mapcapsule == null) mapcapsule = DAO.user_dump.get("id_str", screen_name);
             if (mapcapsule != null) {
                 Map<String, Object> map = mapcapsule.getJson();
-                // check if the entry is maybe outdated, i.e. if it is empty or too old
-                if (map.size() > 0) return map;
+                if (map.size() > 0) {
+                    // check if the entry is maybe outdated, i.e. if it is empty or too old
+                    try {
+                        Date d = DAO.user_dump.parseDate(map);
+                        if (d.getTime() + DateParser.DAY_MILLIS > System.currentTimeMillis()) return map;
+                    } catch (ParseException e) {
+                        return map;
+                    }
+                }
             }
         }
         TwitterFactory tf = getUserTwitterFactory(screen_name);
@@ -198,47 +210,131 @@ public class TwitterAPI {
         RateLimitStatus rateLimitStatus = user.getRateLimitStatus();
         getUserResetTime = System.currentTimeMillis() + rateLimitStatus.getSecondsUntilReset() * 1000;
         getUserRemaining = rateLimitStatus.getRemaining();
-        return enrich(user);
+        Map<String, Object> map = user2json(user);
+        enrichLocation(map);
+        DAO.user_dump.putUnique(map);
+        return map;
     }
-    
-    public static Map<String, Object> enrich(User user) throws IOException {
+
+    public static Map<String, Object> user2json(User user) throws IOException {
         String json = TwitterObjectFactory.getRawJSON(user);
         Map<String, Object> map = DAO.jsonMapper.readValue(json, DAO.jsonTypeRef);
         map.put("retrieval_date", AbstractIndexEntry.utcFormatter.print(System.currentTimeMillis()));
         Object status = map.remove("status"); // we don't need to store the latest status update in the user dump
         // TODO: store the latest status in our message database
-        
-        // enrich the user data with geocoding information
-        String created_at = (String) map.get("created_at");
-        String location = (String) map.get("location");
-        if (created_at != null && location != null) {
-            GeoMark loc = DAO.geoNames.analyse(location, null, 5, created_at.hashCode());
-            if (loc != null) {
-                map.put("location_country", DAO.geoNames.getCountryName(loc.getISO3166cc()));
-                map.put("location_country_code", loc.getISO3166cc());
-                map.put("location_point", new double[]{loc.lon(), loc.lat()}); //[longitude, latitude]
-                map.put("location_mark", new double[]{loc.mlon(), loc.mlat()}); //[longitude, latitude]
-            }
-        }
-        DAO.user_dump.putUnique(map);
         return map;
     }
     
+    /**
+     * enrich the user data with geocoding information
+     * @param map the user json
+     */
+    public static void enrichLocation(Map<String, Object> map) {
+        
+        // if a location is given, try to reverse geocode to get country name, country code and coordinates
+        String location = (String) map.get("location");
+        
+        // in case that no location is given, we try to hack that information out of the context
+        if (location == null || location.length() == 0) {
+            // sometimes the time zone contains city names! Try that
+            String time_zone = (String) map.get("time_zone");
+            if (time_zone != null && time_zone.length() > 0) {
+                GeoMark loc = DAO.geoNames.analyse(time_zone, null, 5, 0);
+                // check if the time zone was actually a location name
+                if (loc != null && loc.getNames().contains(time_zone)) {
+                    // success! It's just a guess, however...
+                    location = time_zone;
+                    map.put("location", location);
+                    //DAO.log("enrichLocation: TRANSLATED time_zone to location '" + location + "'");
+                }
+            }
+        }
+        
+        // if we finally have a location, then compute country name and geo-coordinates
+        if (location != null && location.length() > 0) {
+            String location_country = (String) map.get("location_country");
+            String location_country_code = (String) map.get("location_country_code");
+            Object location_point = map.get("location_point");
+            Object location_mark = map.get("location");
+            // maybe we already computed these values before, but they may be incomplete. If they are not complete, we repeat the geocoding
+            if (location_country == null || location_country.length() == 0 ||
+                location_country_code == null || location_country_code.length() == 0 ||
+                location_point == null || location_mark == null
+            ) {
+                // get a salt 
+                String created_at = (String) map.get("created_at");
+                int salt = created_at == null ? map.hashCode() : created_at.hashCode();
+                // reverse geocode
+                GeoMark loc = DAO.geoNames.analyse(location, null, 5, salt);
+                if (loc != null) {
+                    String countryCode = loc.getISO3166cc();
+                    if (countryCode != null && countryCode.length() > 0) {
+                        String countryName = DAO.geoNames.getCountryName(countryCode);
+                        map.put("location_country", countryName);
+                        map.put("location_country_code", countryCode);
+                    }
+                    map.put("location_point", new double[]{loc.lon(), loc.lat()}); //[longitude, latitude]
+                    map.put("location_mark", new double[]{loc.mlon(), loc.mlat()}); //[longitude, latitude]
+                    //DAO.log("enrichLocation: FOUND   location '" + location + "'");
+                } else {
+                    //DAO.log("enrichLocation: UNKNOWN location '" + location + "'");
+                }
+            }
+        }
+
+    }
+    
+    /**
+     * beautify given location information. This should only be called before an export is done, not for storage
+     * @param map
+     */
+    public static void correctLocation(Map<String, Object> map) {
+        // if a location is given, try to reverse geocode to get country name, country code and coordinates
+        String location = (String) map.get("location");
+        
+        // if we finally have a location, then compute country name and geo-coordinates
+        if (location != null && location.length() > 0) {
+            String location_country = (String) map.get("location_country");
+            
+            // maybe we already computed these values before, but they may be incomplete. If they are not complete, we repeat the geocoding
+            if (location_country != null && location_country.length() > 0) {
+                // check if the location name was made in a "City-Name, Country-Name" schema
+                if (location.endsWith(", " + location_country)) {
+                    // remove the country name from the location name
+                    location = location.substring(0, location.length() - location_country.length() - 2);
+                    map.put("location", location);
+                    //DAO.log("correctLocation: CORRECTED '" + location + ", " + location_country + "'");
+                }
+            }
+        }
+    }
+    
     public static Map<String, Object> getNetwork(String screen_name, int maxFollowers, int maxFollowing) throws IOException, TwitterException {
-        Index userIndex = DAO.user_dump.getIndex("screen_name");
         Map<String, Object> map = new HashMap<>();
         // we clone the maps because we modify it
         map.putAll(getNetworkerNames(screen_name, maxFollowers, Networker.FOLLOWERS));
         map.putAll(getNetworkerNames(screen_name, maxFollowing, Networker.FOLLOWING));
         map.remove("screen_name");
 
+        //int with_before = 0, with_after = 0;
+        
         for (String setname : new String[]{"followers","unfollowers","following","unfollowing"}) {
             List<Map<String, Object>> users = new ArrayList<>(); 
             Map<String, Number> names = (Map<String, Number>) map.remove(setname + "_names");
-            if (names != null) for (String sn: names.keySet()) {
-                JsonMinifier.Capsule user = userIndex.get(sn);
-                if (user != null) users.add(user.getJson());
+            if (names != null) {
+                for (String sn: names.keySet()) {
+                    JsonFactory user = DAO.user_dump.get("screen_name", sn);
+                    if (user != null) {
+                        Map<String, Object> usermap = user.getJson();
+                        //if (usermap.get("location") != null && ((String) usermap.get("location")).length() > 0) with_before++;
+                        enrichLocation(usermap);
+                        correctLocation(usermap);
+                        //if (usermap.get("location") != null && ((String) usermap.get("location")).length() > 0) with_after++;
+                        users.add(usermap);
+                    }
+                }
             }
+            //if (users.size() > 0) DAO.log("enrichLocation result: set = " + setname + ", users = " + users.size() + ", with location before = " + with_before + ", with location after = " + with_after + ", success = " + (100 * (with_after - with_before) / users.size()) + "%");
             map.put(setname + "_count", users.size());
             map.put(setname, users);
         }
@@ -266,8 +362,11 @@ public class TwitterAPI {
         boolean complete = true;
         Set<Number> networkingIDs = new LinkedHashSet<>();
         Set<Number> unnetworkingIDs = new LinkedHashSet<>();
-        JsonMinifier.Capsule mapcapsule = (networkRelation == Networker.FOLLOWERS ? DAO.followers_dump : DAO.following_dump).getIndex("screen_name").get(screen_name);
-        if (mapcapsule == null) mapcapsule = (networkRelation == Networker.FOLLOWERS ? DAO.followers_dump : DAO.following_dump).getIndex("id_str").get(screen_name);
+        JsonFactory mapcapsule = (networkRelation == Networker.FOLLOWERS ? DAO.followers_dump : DAO.following_dump).get("screen_name", screen_name);
+        if (mapcapsule == null) {
+            JsonDataset ds = networkRelation == Networker.FOLLOWERS ? DAO.followers_dump : DAO.following_dump;
+            mapcapsule = ds.get("screen_name", screen_name);
+        }
 
         if (mapcapsule != null) {
             // check if the map is complete
@@ -356,10 +455,9 @@ public class TwitterAPI {
         // first we check all fast solutions until trying the twitter api
         Map<String, Number> r = new HashMap<>();
         Set<Number> id4api = new HashSet<>();
-        Index idIndex = DAO.user_dump.getIndex("id_str");
         for (Number id_str: id_strs) {
             if (r.size() >= maxFollowers) break;
-            JsonMinifier.Capsule mapcapsule = idIndex.get(id_str.toString());
+            JsonFactory mapcapsule = DAO.user_dump.get("id_str", id_str.toString());
             if (mapcapsule != null) {
                 Map<String, Object> map = mapcapsule.getJson();
                 String screen_name = (String) map.get("screen_name");
@@ -399,7 +497,9 @@ public class TwitterAPI {
                 try {
                     ResponseList<User> users = twitter.lookupUsers(u);
                     for (User usr: users) {
-                        enrich(usr);
+                        Map<String, Object> map = user2json(usr);
+                        enrichLocation(map);
+                        DAO.user_dump.putUnique(map);
                         r.put(usr.getScreenName(), usr.getId());
                         id4api.remove(usr.getId());
                     }

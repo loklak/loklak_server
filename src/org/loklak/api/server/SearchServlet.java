@@ -40,6 +40,7 @@ import org.loklak.data.QueryEntry;
 import org.loklak.data.Timeline;
 import org.loklak.data.MessageEntry;
 import org.loklak.data.UserEntry;
+import org.loklak.harvester.TwitterScraper;
 import org.loklak.rss.RSSFeed;
 import org.loklak.rss.RSSMessage;
 import org.loklak.tools.CharacterCoding;
@@ -61,9 +62,8 @@ public class SearchServlet extends HttpServlet {
     
     @Override
     protected void doGet(final HttpServletRequest request, final HttpServletResponse response) throws ServletException, IOException {
+        final RemoteAccess.Post post = RemoteAccess.evaluate(request);
         try {
-        long start = System.currentTimeMillis();
-        RemoteAccess.Post post = RemoteAccess.evaluate(request);
         
         // manage DoS
         if (post.isDoS_blackout()) {response.sendError(503, "your (" + post.getClientHost() + ") request frequency is too high"); return;}
@@ -80,6 +80,7 @@ public class SearchServlet extends HttpServlet {
         String query = post.get("q", "");
         if (query == null || query.length() == 0) query = post.get("query", "");
         query = CharacterCoding.html2unicode(query).replaceAll("\\+", " ");
+        final long timeout = (long) post.get("timeout", DAO.getConfig("search.timeout", 3000));
         final int count = post.isDoS_servicereduction() ? 10 : Math.min(post.get("count", post.get("maximumRecords", 100)), post.isLocalhostAccess() ? 10000 : 1000);
         String source = post.isDoS_servicereduction() ? "cache" : post.get("source", "all"); // possible values: cache, backend, twitter, all
         int limit = post.get("limit", 100);
@@ -92,67 +93,88 @@ public class SearchServlet extends HttpServlet {
         // create tweet timeline
         final Timeline tl = new Timeline(order);
         Map<String, List<Map.Entry<String, Long>>> aggregations = null;
-        long hits = 0;
-        final AtomicInteger newrecords = new AtomicInteger(0);
         final QueryEntry.Tokens tokens = new QueryEntry.Tokens(query);
+        
+        final AtomicInteger cache_hits = new AtomicInteger(0), count_backend = new AtomicInteger(0), count_twitter_all = new AtomicInteger(0), count_twitter_new = new AtomicInteger(0);
         
         if ("all".equals(source)) {
             // start all targets for search concurrently
+            final long start = System.currentTimeMillis();
             final int timezoneOffsetf = timezoneOffset;
             Thread scraperThread = tokens.raw.length() == 0 ? null : new Thread() {
                 public void run() {
                     final String scraper_query = tokens.translate4scraper();
                     DAO.log(request.getServletPath() + " scraping with query: " + scraper_query);
-                    Timeline[] twitterTl = DAO.scrapeTwitter(scraper_query, order, timezoneOffsetf, true);
-                    newrecords.set(twitterTl[1].size());
-                    tl.putAll(QueryEntry.applyConstraint(twitterTl[1], tokens));
+                    Timeline[] twitterTl = DAO.scrapeTwitter(post, scraper_query, order, timezoneOffsetf, true);
+                    count_twitter_all.set(twitterTl[0].size());
+                    count_twitter_new.set(twitterTl[1].size());
+                    tl.putAll(QueryEntry.applyConstraint(twitterTl[0], tokens, false)); // pre-localized results are not filtered with location constraint any more 
+                    post.recordEvent("twitterscraper_time", System.currentTimeMillis() - start);
                 }
             };
             if (scraperThread != null) scraperThread.start();
             Thread backendThread = tokens.original.length() == 0 ? null : new Thread() {
                 public void run() {
                     Timeline backendTl = DAO.searchBackend(tokens.original, order, count, timezoneOffsetf, "cache");
-                    if (backendTl != null) tl.putAll(QueryEntry.applyConstraint(backendTl, tokens));
+                    if (backendTl != null) {
+                        tl.putAll(QueryEntry.applyConstraint(backendTl, tokens, true));
+                        count_backend.set(tl.size());
+                    }
+                    post.recordEvent("backend_time", System.currentTimeMillis() - start);
                 }
             };
             if (backendThread != null) backendThread.start();
             DAO.SearchLocalMessages localSearchResult = new DAO.SearchLocalMessages(query, order, timezoneOffset, count, 0);
-            hits = localSearchResult.hits;
+            post.recordEvent("cache_time", System.currentTimeMillis() - start);
+            cache_hits.set(localSearchResult.hits);
             tl.putAll(localSearchResult.timeline);
-            if (backendThread != null) try {backendThread.join(5000);} catch (InterruptedException e) {}
-            if (scraperThread != null) try {scraperThread.join(8000);} catch (InterruptedException e) {}
+            long start1 = System.currentTimeMillis();
+            if (backendThread != null) try {backendThread.join(Math.max(100, timeout - System.currentTimeMillis() + start));} catch (InterruptedException e) {}
+            post.recordEvent("backend_time_join", System.currentTimeMillis() - start1);
+            long start2 = System.currentTimeMillis();
+            if (scraperThread != null) try {scraperThread.join(Math.max(100, timeout - System.currentTimeMillis() + start));} catch (InterruptedException e) {}
+            post.recordEvent("twitterscraper_time_join", System.currentTimeMillis() - start2);
         } else {
             if ("twitter".equals(source) && tokens.raw.length() > 0) {
+                long start = System.currentTimeMillis();
                 final String scraper_query = tokens.translate4scraper();
                 DAO.log(request.getServletPath() + " scraping with query: " + scraper_query);
-                Timeline[] twitterTl = DAO.scrapeTwitter(scraper_query, order, timezoneOffset, true);
-                newrecords.set(twitterTl[1].size());
-                tl.putAll(QueryEntry.applyConstraint(twitterTl[0], tokens));
+                Timeline[] twitterTl = DAO.scrapeTwitter(post, scraper_query, order, timezoneOffset, true);
+                count_twitter_all.set(twitterTl[0].size());
+                count_twitter_new.set(twitterTl[1].size());
+                tl.putAll(QueryEntry.applyConstraint(twitterTl[0], tokens, false)); // pre-localized results are not filtered with location constraint any more 
+                post.recordEvent("twitterscraper_time", System.currentTimeMillis() - start);
                 // in this case we use all tweets, not only the latest one because it may happen that there are no new and that is not what the user expects
             }
 
             // replace the timeline with one from the own index which now includes the remote result
             if ("backend".equals(source) && query.length() > 0) {
+                long start = System.currentTimeMillis();
                 Timeline backendTl = DAO.searchBackend(query, order, count, timezoneOffset, "cache");
-                if (backendTl != null) tl.putAll(QueryEntry.applyConstraint(backendTl, tokens));
+                if (backendTl != null) {
+                    tl.putAll(QueryEntry.applyConstraint(backendTl, tokens, true));
+                    count_backend.set(tl.size());
+                }
+                post.recordEvent("backend_time", System.currentTimeMillis() - start);
             }
 
             // replace the timeline with one from the own index which now includes the remote result
             if ("cache".equals(source)) {
+                long start = System.currentTimeMillis();
                 DAO.SearchLocalMessages localSearchResult = new DAO.SearchLocalMessages(query, order, timezoneOffset, count, limit, fields);
-                hits = localSearchResult.hits;
+                cache_hits.set(localSearchResult.hits);
                 tl.putAll(localSearchResult.timeline);
                 aggregations = localSearchResult.aggregations;
+                post.recordEvent("cache_time", System.currentTimeMillis() - start);
             }
         }
-        
+
+        long start = System.currentTimeMillis();
         // check the latest user_ids
         DAO.announceNewUserId(tl);
         
         // reduce the list to the wanted number of results if we have more
-        hits = Math.max(hits, tl.size());
-        tl.reduceToMaxsize(count);
-        
+        tl.reduceToMaxsize(count);        
 
         if (post.isDoS_servicereduction() && !RemoteAccess.isSleepingForClient(post.getClientHost())) {
             RemoteAccess.sleep(post.getClientHost(), 2000);
@@ -172,22 +194,27 @@ public class SearchServlet extends HttpServlet {
             }
             metadata.put("itemsPerPage", Integer.toString(count));
             metadata.put("count", Integer.toString(tl.size()));
-            metadata.put("hits", hits);
+            metadata.put("count_twitter_all", count_twitter_all.get());
+            metadata.put("count_twitter_new", count_twitter_new.get());
+            metadata.put("count_backend", count_backend.get());
+            metadata.put("count_cache", cache_hits.get());
+            metadata.put("hits", Math.max(cache_hits.get(), tl.size()));
             if (order == Timeline.Order.CREATED_AT) metadata.put("period", tl.period());
             metadata.put("query", query);
             metadata.put("client", post.getClientHost());
-            metadata.put("time", System.currentTimeMillis() - start);
+            metadata.put("time", System.currentTimeMillis() - post.getAccessTime());
             metadata.put("servicereduction", post.isDoS_servicereduction() ? "true" : "false");
             m.put("search_metadata", metadata);
             List<Object> statuses = new ArrayList<>();
             try {
                 for (MessageEntry t: tl) {
                     UserEntry u = tl.getUser(t);
+                    if (DAO.getConfig("flag.fixunshorten", false)) t.setText(TwitterScraper.unshorten(t.getText()));
                     statuses.add(t.toMap(u, true));
                 }
             } catch (ConcurrentModificationException e) {
                 // late incoming messages from concurrent peer retrieval may cause this
-                // we siletly do nothing here and return what we listed so far
+                // we silently do nothing here and return what we listed so far
             }
             m.put("statuses", statuses);
             
@@ -256,7 +283,16 @@ public class SearchServlet extends HttpServlet {
             }
             response.getOutputStream().write(UTF8.getBytes(buffer.toString()));
         }
-        DAO.log(request.getServletPath() + "?" + request.getQueryString() + " -> " + tl.size() + " records returned, " +  newrecords.get() + " new");
+        post.recordEvent("result_count", tl.size());
+        post.recordEvent("postprocessing_time", System.currentTimeMillis() - start);
+        Map<String, Object> hits = new LinkedHashMap<>();
+        hits.put("count_twitter_all", count_twitter_all.get());
+        hits.put("count_twitter_new", count_twitter_new.get());
+        hits.put("count_backend", count_backend.get());
+        hits.put("cache_hits", cache_hits.get());
+        post.recordEvent("hits", hits);
+        DAO.log(request.getServletPath() + "?" + request.getQueryString() + " -> " + tl.size() + " records returned, " +  count_twitter_new.get() + " new");
+        post.finalize();
         } catch (Throwable e) {
             Log.getLog().warn(e.getMessage(), e);
             //e.printStackTrace();

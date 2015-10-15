@@ -85,11 +85,11 @@ import org.loklak.harvester.TwitterScraper;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.tools.DateParser;
 import org.loklak.tools.storage.JsonDataset;
-import org.loklak.tools.storage.JsonDump;
-import org.loklak.tools.storage.JsonMinifier;
-import org.loklak.tools.storage.JsonDataset.Index;
+import org.loklak.tools.storage.JsonReader;
+import org.loklak.tools.storage.JsonRepository;
+import org.loklak.tools.storage.JsonStreamReader;
+import org.loklak.tools.storage.JsonFactory;
 
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 /**
@@ -99,13 +99,14 @@ import com.fasterxml.jackson.core.type.TypeReference;
  */
 public class DAO {
 
-    public final static JsonFactory jsonFactory = new JsonFactory();
+    public final static com.fasterxml.jackson.core.JsonFactory jsonFactory = new com.fasterxml.jackson.core.JsonFactory();
     public final static ObjectMapper jsonMapper = new ObjectMapper(DAO.jsonFactory);
     public final static TypeReference<HashMap<String,Object>> jsonTypeRef = new TypeReference<HashMap<String,Object>>() {};
 
     public final static String MESSAGE_DUMP_FILE_PREFIX = "messages_";
     public final static String ACCOUNT_DUMP_FILE_PREFIX = "accounts_";
     public final static String USER_DUMP_FILE_PREFIX = "users_";
+    public final static String ACCESS_DUMP_FILE_PREFIX = "access_";
     public final static String FOLLOWERS_DUMP_FILE_PREFIX = "followers_";
     public final static String FOLLOWING_DUMP_FILE_PREFIX = "following_";
     private static final String IMPORT_PROFILE_FILE_PREFIX = "profile_";
@@ -119,8 +120,9 @@ public class DAO {
     public  static File conf_dir, bin_dir;
     private static File external_data, assets, dictionaries;
     private static Path message_dump_dir, account_dump_dir, import_profile_dump_dir;
-    private static JsonDump message_dump, account_dump, import_profile_dump;
+    private static JsonRepository message_dump, account_dump, import_profile_dump;
     public  static JsonDataset user_dump, followers_dump, following_dump;
+    public  static AccessTracker access;
     private static File schema_dir, conv_schema_dir;
     private static Node elasticsearch_node;
     private static Client elasticsearch_client;
@@ -159,21 +161,39 @@ public class DAO {
                 "You can import dump files from other peers by dropping them into the import directory.\n" +
                 "Each dump file must start with the prefix '" + MESSAGE_DUMP_FILE_PREFIX + "' to be recognized.\n";
             message_dump_dir = dataPath.resolve("dump");
-            message_dump = new JsonDump(message_dump_dir.toFile(), MESSAGE_DUMP_FILE_PREFIX, message_dump_readme);
+            message_dump = new JsonRepository(message_dump_dir.toFile(), MESSAGE_DUMP_FILE_PREFIX, message_dump_readme, JsonRepository.COMPRESSED_MODE, 1);
             
             account_dump_dir = dataPath.resolve("accounts");
             account_dump_dir.toFile().mkdirs();
             LoklakServer.protectPath(account_dump_dir); // no other permissions to this path
-            account_dump = new JsonDump(account_dump_dir.toFile(), ACCOUNT_DUMP_FILE_PREFIX, null);
+            account_dump = new JsonRepository(account_dump_dir.toFile(), ACCOUNT_DUMP_FILE_PREFIX, null, JsonRepository.REWRITABLE_MODE, 1);
 
             File user_dump_dir = new File(datadir, "accounts");
             user_dump_dir.mkdirs();
-            user_dump = new JsonDataset(user_dump_dir,USER_DUMP_FILE_PREFIX, new String[]{"id_str","screen_name"});
-            followers_dump = new JsonDataset(user_dump_dir, FOLLOWERS_DUMP_FILE_PREFIX, new String[]{"id_str","screen_name"});
-            following_dump = new JsonDataset(user_dump_dir, FOLLOWING_DUMP_FILE_PREFIX, new String[]{"id_str","screen_name"});
-
+            user_dump = new JsonDataset(
+                    user_dump_dir,USER_DUMP_FILE_PREFIX,
+                    new JsonDataset.Column[]{new JsonDataset.Column("id_str", false), new JsonDataset.Column("screen_name", true)},
+                    "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
+                    JsonRepository.REWRITABLE_MODE);
+            followers_dump = new JsonDataset(
+                    user_dump_dir, FOLLOWERS_DUMP_FILE_PREFIX,
+                    new JsonDataset.Column[]{new JsonDataset.Column("screen_name", true)},
+                    "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
+                    JsonRepository.REWRITABLE_MODE);
+            following_dump = new JsonDataset(
+                    user_dump_dir, FOLLOWING_DUMP_FILE_PREFIX,
+                    new JsonDataset.Column[]{new JsonDataset.Column("screen_name", true)},
+                    "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
+                    JsonRepository.REWRITABLE_MODE);
+            
+            Path log_dump_dir = dataPath.resolve("log");
+            log_dump_dir.toFile().mkdirs();
+            LoklakServer.protectPath(log_dump_dir); // no other permissions to this path
+            access = new AccessTracker(log_dump_dir.toFile(), ACCESS_DUMP_FILE_PREFIX, 60000, 3000);
+            access.start(); // start monitor
+            
 	        import_profile_dump_dir = dataPath.resolve("import-profiles");
-            import_profile_dump = new JsonDump(import_profile_dump_dir.toFile(), IMPORT_PROFILE_FILE_PREFIX, null);
+            import_profile_dump = new JsonRepository(import_profile_dump_dir.toFile(), IMPORT_PROFILE_FILE_PREFIX, null, JsonRepository.COMPRESSED_MODE, 1);
 
             // load schema folder
             conv_schema_dir = new File("conf/conversion");
@@ -261,32 +281,38 @@ public class DAO {
         return message_dump.getOwnDumps();
     }
     
-    public static int importMessageDumps() {
+    public static int importMessageDumps() throws IOException {
         int imported = 0;
-        int concurrency = Runtime.getRuntime().availableProcessors();
-        JsonDump.ConcurrentReader message_reader = message_dump.getImportDumpReader(concurrency);
-        if (message_reader == null) return 0;
-        imported = importMessageDump(message_reader, concurrency);
+        Collection<JsonReader> message_readers = message_dump.getImportDumpReaders(true);
+        if (message_readers == null || message_readers.size() == 0) return 0;
+        for (JsonReader reader: message_readers) {
+            imported += importMessageDump(reader);
+        }
         message_dump.shiftProcessedDumps();
         return imported;
     }
     
-    public static int importMessageDump(final JsonDump.ConcurrentReader dumpReader, int concurrency) {
-        dumpReader.start();
+    public static int importMessageDump(final JsonReader dumpReader) {
+        (new Thread(dumpReader)).start();
         final AtomicInteger newTweet = new AtomicInteger(0);
-        Thread[] indexerThreads = new Thread[concurrency];
-        for (int i = 0; i < concurrency; i++) {
+        Thread[] indexerThreads = new Thread[dumpReader.getConcurrency()];
+        for (int i = 0; i < dumpReader.getConcurrency(); i++) {
             indexerThreads[i] = new Thread() {
                 public void run() {
-                    Map<String, Object> tweet;
+                    JsonFactory tweet;
                     try {
-                        while ((tweet = dumpReader.take()) != JsonDump.POISON_JSON_MAP) {
-                            @SuppressWarnings("unchecked") Map<String, Object> user = (Map<String, Object>) tweet.remove("user");
-                            if (user == null) continue;
-                            UserEntry u = new UserEntry(user);
-                            MessageEntry t = new MessageEntry(tweet);
-                            boolean newtweet = DAO.writeMessage(t, u, false, true);
-                            if (newtweet) newTweet.incrementAndGet();
+                        while ((tweet = dumpReader.take()) != JsonStreamReader.POISON_JSON_MAP) {
+                            try {
+                                Map<String, Object> json = tweet.getJson();
+                                @SuppressWarnings("unchecked") Map<String, Object> user = (Map<String, Object>) json.remove("user");
+                                if (user == null) continue;
+                                UserEntry u = new UserEntry(user);
+                                MessageEntry t = new MessageEntry(json);
+                                boolean newtweet = DAO.writeMessage(t, u, false, true);
+                                if (newtweet) newTweet.incrementAndGet();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
                         }
                     } catch (InterruptedException e) {
                         e.printStackTrace();
@@ -295,7 +321,7 @@ public class DAO {
             };
             indexerThreads[i].start();
         }
-        for (int i = 0; i < concurrency; i++) {
+        for (int i = 0; i < dumpReader.getConcurrency(); i++) {
             try {indexerThreads[i].join();} catch (InterruptedException e) {}
         }
         return newTweet.get();
@@ -308,6 +334,11 @@ public class DAO {
         Log.getLog().info("closing DAO");
         message_dump.close();
         account_dump.close();
+        import_profile_dump.close();
+        user_dump.close();
+        followers_dump.close();
+        following_dump.close();
+        access.close();
         elasticsearch_node.close();
         while (!elasticsearch_node.isClosed()) try {Thread.sleep(100);} catch (InterruptedException e) {break;}
         Log.getLog().info("closed DAO");
@@ -521,6 +552,10 @@ public class DAO {
                 .actionGet();
         return response.getCount();
     }
+
+    public static MessageEntry readMessage(String id) throws IOException {
+        return messages.read(id);
+    }
     
     public static boolean existMessage(String id) {
         return messages.exists(id);
@@ -543,7 +578,7 @@ public class DAO {
     }
     
     public static class SearchLocalMessages {
-        public long hits;
+        public int hits;
         public Timeline timeline;
         public Map<String, List<Map.Entry<String, Long>>> aggregations;
 
@@ -571,7 +606,7 @@ public class DAO {
                 if (resultCount > 0) request.addSort(order_field.getMessageFieldName(), SortOrder.DESC);
                 boolean addTimeHistogram = false;
                 long interval = sq.until.getTime() - sq.since.getTime();
-                DateHistogram.Interval dateHistogrammInterval = interval > 1000 * 60 * 60 * 24 * 7 ? DateHistogram.Interval.DAY : interval > 1000 * 60 * 60 * 3 ? DateHistogram.Interval.HOUR : DateHistogram.Interval.MINUTE;
+                DateHistogram.Interval dateHistogrammInterval = interval > DateParser.WEEK_MILLIS ? DateHistogram.Interval.DAY : interval > DateParser.HOUR_MILLIS * 3 ? DateHistogram.Interval.HOUR : DateHistogram.Interval.MINUTE;
                 for (String field: aggregationFields) {
                     if (field.equals("created_at")) {
                         addTimeHistogram = true;
@@ -582,7 +617,7 @@ public class DAO {
                 }
                 // get response
                 SearchResponse response = request.execute().actionGet();
-                this.hits = response.getHits().getTotalHits();
+                this.hits = (int) response.getHits().getTotalHits();
                         
                 // evaluate search result
                 //long totalHitCount = response.getHits().getTotalHits();
@@ -822,43 +857,60 @@ public class DAO {
         return latests.values();
     }
     
-    public static Timeline[] scrapeTwitter(final String q, final Timeline.Order order, final int timezoneOffset, boolean byUserQuery) {
+    public static Timeline[] scrapeTwitter(final RemoteAccess.Post post, final String q, final Timeline.Order order, final int timezoneOffset, boolean byUserQuery) {
         // retrieve messages from remote server
         ArrayList<String> remote = DAO.getFrontPeers();
         Timeline remoteMessages;
-        if (remote.size() > 0 && (peerLatency.get(remote.get(0)) == null || peerLatency.get(remote.get(0)) < 3000)) {
+        if (remote.size() > 0 && (peerLatency.get(remote.get(0)) == null || peerLatency.get(remote.get(0)).longValue() < 3000)) {
+            long start = System.currentTimeMillis();
             remoteMessages = searchOnOtherPeers(remote, q, order, 100, timezoneOffset, "twitter", SearchClient.frontpeer_hash);
+            if (post != null) post.recordEvent("remote_scraper_on_" + remote.get(0), System.currentTimeMillis() - start);
             if (remoteMessages == null || remoteMessages.size() == 0) {
                 // maybe the remote server died, we try then ourself
+                start = System.currentTimeMillis();
                 remoteMessages = TwitterScraper.search(q, order);
+                if (post != null) post.recordEvent("local_scraper_after_unsuccessful_remote", System.currentTimeMillis() - start);
             }
         } else {
+            if (post != null && remote.size() > 0) post.recordEvent("omitted_scraper_latency_" + remote.get(0), peerLatency.get(remote.get(0)));
+            long start = System.currentTimeMillis();
             remoteMessages = TwitterScraper.search(q, order);
+            if (post != null) post.recordEvent("local_scraper", System.currentTimeMillis() - start);
         }
         
         // identify new tweets
+        long start = System.currentTimeMillis();
         Timeline newMessages = new Timeline(order); // we store new tweets here to be able to transmit them to peers
         if (remoteMessages == null) {// can be caused by time-out
             remoteMessages = new Timeline(order);
         } else {
             // record the result; this may be moved to a concurrent process
-            for (MessageEntry t: remoteMessages) {
+            Iterator<MessageEntry> mi = remoteMessages.iterator();
+            while (mi.hasNext()) {
+                MessageEntry t = mi.next();
                 // wait until messages are ready (i.e. unshortening of shortlinks)
+                boolean tweetOk = true;
                 if (t instanceof TwitterTweet) {
-                    ((TwitterTweet) t).waitReady();
+                    tweetOk = ((TwitterTweet) t).waitReady(1000);
                 }
                 // write the message to the index
-                UserEntry u = remoteMessages.getUser(t);
-                assert u != null;
-                boolean newTweet = writeMessage(t, u, true, true);
-                if (newTweet) {
-                    newMessages.add(t, u);
+                if (tweetOk) {
+                    UserEntry u = remoteMessages.getUser(t);
+                    assert u != null;
+                    boolean newTweet = writeMessage(t, u, true, true);
+                    if (newTweet) {
+                        newMessages.add(t, u);
+                    }
+                } else {
+                    mi.remove();
                 }
             }
             DAO.transmitTimeline(newMessages);
         }
+        if (post != null) post.recordEvent("local_scraper_wait_ready", System.currentTimeMillis() - start);
 
         // record the query
+        start = System.currentTimeMillis();
         QueryEntry qe = null;
         try {
             qe = queries.read(q);
@@ -882,6 +934,7 @@ public class DAO {
             // accept rules may change, we want to delete the query then in the index
             if (qe != null) queries.delete(q, qe.source_type);
         }
+        if (post != null) post.recordEvent("query_recorder", System.currentTimeMillis() - start);
         
         return new Timeline[]{remoteMessages, newMessages};
     }
@@ -930,8 +983,10 @@ public class DAO {
             String[] remote = DAO.getConfig("frontpeers", new String[0], ",");
             for (String peer: remote) frontPeerCache.add(peer);
             // add dynamically all peers that contacted myself
-            for (Map.Entry<String, RemoteAccess> peer: RemoteAccess.history.entrySet()) {
-                updateFrontPeerCache(peer.getValue());
+            for (Map<String, RemoteAccess> hmap: RemoteAccess.history.values()) {
+                for (Map.Entry<String, RemoteAccess> peer: hmap.entrySet()) {
+                    updateFrontPeerCache(peer.getValue());
+                }
             }
         }
         testpeers.addAll(frontPeerCache);
@@ -989,9 +1044,9 @@ public class DAO {
     }
 
     public static void announceNewUserId(Number id) {
-        Index idIndex = DAO.user_dump.getIndex("id_str");
-        JsonMinifier.Capsule mapcapsule = idIndex.get(id.toString());
-        Map<String, Object> map = mapcapsule == null ? null : mapcapsule.getJson();
+        JsonFactory mapcapsule = DAO.user_dump.get("id_str", id.toString());
+        Map<String, Object> map = null;
+        try {map = mapcapsule == null ? null : mapcapsule.getJson();} catch (IOException e) {}
         if (map == null) newUserIds.add(id);
     }
     

@@ -19,7 +19,6 @@
 
 package org.loklak.api.server.push;
 
-import org.loklak.data.DAO;
 import org.loklak.harvester.JsonFieldConverter;
 import org.loklak.harvester.JsonValidator;
 import org.loklak.harvester.SourceType;
@@ -30,7 +29,8 @@ import java.util.Map;
 
 public class FossasiaPushServlet extends AbstractPushServlet {
 
-    @SuppressWarnings("unchecked")
+    private static final long serialVersionUID = 248613410547240115L;
+
     @Override
     protected SourceType getSourceType() {
         return SourceType.FOSSASIA_API;

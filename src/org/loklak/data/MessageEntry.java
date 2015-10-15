@@ -504,7 +504,7 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
         if (this.to != null) m.put("to", utcFormatter.print(this.to.getTime()));
         m.put("screen_name", this.screen_name);
         if (this.retweet_from != null && this.retweet_from.length() > 0) m.put("retweet_from", this.retweet_from);
-        m.put("text", this.text); // the tweet
+        m.put("text", this.text); // the tweet; the cleanup is a helper function which cleans mistakes from the past in scraping
         if (this.status_id_url != null) m.put("link", this.status_id_url.toExternalForm());
         m.put("id_str", this.id_str);
         m.put("source_type", this.source_type.name());

@@ -67,7 +67,10 @@ public class UserServlet extends HttpServlet {
         for (String screen_name: screen_names) {
             try {
                 Map<String, Object> twitterUserEntry = TwitterAPI.getUser(screen_name, false);
-                if (twitterUserEntry != null) twitterUserEntries.add(twitterUserEntry);
+                if (twitterUserEntry != null) {
+                    TwitterAPI.enrichLocation(twitterUserEntry);
+                    twitterUserEntries.add(twitterUserEntry);
+                }
             } catch (TwitterException e) {}
         }
         Map<String, Object> topology = null;
@@ -91,6 +94,7 @@ public class UserServlet extends HttpServlet {
         sos.print((minified ? new ObjectMapper().writer() : new ObjectMapper().writerWithDefaultPrettyPrinter()).writeValueAsString(m));
         if (jsonp) sos.println(");");
         sos.println();
+        post.finalize();
     }
     
 }

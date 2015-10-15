@@ -33,9 +33,10 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Map;
 
 public class ValidateServlet extends HttpServlet {
+
+    private static final long serialVersionUID = -7325042684311478289L;
 
     enum ValidationStatus {
         offline,
@@ -157,5 +158,6 @@ public class ValidateServlet extends HttpServlet {
         sos.println();
 
         DAO.log("Validated url " + url + ". Result = " + status.name());
+        post.finalize();
     }
 }

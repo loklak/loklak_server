@@ -29,10 +29,12 @@ import org.eclipse.jetty.util.log.Log;
 import org.elasticsearch.search.sort.SortOrder;
 import org.loklak.api.client.HelloClient;
 import org.loklak.api.client.PushClient;
+import org.loklak.api.server.SuggestServlet;
 import org.loklak.data.DAO;
 import org.loklak.data.QueryEntry;
 import org.loklak.data.Timeline;
 import org.loklak.harvester.TwitterAPI;
+import org.loklak.tools.DateParser;
 import org.loklak.tools.OS;
 
 import twitter4j.TwitterException;
@@ -46,7 +48,7 @@ public class Caretaker extends Thread {
     private boolean shallRun = true;
     
     public final static long startupTime = System.currentTimeMillis();
-    public final static long upgradeWait = 1000 * 60 * 60 * 24; // 1 day
+    public final static long upgradeWait = DateParser.DAY_MILLIS; // 1 day
     public       static long upgradeTime = startupTime + upgradeWait;
     
     /**
@@ -75,6 +77,9 @@ public class Caretaker extends Thread {
                 upgrade();
                 DAO.log("UPGRADE: started an upgrade");
             }
+            
+            // clear caches
+            if (SuggestServlet.cache.size() > 100) SuggestServlet.cache.clear();
             
             // sleep a bit to prevent that the DoS limit fires at backend server
             try {Thread.sleep(4000);} catch (InterruptedException e) {}
@@ -105,7 +110,11 @@ public class Caretaker extends Thread {
             }
             
             // scan dump input directory to import files
-            DAO.importMessageDumps();
+            try {
+                DAO.importMessageDumps();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
             
             // run some crawl steps
             for (int i = 0; i < 10; i++) {
@@ -121,7 +130,7 @@ public class Caretaker extends Thread {
                         DAO.deleteQuery(qe.getQuery(), qe.getSourceType());
                         continue;
                     }
-                    Timeline[] t = DAO.scrapeTwitter(qe.getQuery(), Timeline.Order.CREATED_AT, qe.getTimezoneOffset(), false);
+                    Timeline[] t = DAO.scrapeTwitter(null, qe.getQuery(), Timeline.Order.CREATED_AT, qe.getTimezoneOffset(), false);
                     DAO.log("automatic retrieval of " + t[0].size() + " messages, " + t[1].size() + " new for q = \"" + qe.getQuery() + "\"");
                     DAO.announceNewUserId(t[0]);
                     try {Thread.sleep(1000);} catch (InterruptedException e) {} // prevent remote DoS protection handling

@@ -35,6 +35,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.MultipartConfigElement;
@@ -47,13 +49,17 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.DefaultHandler;
 import org.eclipse.jetty.server.handler.ErrorHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.server.handler.IPAccessHandler;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.servlets.GzipFilter;
+import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.thread.ExecutorThreadPool;
 import org.eclipse.jetty.webapp.WebAppContext;
+import org.loklak.api.server.AccessServlet;
 import org.loklak.api.server.AssetServlet;
 import org.loklak.api.server.CampaignServlet;
 import org.loklak.api.server.CrawlerServlet;
@@ -87,6 +93,8 @@ import org.loklak.vis.server.MarkdownServlet;
 public class LoklakServer {
 
     private final static Set<PosixFilePermission> securePerm = new HashSet<PosixFilePermission>();
+    
+    public final static Set<String> blacklistedHosts = new ConcurrentHashSet<>();
     
     static {
         securePerm.add(PosixFilePermission.OWNER_READ);
@@ -185,7 +193,11 @@ public class LoklakServer {
         /// https
         
         // init the http server
-        LoklakServer.server = new Server();
+        
+        
+        LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<Runnable>(300);
+        ExecutorThreadPool pool = new ExecutorThreadPool(10, 100, 10000, TimeUnit.MILLISECONDS, queue);;
+        LoklakServer.server = new Server(pool);
         LoklakServer.server.setStopAtShutdown(true);
         ServerConnector connector = new ServerConnector(LoklakServer.server);
         connector.setPort(httpPort);
@@ -193,6 +205,21 @@ public class LoklakServer {
         connector.setIdleTimeout(20000); // timout in ms when no bytes send / received
         LoklakServer.server.addConnector(connector);
 
+        // Setup IPAccessHandler for blacklists
+        String blacklist = config.get("server.blacklist");
+        if (blacklist != null && blacklist.length() > 0) try {
+            IPAccessHandler ipaccess = new IPAccessHandler();
+            String[] bx = blacklist.split(",");
+            ipaccess.setBlack(bx);
+            for (String b: bx) {
+                int p = b.indexOf('|');
+                blacklistedHosts.add(p < 0 ? b : b.substring(0, p));
+            }
+            LoklakServer.server.setHandler(ipaccess);
+        } catch (IllegalArgumentException e) {
+            Log.getLog().warn("bad blacklist:" + blacklist, e);
+        }
+        
         WebAppContext htrootContext = new WebAppContext();
         htrootContext.setContextPath("/");
 
@@ -201,6 +228,9 @@ public class LoklakServer {
         FilterHolder filter = servletHandler.addFilter(GzipFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
             filter.setInitParameter("mimeTypes", "text/plain");
         servletHandler.addServlet(DumpDownloadServlet.class, "/dump/*");
+        servletHandler.addServlet(AccessServlet.class, "/api/access.json");
+        servletHandler.addServlet(AccessServlet.class, "/api/access.html");
+        servletHandler.addServlet(AccessServlet.class, "/api/access.txt");
         servletHandler.addServlet(HelloServlet.class, "/api/hello.json");
         servletHandler.addServlet(PeersServlet.class, "/api/peers.json");
         servletHandler.addServlet(CrawlerServlet.class, "/api/crawler.json");

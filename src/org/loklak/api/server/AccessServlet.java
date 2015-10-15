@@ -1,6 +1,6 @@
 /**
- *  HelloServlet
- *  Copyright 22.02.2015 by Michael Peter Christen, @0rb1t3r
+ *  AccessServlet
+ *  Copyright 11.10.2015 by Michael Peter Christen, @0rb1t3r
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -20,6 +20,8 @@
 package org.loklak.api.server;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -30,14 +32,11 @@ import javax.servlet.http.HttpServletResponse;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.loklak.data.DAO;
+import org.loklak.data.AccessTracker.Track;
 
-/**
- * Servlet to span the message peer-to-peer network.
- * This servlet is called to announce the existence of the remote peer.
- */
-public class HelloServlet extends HttpServlet {
-    
-    private static final long serialVersionUID = 1839868262296635665L;
+public class AccessServlet extends HttpServlet {
+
+    private static final long serialVersionUID = 257718432475091648L;
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -47,22 +46,36 @@ public class HelloServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         RemoteAccess.Post post = RemoteAccess.evaluate(request);
+        if (post.isDoS_servicereduction() || post.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;} // DoS protection
         
-        // manage DoS
-        if (post.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;}
+        boolean anonymize = !post.isLocalhostAccess();
         
         String callback = post.get("callback", "");
         boolean jsonp = callback != null && callback.length() > 0;
-        // String pingback = qm == null ? request.getParameter("pingback") : qm.get("pingback");
-        // pingback may be either filled with nothing, the term 'now' or the term 'later'
-
+        
         post.setResponse(response, "application/javascript");
+        Collection<Track> tracks = DAO.access.getTrack();
         
         // generate json
         XContentBuilder json = XContentFactory.jsonBuilder().prettyPrint().lfAtEnd();
         json.startObject();
-        json.field("status", "ok");
-        json.endObject();
+        json.field("access").startArray();
+        int maxcount = anonymize ? 100 : 1000;
+        for (Track track: tracks) {
+            if (anonymize && !track.get("class").equals("SearchServlet")) continue;
+            json.startObject();
+            for (Map.Entry<String, Object> entry: track.entrySet()) {
+                if (anonymize && "host".equals(entry.getKey())) {
+                    json.field("host-anonymized", Integer.toHexString(Math.abs(entry.getValue().hashCode())));
+                } else {
+                    json.field(entry.getKey(), entry.getValue());
+                }
+            }
+            json.endObject();
+            if (maxcount-- <= 0) break;
+        }
+        json.endArray();
+        json.endObject(); // of root
 
         // write json
         ServletOutputStream sos = response.getOutputStream();

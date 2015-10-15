@@ -31,6 +31,7 @@ import java.util.Date;
 
 
 
+
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -50,6 +51,7 @@ public class DumpDownloadServlet extends HttpServlet {
     
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        RemoteAccess.Post post = RemoteAccess.evaluate(request);
         String path = request.getPathInfo();
         long now = System.currentTimeMillis();
         
@@ -120,8 +122,7 @@ public class DumpDownloadServlet extends HttpServlet {
         int c;
         while ((c = fis.read(buffer)) > 0) response.getOutputStream().write(buffer, 0, c);
         fis.close();
-        
-        DAO.log(path);
-        return;
+
+        post.finalize();
     }
 }

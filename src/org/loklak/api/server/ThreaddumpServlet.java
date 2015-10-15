@@ -54,7 +54,6 @@ public class ThreaddumpServlet extends HttpServlet {
 
     @Override
     protected void doGet(final HttpServletRequest request, final HttpServletResponse response) throws ServletException, IOException {
-
         RemoteAccess.Post post = RemoteAccess.evaluate(request);
 
         int multi = post.isLocalhostAccess() ? post.get("multi", 0) : 0;
@@ -114,6 +113,7 @@ public class ThreaddumpServlet extends HttpServlet {
 
         post.setResponse(response, "text/plain");
         response.getOutputStream().write(UTF8.getBytes(buffer.toString()));
+        post.finalize();
     }
 
     private static class StackTrace {
