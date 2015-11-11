@@ -116,7 +116,7 @@ public class Classifier {
         }
     }
     
-    public static void learnPhrase(String message) {
+    public static synchronized void learnPhrase(String message) {
         for (Context c: Context.values()) c.learnPhrase(message);
     }
     
@@ -152,7 +152,7 @@ public class Classifier {
         for (Context c: Context.values()) {
             //Set<String> voc = c.vocabulary();
             for (MessageEntry m: tl) {
-                c.learnPhrase(m.getText());
+                c.learnPhrase(m.getText(Integer.MAX_VALUE, ""));
             }
         }
         /*

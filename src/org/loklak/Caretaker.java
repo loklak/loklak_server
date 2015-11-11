@@ -67,7 +67,7 @@ public class Caretaker extends Thread {
         HelloClient.propagate(remote, (int) DAO.getConfig("port.http", 9000), (int) DAO.getConfig("port.https", 9443), (String) DAO.getConfig("peername", "anonymous"));
         
         // work loop
-        while (this.shallRun) {
+        while (this.shallRun) try {
             if (System.currentTimeMillis() > upgradeTime) {
                 // increase the upgrade time to prevent that the peer runs amok (re-tries the attempt all the time) when upgrade fails for any reason
                 upgradeTime = upgradeTime + upgradeWait;
@@ -111,6 +111,7 @@ public class Caretaker extends Thread {
             
             // scan dump input directory to import files
             try {
+                DAO.importAccountDumps();
                 DAO.importMessageDumps();
             } catch (IOException e1) {
                 e1.printStackTrace();
@@ -124,15 +125,15 @@ public class Caretaker extends Thread {
             // run automatic searches
             if (DAO.getConfig("retrieval.queries.enabled", false)) {
                 // execute some queries again: look out in the suggest database for queries with outdated due-time in field retrieval_next
-                List<QueryEntry> queryList = DAO.SearchLocalQueries("", 10, "retrieval_next", SortOrder.ASC, null, new Date(), "retrieval_next");
+                List<QueryEntry> queryList = DAO.SearchLocalQueries("", 10, "retrieval_next", "date", SortOrder.ASC, null, new Date(), "retrieval_next");
                 for (QueryEntry qe: queryList) {
                     if (!acceptQuery4Retrieval(qe.getQuery())) {
                         DAO.deleteQuery(qe.getQuery(), qe.getSourceType());
                         continue;
                     }
-                    Timeline[] t = DAO.scrapeTwitter(null, qe.getQuery(), Timeline.Order.CREATED_AT, qe.getTimezoneOffset(), false);
-                    DAO.log("automatic retrieval of " + t[0].size() + " messages, " + t[1].size() + " new for q = \"" + qe.getQuery() + "\"");
-                    DAO.announceNewUserId(t[0]);
+                    Timeline t = DAO.scrapeTwitter(null, qe.getQuery(), Timeline.Order.CREATED_AT, qe.getTimezoneOffset(), false, 10000, true);
+                    DAO.log("automatic retrieval of " + t.size() + " new messages for q = \"" + qe.getQuery() + "\"");
+                    DAO.announceNewUserId(t);
                     try {Thread.sleep(1000);} catch (InterruptedException e) {} // prevent remote DoS protection handling
                 }
             }
@@ -150,6 +151,8 @@ public class Caretaker extends Thread {
             
             // heal the latency to give peers with out-dated information a new chance
             DAO.healLatency(0.95f);
+        } catch (Throwable e) {
+            Log.getLog().warn("CARETAKER THREAD", e);
         }
 
         Log.getLog().info("caretaker terminated");

@@ -30,6 +30,7 @@ import org.loklak.data.ProviderType;
 import org.loklak.data.Timeline;
 import org.loklak.data.MessageEntry;
 import org.loklak.data.UserEntry;
+import org.loklak.http.ClientConnection;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -39,16 +40,15 @@ public class SearchClient {
     public final static String frontpeer_hash = Integer.toHexString(Integer.MAX_VALUE - 1);
 
     // possible values: cache, twitter, all
-    public static Timeline search(final String protocolhostportstub, final String query, final Timeline.Order order, final String source, final int count, final int timezoneOffset, final String provider_hash) throws IOException {
+    public static Timeline search(final String protocolhostportstub, final String query, final Timeline.Order order, final String source, final int count, final int timezoneOffset, final String provider_hash, final long timeout) throws IOException {
         Timeline tl = new Timeline(order);
         String urlstring = "";
         try {
-            urlstring = protocolhostportstub + "/api/search.json?q=" + URLEncoder.encode(query.replace(' ', '+'), "UTF-8") + "&timezoneOffset=" + timezoneOffset + "&maximumRecords=" + count + "&source=" + (source == null ? "all" : source) + "&minified=true";
+            urlstring = protocolhostportstub + "/api/search.json?q=" + URLEncoder.encode(query.replace(' ', '+'), "UTF-8") + "&timezoneOffset=" + timezoneOffset + "&maximumRecords=" + count + "&source=" + (source == null ? "all" : source) + "&minified=true&timeout=" + timeout;
         } catch (UnsupportedEncodingException e1) {
             return tl;
         }
-        byte[] response = ClientConnection.download(urlstring);
-        byte[] json = response;
+        byte[] json = ClientConnection.download(urlstring);
         if (json == null || json.length == 0) return tl;
         Map<String, Object> map = DAO.jsonMapper.readValue(json, DAO.jsonTypeRef);
         Object statuses_obj = map.get("statuses");
@@ -64,13 +64,19 @@ public class SearchClient {
                 tl.add(t, u);
             }
         }
+        Object metadata_obj = map.get("search_metadata");
+        @SuppressWarnings("unchecked") Map<String, Object> metadata = metadata_obj instanceof Map<?,?> ? (Map<String, Object>) metadata_obj : null;
+        if (metadata != null) {
+            Integer hits = (Integer) metadata.get("hits");
+            if (hits != null) tl.setHits(hits.intValue());
+        }
         //System.out.println(parser.text());
         return tl;
     }
     
     public static void main(String[] args) {
         try {
-            Timeline tl = search("http://loklak.org", "beer", Timeline.Order.CREATED_AT, "cache", 20, -120, backend_hash);
+            Timeline tl = search("http://loklak.org", "beer", Timeline.Order.CREATED_AT, "cache", 20, -120, backend_hash, 10000);
             System.out.println(new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(tl.toMap(false)));
         } catch (IOException e) {
             e.printStackTrace();

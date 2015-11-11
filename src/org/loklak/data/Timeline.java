@@ -25,9 +25,10 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,21 +40,29 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class Timeline implements Iterable<MessageEntry> {
 
     public static enum Order {
-        CREATED_AT,
-        RETWEET_COUNT,
-        FAVOURITES_COUNT;
-            
+        CREATED_AT("date"),
+        RETWEET_COUNT("long"),
+        FAVOURITES_COUNT("long");
+        String field_type;
+        
+        Order(String field_type) {this.field_type = field_type;}
+
         public String getMessageFieldName() {
             return this.name().toLowerCase();
         }
+        
+        public String getMessageFieldType() {
+            return this.field_type;
+        }
     }
     
-    private TreeMap<String, MessageEntry> tweets; // the key is the date plus id of the tweet
+    private NavigableMap<String, MessageEntry> tweets; // the key is the date plus id of the tweet
     private Map<String, UserEntry> users;
+    private int hits = -1;
     final private Order order;
     
     public Timeline(Order order) {
-        this.tweets = new TreeMap<String, MessageEntry>();
+        this.tweets = new ConcurrentSkipListMap<String, MessageEntry>();
         this.users = new ConcurrentHashMap<String, UserEntry>();
         this.order = order;
     }
@@ -180,7 +189,7 @@ public class Timeline implements Iterable<MessageEntry> {
         List<Object> statuses = new ArrayList<>();
         for (MessageEntry t: this) {
             UserEntry u = this.users.get(t.getScreenName());
-            statuses.add(t.toMap(u, withEnrichedData));
+            statuses.add(t.toMap(u, withEnrichedData, Integer.MAX_VALUE, ""));
         }
         m.put("statuses", statuses);
         return m;
@@ -225,7 +234,15 @@ public class Timeline implements Iterable<MessageEntry> {
         for (MessageEntry t: this) {
             UserEntry u = getUser(t);
             assert u != null;
-            DAO.writeMessage(t, u, true, false);
+            DAO.writeMessage(t, u, true, false, false);
         }
+    }
+    
+    public void setHits(int hits) {
+        this.hits = hits;
+    }
+    
+    public int getHits() {
+        return this.hits == -1 ? this.size() : this.hits;
     }
 }

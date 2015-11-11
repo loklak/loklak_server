@@ -107,7 +107,7 @@ public abstract class AbstractIndexEntry implements IndexEntry {
         if (n instanceof String) {
             return Long.parseLong((String) n);
         }
-        assert n instanceof Number;
+        assert n == null || n instanceof Number;
         return n == null ? 0 : ((Number) n).longValue();
     }
     
@@ -122,14 +122,16 @@ public abstract class AbstractIndexEntry implements IndexEntry {
         }
         if (l instanceof String[]) {
             LinkedHashSet<String> a = new LinkedHashSet<>();
-            for (String s: ((String[]) l)) a.add(s);
+            for (String s: ((String[]) l)) if (s != null) a.add(s);
             return a;
         }
         if (l instanceof LinkedHashSet<?>) {
-            return (LinkedHashSet<String>) l;
+            LinkedHashSet<String> a = new LinkedHashSet<>();
+            for (String s: (LinkedHashSet<String>) l) if (s != null) a.add(s);
+            return a;
         }
         LinkedHashSet<String> a = new LinkedHashSet<>();
-        for (Object s: ((Collection<?>) l)) a.add((String) s);
+        for (Object s: ((Collection<?>) l)) if (s != null) a.add((String) s);
         return a;
     }
 }

@@ -35,6 +35,7 @@ import org.loklak.data.DAO;
 import org.loklak.data.ProviderType;
 import org.loklak.data.MessageEntry;
 import org.loklak.data.UserEntry;
+import org.loklak.http.RemoteAccess;
 import org.loklak.tools.UTF8;
 
 
@@ -93,9 +94,11 @@ public class PushServlet extends HttpServlet {
                     tweet.put("provider_hash", remoteHash);
                     UserEntry u = new UserEntry(user);
                     MessageEntry t = new MessageEntry(tweet);
-                    boolean newtweet = DAO.writeMessage(t, u, true, true);
+                    boolean newtweet = DAO.writeMessage(t, u, true, true, true);
                     if (newtweet) newCount++; else knownCount++;
                 }
+                try {DAO.users.bulkCacheFlush();} catch (IOException e) {}
+                try {DAO.messages.bulkCacheFlush();} catch (IOException e) {}
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -122,6 +125,7 @@ public class PushServlet extends HttpServlet {
         
         DAO.log(request.getServletPath() + " -> records = " + recordCount + ", new = " + newCount + ", known = " + knownCount + ", from host hash " + remoteHash);
 
+        response.addHeader("Access-Control-Allow-Origin", "*");
         post.finalize();
     }
 }

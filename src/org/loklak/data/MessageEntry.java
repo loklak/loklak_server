@@ -356,7 +356,13 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
         return this.hosts;
     }
     
-    public String getText() {
+    public String getText(final int iflinkexceedslength, final String urlstub) {
+        // check if we shall replace shortlinks
+        if (this.getLinks() != null && this.getLinks().length == 1 &&
+            this.getLinks()[0] != null && this.getLinks()[0].length() > iflinkexceedslength &&
+            DAO.existMessage(this.getIdStr())) {
+            return this.text.replace(this.getLinks()[0], urlstub + "/x?id=" + this.getIdStr());
+        }
         return this.text;
     }
 
@@ -492,10 +498,10 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
     
     @Override
     public Map<String, Object> toMap() {
-        return toMap(null, true); // very important to include calculated data here because that is written into the index using the abstract index factory
+        return toMap(null, true, Integer.MAX_VALUE, ""); // very important to include calculated data here because that is written into the index using the abstract index factory
     }
     
-    public Map<String, Object> toMap(UserEntry user, boolean calculatedData) {
+    public Map<String, Object> toMap(final UserEntry user, final boolean calculatedData, final int iflinkexceedslength, final String urlstub) {
         Map<String, Object> m = new LinkedHashMap<>();
 
         // tweet data
@@ -504,9 +510,11 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
         if (this.to != null) m.put("to", utcFormatter.print(this.to.getTime()));
         m.put("screen_name", this.screen_name);
         if (this.retweet_from != null && this.retweet_from.length() > 0) m.put("retweet_from", this.retweet_from);
-        m.put("text", this.text); // the tweet; the cleanup is a helper function which cleans mistakes from the past in scraping
+        m.put("text", this.getText(iflinkexceedslength, urlstub)); // the tweet; the cleanup is a helper function which cleans mistakes from the past in scraping
         if (this.status_id_url != null) m.put("link", this.status_id_url.toExternalForm());
         m.put("id_str", this.id_str);
+        if (this.canonical_id != null) m.put("canonical_id", this.canonical_id);
+        if (this.parent != null) m.put("parent", this.parent);
         m.put("source_type", this.source_type.name());
         m.put("provider_type", this.provider_type.name());
         if (this.provider_hash != null && this.provider_hash.length() > 0) m.put("provider_hash", this.provider_hash);
@@ -520,24 +528,26 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
         m.put("videos_count", this.videos.size());
         m.put("place_name", this.place_name);
         m.put("place_id", this.place_id);
-        if (this.place_context != null) m.put("place_context", this.place_context.name());
-        if (this.place_country != null && this.place_country.length() == 2) {
-            m.put("place_country", DAO.geoNames.getCountryName(this.place_country));
-            m.put("place_country_code", this.place_country);
-            m.put("place_country_center", DAO.geoNames.getCountryCenter(this.place_country));
-        }
-  
-        // add optional location data. This is written even if calculatedData == false if the source is from REPORT to prevent that it is lost
-        if (this.location_point != null && this.location_point.length == 2 && this.location_mark != null && this.location_mark.length == 2) {
-            // reference for this format: https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-geo-point-type.html#_lat_lon_as_array_5
-            m.put("location_point", this.location_point); // [longitude, latitude]
-            m.put("location_radius", this.location_radius);
-            m.put("location_mark", this.location_mark);
-            m.put("location_source", this.location_source.name());
-        }
         
         // add statistic/calculated data
         if (calculatedData) {
+            // location data
+            if (this.place_context != null) m.put("place_context", this.place_context.name());
+            if (this.place_country != null && this.place_country.length() == 2) {
+                m.put("place_country", DAO.geoNames.getCountryName(this.place_country));
+                m.put("place_country_code", this.place_country);
+                m.put("place_country_center", DAO.geoNames.getCountryCenter(this.place_country));
+            }
+      
+            // add optional location data. This is written even if calculatedData == false if the source is from REPORT to prevent that it is lost
+            if (this.location_point != null && this.location_point.length == 2 && this.location_mark != null && this.location_mark.length == 2) {
+                // reference for this format: https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-geo-point-type.html#_lat_lon_as_array_5
+                m.put("location_point", this.location_point); // [longitude, latitude]
+                m.put("location_radius", this.location_radius);
+                m.put("location_mark", this.location_mark);
+                m.put("location_source", this.location_source.name());
+            }
+            
             // redundant data for enhanced navigation with aggregations
             m.put("hosts", this.hosts);
             m.put("hosts_count", this.hosts.length);

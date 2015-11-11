@@ -32,6 +32,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.loklak.harvester.TwitterAPI;
+import org.loklak.http.RemoteAccess;
 
 import twitter4j.TwitterException;
 
@@ -94,6 +95,7 @@ public class UserServlet extends HttpServlet {
         sos.print((minified ? new ObjectMapper().writer() : new ObjectMapper().writerWithDefaultPrettyPrinter()).writeValueAsString(m));
         if (jsonp) sos.println(");");
         sos.println();
+        sos.flush(); sos.close();
         post.finalize();
     }
     

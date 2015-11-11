@@ -26,12 +26,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.nio.file.FileSystems;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.PosixFilePermission;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -69,6 +66,7 @@ import org.loklak.api.server.HelloServlet;
 import org.loklak.api.server.PeersServlet;
 import org.loklak.api.server.ProxyServlet;
 import org.loklak.api.server.PushServlet;
+import org.loklak.api.server.ShortlinkFromTweetServlet;
 import org.loklak.api.server.UserServlet;
 import org.loklak.api.server.push.GeoJsonPushServlet;
 import org.loklak.api.server.SearchServlet;
@@ -87,26 +85,14 @@ import org.loklak.api.server.ImportProfileServlet;
 import org.loklak.data.DAO;
 import org.loklak.harvester.TwitterScraper;
 import org.loklak.tools.Browser;
+import org.loklak.tools.OS;
 import org.loklak.vis.server.MapServlet;
 import org.loklak.vis.server.MarkdownServlet;
 
 public class LoklakServer {
 
-    private final static Set<PosixFilePermission> securePerm = new HashSet<PosixFilePermission>();
-    
     public final static Set<String> blacklistedHosts = new ConcurrentHashSet<>();
-    
-    static {
-        securePerm.add(PosixFilePermission.OWNER_READ);
-        securePerm.add(PosixFilePermission.OWNER_WRITE);
-        securePerm.add(PosixFilePermission.OWNER_EXECUTE);
-    }
-    
-    public final static void protectPath(Path path) {
-        try {
-            Files.setPosixFilePermissions(path, LoklakServer.securePerm);
-        } catch (UnsupportedOperationException | IOException e) {}
-    }
+
     
     private static Server server = null;
     private static Caretaker caretaker = null;
@@ -119,7 +105,7 @@ public class LoklakServer {
         for (Map.Entry<Object, Object> entry: prop.entrySet()) config.put((String) entry.getKey(), (String) entry.getValue());
         Path settings_dir = data.resolve("settings");
         settings_dir.toFile().mkdirs();
-        LoklakServer.protectPath(settings_dir);
+        OS.protectPath(settings_dir);
         File customized_config = new File(settings_dir.toFile(), "customized_config.properties");
         if (!customized_config.exists()) {
             BufferedWriter w = new BufferedWriter(new FileWriter(customized_config));
@@ -226,8 +212,9 @@ public class LoklakServer {
         File tmp = new File(dataFile, "tmp");
         ServletContextHandler servletHandler = new ServletContextHandler();
         FilterHolder filter = servletHandler.addFilter(GzipFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
-            filter.setInitParameter("mimeTypes", "text/plain");
+        filter.setInitParameter("mimeTypes", "text/plain");
         servletHandler.addServlet(DumpDownloadServlet.class, "/dump/*");
+        servletHandler.addServlet(ShortlinkFromTweetServlet.class, "/x");
         servletHandler.addServlet(AccessServlet.class, "/api/access.json");
         servletHandler.addServlet(AccessServlet.class, "/api/access.html");
         servletHandler.addServlet(AccessServlet.class, "/api/access.txt");

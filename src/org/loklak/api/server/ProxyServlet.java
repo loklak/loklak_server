@@ -28,11 +28,11 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.loklak.api.client.ClientConnection;
-import org.loklak.api.server.RemoteAccess;
 import org.loklak.data.DAO;
 import org.loklak.data.UserEntry;
 import org.loklak.harvester.TwitterAPI;
+import org.loklak.http.ClientConnection;
+import org.loklak.http.RemoteAccess;
 import org.loklak.tools.Cache;
 
 import twitter4j.TwitterException;
@@ -117,7 +117,7 @@ public class ProxyServlet extends HttpServlet {
                 if (user != null && user.getType().length() > 0) {
                     user.setProfileImageUrl(newUrl);
                     user.setProfileImage(buffer);
-                    DAO.writeUser(user, user.getType());
+                    DAO.writeUser(user, user.getType(), false);
                     if (!cache.full()) cache.put(url, buffer);
                 } else {
                     cache.put(url, buffer);

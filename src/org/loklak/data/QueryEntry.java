@@ -35,8 +35,6 @@ import java.util.regex.Pattern;
 
 import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
@@ -66,8 +64,6 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
     
     private final static long DAY_MILLIS = 1000L * 60L * 60L * 24L;
     private final static int RETRIEVAL_CONSTANT = 20; // the number of messages that we get with each retrieval at maximum
-    
-    public static double ttl_factor = 0.5d;
     
     protected String query;           // the query in the exact way as the user typed it in
     protected int query_length;       // the length in the query, number of characters
@@ -151,8 +147,9 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
             this.message_period = this.message_period == 0 ? new_message_period : (this.message_period + new_message_period) / 2;
         }
         this.messages_per_day = (int) (DAY_MILLIS / this.message_period);
-        this.expected_next = new Date(this.retrieval_last.getTime() + ((long) (ttl_factor *  this.message_period)));
+        double ttl_factor = DAO.getConfig("retrieval.queries.ttlfactor", 0.75d);
         long pivot_period = DAO.getConfig("retrieval.queries.pivotfrequency", 10000);
+        this.expected_next = new Date(this.retrieval_last.getTime() + ((long) (ttl_factor *  this.message_period)));
         long strategic_period =   // if the period is far below the minimum, we apply a penalty
                  (this.message_period < pivot_period ?
                      pivot_period + 1000 * (long) Math.pow((pivot_period - this.message_period) / 1000, 3) :
@@ -480,23 +477,8 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
         private QueryBuilder preparse(String q, int timezoneOffset) {
             // detect usage of OR connector usage.
             q = q.replaceAll(" AND ", " "); // AND is default
-            List<String> terms = splitIntoORGroups(q);
-
+            List<String> terms = splitIntoORGroups(q); // OR binds stronger than AND
             if (terms.size() == 0) return QueryBuilders.matchAllQuery();
-            
-            // check for query mistakes
-            for (int i = 0; i < terms.size(); i++) {
-                String[] c = terms.get(i).split(" ");
-                if (c.length == 2) {
-                    String c0 = c[0];
-                    String c1 = c[1];
-                    if (((c0.startsWith("#") && c0.equals("#" + c1))) || ("#" + c0).equals(c1)) {
-                        terms.set(i, c0);
-                        terms.add(i, c1);
-                        continue;
-                    }
-                }
-            }
             
             // special handling
             if (terms.size() == 1) return parse(terms.get(0), timezoneOffset);
@@ -504,7 +486,8 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
             // generic handling
             BoolQueryBuilder aquery = QueryBuilders.boolQuery();
             for (String t: terms) {
-                aquery.should(parse(t, timezoneOffset));
+                QueryBuilder partial = parse(t, timezoneOffset);
+                aquery.must(partial);
             }
             return aquery;
         }
@@ -595,7 +578,7 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
             // compose query for text
             List<QueryBuilder> ops = new ArrayList<>();
             List<QueryBuilder> nops = new ArrayList<>();
-            List<FilterBuilder> filters = new ArrayList<>();
+            List<QueryBuilder> filters = new ArrayList<>();
             for (String text: text_positive_match)  {
                 ops.add(QueryBuilders.matchQuery("text", text));
             }
@@ -631,6 +614,7 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
                         String[] screen_names = screen_name.split(",");
                         BoolQueryBuilder disjunction = QueryBuilders.boolQuery();
                         for (String name: screen_names) disjunction.should(QueryBuilders.termQuery("screen_name", name));
+                        disjunction.minimumNumberShouldMatch(1);
                         ops.add(disjunction);
                     }
                 }
@@ -653,9 +637,10 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
                     BoolQueryBuilder nearquery = QueryBuilders.boolQuery()
                         .should(QueryBuilders.matchQuery("place_name", near_name))
                         .should(QueryBuilders.matchQuery("text", near_name));
+                    nearquery.minimumNumberShouldMatch(1);
                     ops.add(QueryBuilders.boolQuery().must(nearquery).must(QueryBuilders.matchQuery("place_context", PlaceContext.FROM.name())));
                 } else {                    
-                    filters.add(FilterBuilders.geoDistanceFilter("location_point").distance(100.0, DistanceUnit.KILOMETERS).lat(loc.lat()).lon(loc.lon()));
+                    filters.add(QueryBuilders.geoDistanceQuery("location_point").distance(100.0, DistanceUnit.KILOMETERS).lat(loc.lat()).lon(loc.lon()));
                 }
             }
             if (modifier.containsKey("since")) try {
@@ -697,6 +682,7 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
                 for (QueryBuilder qb: ops) {
                     if (ORconnective) ((BoolQueryBuilder) bquery).should(qb); else ((BoolQueryBuilder) bquery).must(qb);
                 }
+                if (ORconnective) ((BoolQueryBuilder) bquery).minimumNumberShouldMatch(1);
                 for (QueryBuilder nqb: nops) {
                     ((BoolQueryBuilder) bquery).mustNot(nqb);
                 }
@@ -705,19 +691,19 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
             
             // apply constraints as filters
             for (String text: text_positive_filter) {
-                filters.add(FilterBuilders.termsFilter("text", text));
+                filters.add(QueryBuilders.termsQuery("text", text));
             }
-            for (String text: text_negative_filter) filters.add(FilterBuilders.notFilter(FilterBuilders.termsFilter("text", text)));
+            for (String text: text_negative_filter) filters.add(QueryBuilders.notQuery(QueryBuilders.termsQuery("text", text)));
             for (Constraint c: Constraint.values()) {
                 if (constraints_positive.contains(c.name())) {
-                    filters.add(FilterBuilders.existsFilter(c.field_name));
+                    filters.add(QueryBuilders.existsQuery(c.field_name));
                 }
                 if (constraints_negative.contains(c.name())) {
-                    filters.add(FilterBuilders.notFilter(FilterBuilders.existsFilter(c.field_name)));
+                    filters.add(QueryBuilders.notQuery(QueryBuilders.existsQuery(c.field_name)));
                 }
             }
             if (constraints_positive.contains("location")) {
-                filters.add(FilterBuilders.termsFilter("place_context", (constraint_about ? PlaceContext.ABOUT : PlaceContext.FROM).name()));
+                filters.add(QueryBuilders.termsQuery("place_context", (constraint_about ? PlaceContext.ABOUT : PlaceContext.FROM).name()));
             }
 
             // special treatment of location constraints of the form /location=lon-west,lat-south,lon-east,lat-north i.e. /location=8.58,50.178,8.59,50.181
@@ -727,13 +713,13 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
                     String params = cs.substring(Constraint.location.name().length() + 1);
                     String[] coord = params.split(",");
                     if (coord.length == 1) {
-                        filters.add(FilterBuilders.termsFilter("location_source", coord[0]));
+                        filters.add(QueryBuilders.termsQuery("location_source", coord[0]));
                     } else if (coord.length == 2) {
                         double lon = Double.parseDouble(coord[0]);
                         double lat = Double.parseDouble(coord[1]);
                         // ugly way to search exact geo_point : using geoboundingboxfilter, with two identical bounding points
                         // geoshape filter can search for exact point shape but it can't be performed on geo_point field
-                        filters.add(FilterBuilders.geoBoundingBoxFilter("location_point")
+                        filters.add(QueryBuilders.geoBoundingBoxQuery("location_point")
                                 .topLeft(lat, lon)
                                 .bottomRight(lat, lon));
                     }
@@ -743,21 +729,21 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
                         double lon_east  = Double.parseDouble(coord[2]);
                         double lat_north = Double.parseDouble(coord[3]);
                         PlaceContext context = constraint_about ? PlaceContext.ABOUT : PlaceContext.FROM;
-                        filters.add(FilterBuilders.existsFilter(Constraint.location.field_name));
-                        filters.add(FilterBuilders.termsFilter("place_context", context.name()));
-                        filters.add(FilterBuilders.geoBoundingBoxFilter("location_point")
+                        filters.add(QueryBuilders.existsQuery(Constraint.location.field_name));
+                        filters.add(QueryBuilders.termsQuery("place_context", context.name()));
+                        filters.add(QueryBuilders.geoBoundingBoxQuery("location_point")
                                 .topLeft(lat_north, lon_west)
                                 .bottomRight(lat_south, lon_east));
-                        if (coord.length == 5) filters.add(FilterBuilders.termsFilter("location_source", coord[4]));
+                        if (coord.length == 5) filters.add(QueryBuilders.termsQuery("location_source", coord[4]));
                     }
                 } else if (cs.startsWith(Constraint.link.name() + "=")) {
                     String regexp = cs.substring(Constraint.link.name().length() + 1);
-                    filters.add(FilterBuilders.existsFilter(Constraint.link.field_name));
-                    filters.add(FilterBuilders.regexpFilter(Constraint.link.field_name, regexp));
+                    filters.add(QueryBuilders.existsQuery(Constraint.link.field_name));
+                    filters.add(QueryBuilders.regexpQuery(Constraint.link.field_name, regexp));
                 } else if (cs.startsWith(Constraint.source_type.name() + "=")) {
                     String regexp = cs.substring(Constraint.source_type.name().length() + 1);
                     if (SourceType.hasValue(regexp)) {
-                        filters.add(FilterBuilders.termFilter("_type", regexp));
+                        filters.add(QueryBuilders.termQuery("_type", regexp));
                     }
                 }
             }
@@ -766,13 +752,13 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
                 if (cs.startsWith(Constraint.source_type.name() + "=")) {
                     String regexp = cs.substring(Constraint.source_type.name().length() + 1);
                     if (SourceType.hasValue(regexp)) {
-                        filters.add(FilterBuilders.notFilter(FilterBuilders.termFilter("_type", regexp)));
+                        filters.add(QueryBuilders.notQuery(QueryBuilders.termQuery("_type", regexp)));
                     }
 
                 }
             }
 
-            QueryBuilder cquery = filters.size() == 0 ? bquery : QueryBuilders.filteredQuery(bquery, FilterBuilders.andFilter(filters.toArray(new FilterBuilder[filters.size()])));
+            QueryBuilder cquery = filters.size() == 0 ? bquery : QueryBuilders.filteredQuery(bquery, QueryBuilders.andQuery(filters.toArray(new QueryBuilder[filters.size()])));
             return cquery;
         }
     }
