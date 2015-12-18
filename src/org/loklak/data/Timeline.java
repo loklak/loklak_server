@@ -22,7 +22,6 @@ package org.loklak.data;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -30,8 +29,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.loklak.tools.json.JSONArray;
+import org.loklak.tools.json.JSONException;
+import org.loklak.tools.json.JSONObject;
 
 /**
  * A timeline is a structure which holds tweet for the purpose of presentation
@@ -59,12 +59,19 @@ public class Timeline implements Iterable<MessageEntry> {
     private NavigableMap<String, MessageEntry> tweets; // the key is the date plus id of the tweet
     private Map<String, UserEntry> users;
     private int hits = -1;
+    private String scraperInfo = "";
     final private Order order;
-    
+    private String query;
+
     public Timeline(Order order) {
         this.tweets = new ConcurrentSkipListMap<String, MessageEntry>();
         this.users = new ConcurrentHashMap<String, UserEntry>();
         this.order = order;
+        this.query = null;
+    }
+    public Timeline(Order order, String scraperInfo) {
+        this(order);
+        this.scraperInfo = scraperInfo;
     }
     
     public static Order parseOrder(String order) {
@@ -74,9 +81,31 @@ public class Timeline implements Iterable<MessageEntry> {
             return Order.CREATED_AT;
         }
     }
+
+    public void clear() {
+        this.tweets.clear();
+        this.users.clear();
+        // we keep the other details (like order, scraperInfo and query) to be able to test with zero-size pushes
+    }
+    
+    public void setScraperInfo(String info) {
+        this.scraperInfo = info;
+    }
+    
+    public String getScraperInfo() {
+        return this.scraperInfo;
+    }
     
     public Order getOrder() {
         return this.order;
+    }
+    
+    public String getQuery() {
+        return this.query;
+    }
+    
+    public void setQuery(String query) {
+        this.query = query;
     }
     
     public int size() {
@@ -173,18 +202,18 @@ public class Timeline implements Iterable<MessageEntry> {
     }
     
     public String toString() {
-        try {
-            return new ObjectMapper().writer().writeValueAsString(toMap(true));
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-            return "";
-        }
+        return toJSON(true).toString();
+        //return new ObjectMapper().writer().writeValueAsString(toMap(true));
     }
     
+    /*
     public Map<String, Object> toMap(boolean withEnrichedData) {
         Map<String, Object> m = new LinkedHashMap<>();
         Map<String, Object> metadata = new LinkedHashMap<>();
         metadata.put("count", Integer.toString(this.tweets.size()));
+        if (this.query != null) metadata.put("query", this.query);
+        if (this.hits >= 0) metadata.put("hits", Math.max(this.hits, this.size()));
+        if (this.scraperInfo.length() > 0) metadata.put("scraperInfo", this.scraperInfo);
         m.put("search_metadata", metadata);
         List<Object> statuses = new ArrayList<>();
         for (MessageEntry t: this) {
@@ -193,6 +222,24 @@ public class Timeline implements Iterable<MessageEntry> {
         }
         m.put("statuses", statuses);
         return m;
+    }
+     */
+    
+    public JSONObject toJSON(boolean withEnrichedData) throws JSONException {
+        JSONObject json = new JSONObject();
+        JSONObject metadata = new JSONObject();
+        metadata.put("count", Integer.toString(this.tweets.size()));
+        if (this.query != null) metadata.put("query", this.query);
+        if (this.hits >= 0) metadata.put("hits", Math.max(this.hits, this.size()));
+        if (this.scraperInfo.length() > 0) metadata.put("scraperInfo", this.scraperInfo);
+        json.put("search_metadata", metadata);
+        JSONArray statuses = new JSONArray();
+        for (MessageEntry t: this) {
+            UserEntry u = this.users.get(t.getScreenName());
+            statuses.put(t.toJSON(u, withEnrichedData, Integer.MAX_VALUE, ""));
+        }
+        json.put("statuses", statuses);
+        return json;
     }
     
     /**

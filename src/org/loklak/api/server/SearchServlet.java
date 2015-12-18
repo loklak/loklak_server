@@ -20,6 +20,7 @@
 package org.loklak.api.server;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
@@ -29,7 +30,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -109,6 +109,7 @@ public class SearchServlet extends HttpServlet {
                     Timeline twitterTl = DAO.scrapeTwitter(post, scraper_query, order, timezoneOffsetf, true, timeout, true);
                     count_twitter_new.set(twitterTl.size());
                     tl.putAll(QueryEntry.applyConstraint(twitterTl, tokens, false)); // pre-localized results are not filtered with location constraint any more 
+                    tl.setScraperInfo(twitterTl.getScraperInfo());
                     post.recordEvent("twitterscraper_time", System.currentTimeMillis() - start);
                 }
             };
@@ -142,6 +143,7 @@ public class SearchServlet extends HttpServlet {
                 Timeline twitterTl = DAO.scrapeTwitter(post, scraper_query, order, timezoneOffset, true, timeout, true);
                 count_twitter_new.set(twitterTl.size());
                 tl.putAll(QueryEntry.applyConstraint(twitterTl, tokens, false)); // pre-localized results are not filtered with location constraint any more 
+                tl.setScraperInfo(twitterTl.getScraperInfo());
                 post.recordEvent("twitterscraper_time", System.currentTimeMillis() - start);
                 // in this case we use all tweets, not only the latest one because it may happen that there are no new and that is not what the user expects
             }
@@ -152,6 +154,7 @@ public class SearchServlet extends HttpServlet {
                 Timeline backendTl = DAO.searchBackend(query, order, count, timezoneOffset, "cache", timeout);
                 if (backendTl != null) {
                     tl.putAll(QueryEntry.applyConstraint(backendTl, tokens, true));
+                    tl.setScraperInfo(backendTl.getScraperInfo());
                     count_backend.set(tl.size());
                 }
                 post.recordEvent("backend_time", System.currentTimeMillis() - start);
@@ -205,6 +208,7 @@ public class SearchServlet extends HttpServlet {
             metadata.put("client", post.getClientHost());
             metadata.put("time", System.currentTimeMillis() - post.getAccessTime());
             metadata.put("servicereduction", post.isDoS_servicereduction() ? "true" : "false");
+            if (tl.getScraperInfo().length() > 0) metadata.put("scraperInfo", tl.getScraperInfo());
             m.put("search_metadata", metadata);
             List<Object> statuses = new ArrayList<>();
             try {
@@ -234,12 +238,14 @@ public class SearchServlet extends HttpServlet {
             m.put("aggregations", agg);
             
             // write json
-            ServletOutputStream sos = response.getOutputStream();
+            response.setCharacterEncoding("UTF-8");
+            PrintWriter sos = response.getWriter();
             if (jsonp) sos.print(callback + "(");
             sos.print(minified ? new ObjectMapper().writer().writeValueAsString(m) : new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(m));
             if (jsonp) sos.println(");");
             sos.println();
         } else if (rssExt) {
+            response.setCharacterEncoding("UTF-8");
             post.setResponse(response, "application/rss+xml;charset=utf-8");
             // generate xml
             RSSMessage channel = new RSSMessage();

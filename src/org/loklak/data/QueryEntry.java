@@ -40,9 +40,10 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.loklak.geo.GeoLocation;
 import org.loklak.geo.GeoMark;
-import org.loklak.geo.PlaceContext;
 import org.loklak.harvester.SourceType;
 import org.loklak.tools.DateParser;
+import org.loklak.tools.json.JSONException;
+import org.loklak.tools.json.JSONObject;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -103,7 +104,7 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
         this.query_first = retrieval_last;
     }
 
-    protected QueryEntry(Map<String, Object> map) throws IllegalArgumentException {
+    public QueryEntry(Map<String, Object> map) throws IllegalArgumentException {
         init(map);
     }
     
@@ -126,6 +127,31 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
         this.score_retrieval = (int) parseLong((Number) map.get("score_retrieval"));
         this.score_suggest = (int) parseLong((Number) map.get("score_suggest"));
     }
+
+    public QueryEntry(JSONObject json) throws IllegalArgumentException, JSONException {
+        init(json);
+    }
+
+    public void init(JSONObject json) throws IllegalArgumentException, JSONException {
+        this.query = (String) json.get("query");
+        this.query_length = (int) parseLong((Number) json.get("query_length"));
+        String source_type_string = (String) json.get("source_type");
+        if (source_type_string == null) source_type_string = SourceType.USER.name();
+        this.source_type = SourceType.valueOf(source_type_string);
+        this.timezoneOffset = (int) parseLong((Number) json.get("timezoneOffset"));
+        Date now = new Date();
+        this.query_first = parseDate(json.get("query_first"), now);
+        this.query_last = parseDate(json.get("query_last"), now);
+        this.retrieval_last = parseDate(json.get("retrieval_last"), now);
+        this.retrieval_next = parseDate(json.get("retrieval_next"), now);
+        this.expected_next = parseDate(json.get("expected_next"), now);
+        this.query_count = (int) parseLong((Number) json.get("query_count"));
+        this.retrieval_count = (int) parseLong((Number) json.get("retrieval_count"));
+        this.message_period = parseLong((Number) json.get("message_period"));
+        this.messages_per_day = (int) parseLong((Number) json.get("messages_per_day"));
+        this.score_retrieval = (int) parseLong((Number) json.get("score_retrieval"));
+        this.score_suggest = (int) parseLong((Number) json.get("score_suggest"));
+    }
     
     /**
      * update the query entry
@@ -133,6 +159,7 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
      * @param byUserQuery is true, if the query was submitted by the user; false if the query was submitted by an automatic system
      */
     public void update(final long message_period, final boolean byUserQuery) {
+        // message_period may have the value Long.MAX_VALUE if search requests have been empty and a message period cannot be computed
         this.retrieval_last = new Date();
         this.retrieval_count++;
         if (byUserQuery) {
@@ -142,7 +169,7 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
         long new_message_period = message_period; // can be Long.MAX_VALUE if less than 2 messages are in timeline!
         int new_messages_per_day = (int) (DAY_MILLIS / new_message_period); // this is an interpolation based on the last tweet list, can be 0!
         if (new_message_period == Long.MAX_VALUE || new_messages_per_day == 0) {
-            this.message_period = this.message_period == 0 ? DAY_MILLIS : Math.min(DAY_MILLIS, this.message_period * 2);
+            this.message_period = DAY_MILLIS;
         } else {
             this.message_period = this.message_period == 0 ? new_message_period : (this.message_period + new_message_period) / 2;
         }
@@ -221,6 +248,27 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
     @Override
     public Map<String, Object> toMap() {
         Map<String, Object> m = new LinkedHashMap<>();
+        m.put("query", this.query);
+        m.put("query_length", this.query_length);
+        m.put("source_type", this.source_type.name());
+        m.put("timezoneOffset", this.timezoneOffset);
+        if (this.query_first != null) m.put("query_first", utcFormatter.print(this.query_first.getTime()));
+        if (this.query_last != null) m.put("query_last", utcFormatter.print(this.query_last.getTime()));
+        if (this.retrieval_last != null) m.put("retrieval_last", utcFormatter.print(this.retrieval_last.getTime()));
+        if (this.retrieval_next != null) m.put("retrieval_next", utcFormatter.print(this.retrieval_next.getTime()));
+        if (this.expected_next != null) m.put("expected_next", utcFormatter.print(this.expected_next.getTime()));
+        m.put("query_count", this.query_count);
+        m.put("retrieval_count", this.retrieval_count);
+        m.put("message_period", this.message_period);
+        m.put("messages_per_day", this.messages_per_day);
+        m.put("score_retrieval", this.score_retrieval);
+        m.put("score_suggest", this.score_suggest);
+        return m;
+    }
+
+    @Override
+    public JSONObject toJSON() {
+        JSONObject m = new JSONObject();
         m.put("query", this.query);
         m.put("query_length", this.query_length);
         m.put("source_type", this.source_type.name());
@@ -762,4 +810,12 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
             return cquery;
         }
     }
+    
+    public static enum PlaceContext {
+        
+        FROM,  // the message was made at that place
+        ABOUT; // the message is about that place
+        
+    }
+
 }

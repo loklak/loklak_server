@@ -24,6 +24,7 @@ import java.util.Map;
 
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.loklak.harvester.SourceType;
+import org.loklak.tools.json.JSONObject;
 
 public interface IndexFactory<Entry extends IndexEntry> {
 
@@ -32,8 +33,10 @@ public interface IndexFactory<Entry extends IndexEntry> {
      * @return a json string which can be used to define an index in elasticsearch
      */
     public XContentBuilder getMapping();
-    
+
     public Entry init(Map<String, Object> map) throws IOException;
+    
+    //public Entry init(JSONObject json) throws IOException;
 
     public boolean exists(String id);
     
@@ -41,6 +44,8 @@ public interface IndexFactory<Entry extends IndexEntry> {
     
     public Map<String, Object> readMap(String id);
 
-    public void writeEntry(String id, String type, Entry entry) throws IOException;
+    public void writeEntry(String id, String type, Entry entry, boolean bulk) throws IOException;
+    
+    public void close();
     
 }

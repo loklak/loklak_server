@@ -31,14 +31,16 @@ import org.loklak.data.Timeline;
 import org.loklak.data.MessageEntry;
 import org.loklak.data.UserEntry;
 import org.loklak.http.ClientConnection;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.loklak.tools.UTF8;
+import org.loklak.tools.json.JSONArray;
+import org.loklak.tools.json.JSONObject;
 
 public class SearchClient {
 
     public final static String backend_hash = Integer.toHexString(Integer.MAX_VALUE);
     public final static String frontpeer_hash = Integer.toHexString(Integer.MAX_VALUE - 1);
 
+    /*
     // possible values: cache, twitter, all
     public static Timeline search(final String protocolhostportstub, final String query, final Timeline.Order order, final String source, final int count, final int timezoneOffset, final String provider_hash, final long timeout) throws IOException {
         Timeline tl = new Timeline(order);
@@ -69,6 +71,44 @@ public class SearchClient {
         if (metadata != null) {
             Integer hits = (Integer) metadata.get("hits");
             if (hits != null) tl.setHits(hits.intValue());
+            String scraperInfo = (String) metadata.get("scraperInfo");
+            if (scraperInfo != null) tl.setScraperInfo(scraperInfo);
+        }
+        //System.out.println(parser.text());
+        return tl;
+    }
+    */
+
+    // possible values: cache, twitter, all
+    public static Timeline search(final String protocolhostportstub, final String query, final Timeline.Order order, final String source, final int count, final int timezoneOffset, final String provider_hash, final long timeout) throws IOException {
+        Timeline tl = new Timeline(order);
+        String urlstring = "";
+        try {
+            urlstring = protocolhostportstub + "/api/search.json?q=" + URLEncoder.encode(query.replace(' ', '+'), "UTF-8") + "&timezoneOffset=" + timezoneOffset + "&maximumRecords=" + count + "&source=" + (source == null ? "all" : source) + "&minified=true&timeout=" + timeout;
+            byte[] jsonb = ClientConnection.download(urlstring);
+            JSONObject json = new JSONObject(UTF8.String(jsonb));
+            if (json == null || json.length() == 0) return tl;
+            JSONArray statuses = json.getJSONArray("statuses");
+            if (statuses != null) {
+                for (int i = 0; i < statuses.length(); i++) {
+                    JSONObject tweet = statuses.getJSONObject(i);
+                    JSONObject user = tweet.getJSONObject("user");
+                    if (user == null) continue;
+                    tweet.remove("user");
+                    UserEntry u = new UserEntry(user);
+                    MessageEntry t = new MessageEntry(tweet);
+                    tl.add(t, u);
+                }
+            }
+            JSONObject metadata = json.getJSONObject("search_metadata");
+            if (metadata != null) {
+                Integer hits = (Integer) metadata.get("hits");
+                if (hits != null) tl.setHits(hits.intValue());
+                String scraperInfo = (String) metadata.get("scraperInfo");
+                if (scraperInfo != null) tl.setScraperInfo(scraperInfo);
+            }
+        } catch (Throwable e) {
+            return tl;
         }
         //System.out.println(parser.text());
         return tl;
@@ -77,7 +117,7 @@ public class SearchClient {
     public static void main(String[] args) {
         try {
             Timeline tl = search("http://loklak.org", "beer", Timeline.Order.CREATED_AT, "cache", 20, -120, backend_hash, 10000);
-            System.out.println(new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(tl.toMap(false)));
+            System.out.println(tl.toJSON(false).toString(2));
         } catch (IOException e) {
             e.printStackTrace();
         }

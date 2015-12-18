@@ -39,9 +39,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.jetty.util.ConcurrentHashSet;
@@ -80,7 +77,6 @@ import org.loklak.api.client.SearchClient;
 import org.loklak.geo.GeoNames;
 import org.loklak.harvester.SourceType;
 import org.loklak.harvester.TwitterScraper;
-import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.http.AccessTracker;
 import org.loklak.http.ClientConnection;
 import org.loklak.http.RemoteAccess;
@@ -147,7 +143,6 @@ public class DAO {
     public static MessageFactory messages;
     public static QueryFactory queries;
     private static ImportProfileFactory importProfiles;
-    private static BlockingQueue<Timeline> newMessageTimelines = new LinkedBlockingQueue<Timeline>();
     private static Map<String, String> config = new HashMap<>();
     public  static GeoNames geoNames;
     
@@ -308,7 +303,11 @@ public class DAO {
                             // write line into query database
                             if (!existQuery(line)) {
                                 try {
-                                    queries.writeEntry(line, SourceType.TWITTER.name(), new QueryEntry(line, 0, 60000, SourceType.TWITTER, false));
+                                    queries.writeEntry(
+                                            line,
+                                            SourceType.TWITTER.name(),
+                                            new QueryEntry(line, 0, 60000, SourceType.TWITTER, false),
+                                            true);
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
@@ -319,6 +318,7 @@ public class DAO {
                         e.printStackTrace();
                     }
                 }
+                queries.bulkCacheFlush();
             }
         } catch (Throwable e) {
             e.printStackTrace();
@@ -428,13 +428,26 @@ public class DAO {
      */
     public static void close() {
         Log.getLog().info("closing DAO");
+        
+        // close the dump files
         message_dump.close();
         account_dump.close();
         import_profile_dump.close();
         user_dump.close();
         followers_dump.close();
         following_dump.close();
+        
+        // close the tracker
         access.close();
+        
+        // close the index factories (flushes the caches)
+        messages.close();
+        users.close();
+        accounts.close();
+        queries.close();
+        importProfiles.close();
+
+        // close the index
         elasticsearch_client.close();
         elasticsearch_node.close();
         Log.getLog().info("closed DAO");
@@ -499,48 +512,6 @@ public class DAO {
         return config.keySet();
     }
     
-    public static void transmitTimeline(Timeline tl) {
-        if (getConfig("backend", new String[0], ",").length > 0) newMessageTimelines.add(tl);
-    }
-    
-    public static void transmitMessage(final MessageEntry tweet, final UserEntry user) {
-        if (getConfig("backend", new String[0], ",").length <= 0) return;
-        Timeline tl = newMessageTimelines.poll();
-        if (tl == null) tl = new Timeline(Timeline.Order.CREATED_AT);
-        tl.add(tweet, user);
-        newMessageTimelines.add(tl);
-    }
-
-    public static Timeline takeTimelineMin(Timeline.Order order, int minsize, int maxsize, long maxwait) {
-        Timeline tl = takeTimelineMax(order, minsize, maxwait);
-        if (tl.size() >= minsize) {
-            // split that and return the maxsize
-            Timeline tlr = tl.reduceToMaxsize(minsize);
-            newMessageTimelines.add(tlr); // push back the remaining
-            return tl;
-        }
-        // push back that timeline and return nothing
-        newMessageTimelines.add(tl);
-        return new Timeline(order);
-    }
-
-    public static Timeline takeTimelineMax(Timeline.Order order, int maxsize, long maxwait) {
-        Timeline tl = new Timeline(order);
-        try {
-            Timeline tl0 = newMessageTimelines.poll(maxwait, TimeUnit.MILLISECONDS);
-            if (tl0 == null) return tl;
-            tl.putAll(tl0);
-            while (tl0.size() < maxsize && newMessageTimelines.size() > 0 && newMessageTimelines.peek().size() + tl0.size() <= maxsize) {
-                tl0 = newMessageTimelines.take();
-                if (tl0 == null) return tl;
-                tl.putAll(tl0);
-            }
-            return tl;
-        } catch (InterruptedException e) {
-            return tl;
-        }
-    }
-    
     /**
      * Store a message together with a user into the search index
      * This method is synchronized to prevent concurrent IO caused by this call.
@@ -573,7 +544,7 @@ public class DAO {
                 }
     
                 // record tweet into search index
-                if (bulk) messages.writeEntryBulk(t.getIdStr(), t.getSourceType().name(), t); else messages.writeEntry(t.getIdStr(), t.getSourceType().name(), t);
+                messages.writeEntry(t.getIdStr(), t.getSourceType().name(), t, bulk);
             }
             
             // record tweet into text file
@@ -597,7 +568,7 @@ public class DAO {
     public synchronized static boolean writeUser(UserEntry u, String source_type, boolean bulk) {
         try {
             // record user into search index
-            if (bulk) users.writeEntryBulk(u.getScreenName(), source_type, u); else users.writeEntry(u.getScreenName(), source_type, u);
+            users.writeEntry(u.getScreenName(), source_type, u, bulk);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -617,7 +588,7 @@ public class DAO {
             if (dump) account_dump.write(a.toMap(null));
 
             // record account into search index
-            accounts.writeEntry(a.getScreenName(), a.getSourceType().name(), a);
+            accounts.writeEntry(a.getScreenName(), a.getSourceType().name(), a, false);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -635,33 +606,50 @@ public class DAO {
             // record import profile into text file
             if (dump) import_profile_dump.write(i.toMap());
             // record import profile into search index
-            importProfiles.writeEntry(i.getId(), i.getSourceType().name(), i);
+            importProfiles.writeEntry(i.getId(), i.getSourceType().name(), i, false);
         } catch (IOException e) {
             e.printStackTrace();
         }
         return true;
     }
 
-    public static long countLocalMessages() {
-        return countLocal(MESSAGES_INDEX_NAME);
+    public static long countLocalMessages(long millis) {
+        return countLocal(MESSAGES_INDEX_NAME, millis);
+    }
+    
+    public static long countLocalMessages(String provider_hash) {
+        return countLocal(MESSAGES_INDEX_NAME, provider_hash);
     }
     
     public static long countLocalUsers() {
-        return countLocal(USERS_INDEX_NAME);
+        return countLocal(USERS_INDEX_NAME, -1);
     }
 
     public static long countLocalQueries() {
-        return countLocal(QUERIES_INDEX_NAME);
+        return countLocal(QUERIES_INDEX_NAME, -1);
     }
     
     public static long countLocalAccounts() {
-        return countLocal(ACCOUNTS_INDEX_NAME);
+        return countLocal(ACCOUNTS_INDEX_NAME, -1);
     }
-    
-    private static long countLocal(String index) {
+
+    private static long countLocal(String index, long millis) {
         try {
             CountResponse response = elasticsearch_client.prepareCount(index)
-                .setQuery(QueryBuilders.matchAllQuery())
+                .setQuery(millis <= 0 ? QueryBuilders.matchAllQuery() : QueryBuilders.rangeQuery("created_at").from(new Date(System.currentTimeMillis() - millis)))
+                .execute()
+                .actionGet();
+            return response.getCount();
+        } catch (Throwable e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+    
+    private static long countLocal(String index, String provider_hash) {
+        try {
+            CountResponse response = elasticsearch_client.prepareCount(index)
+                .setQuery(QueryBuilders.matchQuery("provider_hash", provider_hash))
                 .execute()
                 .actionGet();
             return response.getCount();
@@ -982,55 +970,25 @@ public class DAO {
     
     public static Timeline scrapeTwitter(final RemoteAccess.Post post, final String q, final Timeline.Order order, final int timezoneOffset, boolean byUserQuery, long timeout, boolean recordQuery) {
         // retrieve messages from remote server
-        long start0 = System.currentTimeMillis();
         ArrayList<String> remote = DAO.getFrontPeers();
-        Timeline[] remoteMessages; // Timeline[2] as [finished to be used, messages in postprocessing]; all of them are only new messages!
+        Timeline tl;
         if (remote.size() > 0 && (peerLatency.get(remote.get(0)) == null || peerLatency.get(remote.get(0)).longValue() < 3000)) {
             long start = System.currentTimeMillis();
-            remoteMessages = new Timeline[]{searchOnOtherPeers(remote, q, order, 100, timezoneOffset, "all", SearchClient.frontpeer_hash, timeout), new Timeline(order)}; // all must be selected here to catch up missing tweets between intervals
+            tl = searchOnOtherPeers(remote, q, order, 100, timezoneOffset, "all", SearchClient.frontpeer_hash, timeout); // all must be selected here to catch up missing tweets between intervals
             // at this point the remote list can be empty as a side-effect of the remote search attempt
-            if (post != null && remote.size() > 0 && remoteMessages != null) post.recordEvent("remote_scraper_on_" + remote.get(0), System.currentTimeMillis() - start);
-            if (remoteMessages == null || ((remoteMessages[0] == null || remoteMessages[0].size() == 0) && (remoteMessages[1] == null || remoteMessages[1].size() == 0))) {
+            if (post != null && remote.size() > 0 && tl != null) post.recordEvent("remote_scraper_on_" + remote.get(0), System.currentTimeMillis() - start);
+            if (tl == null || tl.size() == 0) {
                 // maybe the remote server died, we try then ourself
                 start = System.currentTimeMillis();
-                remoteMessages = TwitterScraper.search(q, order);
+                tl = TwitterScraper.search(q, order, true, true, 400);
                 if (post != null) post.recordEvent("local_scraper_after_unsuccessful_remote", System.currentTimeMillis() - start);
             }
         } else {
             if (post != null && remote.size() > 0) post.recordEvent("omitted_scraper_latency_" + remote.get(0), peerLatency.get(remote.get(0)));
             long start = System.currentTimeMillis();
-            remoteMessages = TwitterScraper.search(q, order);
+            tl = TwitterScraper.search(q, order, true, true, 400);
             if (post != null) post.recordEvent("local_scraper", System.currentTimeMillis() - start);
         }
-        
-        
-        // wait some time until timeout until either all messages have been processed or if timeout occurs, whatever happens first
-        long start1 = System.currentTimeMillis();
-        Timeline finishedTweets = remoteMessages[0]; // put all finished tweets here, abandon all other (they will live if they are finished in the search index)
-        int expectedJoin = remoteMessages[1].size();
-        long termination = start0 + timeout - 200; // the -200 is here to give the recording process some time as well. If we exceed the timeout, the front-end will discard all results!
-        //log("SCRAPER: TIME LEFT before unshortening = " + (termination - System.currentTimeMillis()));
-        //long unshortenStart = System.currentTimeMillis();
-        int previousExpectedJoin = -1;
-        while (System.currentTimeMillis() < termination && expectedJoin > 0) {
-            // iterate over all messages, wait a bit and re-calculate expectedJoin at the end
-            long remainingTime = timeout - (System.currentTimeMillis() - start0);
-            long jointime = Math.max(10, remainingTime / expectedJoin / 20);
-            //log("SCRAPER: expectedJoin = " + expectedJoin + ", jointime = " + jointime);
-            expectedJoin = 0;
-            for (MessageEntry me: remoteMessages[1]) {
-                assert me instanceof TwitterTweet;
-                TwitterTweet tt = (TwitterTweet) me;
-                if (tt.waitReady(jointime)) finishedTweets.add(tt, tt.getUser()); else expectedJoin++; // double additions are detected
-            }
-            //log("SCRAPER: expectedJoin after loop = " + expectedJoin);
-            if (expectedJoin == previousExpectedJoin) break; // if there is no change, exit
-            previousExpectedJoin = expectedJoin;
-        }
-        //log("SCRAPER: TIME LEFT after unshortening = " + (termination - System.currentTimeMillis()));
-        //log("SCRAPER: unshortening time = " + (System.currentTimeMillis() - unshortenStart));
-        
-        if (post != null) post.recordEvent("local_scraper_wait_ready", System.currentTimeMillis() - start1);
 
         // record the query
         long start2 = System.currentTimeMillis();
@@ -1044,13 +1002,13 @@ public class DAO {
         if (qe != null || (recordQuery && Caretaker.acceptQuery4Retrieval(q))) {
             if (qe == null) {
                 // a new query occurred
-                qe = new QueryEntry(q, timezoneOffset, finishedTweets.period(), SourceType.TWITTER, byUserQuery);
+                qe = new QueryEntry(q, timezoneOffset, tl.period(), SourceType.TWITTER, byUserQuery);
             } else {
                 // existing queries are updated
-                qe.update(finishedTweets.period(), byUserQuery);
+                qe.update(tl.period(), byUserQuery);
             }
             try {
-                queries.writeEntry(q, qe.source_type.name(), qe);
+                queries.writeEntry(q, qe.source_type == null ? SourceType.TWITTER.name() : qe.source_type.name(), qe, false);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -1061,7 +1019,7 @@ public class DAO {
         if (post != null) post.recordEvent("query_recorder", System.currentTimeMillis() - start2);
         //log("SCRAPER: TIME LEFT after recording = " + (termination - System.currentTimeMillis()));
         
-        return finishedTweets;
+        return tl;
     }
     
     public static final Random random = new Random(System.currentTimeMillis());
@@ -1151,6 +1109,7 @@ public class DAO {
                 peerLatency.put(peer, System.currentTimeMillis() - start);
                 // to show which peer was used for the retrieval, we move the picked peer to the front of the list
                 if (pick != 0) remote.add(0, remote.remove(pick));
+                tl.setScraperInfo(tl.getScraperInfo().length() > 0 ? peer + "," + tl.getScraperInfo() : peer);
                 return tl;
             } catch (IOException e) {
                 DAO.log("searchOnOtherPeers: no IO to scraping target: " + e.getMessage());

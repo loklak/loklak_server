@@ -20,11 +20,11 @@
 package org.loklak.api.server;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -39,7 +39,6 @@ import org.loklak.data.QueryEntry;
 import org.loklak.data.Timeline;
 import org.loklak.data.Timeline.Order;
 import org.loklak.data.UserEntry;
-import org.loklak.harvester.SourceType;
 import org.loklak.http.RemoteAccess;
 import org.loklak.tools.UTF8;
 
@@ -69,8 +68,12 @@ public class PushServlet extends HttpServlet {
     
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+
+        long timeStart = System.currentTimeMillis();
+        
         RemoteAccess.Post post = RemoteAccess.evaluate(request);
         String remoteHash = Integer.toHexString(Math.abs(post.getClientHost().hashCode()));
+        boolean remoteHashFromPeerId = false;
                 
         // manage DoS
         if (post.isDoS_blackout()) {
@@ -85,11 +88,25 @@ public class PushServlet extends HttpServlet {
         if (data == null || data.length == 0) {response.sendError(400, "your request does not contain a data object. The data object should contain data to be pushed. The format of the data object is JSON; it is exactly the same as the JSON search result"); return;}
         
         // parse the json data
-        int recordCount = 0, newCount = 0, knownCount = 0;
+        int recordCount = 0;//, newCount = 0, knownCount = 0;
+        String query = null;
+        long timeParsing = 0, timeTimelineStorage = 0, timeQueryStorage = 0;
         try {
             Map<String, Object> map = DAO.jsonMapper.readValue(data, DAO.jsonTypeRef);
+
+            timeParsing = System.currentTimeMillis();
+            
             // read metadata
             Object metadata_obj = map.get("search_metadata");
+            @SuppressWarnings("unchecked") Map<String, Object> metadata = metadata_obj instanceof Map<?, ?> ? (Map<String, Object>) metadata_obj : null;
+            // read peer id if they submitted one
+            if (metadata != null) {
+                String peerid = (String) metadata.get("peerid");
+                if (peerid != null && peerid.length() > 3 && peerid.charAt(2) == '_') {
+                    remoteHash = peerid;
+                    remoteHashFromPeerId = true;
+                }
+            }
             
             // read statuses
             Object statuses_obj = map.get("statuses");
@@ -105,16 +122,18 @@ public class PushServlet extends HttpServlet {
                     UserEntry u = new UserEntry(user);
                     MessageEntry t = new MessageEntry(tweet);
                     tl.add(t, u);
-                    boolean newtweet = DAO.writeMessage(t, u, true, true, true);
-                    if (newtweet) newCount++; else knownCount++;
+                    //boolean newtweet = DAO.writeMessage(t, u, true, true, true);
+                    //if (newtweet) newCount++; else knownCount++;
                 }
-                try {DAO.users.bulkCacheFlush();} catch (IOException e) {}
-                try {DAO.messages.bulkCacheFlush();} catch (IOException e) {}
+                Caretaker.storeTimelineScheduler(tl);
+                //try {DAO.users.bulkCacheFlush();} catch (IOException e) {}
+                //try {DAO.messages.bulkCacheFlush();} catch (IOException e) {}
+
+                timeTimelineStorage = System.currentTimeMillis();
                 
                 // update query database if query was given in the result list
-                @SuppressWarnings("unchecked") Map<String, Object> metadata = metadata_obj instanceof Map<?, ?> ? (Map<String, Object>) metadata_obj : null;
-                if (metadata != null && tl.size() > 0) {
-                    String query = (String) metadata.get("query");
+                if (metadata != null) {
+                    query = (String) metadata.get("query");
                     if (query != null) {
                         // update query database
                         QueryEntry qe = null;
@@ -123,21 +142,26 @@ public class PushServlet extends HttpServlet {
                         } catch (IOException e1) {
                             e1.printStackTrace();
                         }
-                        if (qe != null && Caretaker.acceptQuery4Retrieval(query)) {
+                        if (qe != null) {
                             // existing queries are updated
                             qe.update(tl.period(), false);
                             try {
-                                DAO.queries.writeEntry(query, qe.getSourceType().name(), qe);
+                                DAO.queries.writeEntry(query, qe.getSourceType().name(), qe, false);
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }
                         }
                     }
                 }
+
+                timeQueryStorage = System.currentTimeMillis();
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
+        
+        // in case that a peer submitted their peer id, we return also some statistics for that peer
+        long messages_from_client = remoteHashFromPeerId ? DAO.countLocalMessages(remoteHash) : -1;
 
         post.setResponse(response, "application/javascript");
         
@@ -146,19 +170,34 @@ public class PushServlet extends HttpServlet {
         json.startObject();
         json.field("status", "ok");
         json.field("records", recordCount);
-        json.field("new", newCount);
-        json.field("known", knownCount);
+        if (remoteHashFromPeerId) json.field("contribution_message_count", messages_from_client);
+        //json.field("new", newCount);
+        //json.field("known", knownCount);
         json.field("message", "pushed");
         json.endObject(); // of root
 
         // write json
-        ServletOutputStream sos = response.getOutputStream();
+        response.setCharacterEncoding("UTF-8");
+        PrintWriter sos = response.getWriter();
         if (jsonp) sos.print(callback + "(");
         sos.print(json.string());
         if (jsonp) sos.println(");");
         sos.println();
+
+        long timeResponse = System.currentTimeMillis();
         
-        DAO.log(request.getServletPath() + " -> records = " + recordCount + ", new = " + newCount + ", known = " + knownCount + ", from host hash " + remoteHash);
+        DAO.log(
+                request.getServletPath() + " -> records = " + recordCount +
+                //", new = " + newCount +
+                //", known = " + knownCount +
+                ", from host hash " + remoteHash +
+                (query == null ? "" : " for query=" + query) +
+                ", timeParsing = " + (timeParsing - timeStart) +
+                ", timeTimelineStorage = " + (timeTimelineStorage - timeParsing) +
+                ", timeQueryStorage = " + (timeQueryStorage - timeTimelineStorage) +
+                ", timeResponse = " + (timeResponse - timeQueryStorage) +
+                ", total time = " + (timeResponse - timeStart)
+                );
 
         response.addHeader("Access-Control-Allow-Origin", "*");
         post.finalize();

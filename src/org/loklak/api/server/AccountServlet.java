@@ -20,13 +20,13 @@
 package org.loklak.api.server;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -41,21 +41,27 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class AccountServlet extends HttpServlet {
    
     private static final long serialVersionUID = 8578478303032749879L;
-
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        doGet(request, response);
-    }
     
-    @SuppressWarnings("unchecked")
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         RemoteAccess.Post post = RemoteAccess.evaluate(request);
-     
-        // manage DoS
-        if (post.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;}
+        if (post.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;} // DoS protection
         if (!post.isLocalhostAccess()) {response.sendError(503, "access only allowed from localhost, your request comes from " + post.getClientHost()); return;} // danger! do not remove this!
-        
+        process(request, response, post);
+    }
+    
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        RemoteAccess.Post post = RemoteAccess.evaluate(request);
+        if (post.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;} // DoS protection
+        if (!post.isLocalhostAccess()) {response.sendError(503, "access only allowed from localhost, your request comes from " + post.getClientHost()); return;} // danger! do not remove this!
+        post.initPOST(RemoteAccess.getPostMap(request));
+        process(request, response, post);
+    }
+    
+    @SuppressWarnings("unchecked")
+    protected void process(HttpServletRequest request, HttpServletResponse response, RemoteAccess.Post post) throws ServletException, IOException {
+
         // parameters
         String callback = post.get("callback", "");
         boolean jsonp = callback != null && callback.length() > 0;
@@ -122,7 +128,7 @@ public class AccountServlet extends HttpServlet {
         m.put("accounts", accounts);
         
         // write json
-        ServletOutputStream sos = response.getOutputStream();
+        PrintWriter sos = response.getWriter();
         if (jsonp) sos.print(callback + "(");
         sos.print((minified ? new ObjectMapper().writer() : new ObjectMapper().writerWithDefaultPrettyPrinter()).writeValueAsString(m));
         if (jsonp) sos.println(");");

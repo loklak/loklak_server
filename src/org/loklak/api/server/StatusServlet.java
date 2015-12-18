@@ -20,12 +20,12 @@
 package org.loklak.api.server;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
 
 import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -67,7 +67,8 @@ public class StatusServlet extends HttpServlet {
         
         json.field("index_sizes");
         json.startObject();
-        json.field("messages", DAO.countLocalMessages());
+        json.field("messages", DAO.countLocalMessages(-1));
+        json.field("mps", DAO.countLocalMessages(86400000) / 86400);
         json.field("users", DAO.countLocalUsers());
         json.field("queries", DAO.countLocalQueries());
         json.field("accounts", DAO.countLocalAccounts());
@@ -94,7 +95,8 @@ public class StatusServlet extends HttpServlet {
         json.endObject(); // of root object
 
         // write json
-        ServletOutputStream sos = response.getOutputStream();
+        response.setCharacterEncoding("UTF-8");
+        PrintWriter sos = response.getWriter();
         if (jsonp) sos.print(callback + "(");
         sos.print(json.string());
         if (jsonp) sos.println(");");

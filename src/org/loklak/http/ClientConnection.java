@@ -36,16 +36,18 @@ import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.conn.routing.HttpRoute;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.util.EntityUtils;
 
 /**
  * Helper class to provide BufferedReader Objects for get and post connections
@@ -59,20 +61,27 @@ public class ClientConnection {
     private static final byte CR = 13;
     public static final byte[] CRLF = {CR, LF};
 
-    private static PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
-    private static CloseableHttpClient httpClient;
+    public static PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
+    private static RequestConfig defaultRequestConfig = RequestConfig.custom()
+            .setSocketTimeout(5000)
+            .setConnectTimeout(5000)
+            .setConnectionRequestTimeout(5000)
+            .setContentCompressionEnabled(true)
+            .build();
     
-    public int status;
+    private int status;
     public BufferedInputStream inputStream;
-    public Map<String, List<String>> header;
+    private Map<String, List<String>> header;
+    private CloseableHttpClient httpClient;
+    private HttpRequestBase request;
+    private HttpResponse httpResponse;
     
     
     static {
-     cm.setMaxTotal(200);
-     cm.setDefaultMaxPerRoute(20);
-     HttpHost twitter = new HttpHost("twitter.com", 443);
-     cm.setMaxPerRoute(new HttpRoute(twitter), 50);
-     httpClient = HttpClients.custom().setConnectionManager(cm).build();
+        cm.setMaxTotal(200);
+        cm.setDefaultMaxPerRoute(20);
+        HttpHost twitter = new HttpHost("twitter.com", 443);
+        cm.setMaxPerRoute(new HttpRoute(twitter), 50);
     }
     
     /**
@@ -81,40 +90,49 @@ public class ClientConnection {
      * @throws IOException
      */
     public ClientConnection(String urlstring) throws IOException {
-        HttpGet get = new HttpGet(urlstring);
-        get.setHeader("User-Agent", USER_AGENT);
-        this.init(get);
+        this.httpClient = HttpClients.custom().setConnectionManager(cm).setDefaultRequestConfig(defaultRequestConfig).build();
+        this.request = new HttpGet(urlstring);
+        this.request.setHeader("User-Agent", USER_AGENT);
+        this.init();
     }
     
     /**
      * POST request
      * @param urlstring
      * @param map
+     * @throws ClientProtocolException 
      * @throws IOException
      */
-    public ClientConnection(String urlstring, Map<String, byte[]> map) throws IOException {
-        HttpPost post = new HttpPost(urlstring);        
+    public ClientConnection(String urlstring, Map<String, byte[]> map) throws ClientProtocolException, IOException {
+        this.httpClient = HttpClients.custom().setConnectionManager(cm).setDefaultRequestConfig(defaultRequestConfig).build();
+        this.request = new HttpPost(urlstring);        
         MultipartEntityBuilder entityBuilder = MultipartEntityBuilder.create();
         entityBuilder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
         for (Map.Entry<String, byte[]> entry: map.entrySet()) {
             entityBuilder.addBinaryBody(entry.getKey(), entry.getValue());
         }
-        post.setEntity(entityBuilder.build());
-        post.setHeader("User-Agent", USER_AGENT);
-        this.init(post);
+        ((HttpPost) this.request).setEntity(entityBuilder.build());
+        this.request.setHeader("User-Agent", USER_AGENT);
+        this.init();
     }
 
-    private void init(HttpUriRequest request) throws IOException {
-        HttpResponse httpResponse = null;
+    private void init() throws IOException {
+        this.httpResponse = null;
         try {
-            httpResponse = httpClient.execute(request);
+            this.httpResponse = httpClient.execute(this.request);
         } catch (UnknownHostException e) {
+            this.request.releaseConnection();
             throw new IOException(e.getMessage());
         }
-        HttpEntity httpEntity = httpResponse.getEntity();
+        HttpEntity httpEntity = this.httpResponse.getEntity();
         if (httpEntity != null) {
-            if (httpResponse.getStatusLine().getStatusCode() == 200) {
-                this.inputStream = new BufferedInputStream(httpEntity.getContent());
+            if (this.httpResponse.getStatusLine().getStatusCode() == 200) {
+                try {
+                    this.inputStream = new BufferedInputStream(httpEntity.getContent());
+                } catch (IOException e) {
+                    this.request.releaseConnection();
+                    throw e;
+                }
                 this.header = new HashMap<String, List<String>>();
                 for (Header header: httpResponse.getAllHeaders()) {
                     List<String> vals = this.header.get(header.getName());
@@ -122,15 +140,17 @@ public class ClientConnection {
                     vals.add(header.getValue());
                 }
             } else {
-                throw new IOException("client connection to " + request.getURI() + " fail: " + status + ": " + httpResponse.getStatusLine().getReasonPhrase());
+                this.request.releaseConnection();
+                throw new IOException("client connection to " + this.request.getURI() + " fail: " + status + ": " + httpResponse.getStatusLine().getReasonPhrase());
             }
         } else {
-            throw new IOException("client connection to " + request.getURI() + " fail: no connection");
+            this.request.releaseConnection();
+            throw new IOException("client connection to " + this.request.getURI() + " fail: no connection");
         }
     }
     
     /**
-     * get a redirect for an url: this mehtod shall be called if it is expected that a url
+     * get a redirect for an url: this method shall be called if it is expected that a url
      * is redirected to another url. This method then discovers the redirect.
      * @param urlstring
      * @return the redirect url for the given urlstring
@@ -140,15 +160,21 @@ public class ClientConnection {
         HttpGet get = new HttpGet(urlstring);
         get.setConfig(RequestConfig.custom().setRedirectsEnabled(false).build());
         get.setHeader("User-Agent", USER_AGENT);
+        CloseableHttpClient httpClient = HttpClients.custom().setConnectionManager(cm).setDefaultRequestConfig(defaultRequestConfig).build();
         HttpResponse httpResponse = httpClient.execute(get);
         HttpEntity httpEntity = httpResponse.getEntity();
         if (httpEntity != null) {
             if (httpResponse.getStatusLine().getStatusCode() == 301) {
                 for (Header header: httpResponse.getAllHeaders()) {
-                    if (header.getName().toLowerCase().equals("location")) return header.getValue();
+                    if (header.getName().toLowerCase().equals("location")) {
+                        EntityUtils.consumeQuietly(httpEntity);
+                        return header.getValue();
+                    }
                 }
+                EntityUtils.consumeQuietly(httpEntity);
                 throw new IOException("redirect for  " + urlstring+ ": no location attribute found");
             } else {
+                EntityUtils.consumeQuietly(httpEntity);
                 throw new IOException("no redirect for  " + urlstring+ " fail: " + httpResponse.getStatusLine().getStatusCode() + ": " + httpResponse.getStatusLine().getReasonPhrase());
             }
         } else {
@@ -157,32 +183,57 @@ public class ClientConnection {
     }
     
     public void close() {
-        try {this.inputStream.close();} catch (IOException e) {}
+        HttpEntity httpEntity = this.httpResponse.getEntity();
+        if (httpEntity != null) EntityUtils.consumeQuietly(httpEntity);
+        try {
+            this.inputStream.close();
+        } catch (IOException e) {} finally {
+            this.request.releaseConnection();
+        }
     }
     
-    public static void download(String source_url, File target_file) throws IOException {
-        byte[] buffer = new byte[2048];
-        ClientConnection connection = new ClientConnection(source_url);
-        OutputStream os = new BufferedOutputStream(new FileOutputStream(target_file));
-        int count;
+    public static void download(String source_url, File target_file) {
         try {
-            while ((count = connection.inputStream.read(buffer)) > 0) os.write(buffer, 0, count);
+            ClientConnection connection = new ClientConnection(source_url);
+            try {
+                OutputStream os = new BufferedOutputStream(new FileOutputStream(target_file));
+                int count;
+                byte[] buffer = new byte[2048];
+                try {
+                    while ((count = connection.inputStream.read(buffer)) > 0) os.write(buffer, 0, count);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    os.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                connection.close();
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
-        connection.close();
-        os.close();
     }
     
     public static byte[] download(String source_url) throws IOException {
-        byte[] buffer = new byte[2048];
-        ClientConnection connection = new ClientConnection(source_url);
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        int count;
         try {
-            while ((count = connection.inputStream.read(buffer)) > 0) baos.write(buffer, 0, count);
-        } catch (IOException e) {}
-        connection.close();
-        return baos.toByteArray();
+            ClientConnection connection = new ClientConnection(source_url);
+            if (connection.inputStream == null) return null;
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            int count;
+            byte[] buffer = new byte[2048];
+            try {
+                while ((count = connection.inputStream.read(buffer)) > 0) baos.write(buffer, 0, count);
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                connection.close();
+            }
+            return baos.toByteArray();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

@@ -26,9 +26,7 @@ import java.util.Map;
 import org.loklak.data.Timeline;
 import org.loklak.http.ClientConnection;
 import org.loklak.tools.UTF8;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.loklak.tools.json.JSONException;
 
 public class PushClient {
     
@@ -39,28 +37,27 @@ public class PushClient {
      * @return true if the data was transmitted to at least one target peer
      */
     public static boolean push(String[] hoststubs, Timeline timeline) {
-        // transmit the timeline
-        assert timeline.size() != 0;
-        if (timeline.size() == 0) return true;
-        
+        // transmit the timeline        
         try {
-            String data = new ObjectMapper().writer().writeValueAsString(timeline.toMap(false));
+            String data = timeline.toJSON(false).toString();
             assert data != null;
             boolean transmittedToAtLeastOnePeer = false;
             for (String hoststub: hoststubs) {
                 if (hoststub.endsWith("/")) hoststub = hoststub.substring(0, hoststub.length() - 1);
                 Map<String, byte[]> post = new HashMap<String, byte[]>();
                 post.put("data", UTF8.getBytes(data)); // optionally implement a gzipped form here
+                ClientConnection connection = null;
                 try {
-                    ClientConnection connection = new ClientConnection(hoststub + "/api/push.json", post);
-                    connection.close();
+                    connection = new ClientConnection(hoststub + "/api/push.json", post);
                     transmittedToAtLeastOnePeer = true;
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    //e.printStackTrace();
+                } finally {
+                    if (connection != null) connection.close();
                 }
             }
             return transmittedToAtLeastOnePeer;
-        } catch (JsonProcessingException e) {
+        } catch (JSONException e) {
             e.printStackTrace();
             return false;
         }

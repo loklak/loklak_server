@@ -29,14 +29,16 @@ import org.loklak.data.Timeline;
 import org.loklak.data.ImportProfileEntry;
 import org.loklak.harvester.SourceType;
 import org.loklak.http.RemoteAccess;
+import org.loklak.tools.json.JSONArray;
+import org.loklak.tools.json.JSONObject;
 
 import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -130,7 +132,8 @@ public class ImportProfileServlet extends HttpServlet {
         json.field("message", "updated");
         json.endObject();
         // write json
-        ServletOutputStream sos = response.getOutputStream();
+        response.setCharacterEncoding("UTF-8");
+        PrintWriter sos = response.getWriter();
         if (jsonp) sos.print(callback + "(");
         sos.print(json.string());
         if (jsonp) sos.println(");");
@@ -173,7 +176,8 @@ public class ImportProfileServlet extends HttpServlet {
         json.field("message", "deleted");
         json.endObject();
         // write json
-        ServletOutputStream sos = response.getOutputStream();
+        response.setCharacterEncoding("UTF-8");
+        PrintWriter sos = response.getWriter();
         if (jsonp) sos.print(callback + "(");
         sos.print(json.string());
         if (jsonp) sos.println(");");
@@ -205,32 +209,33 @@ public class ImportProfileServlet extends HttpServlet {
             searchConstraints.put("imported", msg_id);
         }
         Collection<ImportProfileEntry> entries = DAO.SearchLocalImportProfilesWithConstraints(searchConstraints, true);
-        List<Map<String, Object>> entries_to_map = new ArrayList<>();
+        JSONArray entries_to_map = new JSONArray();
         for (ImportProfileEntry entry : entries) {
-            Map<String, Object> entry_to_map = entry.toMap();
+            JSONObject entry_to_map = entry.toJSON();
             if ("true".equals(detailed)) {
                 String query = "";
                 for (String msgId : entry.getImported()) {
                     query += "id:" + msgId + " ";
                 }
                 DAO.SearchLocalMessages search = new DAO.SearchLocalMessages(query, Timeline.Order.CREATED_AT, 0, 1000, 0);
-                entry_to_map.put("imported", search.timeline.toMap(false).get("statuses"));
+                entry_to_map.put("imported", search.timeline.toJSON(false).get("statuses"));
             }
-            entries_to_map.add(entry_to_map);
+            entries_to_map.put(entry_to_map);
         }
         post.setResponse(response, "application/javascript");
 
-        Map<String, Object> m = new LinkedHashMap<>();
-        Map<String, Object> metadata = new LinkedHashMap<>();
+        JSONObject m = new JSONObject();
+        JSONObject metadata = new JSONObject();
         metadata.put("count", entries.size());
         metadata.put("client", post.getClientHost());
         m.put("search_metadata", metadata);
         m.put("profiles", entries_to_map);
 
         // write json
-        ServletOutputStream sos = response.getOutputStream();
+        response.setCharacterEncoding("UTF-8");
+        PrintWriter sos = response.getWriter();
         if (jsonp) sos.print(callback + "(");
-        sos.print((minified ? new ObjectMapper().writer() : new ObjectMapper().writerWithDefaultPrettyPrinter()).writeValueAsString(m));
+        sos.print(minified ? m.toString() : m.toString(2));
         if (jsonp) sos.println(");");
         sos.println();
     }

@@ -32,6 +32,11 @@ import org.elasticsearch.index.VersionType;
 import org.loklak.harvester.SourceType;
 import org.loklak.tools.Cache;
 
+/**
+ * test calls:
+ * curl "http://localhost:9000/api/account.json?screen_name=test"
+ * curl -g "http://localhost:9000/api/account.json?action=update&data={\"screen_name\":\"test\",\"apps\":{\"wall\":{\"type\":\"vertical\"}}}"
+ */
 public abstract class AbstractIndexFactory<Entry extends IndexEntry> implements IndexFactory<Entry> {
 
     protected final Client elasticsearch_client;
@@ -81,27 +86,26 @@ public abstract class AbstractIndexFactory<Entry extends IndexEntry> implements 
         return map;
     }
     
-
-    public void writeEntry(String id, String type, Entry entry) throws IOException {
-        bulkCacheFlush();
-        this.cache.put(id, entry);
-        // record user into search index
-        Map<String, Object> jsonMap = entry.toMap();
-        //DAO.log((new ObjectMapper().writerWithDefaultPrettyPrinter()).writeValueAsString(jsonMap));
-        if (jsonMap != null) {
-            elasticsearch_client.prepareIndex(this.index_name, type, id).setSource(jsonMap)
-                .setVersion(1).setVersionType(VersionType.FORCE).execute().actionGet();
+    public void writeEntry(String id, String type, Entry entry, boolean bulk) throws IOException {
+        if (bulk) {
+            BulkEntry be = new BulkEntry(id, type, entry);
+            if (be.jsonMap != null) try {
+                bulkCache.put(be);
+            } catch (InterruptedException e) {
+                throw new IOException(e.getMessage());
+            }
+            if (bulkCacheSize() >= 1000) bulkCacheFlush(); // protect against OOM
+        } else {
+            bulkCacheFlush();
+            this.cache.put(id, entry);
+            // record user into search index
+            Map<String, Object> jsonMap = entry.toMap();
+            //DAO.log((new ObjectMapper().writerWithDefaultPrettyPrinter()).writeValueAsString(jsonMap));
+            if (jsonMap != null) {
+                elasticsearch_client.prepareIndex(this.index_name, type, id).setSource(jsonMap)
+                    .setVersion(1).setVersionType(VersionType.FORCE).execute().actionGet();
+            }
         }
-    }
-    
-    public void writeEntryBulk(String id, String type, Entry entry) throws IOException {
-        BulkEntry be = new BulkEntry(id, type, entry);
-        if (be.jsonMap != null) try {
-            bulkCache.put(be);
-        } catch (InterruptedException e) {
-            throw new IOException(e.getMessage());
-        }
-        if (bulkCacheSize() >= 1000) bulkCacheFlush(); // protect against OOM
     }
 
     public int bulkCacheSize() {
@@ -136,6 +140,13 @@ public abstract class AbstractIndexFactory<Entry extends IndexEntry> implements 
             this.id = id;
             this.type = type;
             this.jsonMap = entry.toMap();
+        }
+    }
+    
+    public void close() {
+        try {
+            this.bulkCacheFlush();
+        } catch (IOException e) {
         }
     }
 

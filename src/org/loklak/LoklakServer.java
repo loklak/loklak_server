@@ -136,6 +136,7 @@ public class LoklakServer {
         try {
             ss = new ServerSocket(httpPort);
             ss.setReuseAddress(true);
+            ss.setReceiveBufferSize(65536);
         } catch (IOException e) {
             // the socket is already occupied by another service
             Log.getLog().info("port " + httpPort + " is already occupied by another service, maybe another loklak is running on this port already. exit.");
@@ -211,7 +212,7 @@ public class LoklakServer {
 
         File tmp = new File(dataFile, "tmp");
         ServletContextHandler servletHandler = new ServletContextHandler();
-        FilterHolder filter = servletHandler.addFilter(GzipFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
+        FilterHolder filter = servletHandler.addFilter(GzipFilter.class, "/*", EnumSet.allOf(DispatcherType.class));
         filter.setInitParameter("mimeTypes", "text/plain");
         servletHandler.addServlet(DumpDownloadServlet.class, "/dump/*");
         servletHandler.addServlet(ShortlinkFromTweetServlet.class, "/x");
@@ -226,7 +227,9 @@ public class LoklakServer {
         servletHandler.addServlet(SearchServlet.class, "/api/search.json");
         servletHandler.addServlet(SearchServlet.class, "/api/search.txt");
         servletHandler.addServlet(SuggestServlet.class, "/api/suggest.json");
-        servletHandler.addServlet(AccountServlet.class, "/api/account.json");
+        ServletHolder accountServletHolder = new ServletHolder(AccountServlet.class);
+        accountServletHolder.getRegistration().setMultipartConfig(new MultipartConfigElement(tmp.getAbsolutePath()));
+        servletHandler.addServlet(accountServletHolder, "/api/account.json");
         servletHandler.addServlet(UserServlet.class, "/api/user.json");
         servletHandler.addServlet(CampaignServlet.class, "/api/campaign.json");
         servletHandler.addServlet(ImportProfileServlet.class, "/api/import.json");
@@ -309,6 +312,7 @@ public class LoklakServer {
                     LoklakServer.caretaker.shutdown();
                     DAO.close();
                     TwitterScraper.executor.shutdown();
+                    Harvester.executor.shutdown();
                     Log.getLog().info("main terminated, goodby.");
                 } catch (Exception e) {
                 }
