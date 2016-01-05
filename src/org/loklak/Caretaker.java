@@ -39,7 +39,6 @@ import org.loklak.data.QueryEntry;
 import org.loklak.data.Timeline;
 import org.loklak.data.UserEntry;
 import org.loklak.harvester.TwitterAPI;
-import org.loklak.http.ClientConnection;
 import org.loklak.tools.DateParser;
 import org.loklak.tools.OS;
 
@@ -55,12 +54,11 @@ public class Caretaker extends Thread {
     
     private boolean shallRun = true;
     
-    public final static long startupTime = System.currentTimeMillis();
-    public final static long upgradeWait = DateParser.DAY_MILLIS; // 1 day
-    public       static long upgradeTime = startupTime + upgradeWait;
+    public  final static long startupTime = System.currentTimeMillis();
+    private final static long upgradeWait = DateParser.DAY_MILLIS; // 1 day
+    public        static long upgradeTime = startupTime + upgradeWait;
 
-    public static BlockingQueue<Timeline> pushToBackendTimeline = new LinkedBlockingQueue<Timeline>();
-    public static BlockingQueue<Timeline> receivedFromPushTimeline = new LinkedBlockingQueue<Timeline>();
+    private static BlockingQueue<Timeline> pushToBackendTimeline = new LinkedBlockingQueue<Timeline>();
     
     /**
      * ask the thread to shut down
@@ -75,7 +73,7 @@ public class Caretaker extends Thread {
     public void run() {
         // send a message to other peers that I am alive
         String[] remote = DAO.getConfig("backend", new String[0], ",");
-        HelloClient.propagate(remote, (int) DAO.getConfig("port.http", 9000), (int) DAO.getConfig("port.https", 9443), (String) DAO.getConfig("peername", "anonymous"));
+        HelloClient.propagate(remote);
         
         // work loop
         while (this.shallRun) try {
@@ -92,19 +90,10 @@ public class Caretaker extends Thread {
             // clear caches
             if (SuggestServlet.cache.size() > 100) SuggestServlet.cache.clear();
             
-            // dump timelines submitted by the peers
-            long dumpstart = System.currentTimeMillis();
-            int[] newandknown = scheduledTimelineStorage();
-            long dumpfinish = System.currentTimeMillis();
-            if (newandknown[0] > 0 || newandknown[1] > 0) {
-                DAO.log("dumped timelines from push api: " + newandknown[0] + " new, " + newandknown[1] + " known, storage time: " + (dumpfinish - dumpstart) + " ms");
-            }
-            if (dumpfinish - dumpstart < 3000) {
-                // sleep a bit to prevent that the DoS limit fires at backend server
-                try {Thread.sleep(3000 - (dumpfinish - dumpstart));} catch (InterruptedException e) {}
-            }
+            // sleep a bit to prevent that the DoS limit fires at backend server
+            try {Thread.sleep(3000);} catch (InterruptedException e) {}
             
-            DAO.log("connection pool: " + ClientConnection.cm.getTotalStats().toString());
+            //DAO.log("connection pool: " + ClientConnection.cm.getTotalStats().toString());
             
             // peer-to-peer operation
             Timeline tl = takeTimelineMin(pushToBackendTimeline, Timeline.Order.CREATED_AT, 200);
@@ -142,7 +131,7 @@ public class Caretaker extends Thread {
             }
             
             // run some harvesting steps
-            if (DAO.getConfig("retrieval.forbackend.enabled", false) && (DAO.getConfig("backend", "").length() > 0)) {
+            if (DAO.getConfig("retrieval.forbackend.enabled", false) && DAO.getConfig("backend.push.enabled", false) && (DAO.getConfig("backend", "").length() > 0)) {
                 for (int i = 0; i < 10; i++) {
                     int count = Harvester.harvest();
                     if (count == -1) break;
@@ -211,33 +200,13 @@ public class Caretaker extends Thread {
         }
     }
     
-    private int[] scheduledTimelineStorage() {
-        Timeline tl;
-        int newMessages = 0, knownMessages = 0;
-        while (!receivedFromPushTimeline.isEmpty() && (tl = receivedFromPushTimeline.poll()) != null) {
-            for (MessageEntry me: tl) {
-                me.enrich(); // we enrich here again because the remote peer may have done this with an outdated version or not at all
-                boolean stored = DAO.writeMessage(me, tl.getUser(me), true, true, true);
-                if (stored) newMessages++; else knownMessages++;
-            }
-        }
-        return new int[]{newMessages, knownMessages};
-    }
-
-    public static void storeTimelineScheduler(Timeline tl) {
-        try {
-            receivedFromPushTimeline.put(tl);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-    
     public static void transmitTimelineToBackend(Timeline tl) {
         if (DAO.getConfig("backend", new String[0], ",").length > 0) pushToBackendTimeline.add(tl);
     }
     
     public static void transmitMessage(final MessageEntry tweet, final UserEntry user) {
         if (DAO.getConfig("backend", new String[0], ",").length <= 0) return;
+        if (!DAO.getConfig("backend.push.enabled", false)) return;
         Timeline tl = pushToBackendTimeline.poll();
         if (tl == null) tl = new Timeline(Timeline.Order.CREATED_AT);
         tl.add(tweet, user);

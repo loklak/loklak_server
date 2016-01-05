@@ -96,6 +96,7 @@ public class LoklakServer {
     
     private static Server server = null;
     private static Caretaker caretaker = null;
+    public  static QueuedIndexing queuedIndexing = null;
     
     public static Map<String, String> readConfig(Path data) throws IOException {
         File conf_dir = new File("conf");
@@ -183,7 +184,7 @@ public class LoklakServer {
         
         
         LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<Runnable>(300);
-        ExecutorThreadPool pool = new ExecutorThreadPool(10, 100, 10000, TimeUnit.MILLISECONDS, queue);;
+        ExecutorThreadPool pool = new ExecutorThreadPool(10, 20, 2000, TimeUnit.MILLISECONDS, queue);;
         LoklakServer.server = new Server(pool);
         LoklakServer.server.setStopAtShutdown(true);
         ServerConnector connector = new ServerConnector(LoklakServer.server);
@@ -294,6 +295,8 @@ public class LoklakServer {
         LoklakServer.server.start();
         LoklakServer.caretaker = new Caretaker();
         LoklakServer.caretaker.start();
+        LoklakServer.queuedIndexing = new QueuedIndexing();
+        LoklakServer.queuedIndexing.start();
         
         // read upgrade interval
         Caretaker.upgradeTime = Caretaker.startupTime + DAO.getConfig("upgradeInterval", 86400000);
@@ -308,8 +311,9 @@ public class LoklakServer {
             public void run() {
                 try {
                     Log.getLog().info("catched main termination signal");
-                    LoklakServer.server.stop();
+                    LoklakServer.queuedIndexing.shutdown();
                     LoklakServer.caretaker.shutdown();
+                    LoklakServer.server.stop();
                     DAO.close();
                     TwitterScraper.executor.shutdown();
                     Harvester.executor.shutdown();

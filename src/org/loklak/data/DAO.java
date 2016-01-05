@@ -39,7 +39,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.eclipse.jetty.util.ConcurrentHashSet;
 
@@ -51,6 +51,7 @@ import com.google.common.io.Files;
 
 import org.eclipse.jetty.util.log.Log;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
+import org.elasticsearch.action.admin.cluster.health.ClusterHealthStatus;
 import org.elasticsearch.action.count.CountResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -73,6 +74,7 @@ import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 import org.loklak.Caretaker;
+import org.loklak.LoklakServer;
 import org.loklak.api.client.SearchClient;
 import org.loklak.geo.GeoNames;
 import org.loklak.harvester.SourceType;
@@ -156,59 +158,6 @@ public class DAO {
         bin_dir = new File("bin");
         File datadir = dataPath.toFile();
         try {
-            // create and document the data dump dir
-            assets = new File(datadir, "assets");
-            external_data = new File(datadir, "external");
-            dictionaries = new File(external_data, "dictionaries");
-            dictionaries.mkdirs();
-            
-            // create message dump dir
-            String message_dump_readme =
-                "This directory contains dump files for messages which arrived the platform.\n" +
-                "There are three subdirectories for dump files:\n" +
-                "- own:      for messages received with this peer. There is one file for each month.\n" +
-                "- import:   hand-over directory for message dumps to be imported. Drop dumps here and they are imported.\n" +
-                "- imported: dump files which had been processed from the import directory are moved here.\n" +
-                "You can import dump files from other peers by dropping them into the import directory.\n" +
-                "Each dump file must start with the prefix '" + MESSAGE_DUMP_FILE_PREFIX + "' to be recognized.\n";
-            message_dump_dir = dataPath.resolve("dump");
-            message_dump = new JsonRepository(message_dump_dir.toFile(), MESSAGE_DUMP_FILE_PREFIX, message_dump_readme, JsonRepository.COMPRESSED_MODE, Runtime.getRuntime().availableProcessors());
-            
-            account_dump_dir = dataPath.resolve("accounts");
-            account_dump_dir.toFile().mkdirs();
-            OS.protectPath(account_dump_dir); // no other permissions to this path
-            account_dump = new JsonRepository(account_dump_dir.toFile(), ACCOUNT_DUMP_FILE_PREFIX, null, JsonRepository.REWRITABLE_MODE, Runtime.getRuntime().availableProcessors());
-
-            File user_dump_dir = new File(datadir, "accounts");
-            user_dump_dir.mkdirs();
-            user_dump = new JsonDataset(
-                    user_dump_dir,USER_DUMP_FILE_PREFIX,
-                    new JsonDataset.Column[]{new JsonDataset.Column("id_str", false), new JsonDataset.Column("screen_name", true)},
-                    "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
-                    JsonRepository.REWRITABLE_MODE);
-            followers_dump = new JsonDataset(
-                    user_dump_dir, FOLLOWERS_DUMP_FILE_PREFIX,
-                    new JsonDataset.Column[]{new JsonDataset.Column("screen_name", true)},
-                    "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
-                    JsonRepository.REWRITABLE_MODE);
-            following_dump = new JsonDataset(
-                    user_dump_dir, FOLLOWING_DUMP_FILE_PREFIX,
-                    new JsonDataset.Column[]{new JsonDataset.Column("screen_name", true)},
-                    "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
-                    JsonRepository.REWRITABLE_MODE);
-            
-            Path log_dump_dir = dataPath.resolve("log");
-            log_dump_dir.toFile().mkdirs();
-            OS.protectPath(log_dump_dir); // no other permissions to this path
-            access = new AccessTracker(log_dump_dir.toFile(), ACCESS_DUMP_FILE_PREFIX, 60000, 3000);
-            access.start(); // start monitor
-            
-	        import_profile_dump_dir = dataPath.resolve("import-profiles");
-            import_profile_dump = new JsonRepository(import_profile_dump_dir.toFile(), IMPORT_PROFILE_FILE_PREFIX, null, JsonRepository.COMPRESSED_MODE, Runtime.getRuntime().availableProcessors());
-
-            // load schema folder
-            conv_schema_dir = new File("conf/conversion");
-            schema_dir = new File("conf/schema");            
 
             // use all config attributes with a key starting with "elasticsearch." to set elasticsearch settings
             Settings.Builder settings = Settings.builder();
@@ -220,23 +169,9 @@ public class DAO {
             settings.put("path.home", datadir.getAbsolutePath());
             settings.put("path.data", datadir.getAbsolutePath());
             settings.build();
-
-            // load dictionaries if they are embedded here
-            // read the file allCountries.zip from http://download.geonames.org/export/dump/allCountries.zip
-            //File allCountries = new File(dictionaries, "allCountries.zip");
-            File cities1000 = new File(dictionaries, "cities1000.zip");
-            if (!cities1000.exists()) {
-                // download this file
-                ClientConnection.download("http://download.geonames.org/export/dump/cities1000.zip", cities1000);
-            }
-            if (cities1000.exists()) {
-                geoNames = new GeoNames(cities1000, new File(conf_dir, "iso3166.json"), 1);
-            } else {
-                geoNames = null;
-            }
             
             // start elasticsearch
-            elasticsearch_node = NodeBuilder.nodeBuilder().settings(settings).node();
+            elasticsearch_node = NodeBuilder.nodeBuilder().settings(settings).client(false).node();
             elasticsearch_client = elasticsearch_node.client(); // TransportClient.builder().settings(settings).build();
 
             Path index_dir = dataPath.resolve("index");
@@ -263,7 +198,77 @@ public class DAO {
             try {elasticsearch_client.admin().indices().preparePutMapping(QUERIES_INDEX_NAME).setSource(queries.getMapping()).setType("_default_").execute().actionGet();} catch (Throwable e) {e.printStackTrace();};
             try {elasticsearch_client.admin().indices().preparePutMapping(IMPORT_PROFILE_INDEX_NAME).setSource(importProfiles.getMapping()).setType("_default_").execute().actionGet();} catch (Throwable e) {e.printStackTrace();};
             
-            // finally wait for healty status of shards
+            // elasticsearch will probably take some time until it is started up. We do some other stuff meanwhile..
+            
+            // create and document the data dump dir
+            assets = new File(datadir, "assets");
+            external_data = new File(datadir, "external");
+            dictionaries = new File(external_data, "dictionaries");
+            dictionaries.mkdirs();
+            
+            // create message dump dir
+            String message_dump_readme =
+                "This directory contains dump files for messages which arrived the platform.\n" +
+                "There are three subdirectories for dump files:\n" +
+                "- own:      for messages received with this peer. There is one file for each month.\n" +
+                "- import:   hand-over directory for message dumps to be imported. Drop dumps here and they are imported.\n" +
+                "- imported: dump files which had been processed from the import directory are moved here.\n" +
+                "You can import dump files from other peers by dropping them into the import directory.\n" +
+                "Each dump file must start with the prefix '" + MESSAGE_DUMP_FILE_PREFIX + "' to be recognized.\n";
+            message_dump_dir = dataPath.resolve("dump");
+            message_dump = new JsonRepository(message_dump_dir.toFile(), MESSAGE_DUMP_FILE_PREFIX, message_dump_readme, JsonRepository.COMPRESSED_MODE, true, Runtime.getRuntime().availableProcessors());
+            
+            account_dump_dir = dataPath.resolve("accounts");
+            account_dump_dir.toFile().mkdirs();
+            OS.protectPath(account_dump_dir); // no other permissions to this path
+            account_dump = new JsonRepository(account_dump_dir.toFile(), ACCOUNT_DUMP_FILE_PREFIX, null, JsonRepository.REWRITABLE_MODE, false, Runtime.getRuntime().availableProcessors());
+
+            File user_dump_dir = new File(datadir, "accounts");
+            user_dump_dir.mkdirs();
+            user_dump = new JsonDataset(
+                    user_dump_dir,USER_DUMP_FILE_PREFIX,
+                    new JsonDataset.Column[]{new JsonDataset.Column("id_str", false), new JsonDataset.Column("screen_name", true)},
+                    "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
+                    JsonRepository.REWRITABLE_MODE, false);
+            followers_dump = new JsonDataset(
+                    user_dump_dir, FOLLOWERS_DUMP_FILE_PREFIX,
+                    new JsonDataset.Column[]{new JsonDataset.Column("screen_name", true)},
+                    "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
+                    JsonRepository.REWRITABLE_MODE, false);
+            following_dump = new JsonDataset(
+                    user_dump_dir, FOLLOWING_DUMP_FILE_PREFIX,
+                    new JsonDataset.Column[]{new JsonDataset.Column("screen_name", true)},
+                    "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
+                    JsonRepository.REWRITABLE_MODE, false);
+            
+            Path log_dump_dir = dataPath.resolve("log");
+            log_dump_dir.toFile().mkdirs();
+            OS.protectPath(log_dump_dir); // no other permissions to this path
+            access = new AccessTracker(log_dump_dir.toFile(), ACCESS_DUMP_FILE_PREFIX, 60000, 3000);
+            access.start(); // start monitor
+            
+	        import_profile_dump_dir = dataPath.resolve("import-profiles");
+            import_profile_dump = new JsonRepository(import_profile_dump_dir.toFile(), IMPORT_PROFILE_FILE_PREFIX, null, JsonRepository.COMPRESSED_MODE, false, Runtime.getRuntime().availableProcessors());
+
+            // load schema folder
+            conv_schema_dir = new File("conf/conversion");
+            schema_dir = new File("conf/schema");            
+
+            // load dictionaries if they are embedded here
+            // read the file allCountries.zip from http://download.geonames.org/export/dump/allCountries.zip
+            //File allCountries = new File(dictionaries, "allCountries.zip");
+            File cities1000 = new File(dictionaries, "cities1000.zip");
+            if (!cities1000.exists()) {
+                // download this file
+                ClientConnection.download("http://download.geonames.org/export/dump/cities1000.zip", cities1000);
+            }
+            if (cities1000.exists()) {
+                geoNames = new GeoNames(cities1000, new File(conf_dir, "iso3166.json"), 1);
+            } else {
+                geoNames = null;
+            }
+            
+            // finally wait for healty status of elasticsearch shards
             ClusterHealthResponse health;
             do {
                 log("Waiting for elasticsearch yellow status");
@@ -326,6 +331,14 @@ public class DAO {
         
     }
     
+    private static boolean clusterReadyCache = false;
+    public static boolean clusterReady() {
+        if (clusterReadyCache) return true;
+        ClusterHealthResponse chr = elasticsearch_client.admin().cluster().prepareHealth().get();
+        clusterReadyCache = chr.getStatus() != ClusterHealthStatus.RED;
+        return clusterReadyCache;
+    }
+    
     public static File getAssetFile(String screen_name, String id_str, String file) {
         String letter0 = ("" + screen_name.charAt(0)).toLowerCase();
         String letter1 = ("" + screen_name.charAt(1)).toLowerCase();
@@ -357,9 +370,9 @@ public class DAO {
         account_dump.shiftProcessedDumps();
     }
 
-    public static int importMessageDump(final JsonReader dumpReader) {
+    public static long importMessageDump(final JsonReader dumpReader) {
         (new Thread(dumpReader)).start();
-        final AtomicInteger newTweet = new AtomicInteger(0);
+        final AtomicLong newTweets = new AtomicLong(0);
         Thread[] indexerThreads = new Thread[dumpReader.getConcurrency()];
         for (int i = 0; i < dumpReader.getConcurrency(); i++) {
             indexerThreads[i] = new Thread() {
@@ -373,11 +386,12 @@ public class DAO {
                                 if (user == null) continue;
                                 UserEntry u = new UserEntry(user);
                                 MessageEntry t = new MessageEntry(json);
-                                boolean newtweet = DAO.writeMessage(t, u, false, true, true);
-                                if (newtweet) newTweet.incrementAndGet();
+                                DAO.writeMessage(t, u, false, true, true);
+                                newTweets.incrementAndGet();
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }
+                            if (LoklakServer.queuedIndexing.isBusy()) try {Thread.sleep(200);} catch (InterruptedException e) {}
                         }
                     } catch (InterruptedException e) {
                         e.printStackTrace();
@@ -386,12 +400,22 @@ public class DAO {
             };
             indexerThreads[i].start();
         }
-        for (int i = 0; i < dumpReader.getConcurrency(); i++) {
-            try {indexerThreads[i].join();} catch (InterruptedException e) {}
+        boolean running = true;
+        while (running) {
+            long startTime = System.currentTimeMillis();
+            long startCount = newTweets.get();
+            running = false;
+            for (int i = 0; i < dumpReader.getConcurrency(); i++) {
+                if (indexerThreads[i].isAlive()) running = true;
+            }
+            try {Thread.sleep(10000);} catch (InterruptedException e) {}
+            long runtime = System.currentTimeMillis() - startTime;
+            long count = newTweets.get() - startCount;
+            Log.getLog().info("imported " + newTweets.get() + " tweets at " + (count * 1000 / runtime) + " tweets per second");
         }
         try {DAO.users.bulkCacheFlush();} catch (IOException e) {}
         try {DAO.messages.bulkCacheFlush();} catch (IOException e) {}
-        return newTweet.get();
+        return newTweets.get();
     }
     
     public static void importAccountDump(final JsonReader dumpReader) {
@@ -511,10 +535,9 @@ public class DAO {
     public static Set<String> getConfigKeys() {
         return config.keySet();
     }
-    
+
     /**
      * Store a message together with a user into the search index
-     * This method is synchronized to prevent concurrent IO caused by this call.
      * @param t a tweet
      * @param u a user
      * @return true if the record was stored because it did not exist, false if it was not stored because the record existed already
@@ -525,11 +548,8 @@ public class DAO {
         }
         try {
             // check if tweet exists in index
-            if ((t instanceof TwitterScraper.TwitterTweet &&
-                ((TwitterScraper.TwitterTweet) t).exist() != null &&
-                ((TwitterScraper.TwitterTweet) t).exist().booleanValue()) ||
-                messages.exists(t.getIdStr())) return false; // we omit writing this again
-
+            if (dump && messages.exists(t.getIdStr())) return false; // we omit writing this again
+    
             synchronized (DAO.class) {
                 // check if user exists in index
                 if (overwriteUser) {
@@ -545,13 +565,14 @@ public class DAO {
     
                 // record tweet into search index
                 messages.writeEntry(t.getIdStr(), t.getSourceType().name(), t, bulk);
-            }
+                 
+                // record tweet into text file
+                if (dump) message_dump.write(t.toMap(u, false, Integer.MAX_VALUE, ""));
+    
+             }
             
-            // record tweet into text file
-            if (dump) message_dump.write(t.toMap(u, false, Integer.MAX_VALUE, ""));
-            
-            // teach the classifier
-            Classifier.learnPhrase(t.getText(Integer.MAX_VALUE, ""));
+             // teach the classifier
+             Classifier.learnPhrase(t.getText(Integer.MAX_VALUE, ""));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -565,7 +586,7 @@ public class DAO {
      * @param u a user
      * @return true if the record was stored because it did not exist, false if it was not stored because the record existed already
      */
-    public synchronized static boolean writeUser(UserEntry u, String source_type, boolean bulk) {
+    public static boolean writeUser(UserEntry u, String source_type, boolean bulk) {
         try {
             // record user into search index
             users.writeEntry(u.getScreenName(), source_type, u, bulk);
@@ -582,7 +603,7 @@ public class DAO {
      * @param u a user
      * @return true if the record was stored because it did not exist, false if it was not stored because the record existed already
      */
-    public synchronized static boolean writeAccount(AccountEntry a, boolean dump) {
+    public static boolean writeAccount(AccountEntry a, boolean dump) {
         try {
             // record account into text file
             if (dump) account_dump.write(a.toMap(null));
@@ -601,7 +622,7 @@ public class DAO {
      * @param i an import profile
      * @return true if the record was stored because it did not exist, false if it was not stored because the record existed already
      */
-    public synchronized static boolean writeImportProfile(ImportProfileEntry i, boolean dump) {
+    public static boolean writeImportProfile(ImportProfileEntry i, boolean dump) {
         try {
             // record import profile into text file
             if (dump) import_profile_dump.write(i.toMap());
@@ -1088,7 +1109,8 @@ public class DAO {
     
     public static Timeline searchBackend(final String q, final Timeline.Order order, final int count, final int timezoneOffset, final String where, final long timeout) {
         List<String> remote = getBackendPeers();
-        if (remote.size() > 0 && (peerLatency.get(remote.get(0)) == null || peerLatency.get(remote.get(0)) < 3000)) {
+        
+        if (remote.size() > 0 /*&& (peerLatency.get(remote.get(0)) == null || peerLatency.get(remote.get(0)) < 3000)*/) { // condition deactivated because we need always at least one peer
             Timeline tt = searchOnOtherPeers(remote, q, order, count, timezoneOffset, where, SearchClient.backend_hash, timeout);
             if (tt != null) tt.writeToIndex();
             return tt;
@@ -1114,7 +1136,7 @@ public class DAO {
             } catch (IOException e) {
                 DAO.log("searchOnOtherPeers: no IO to scraping target: " + e.getMessage());
                 // the remote peer seems to be unresponsive, remove it (temporary) from the remote peer list
-                peerLatency.put(peer, System.currentTimeMillis() - start);
+                peerLatency.put(peer, 3600000L);
                 frontPeerCache.remove(peer);
                 backendPeerCache.remove(peer);
                 remote.remove(pick);

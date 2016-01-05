@@ -8,3 +8,9 @@
 /data.bkp/
 
 *.xml~
+
+# python
+venv/*
+
+dist
+dist/loklak.jar
