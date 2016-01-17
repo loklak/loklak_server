@@ -25,6 +25,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -47,7 +49,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jackson.JsonLoader;
 import com.google.common.base.Charsets;
-import com.google.common.io.Files;
 
 import org.eclipse.jetty.util.log.Log;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
@@ -125,12 +126,9 @@ public class DAO {
     public final static String FOLLOWERS_DUMP_FILE_PREFIX = "followers_";
     public final static String FOLLOWING_DUMP_FILE_PREFIX = "following_";
     private static final String IMPORT_PROFILE_FILE_PREFIX = "profile_";
-    public final static String QUERIES_INDEX_NAME = "queries";
-    public final static String MESSAGES_INDEX_NAME = "messages";
-    public final static String USERS_INDEX_NAME = "users";
-    public final static String ACCOUNTS_INDEX_NAME = "accounts";
-    private static final String IMPORT_PROFILE_INDEX_NAME = "import_profiles";
-    public final static int CACHE_MAXSIZE = 10000;
+    
+    public final static int CACHE_MAXSIZE =   10000;
+    public final static int EXIST_MAXSIZE = 1000000;
     
     public  static File conf_dir, bin_dir, html_dir;
     private static File external_data, assets, dictionaries;
@@ -151,6 +149,10 @@ public class DAO {
     private static Map<String, String> config = new HashMap<>();
     public  static GeoNames geoNames;
     public static Peers peers = new Peers();
+    
+    public static enum IndexName {
+    	queries, messages, users, accounts, import_profiles;
+    }
     
     /**
      * initialize the DAO
@@ -183,26 +185,26 @@ public class DAO {
             if (index_dir.toFile().exists()) OS.protectPath(index_dir); // no other permissions to this path
             
             // define the index factories
-            messages = new MessageFactory(elasticsearch_client, MESSAGES_INDEX_NAME, CACHE_MAXSIZE);
-            users = new UserFactory(elasticsearch_client, USERS_INDEX_NAME, CACHE_MAXSIZE);
-            accounts = new AccountFactory(elasticsearch_client, ACCOUNTS_INDEX_NAME, CACHE_MAXSIZE);
-            queries = new QueryFactory(elasticsearch_client, QUERIES_INDEX_NAME, CACHE_MAXSIZE);
-            importProfiles = new ImportProfileFactory(elasticsearch_client, IMPORT_PROFILE_INDEX_NAME, CACHE_MAXSIZE);
+            messages = new MessageFactory(elasticsearch_client, IndexName.messages.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+            users = new UserFactory(elasticsearch_client, IndexName.users.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+            accounts = new AccountFactory(elasticsearch_client, IndexName.accounts.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+            queries = new QueryFactory(elasticsearch_client, IndexName.queries.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+            importProfiles = new ImportProfileFactory(elasticsearch_client, IndexName.import_profiles.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
 
-            // create indices
-            try {elasticsearch_client.admin().indices().prepareCreate(MESSAGES_INDEX_NAME).execute().actionGet();} catch (Throwable e) {};
-            try {elasticsearch_client.admin().indices().prepareCreate(USERS_INDEX_NAME).execute().actionGet();} catch (Throwable e) {};
-            try {elasticsearch_client.admin().indices().prepareCreate(ACCOUNTS_INDEX_NAME).execute().actionGet();} catch (Throwable e) {};
-            try {elasticsearch_client.admin().indices().prepareCreate(QUERIES_INDEX_NAME).execute().actionGet();} catch (Throwable e) {};
-            try {elasticsearch_client.admin().indices().prepareCreate(IMPORT_PROFILE_INDEX_NAME).execute().actionGet();} catch (Throwable e) {};
-
-            // set mapping (that shows how 'elastic' elasticsearch is: it's always good to define data types)
-            try {elasticsearch_client.admin().indices().preparePutMapping(MESSAGES_INDEX_NAME).setSource(messages.getMapping()).setType("_default_").execute().actionGet();} catch (Throwable e) {e.printStackTrace();};
-            try {elasticsearch_client.admin().indices().preparePutMapping(USERS_INDEX_NAME).setSource(users.getMapping()).setType("_default_").execute().actionGet();} catch (Throwable e) {e.printStackTrace();};
-            try {elasticsearch_client.admin().indices().preparePutMapping(ACCOUNTS_INDEX_NAME).setSource(accounts.getMapping()).setType("_default_").execute().actionGet();} catch (Throwable e) {e.printStackTrace();};
-            try {elasticsearch_client.admin().indices().preparePutMapping(QUERIES_INDEX_NAME).setSource(queries.getMapping()).setType("_default_").execute().actionGet();} catch (Throwable e) {e.printStackTrace();};
-            try {elasticsearch_client.admin().indices().preparePutMapping(IMPORT_PROFILE_INDEX_NAME).setSource(importProfiles.getMapping()).setType("_default_").execute().actionGet();} catch (Throwable e) {e.printStackTrace();};
-            
+            // create indices and set mapping (that shows how 'elastic' elasticsearch is: it's always good to define data types)
+            File mappingsDir = new File(new File(conf_dir, "elasticsearch"), "mappings");
+            for (IndexName index: IndexName.values()) {
+            	try {
+            		elasticsearch_client.admin().indices().prepareCreate(index.name()).execute().actionGet();
+                	elasticsearch_client.admin().indices().preparePutMapping(index.name())
+                		.setSource(new String(Files.readAllBytes(new File(mappingsDir, index.name() + ".json").toPath()), StandardCharsets.UTF_8))
+                		.setType("_default_")
+                		.execute()
+                		.actionGet();
+            	} catch (Throwable e) {
+            		e.printStackTrace();
+            	}
+            }
             // elasticsearch will probably take some time until it is started up. We do some other stuff meanwhile..
             
             // create and document the data dump dir
@@ -481,7 +483,7 @@ public class DAO {
         if (!schema.exists()) {
             throw new FileNotFoundException("No schema file with name " + key + " found");
         }
-        return DAO.jsonMapper.readValue(Files.toString(schema, Charsets.UTF_8), DAO.jsonTypeRef);
+        return DAO.jsonMapper.readValue(com.google.common.io.Files.toString(schema, Charsets.UTF_8), DAO.jsonTypeRef);
     }
 
     public static boolean getConfig(String key, boolean default_val) {
@@ -512,11 +514,13 @@ public class DAO {
                 if (overwriteUser) {
                     UserEntry oldUser = users.read(u.getScreenName());
                     if (oldUser == null || !oldUser.equals(u)) {
-                        writeUser(u, t.getSourceType().name(), bulk);
+                        // record user into search index
+                        users.writeEntry(u.getScreenName(), t.getSourceType().name(), u, bulk);
                     }
                 } else {
                     if (!users.exists(u.getScreenName())) {
-                        writeUser(u, t.getSourceType().name(), bulk);
+                        // record user into search index
+                        users.writeEntry(u.getScreenName(), t.getSourceType().name(), u, bulk);
                     } 
                 }
     
@@ -530,23 +534,6 @@ public class DAO {
             
              // teach the classifier
              Classifier.learnPhrase(t.getText(Integer.MAX_VALUE, ""));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return true;
-    }
-    
-    /**
-     * Store an user into the search index
-     * This method is synchronized to prevent concurrent IO caused by this call.
-     * @param a an account 
-     * @param u a user
-     * @return true if the record was stored because it did not exist, false if it was not stored because the record existed already
-     */
-    public static boolean writeUser(UserEntry u, String source_type, boolean bulk) {
-        try {
-            // record user into search index
-            users.writeEntry(u.getScreenName(), source_type, u, bulk);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -592,23 +579,23 @@ public class DAO {
     }
 
     public static long countLocalMessages(long millis) {
-        return countLocal(MESSAGES_INDEX_NAME, millis);
+        return countLocal(IndexName.messages.name(), millis);
     }
     
     public static long countLocalMessages(String provider_hash) {
-        return countLocal(MESSAGES_INDEX_NAME, provider_hash);
+        return countLocal(IndexName.messages.name(), provider_hash);
     }
     
     public static long countLocalUsers() {
-        return countLocal(USERS_INDEX_NAME, -1);
+        return countLocal(IndexName.users.name(), -1);
     }
 
     public static long countLocalQueries() {
-        return countLocal(QUERIES_INDEX_NAME, -1);
+        return countLocal(IndexName.queries.name(), -1);
     }
     
     public static long countLocalAccounts() {
-        return countLocal(ACCOUNTS_INDEX_NAME, -1);
+        return countLocal(IndexName.accounts.name(), -1);
     }
 
     private static long countLocal(String index, long millis) {
@@ -679,7 +666,7 @@ public class DAO {
             this.timeline = new Timeline(order_field);
             // prepare request
             QueryEntry.ElasticsearchQuery sq = new QueryEntry.ElasticsearchQuery(q, timezoneOffset);
-            SearchRequestBuilder request = elasticsearch_client.prepareSearch(MESSAGES_INDEX_NAME)
+            SearchRequestBuilder request = elasticsearch_client.prepareSearch(IndexName.messages.name())
                     .setSearchType(SearchType.QUERY_THEN_FETCH)
                     .setQuery(sq.queryBuilder)
                     .setFrom(0)
@@ -780,7 +767,7 @@ public class DAO {
 
     public static LinkedHashMap<String, Long> FullDateHistogram(int timezoneOffset) {
         // prepare request
-        SearchRequestBuilder request = elasticsearch_client.prepareSearch(MESSAGES_INDEX_NAME)
+        SearchRequestBuilder request = elasticsearch_client.prepareSearch(IndexName.messages.name())
                 .setSearchType(SearchType.QUERY_THEN_FETCH)
                 .setQuery(QueryBuilders.matchAllQuery())
                 .setFrom(0)
@@ -824,7 +811,7 @@ public class DAO {
         BoolQueryBuilder query = QueryBuilders.boolQuery();
         query.must(QueryBuilders.termQuery(UserFactory.field_user_id, user_id));
 
-        SearchRequestBuilder request = elasticsearch_client.prepareSearch(USERS_INDEX_NAME)
+        SearchRequestBuilder request = elasticsearch_client.prepareSearch(IndexName.users.name())
                 .setSearchType(SearchType.QUERY_THEN_FETCH)
                 .setQuery(query)
                 .setFrom(0)
@@ -888,7 +875,7 @@ public class DAO {
             query = suggest;
         }
         
-        SearchRequestBuilder request = elasticsearch_client.prepareSearch(QUERIES_INDEX_NAME)
+        SearchRequestBuilder request = elasticsearch_client.prepareSearch(IndexName.queries.name())
                 .setSearchType(SearchType.QUERY_THEN_FETCH)
                 .setQuery(query)
                 .setFrom(0)
@@ -926,7 +913,7 @@ public class DAO {
 
     public static Collection<ImportProfileEntry> SearchLocalImportProfilesWithConstraints(final Map<String, String> constraints, boolean latest) throws IOException {
         List<ImportProfileEntry> rawResults = new ArrayList<>();
-        SearchRequestBuilder request = elasticsearch_client.prepareSearch(IMPORT_PROFILE_INDEX_NAME)
+        SearchRequestBuilder request = elasticsearch_client.prepareSearch(IndexName.import_profiles.name())
                 .setSearchType(SearchType.QUERY_THEN_FETCH)
                 .setFrom(0);
 
@@ -1066,10 +1053,13 @@ public class DAO {
      * @return a list of front peers. only the first one shall be used, but the other are fail-over peers
      */
     public static ArrayList<String> getFrontPeers() {
+        String[] remote = DAO.getConfig("frontpeers", new String[0], ",");
         ArrayList<String> testpeers = new ArrayList<>();
+        if (remote.length > 0) {
+            for (String peer: remote) testpeers.add(peer);
+            return testpeers;
+        }
         if (frontPeerCache.size() == 0) {
-            String[] remote = DAO.getConfig("frontpeers", new String[0], ",");
-            for (String peer: remote) frontPeerCache.add(peer);
             // add dynamically all peers that contacted myself
             for (Map<String, RemoteAccess> hmap: RemoteAccess.history.values()) {
                 for (Map.Entry<String, RemoteAccess> peer: hmap.entrySet()) {
