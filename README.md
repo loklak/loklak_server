@@ -68,6 +68,16 @@ Run elasticsearch-head with:
 
 The application has built-in documentation web pages, you will see them when you opened the application web pages or you can simply open html/index.html or just use http://loklak.org as reference.
 
+## How to compile using Gradle?
+
+- First, create dir necessary for Gradle
+- `./gradle_init.sh`
+- Compile the source to classes and a jar file
+- `gradle assemble`
+- Compiled file can be find in build dir
+- Last, clean up so that we can still build the project using Ant
+- `./gradle_clean.sh`
+
 
 ## What is the software license?
 
