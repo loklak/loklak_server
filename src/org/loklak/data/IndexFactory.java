@@ -22,23 +22,17 @@ package org.loklak.data;
 import java.io.IOException;
 import java.util.Map;
 
-import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.loklak.harvester.SourceType;
-import org.loklak.tools.json.JSONObject;
 
 public interface IndexFactory<Entry extends IndexEntry> {
-
-    /**
-     * get a mapping for the index definition
-     * @return a json string which can be used to define an index in elasticsearch
-     */
-    public XContentBuilder getMapping();
 
     public Entry init(Map<String, Object> map) throws IOException;
     
     //public Entry init(JSONObject json) throws IOException;
 
     public boolean exists(String id);
+    
+    public boolean existsCache(String id);
     
     public boolean delete(String id, SourceType sourceType);
     

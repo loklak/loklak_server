@@ -31,6 +31,7 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.index.VersionType;
 import org.loklak.harvester.SourceType;
 import org.loklak.tools.CacheMap;
+import org.loklak.tools.CacheSet;
 
 /**
  * test calls:
@@ -41,45 +42,62 @@ public abstract class AbstractIndexFactory<Entry extends IndexEntry> implements 
 
 
     private final static VersionType update_version_type = VersionType.FORCE;
-    private final static int MAX_BULK_SIZE = 1500;
+    private final static int MAX_BULK_SIZE =  1500;
+    private final static int MAX_BULK_TIME = 10000;
     
     protected final Client elasticsearch_client;
-    protected final CacheMap<String, Entry> cache;
+    protected final CacheMap<String, Entry> objectCache;
+    private CacheSet<String> existCache;
     protected final String index_name;
+    private long lastBulkWrite;
     
-    public AbstractIndexFactory(final Client elasticsearch_client, final String index_name, final int cacheSize) {
+    
+    public AbstractIndexFactory(final Client elasticsearch_client, final String index_name, final int cacheSize, final int existSize) {
         this.elasticsearch_client = elasticsearch_client;
         this.index_name = index_name;
-        this.cache = new CacheMap<>(cacheSize);
+        this.objectCache = new CacheMap<>(cacheSize);
+        this.existCache = new CacheSet<>(existSize);
+        this.lastBulkWrite = System.currentTimeMillis();
     }
     
     public Entry read(String id) throws IOException {
         assert id != null;
         if (id == null) return null;
-        Entry entry = cache.get(id);
+        Entry entry = objectCache.get(id);
         if (entry != null) return entry;
         Map<String, Object> map = readMap(id);
         if (map == null) return null;
         entry = init(map);
-        cache.put(id, entry);
+        objectCache.put(id, entry);
+        existCache.add(id);
         return entry;
     }
     
     @Override
     public boolean exists(String id) {
-        if (this.cache.exist(id)) return true;
-        return elasticsearch_client.prepareGet(index_name, null, id).execute().actionGet().isExists();
+        if (existsCache(id)) return true;
+        boolean exist = elasticsearch_client.prepareGet(index_name, null, id).execute().actionGet().isExists();
+        if (exist) this.existCache.add(id);
+        return exist;
+    }
+
+    @Override
+    public boolean existsCache(String id) {
+        return (this.objectCache.exist(id) || this.existCache.contains(id));
     }
     
     @Override
     public boolean delete(String id, SourceType sourceType) {
-        this.cache.remove(id);
-            return elasticsearch_client.prepareDelete(index_name, sourceType.name(), id).execute().actionGet().isFound();
+        this.objectCache.remove(id);
+        this.existCache.remove(id);
+        return elasticsearch_client.prepareDelete(index_name, sourceType.name(), id).execute().actionGet().isFound();
     }
 
     @Override
     public Map<String, Object> readMap(String id) {
-        return getMap(elasticsearch_client.prepareGet(index_name, null, id).execute().actionGet());
+        Map<String, Object> json = getMap(elasticsearch_client.prepareGet(index_name, null, id).execute().actionGet());
+        if (json != null) this.existCache.add(id);
+        return json;
     }
     
     protected static Map<String, Object> getMap(GetResponse response) {
@@ -91,6 +109,8 @@ public abstract class AbstractIndexFactory<Entry extends IndexEntry> implements 
     }
     
     public void writeEntry(String id, String type, Entry entry, boolean bulk) throws IOException {
+        this.objectCache.put(id, entry);
+        this.existCache.add(id);
         if (bulk) {
             BulkEntry be = new BulkEntry(id, type, entry);
             if (be.jsonMap != null) try {
@@ -98,10 +118,9 @@ public abstract class AbstractIndexFactory<Entry extends IndexEntry> implements 
             } catch (InterruptedException e) {
                 throw new IOException(e.getMessage());
             }
-            if (bulkCacheSize() >= MAX_BULK_SIZE) bulkCacheFlush(); // protect against OOM
+            if (bulkCacheSize() >= MAX_BULK_SIZE || this.lastBulkWrite + MAX_BULK_TIME < System.currentTimeMillis()) bulkCacheFlush(); // protect against OOM
         } else {
             bulkCacheFlush();
-            this.cache.put(id, entry);
             // record user into search index
             Map<String, Object> jsonMap = entry.toMap();
             
@@ -124,6 +143,7 @@ public abstract class AbstractIndexFactory<Entry extends IndexEntry> implements 
     }
 
     public int bulkCacheFlush() throws IOException {
+        this.lastBulkWrite = System.currentTimeMillis();
         if (this.bulkCache.size() == 0) return 0;
         
         BulkRequestBuilder bulkRequest = elasticsearch_client.prepareBulk().setRefresh(true);

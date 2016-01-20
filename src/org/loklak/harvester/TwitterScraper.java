@@ -26,6 +26,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -47,26 +48,6 @@ import org.loklak.data.Timeline;
 import org.loklak.data.MessageEntry;
 import org.loklak.data.UserEntry;
 import org.loklak.http.ClientConnection;
-import org.loklak.tools.UTF8;
-
-/**
- *  TwitterScraper
- *  Copyright 08.03.2015 by Michael Peter Christen, @0rb1t3r
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *  
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *  
- *  You should have received a copy of the GNU Lesser General Public License
- *  along with this program in the file lgpl21.txt
- *  If not, see <http://www.gnu.org/licenses/>.
- */
 
 public class TwitterScraper {
 
@@ -118,7 +99,7 @@ public class TwitterScraper {
             ClientConnection connection = new ClientConnection(https_url);
             if (connection.inputStream == null) return null;
             try {
-                BufferedReader br = new BufferedReader(new InputStreamReader(connection.inputStream, UTF8.charset));
+                BufferedReader br = new BufferedReader(new InputStreamReader(connection.inputStream, StandardCharsets.UTF_8));
                 timelines = search(br, order, writeToIndex, writeToBackend);
             } catch (IOException e) {
                e.printStackTrace();

@@ -1,4 +1,5 @@
 # loklak
+[![Build Status](https://travis-ci.org/loklak/loklak_server.svg?branch=master)](https://travis-ci.org/loklak/loklak_server)
 
 loklak is a server application which is able to collect messages from various sources, including twitter. The server contains a search index and a peer-to-peer index sharing interface. All messages are stored in a elasticsearch index.
 
@@ -41,7 +42,7 @@ To install loklak with Docker please refer to the [loklak Docker installation re
 
 ## How do I configure loklak?
 
-The basis configuration file is in conf/config.properties. To customize these settings place a file 'customized_config.properties' to the path data/settings/
+The basis configuration file is in ```conf/config.properties```. To customize these settings place a file ```customized_config.properties``` to the path ```data/settings/```
 
 ## How do I run loklak?
 
@@ -67,6 +68,27 @@ Run elasticsearch-head with:
 ## Where can I find more information and documentation?
 
 The application has built-in documentation web pages, you will see them when you opened the application web pages or you can simply open html/index.html or just use http://loklak.org as reference.
+
+## How to compile using Gradle?
+- To install Gradle on ubuntu:
+```
+$ sudo add-apt-repository ppa:cwchien/gradle
+
+$ sudo apt-get update
+
+$ sudo apt-get install gradle
+```
+- To install Gradle on Mac OS X with homebrew
+```
+brew install gradle
+```
+- To compile, first, create dir necessary for Gradle
+- `./gradle_init.sh`
+- Compile the source to classes and a jar file
+- `gradle assemble`
+- Compiled file can be find in build dir
+- Last, clean up so that we can still build the project using Ant
+- `./gradle_clean.sh`
 
 
 ## What is the software license?
