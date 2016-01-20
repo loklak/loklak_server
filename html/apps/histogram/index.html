@@ -42,7 +42,7 @@
 			if (diffDays < 5){
 				alert('Kindly provide a difference of more than 4 days between the two dates.')
 			} else{
-				if ($scope.query !== 'undefined'){
+				if ($scope.query == undefined){
 					alert("Kindly provide a query to search for!");
 				} else{
 			        $("#bar-example")[0].innerHTML = spinner;
