@@ -5,7 +5,8 @@ import html
 import json
 import sys
 
-query = "http://loklak.org/api/search.json?q=fossasia"
+search_term = sys.argv[1]
+query = "http://loklak.org/api/search.json?q=fossasia{}".format(search_term)
 
 #get file and decode
 try:
