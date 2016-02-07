@@ -8,5 +8,5 @@
 6. Set the buildpack: `heroku buildpacks:set https://github.com/aneeshd16/heroku-buildpack-ant-loklak.git`
 7. Push your app to heroku: `git push heroku master`
 8. Confirm the loklak server is running: `heroku logs --tail`
-9. Sometimes the server may take a while to start.
+9. Sometimes the server may take a while to start. The logs would show `State changed from starting to up` when the server is ready.
 9. Open the URL of your server in your browser: `heroku open`.
