@@ -32,10 +32,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.eclipse.jetty.util.log.Log;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.http.RemoteAccess;
-import org.loklak.tools.json.JSONArray;
-import org.loklak.tools.json.JSONObject;
 
 public class AppsServlet extends HttpServlet {
 
@@ -56,7 +56,7 @@ public class AppsServlet extends HttpServlet {
         
         // generate json
         File apps = new File(DAO.html_dir, "apps");
-        JSONObject json = new JSONObject();
+        JSONObject json = new JSONObject(true);
         JSONArray app_array = new JSONArray();
         json.put("apps", app_array);
         for (String appname: apps.list()) try {

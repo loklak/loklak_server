@@ -1,6 +1,6 @@
 /**
- *  ProviderType
- *  Copyright 22.02.2015 by Michael Peter Christen, @0rb1t3r
+ *  Peer
+ *  Copyright 07.01.2016 by Michael Peter Christen, @0rb1t3r
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -17,16 +17,16 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.loklak.data;
+package org.loklak.objects;
 
-public enum ProviderType {
+import org.json.JSONObject;
 
-    NOONE,   // value assigned during instantiation phase
-    SCRAPED, // scraped with this peer from a remote service
-    IMPORT,  // external resource imported with special reader
-    GENERIC, // pushed as single message at this peer
-    REMOTE,  // pushed as message bulk from a remote peer
-    GEOJSON, // geojson feature collection provided from remote peer
-    ;
+public class Peer extends JSONObject {
+
+    public static enum Status {
+        CANDIDATE, // a new peer which was not tested for an open port or a SENIOR which could not be connected
+        JUNIOR,    // a candidate which was tested for an open port unsuccessfully
+        SENIOR;    // a candidate which was tested for an open port successfully
+    }
     
 }

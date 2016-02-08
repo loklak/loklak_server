@@ -24,13 +24,13 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.loklak.data.DAO;
-import org.loklak.data.Timeline;
-import org.loklak.data.ImportProfileEntry;
 import org.loklak.harvester.SourceType;
 import org.loklak.http.RemoteAccess;
-import org.loklak.tools.json.JSONArray;
-import org.loklak.tools.json.JSONObject;
+import org.loklak.objects.ImportProfileEntry;
+import org.loklak.objects.Timeline;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -224,7 +224,7 @@ public class ImportProfileServlet extends HttpServlet {
         }
         post.setResponse(response, "application/javascript");
 
-        JSONObject m = new JSONObject();
+        JSONObject m = new JSONObject(true);
         JSONObject metadata = new JSONObject();
         metadata.put("count", entries.size());
         metadata.put("client", post.getClientHost());

@@ -23,18 +23,9 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.elasticsearch.client.Client;
+import org.loklak.objects.AccountEntry;
 
 public class AccountFactory extends AbstractIndexFactory<AccountEntry> implements IndexFactory<AccountEntry> {
-
-    public enum Field {
-        screen_name,
-        source_type,
-        oauth_token,
-        oauth_token_secret,
-        authentication_first,
-        authentication_latest,
-        apps;
-    }
     
     public AccountFactory(final Client elasticsearch_client, final String index_name, final int cacheSize, final int existSize) {
         super(elasticsearch_client, index_name, cacheSize, existSize);

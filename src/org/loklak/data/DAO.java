@@ -84,6 +84,14 @@ import org.loklak.harvester.TwitterScraper;
 import org.loklak.http.AccessTracker;
 import org.loklak.http.ClientConnection;
 import org.loklak.http.RemoteAccess;
+import org.loklak.objects.AccountEntry;
+import org.loklak.objects.ImportProfileEntry;
+import org.loklak.objects.MessageEntry;
+import org.loklak.objects.Peers;
+import org.loklak.objects.QueryEntry;
+import org.loklak.objects.ResultList;
+import org.loklak.objects.Timeline;
+import org.loklak.objects.UserEntry;
 import org.loklak.tools.DateParser;
 import org.loklak.tools.OS;
 import org.loklak.tools.storage.JsonDataset;
@@ -809,7 +817,7 @@ public class DAO {
         if (user_id == null || user_id.length() == 0) return null;
         // prepare request
         BoolQueryBuilder query = QueryBuilders.boolQuery();
-        query.must(QueryBuilders.termQuery(UserFactory.field_user_id, user_id));
+        query.must(QueryBuilders.termQuery(UserEntry.field_user_id, user_id));
 
         SearchRequestBuilder request = elasticsearch_client.prepareSearch(IndexName.users.name())
                 .setSearchType(SearchType.QUERY_THEN_FETCH)
@@ -918,7 +926,7 @@ public class DAO {
                 .setFrom(0);
 
         BoolQueryBuilder bFilter = QueryBuilders.boolQuery();
-        bFilter.must(QueryBuilders.termQuery("active_status", EntryStatus.ACTIVE.name().toLowerCase()));
+        bFilter.must(QueryBuilders.termQuery("active_status", ImportProfileEntry.EntryStatus.ACTIVE.name().toLowerCase()));
         for (Object o : constraints.entrySet()) {
             @SuppressWarnings("rawtypes")
             Map.Entry entry = (Map.Entry) o;

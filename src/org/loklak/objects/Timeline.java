@@ -17,7 +17,7 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.loklak.data;
+package org.loklak.objects;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -29,9 +29,10 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-import org.loklak.tools.json.JSONArray;
-import org.loklak.tools.json.JSONException;
-import org.loklak.tools.json.JSONObject;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.loklak.data.DAO;
 
 /**
  * A timeline is a structure which holds tweet for the purpose of presentation

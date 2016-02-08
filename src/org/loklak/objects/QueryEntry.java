@@ -17,7 +17,7 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.loklak.data;
+package org.loklak.objects;
 
 import java.net.MalformedURLException;
 import java.text.ParseException;
@@ -38,12 +38,14 @@ import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.loklak.data.Classifier;
+import org.loklak.data.DAO;
 import org.loklak.geo.GeoLocation;
 import org.loklak.geo.GeoMark;
 import org.loklak.harvester.SourceType;
 import org.loklak.tools.DateParser;
-import org.loklak.tools.json.JSONException;
-import org.loklak.tools.json.JSONObject;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -68,7 +70,7 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
     
     protected String query;           // the query in the exact way as the user typed it in
     protected int query_length;       // the length in the query, number of characters
-    protected SourceType source_type; // the (external) retrieval system where that query was submitted
+    public SourceType source_type; // the (external) retrieval system where that query was submitted
     protected int timezoneOffset;     // the timezone offset of the user
     protected Date query_first;       // the date when this query was submitted by the user the first time
     protected Date query_last;        // the date when this query was submitted by the user the last time
@@ -511,8 +513,9 @@ public class QueryEntry extends AbstractIndexEntry implements IndexEntry {
     
     public static class ElasticsearchQuery {
         
-        QueryBuilder queryBuilder;
-        Date since, until;
+        public QueryBuilder queryBuilder;
+        public Date since;
+        public Date until;
 
         public ElasticsearchQuery(String q, int timezoneOffset) {
             // default values for since and util

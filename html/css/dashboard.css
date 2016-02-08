@@ -120,9 +120,11 @@ body {
 .nav-sidebar > .active > a:focus {
   color: GreenYellow;
 }
-
+.nav-sidebar > .active > a{
+  background-color: grey;
+}
 .nav-sidebar li a:hover {
-	background-color: grey;
+  background-color: grey;
 }
 
 /*
@@ -145,4 +147,9 @@ body {
 .main, .col-sm-9, .col-sm-offset-3, .col-md-10, .col-md-offset-2{
   padding-bottom: 0px;
   margin-bottom: 0px;
+}
+
+section{
+  padding-top: 50px;
+  margin-top: -50px;
 }
