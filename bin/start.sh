@@ -1,4 +1,15 @@
 #!/usr/bin/env sh
+
+# Check for an existing instance of server
+# If it exists, shut it down
+filepath="`dirname $0`/../data/loklak.pid"
+if [ -f $filepath ]; then
+ echo "shutting down existing loklak server"
+ kill `cat $filepath` 2>/dev/null
+ if [ $? -eq 0 ]; then while [ -f $filepath ]; do sleep 1; done fi;
+ rm -f $filepath 2>/dev/null
+fi
+
 cd `dirname $0`/..
 mkdir -p data
 
