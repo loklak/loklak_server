@@ -74,6 +74,7 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
     protected LocationSource location_source;
     protected PlaceContext place_context;
     protected String place_country;
+    private boolean enriched;
 
     // the following can be computed from the tweet data but is stored in the search index to provide statistical data and ranking attributes
     private int without_l_len, without_lu_len, without_luh_len; // the length of tweets without links, users, hashtags
@@ -116,6 +117,7 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
         this.mentions = new String[0];
         this.hashtags = new String[0];
         this.classifier = null;
+        this.enriched = false;
     }
 
     public MessageEntry(JSONObject json) {
@@ -174,6 +176,7 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
             this.location_mark = new double[]{(Double) ((List<?>) location_mark_obj).get(0), (Double) ((List<?>) location_mark_obj).get(1)};
             this.location_source = LocationSource.valueOf((String) location_source_obj);
         }
+        this.enriched = false;
 
         // load enriched data
         enrich();
@@ -238,6 +241,7 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
             this.location_mark = new double[]{(Double) ((List<?>) location_mark_obj).get(0), (Double) ((List<?>) location_mark_obj).get(1)};
             this.location_source = LocationSource.valueOf((String) location_source_obj);
         }
+        this.enriched = false;
         
         // load enriched data
         enrich();
@@ -490,6 +494,7 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
      * - count message size without links and without users
      */
     public void enrich() {
+        if (this.enriched) return;
         StringBuilder t = new StringBuilder(this.text);
 
         // extract the links
@@ -551,12 +556,12 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
             GeoMark loc = null;
             if (this.place_name != null && this.place_name.length() > 0 &&
                 (this.location_source == null || this.location_source == LocationSource.ANNOTATION || this.location_source == LocationSource.PLACE)) {
-                loc = DAO.geoNames.analyse(this.place_name, null, 5, this.text.hashCode());
+                loc = DAO.geoNames.analyse(this.place_name, null, 5, Integer.toString(this.text.hashCode()));
                 this.place_context = PlaceContext.FROM;
                 this.location_source = LocationSource.PLACE;
             }
             if (loc == null) {
-                loc = DAO.geoNames.analyse(this.text, this.hashtags, 5, this.text.hashCode());
+                loc = DAO.geoNames.analyse(this.text, this.hashtags, 5, Integer.toString(this.text.hashCode()));
                 this.place_context = PlaceContext.ABOUT;
                 this.location_source = LocationSource.ANNOTATION;
             }
@@ -568,6 +573,7 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
                 this.place_country = loc.getISO3166cc();
             }
         }
+        this.enriched = true;
     }
     
     private static List<String> extract(StringBuilder s, Pattern p, int g) {
@@ -750,7 +756,9 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
             e.printStackTrace();
         }
         // remove tags
-        s = s.replaceAll("</a>", "").replaceAll("&quot;", "\"").replaceAll("&amp;", "&");
+        s = A_END_TAG.matcher(s).replaceAll("");
+        s = QUOT_TAG.matcher(s).replaceAll("\"");
+        s = AMP_TAG.matcher(s).replaceAll("&");
         // remove funny symbols
         StringBuilder clean = new StringBuilder(s.length() + 5);
         for (int i = 0; i < s.length(); i++) {
@@ -762,4 +770,8 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
         // remove double spaces
         return clean.toString().replaceAll("  ", " ");
     }
+
+    private final static Pattern A_END_TAG = Pattern.compile("</a>");
+    private final static Pattern QUOT_TAG = Pattern.compile("&quot;");
+    private final static Pattern AMP_TAG = Pattern.compile("&amp;");
 }
