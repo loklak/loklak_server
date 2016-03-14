@@ -97,9 +97,11 @@ public class Classifier {
             try {
                 List<String> words = normalize(phrase);
                 for (Map.Entry<Category, Set<String>> entry: categories.entrySet()) {
+                    Set<String> vs = entry.getValue();
+                    if (vs == null) continue; // what does that mean?
                     for (String word: words) {
                         if (word.length() == 0) continue;
-                        if (entry.getValue().contains(word)) {
+                        if (vs.contains(word)) {
                             bayes.learn(entry.getKey(), words);
                         }
                     }
@@ -140,7 +142,11 @@ public class Classifier {
     public static void init(int maxsize, int initsize) {
         
         // load the context keys
-        for (Context c: Context.values()) c.init(maxsize);
+        DAO.log("Classifier: initializing " + Context.values().length + " contexts...");
+        for (Context c: Context.values()) {
+            DAO.log("Classifier: initializing contexts '" + c.name() + "'...");
+            c.init(maxsize);
+        }
         /*
         // ensure consistency throughout the contexts: remove words which could confuse the bayesian filter
         for (Context c: Context.values()) {
@@ -154,12 +160,17 @@ public class Classifier {
         
         // load a test set
         if (DAO.countLocalMessages(-1) > 0) {
+            DAO.log("Classifier: loading test set for " + initsize + " messages...");
             DAO.SearchLocalMessages testset = new DAO.SearchLocalMessages("", Timeline.Order.CREATED_AT, 0, initsize, 0);
             Timeline tl = testset.timeline;
+            DAO.log("Classifier: awaiting " + tl.size() * Context.values().length + " learn steps...");
+            int count = 0;
             for (Context c: Context.values()) {
                 //Set<String> voc = c.vocabulary();
                 for (MessageEntry m: tl) {
                     c.learnPhrase(m.getText(Integer.MAX_VALUE, ""));
+                    count++;
+                    if (count % 100 == 0) DAO.log("Classifier: performed " + count + " learn steps");
                 }
             }
         }

@@ -51,6 +51,7 @@ import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.servlets.GzipFilter;
+import org.eclipse.jetty.servlets.gzip.GzipHandler;
 import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.thread.ExecutorThreadPool;
@@ -85,6 +86,7 @@ import org.loklak.api.server.push.NetmonPushServlet;
 import org.loklak.api.server.ImportProfileServlet;
 import org.loklak.data.DAO;
 import org.loklak.harvester.TwitterScraper;
+import org.loklak.http.RemoteAccess;
 import org.loklak.tools.Browser;
 import org.loklak.tools.OS;
 import org.loklak.vis.server.MapServlet;
@@ -131,6 +133,12 @@ public class LoklakServer {
 
         // load the config file(s);
         Map<String, String> config = readConfig(data);
+        
+        // set localhost pattern
+        String server_localhost = config.get("server.localhost");
+        if (server_localhost != null && server_localhost.length() > 0) {
+            for (String h: server_localhost.split(",")) RemoteAccess.addLocalhost(h);
+        }
         
         // check if a loklak service is already running on configured port
         String httpPortS = config.get("port.http");
@@ -297,7 +305,9 @@ public class LoklakServer {
         
         HandlerList handlerlist2 = new HandlerList();
         handlerlist2.setHandlers(new Handler[]{fileHandler, rewriteHandler, new DefaultHandler()});
-        LoklakServer.server.setHandler(handlerlist2);
+        GzipHandler gzipHandler = new GzipHandler();
+        gzipHandler.setHandler(handlerlist2);
+        LoklakServer.server.setHandler(gzipHandler);
 
         LoklakServer.server.start();
         LoklakServer.caretaker = new Caretaker();

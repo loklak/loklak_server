@@ -48,6 +48,7 @@ import com.github.fge.jackson.JsonLoader;
 import com.google.common.base.Charsets;
 
 import org.eclipse.jetty.util.log.Log;
+import org.elasticsearch.cluster.health.ClusterHealthStatus;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.search.sort.SortOrder;
 import org.loklak.Caretaker;
@@ -273,10 +274,11 @@ public class DAO {
             }
             
             // finally wait for healthy status of elasticsearch shards
+            ClusterHealthStatus required_status = ClusterHealthStatus.fromString(config.get("elasticsearch_requiredClusterHealthStatus"));
             boolean ok;
             do {
-                log("Waiting for elasticsearch yellow status");
-                ok = elasticsearch_client.wait_ready(60000l);
+                log("Waiting for elasticsearch " + required_status.name() + " status");
+                ok = elasticsearch_client.wait_ready(60000l, required_status);
             } while (!ok);
             /**
             do {
@@ -284,16 +286,22 @@ public class DAO {
                 health = elasticsearch_client.admin().cluster().prepareHealth().setWaitForGreenStatus().execute().actionGet();
             } while (health.isTimedOut());
             **/
-            log("elasticsearch has started up! initializing the classifier...");
+            log("elasticsearch has started up!");
 
             // start the classifier
-            try {
-                Classifier.init(10000, 1000);
-            } catch (Throwable ee) {
-                ee.printStackTrace();
-            }
-            log("classifier initialized! initializing queries...");
+            new Thread(){
+                public void run() {
+                    log("initializing the classifier...");
+                    try {
+                        Classifier.init(10000, 1000);
+                    } catch (Throwable ee) {
+                        ee.printStackTrace();
+                    }
+                    log("classifier initialized! initializing queries...");
+                }
+            }.start();
 
+            log("initializing queries...");
             // initialize query harvesting
             //if (getConfig("retrieval.queries.enabled", false)) {
                 File harvestingPath = new File(datadir, "queries");
@@ -340,8 +348,9 @@ public class DAO {
         log("finished startup!");
     }
     
-    public static boolean isReady() {
-        return elasticsearch_client.is_ready();
+    public static boolean wait_ready(long maxtimemillis) {
+        ClusterHealthStatus required_status = ClusterHealthStatus.fromString(config.get("elasticsearch_requiredClusterHealthStatus"));
+        return elasticsearch_client.wait_ready(maxtimemillis, required_status);
     }
     
     public static String pendingClusterTasks() {

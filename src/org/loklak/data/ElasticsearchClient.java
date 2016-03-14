@@ -132,23 +132,19 @@ public class ElasticsearchClient {
         return clusterReadyCache;
     }
 
-    public boolean wait_ready(long maxtimemillis) {
+    public boolean wait_ready(long maxtimemillis, ClusterHealthStatus status) {
         // wait for yellow status
         long start = System.currentTimeMillis();
         boolean is_ready;
         do {
-            is_ready = is_ready();
+            // wait for yellow status
+            ClusterHealthResponse health = elasticsearchClient.admin().cluster().prepareHealth().setWaitForStatus(status).execute().actionGet();
+            is_ready = !health.isTimedOut();
             if (!is_ready && System.currentTimeMillis() - start > maxtimemillis) return false; 
         } while (!is_ready);
         return is_ready;
     }
     
-    public boolean is_ready() {
-        // wait for yellow status
-        ClusterHealthResponse health = elasticsearchClient.admin().cluster().prepareHealth().setWaitForYellowStatus().execute().actionGet();
-        return !health.isTimedOut();
-    }
-
     public void createIndexIfNotExists(String indexName, final int shards, final int replicas) {
         // create an index if not existent
         if (!this.elasticsearchClient.admin().indices().prepareExists(indexName).execute().actionGet().isExists()) {
@@ -571,21 +567,12 @@ public class ElasticsearchClient {
     }
 
     /**
-     * query with a string. The string is supposed to be something that the user types in without
-     * a technical syntax. The mapping of the search terms into the index can be different according
+     * Query with a string and boundaries.
+     * The string is supposed to be something that the user types in without a technical syntax.
+     * The mapping of the search terms into the index can be different according
      * to a search type. Please see
      * https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-match-query.html.
-     * 
-     * @param q
-     * @return a list of json objects, mapped as Map<String,Object> for each json
-     */
-    public List<Map<String, Object>> query(final String indexName, final String q) {
-        return query(indexName, q, Operator.OR, 0, 100);
-    }
-
-
-    /**
-     * query with boundaries. A better way to do this would be the usage of a cursor.
+     * A better way to do this would be the usage of a cursor.
      * See the delete method to find out how cursors work.
      * 
      * @param q
@@ -599,28 +586,10 @@ public class ElasticsearchClient {
      * @return a list of json objects, mapped as Map<String,Object> for each json
      */
     public List<Map<String, Object>> query(final String indexName, final String q, final Operator operator, final int offset, final int count) {
-        return query(indexName,
-            QueryBuilders.multiMatchQuery(q, "_all").operator(operator).zeroTermsQuery(ZeroTermsQuery.ALL), offset,
-            count);
-    }
-
-
-    /**
-     * query with boundaries. A better way to do this would be the usage of a cursor.
-     * See the delete method to find out how cursors work.
-     * 
-     * @param q
-     *            a QueryBuilder object
-     * @param offset
-     *            the first document number, 0 is the first one
-     * @param count
-     *            the number of documents to be returned
-     * @return a list of json objects, mapped as Map<String,Object> for each json
-     */
-    public List<Map<String, Object>> query(final String indexName, final QueryBuilder q, final int offset, final int count) {
+        assert count > 1; // for smaller amounts, use the next method
         SearchRequestBuilder request = elasticsearchClient.prepareSearch(indexName)
             // .addFields("_all")
-            .setQuery(q).setFrom(offset).setSize(count);
+            .setQuery(QueryBuilders.multiMatchQuery(q, "_all").operator(operator).zeroTermsQuery(ZeroTermsQuery.ALL)).setFrom(offset).setSize(count);
         SearchResponse response = request.execute().actionGet();
         SearchHit[] hits = response.getHits().getHits();
         ArrayList<Map<String, Object>> result = new ArrayList<Map<String, Object>>();
@@ -658,9 +627,7 @@ public class ElasticsearchClient {
     public Query query(final String indexName, final QueryBuilder queryBuilder, String order_field, int timezoneOffset, int resultCount, long histogram_interval, String histogram_timefield, int aggregationLimit, String... aggregationFields) {
         return new Query(indexName,  queryBuilder, order_field, timezoneOffset, resultCount, histogram_interval, histogram_timefield, aggregationLimit, aggregationFields);
     }
-        
     
-
     public class Query {
         public List<Map<String, Object>> result;
         public int hitCount;
