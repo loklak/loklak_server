@@ -1,0 +1,12 @@
+{
+  "public": {
+    "apiURL": "http://loklak.org/api",
+    "google_maps_key": "INSERT YOURS"
+  },
+  "private": {
+    "tw_consumerKey": "INSERT YOURS",
+    "tw_consumerSecret": "INSERT YOURS",
+    "tw_accessToken": "INSERT YOURS",
+    "tw_accessSecret": "INSERT YOURS"
+  }
+}

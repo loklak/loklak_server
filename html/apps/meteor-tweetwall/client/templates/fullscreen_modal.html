@@ -1,0 +1,34 @@
+<template name="modal">
+    <!-- Modal Structure -->
+    <div id="modal1" class="modal">
+
+      <div class="modal-content">
+          <div class="row">
+            <div class="col s2">
+              <a href="https://www.twitter.com/{{username}}">
+
+                <img src="{{userPicture}}" class="circle modal-img"/>
+                <!-- onError="this.onerror=null;this.src='https://abs.twimg.com/sticky/default_profile_images/default_profile_6_normal.png';"/> -->
+
+              </a>
+
+            </div>
+            <div class="col s10" data-linkify="this">
+              <a class="pink-text" href="https://www.twitter.com/{{username}}">
+                {{{userScreen}}} <small class="grey-text">@({{username}})</small>
+              </a>
+                <small class="grey-text">{{created_date}}</small>
+              <p class="grey-text" >
+                {{{tweetLink}}}
+              </p>
+              {{{displayImgs}}}
+            </div>
+          </div>
+  <!--
+    <div class="modal-footer">
+        <a href="#!" class=" modal-action modal-close waves-effect waves-green btn-flat">test footer</a>
+    </div>
+  -->
+        </div>
+    </div>
+</template>

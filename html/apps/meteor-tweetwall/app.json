@@ -1,0 +1,16 @@
+{
+  "@context":"http://schema.org",
+  "@type":"SoftwareApplication",
+  "name":"meteor-twitterwall",
+  "headline":"Tweet wall using MeteorJS",
+  "alternativeHeadline":"Install MeteorJS on local machine first, then run /bin/start_meteor_app.sh",
+  "applicationCategory":"Demo",
+  "applicationSubCategory":"Meteor",
+  "operatingSystem":"http://loklak.org",
+  "author":{
+    "@type":"Person",
+    "name":"Leon",
+    "url":"https://github.com/leonmak",
+    "sameAs":"https://github.com/leonmak"
+  }
+}
