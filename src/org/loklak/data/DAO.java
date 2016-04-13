@@ -233,17 +233,17 @@ public class DAO {
                     user_dump_dir,USER_DUMP_FILE_PREFIX,
                     new JsonDataset.Column[]{new JsonDataset.Column("id_str", false), new JsonDataset.Column("screen_name", true)},
                     "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
-                    JsonRepository.REWRITABLE_MODE, false);
+                    JsonRepository.REWRITABLE_MODE, false, Integer.MAX_VALUE);
             followers_dump = new JsonDataset(
                     user_dump_dir, FOLLOWERS_DUMP_FILE_PREFIX,
                     new JsonDataset.Column[]{new JsonDataset.Column("screen_name", true)},
                     "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
-                    JsonRepository.REWRITABLE_MODE, false);
+                    JsonRepository.REWRITABLE_MODE, false, Integer.MAX_VALUE);
             following_dump = new JsonDataset(
                     user_dump_dir, FOLLOWING_DUMP_FILE_PREFIX,
                     new JsonDataset.Column[]{new JsonDataset.Column("screen_name", true)},
                     "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
-                    JsonRepository.REWRITABLE_MODE, false);
+                    JsonRepository.REWRITABLE_MODE, false, Integer.MAX_VALUE);
             
             Path log_dump_dir = dataPath.resolve("log");
             log_dump_dir.toFile().mkdirs();
@@ -297,7 +297,7 @@ public class DAO {
                     } catch (Throwable ee) {
                         ee.printStackTrace();
                     }
-                    log("classifier initialized! initializing queries...");
+                    log("classifier initialized!");
                 }
             }.start();
 
@@ -372,12 +372,12 @@ public class DAO {
         return new File(storage_path, id_str + "_" + file); // all assets for one user in one file
     }
     
-    public static Collection<File> getTweetOwnDumps() {
-        return message_dump.getOwnDumps();
+    public static Collection<File> getTweetOwnDumps(int count) {
+        return message_dump.getOwnDumps(count);
     }
 
-    public static void importAccountDumps() throws IOException {
-        Collection<File> dumps = account_dump.getImportDumps();
+    public static void importAccountDumps(int count) throws IOException {
+        Collection<File> dumps = account_dump.getImportDumps(count);
         if (dumps == null || dumps.size() == 0) return;
         for (File dump: dumps) {
             JsonReader reader = account_dump.getDumpReader(dump);
@@ -712,8 +712,8 @@ public class DAO {
      */
     public static ResultList<QueryEntry> SearchLocalQueries(final String q, final int resultCount, final String sort_field, final String default_sort_type, final SortOrder sort_order, final Date since, final Date until, final String range_field) {
         ResultList<QueryEntry> queries = new ResultList<>();
-        List<Map<String, Object>> result = elasticsearch_client.fuzzyquery(IndexName.queries.name(), "query", q, resultCount, sort_field, default_sort_type, sort_order, since, until, range_field);
-        queries.setHits(result.size()); // that should maybe be corrected
+        ResultList<Map<String, Object>> result = elasticsearch_client.fuzzyquery(IndexName.queries.name(), "query", q, resultCount, sort_field, default_sort_type, sort_order, since, until, range_field);
+        queries.setHits(result.getHits());
         for (Map<String, Object> map: result) {
             queries.add(new QueryEntry(map));
         }
