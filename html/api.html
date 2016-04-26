@@ -163,21 +163,127 @@
 	client_info.</p>
 
 <pre>{
-  "index_sizes" : {
-    "messages" : 127111,
-    "users" : 56341,
-    "queries" : 94
+  "system": {
+    "assigned_memory": 2138046464,
+    "used_memory": 1483733632,
+    "available_memory": 654312832,
+    "cores": 8,
+    "threads": 66,
+    "runtime": 9771988,
+    "time_to_restart": 76628012,
+    "load_system_average": 3.41,
+    "load_system_cpu": 0.15860576435689824,
+    "load_process_cpu": 0.06938855268126196,
+    "server_threads": 6
   },
-  "client_info" : {
-    "RemoteHost" : "109.91.39.64",
-    "Accept-Language" : "de-DE,de;q=0.8,en-US;q=0.6,en;q=0.4",
-    "Host" : "loklak.org",
-    "Accept-Encoding" : "gzip, deflate, sdch",
-    "X-Forwarded-For" : "109.91.39.64",
-    "X-Real-IP" : "109.91.39.64",
-    "User-Agent" : "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.76 Safari/537.36",
-    "Accept" : "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-    "Connection" : "close"
+  "index": {
+    "mps": 145,
+    "messages": {
+      "size": 817015033,
+      "size_local": 817015033,
+      "size_backend": 0,
+      "stats": {
+        "name": "messages",
+        "object_cache": {
+          "update": 1681695,
+          "hit": 68974,
+          "miss": 5093840,
+          "size": 10001,
+          "maxsize": 10000
+        },
+        "exist_cache": {
+          "update": 2047729,
+          "hit": 633027,
+          "miss": 4460813,
+          "size": 2047695,
+          "maxsize": 3000000
+        },
+        "index": {
+          "get": 0,
+          "write": 1681217,
+          "exist": 2047772
+        }
+      },
+      "queue": {
+        "size": 98790,
+        "maxSize": 100000,
+        "clients": 0
+      }
+    },
+    "users": {
+      "size": 57390340,
+      "size_local": 57390340,
+      "size_backend": 0,
+      "stats": {
+        "name": "users",
+        "object_cache": {
+          "update": 1687190,
+          "hit": 39660,
+          "miss": 5495,
+          "size": 10000,
+          "maxsize": 10000
+        },
+        "exist_cache": {
+          "update": 1732345,
+          "hit": 0,
+          "miss": 0,
+          "size": 378658,
+          "maxsize": 3000000
+        },
+        "index": {
+          "get": 5495,
+          "write": 1681420,
+          "exist": 0
+        }
+      }
+    },
+    "queries": {
+      "size": 3958,
+      "stats": {
+        "name": "queries",
+        "object_cache": {
+          "update": 4648,
+          "hit": 3166,
+          "miss": 3868,
+          "size": 741,
+          "maxsize": 10000
+        },
+        "exist_cache": {
+          "update": 11514,
+          "hit": 162,
+          "miss": 2959,
+          "size": 3096,
+          "maxsize": 3000000
+        },
+        "index": {
+          "get": 747,
+          "write": 3907,
+          "exist": 2959
+        }
+      }
+    },
+    "accounts": {"size": 94},
+    "user": {"size": 688251},
+    "followers": {"size": 141},
+    "following": {"size": 129}
+  },
+  "client_info": {
+    "RemoteHost": "14.139.85.203",
+    "IsLocalhost": "false",
+    "request_header": {
+      "Upgrade-Insecure-Requests": "1",
+      "Accept-Language": "en-US,en;q=0.8",
+      "Host": "loklak.org",
+      "Accept-Encoding": "gzip, deflate, sdch",
+      "X-Forwarded-Proto": "http",
+      "X-Forwarded-For": "172.30.107.104, 14.139.85.203",
+      "X-Real-IP": "14.139.85.203",
+      "Via": "1.1 proxy17.nitw (squid/3.1.8)",
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.112 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+      "Connection": "close",
+      "Cache-Control": "max-age=259200"
+    }
   }
 }</pre>
 </section>
@@ -249,42 +355,73 @@
 <p>A search result in JSON format looks like:</p>
 <pre>
 {
+  "readme_0" : "THIS JSON IS THE RESULT OF YOUR SEARCH QUERY - THERE IS NO WEB PAGE WHICH SHOWS THE RESULT!",
+  "readme_1" : "loklak.org is the framework for a message search system, not the portal, read: http://loklak.org/about.html#notasearchportal",
+  "readme_2" : "This is supposed to be the back-end of a search portal. For the api, see http://loklak.org/api.html",
+  "readme_3" : "Parameters q=(query), source=(cache|backend|twitter|all), callback=p for jsonp, maximumRecords=(message count), minified=(true|false)",
   "search_metadata" : {
-    "startIndex" : "0",
-    "itemsPerPage" : "100",
-    "count" : "120",
-    "query" : "doctor who"
+    "itemsPerPage" : "1",
+    "count" : "1",
+    "count_twitter_all" : 0,
+    "count_twitter_new" : 0,
+    "count_backend" : 0,
+    "count_cache" : 7336,
+    "hits" : 7336,
+    "period" : 9223372036854775807,
+    "query" : "fossasia",
+    "client" : "122.175.88.159",
+    "time" : 1196,
+    "servicereduction" : "false",
+    "scraperInfo" : "local"
   },
   "statuses" : [ {
-    "created_at" : "2015-03-03T19:30:43.000Z",
-    "screen_name" : "exanonym77s",
-    "text" : "check #DoctorWho forums #TheDayOfTheDoctor #TheMaster @0rb1t3r http://www.thedoctorwhoforum.com/ https://pic.twitter.com/FvW6J9WMCw",
-    "link" : "https://twitter.com/ronakpw/status/572841550834737152",
-    "id_str" : "572841550834737152",
-    "source_type" : "TWITTER",
-    "provider_type" : "SCRAPED",
+    "timestamp" : "2016-04-21T17:33:06.959Z",
+    "created_at" : "2016-04-21T15:39:39.000Z",
+    "screen_name" : "notrademark",
+    "text" : "@fossasia @mariobehling sure, I am happy about every pull request on GitHub. What features do you plan?",
+    "link" : "https://twitter.com/notrademark/status/723174364968005632",
+    "id_str" : "723174364968005632",
+    "source_type" : "USER",
+    "provider_type" : "REMOTE",
+    "provider_hash" : "1cadbfd3",
     "retweet_count" : 0,
     "favourites_count" : 0,
-    "hosts" : [ "www.thedoctorwhoforum.com", "pic.twitter.com" ],
-    "hosts_count" : 2,
-    "links" : [ "http://www.thedoctorwhoforum.com/", "https://pic.twitter.com/FvW6J9WMCw" ],
-    "links_count" : 2,
-    "mentions" : [ "@0rb1t3r" ],
-    "mentions_count" : 1,
-    "hashtags" : [ "DoctorWho", "TheDayOfTheDoctor", "TheMaster" ],
-    "hashtags_count" : 3,
-    "without_l_len" : 62,
-    "without_lu_len" : 62,
-    "without_luh_len" : 21,
+    "images" : [ ],
+    "images_count" : 0,
+    "audio" : [ ],
+    "audio_count" : 0,
+    "videos" : [ ],
+    "videos_count" : 0,
+    "place_name" : "Planá",
+    "place_id" : "",
+    "place_context" : "FROM",
+    "location_point" : [ 12.743780125278874, 49.86816018348006 ],
+    "location_radius" : 0,
+    "location_mark" : [ 12.74180946741263, 49.86938948602838 ],
+    "location_source" : "PLACE",
+    "hosts" : [ ],
+    "hosts_count" : 0,
+    "links" : [ ],
+    "links_count" : 0,
+    "mentions" : [ "fossasia", "mariobehling" ],
+    "mentions_count" : 2,
+    "hashtags" : [ ],
+    "hashtags_count" : 0,
+    "classifier_language" : "english",
+    "classifier_language_probability" : 2.7384035E-14,
+    "without_l_len" : 103,
+    "without_lu_len" : 79,
+    "without_luh_len" : 79,
     "user" : {
-      "name" : "Example User Anyone",
-      "screen_name" : "exanonym77s",
-      "profile_image_url_https" : "https://pbs.twimg.com/profile_images/567071565473267713/4hiyjKkF_bigger.jpeg",
-      "appearance_first" : "2015-03-03T19:31:30.269Z",
-      "appearance_latest" : "2015-03-03T19:31:30.269Z"
+      "screen_name" : "notrademark",
+      "user_id" : "2374283574",
+      "name" : "msquare",
+      "profile_image_url_https" : "https://pbs.twimg.com/profile_images/514057179737772032/OPi1EgNA_bigger.png",
+      "appearance_first" : "2015-08-17T02:42:20.874Z",
+      "appearance_latest" : "2015-08-17T02:42:20.874Z"
     }
-  }, ...
-  ]
+  } ],
+  "aggregations" : { }
 }
 </pre>
 <p>The text field is evaluated and all shortened links are
@@ -303,7 +440,7 @@
 		hashtags appearing in the message, without the leading '#'</li>
 </ul><br/>
 <p>To identify the source of the Tweet, the Tweet system and the
-	harvesting source is mentioned:</p>
+	collection source is mentioned:</p>
 <ul class="request">
 	<li><div class="tabcol0">source_type</div>&nbsp;:&nbsp;The
 		source of the message, currently only 'TWITTER' is possible</li>
@@ -600,14 +737,15 @@ network, then simply the field <code>backend</code> in the configuration must be
 <p>
 This servlet provides geocoding of place names to location coordinates and also
 reverse geocoding of location coordinates to place names.
-Additionally to th
-
-added geocoding servlet: you can geocode place names into locations with
+Additionally to the added geocoding servlet: you can geocode place names into locations with
 this. To render markers, use the 'mark' location (they have an applied
 fuzziness). location coordinates are given as [lon,lat]
 Example usage:
-http://localhost:9000/api/geocode.json?data={%22places%22:[%22Frankfurt%20am%20Main%22,%22New%20York%22,%22Singapore%22]}
-
+</p>
+<ul class="request">
+<li> http://localhost:9000/api/geocode.json?data={%22places%22:[%22Frankfurt%20am%20Main%22,%22New%20York%22,%22Singapore%22]}</li>
+</ul>
+<p>
 upgrade to geocode location detection: now recognizes also all
 alternative (different languages) place names. The geocode servlet shows
 all those alternative names in a string array. The minified version
@@ -625,8 +763,18 @@ shortens this array to only one entry. The API also has reverse geocoding and fu
 		<div class="tabcol1">&nbsp;=&nbsp;&lt;json&gt;</div>// the json must contain a 'places' property with an array of place name strings. This is an alernative to the 'places' property.</li>
 </ul><br/>
 <p>Result-Description</p>
-<pre>{
-  json
+<pre>
+{
+  "locations" : {
+    "Singapore" : {
+      "place" : [ "Singapore", "SIN", "Sin-ka-po", "Singapore City", "Singapour", "Singapur", "Singapura", "Sinkapoure", "Sîn-kâ-po", "Tumasik", "cinkappur", "prathes singkhpor", "shingaporu", "sigapura", "sing-gapol", "sing-gapoleu", "singapura", "singkh por", "sngapwr", "snghafwrt", "syngpwr", "xin jia po", "xing jia po", "Σιγκαπούρη", "Сингапур", "Сінгапур", "סינגפור", "سنغافورة", "سنگاپور", "सिंगापुर", "सिंगापूर", "ਸਿੰਗਾਪੁਰ", "சிங்கப்பூர்", "ประเทศสิงคโปร์", "สิงค์โปร", "ປະເທດສງກະໂປ", "ປະເທດສິງກະໂປ", "စငကာပနငင", "စင်ကာပူနိုင်ငံ", "សងហបរ", "សិង្ហបុរី", "シンガポール", "新加坡", "星架坡", "싱가포르", "싱가폴" ],
+      "population" : 3547809,
+      "country_code" : "SG",
+      "country" : "Singapore",
+      "location" : [ 103.85006683126556, 1.2896698812440377 ],
+      "mark" : [ 103.86065693202819, 1.2871885668277656 ]
+    }
+  }
 }
 </pre>
 </section>
@@ -898,7 +1046,7 @@ shortens this array to only one entry. The API also has reverse geocoding and fu
 </h2>
 <div class="alert alert-success" role="alert">This API is open and can be accessed without any restrictions!</div>
 
-<p>While pushing custom data using /api/push/*.json, loklak saves metadata of the push: harvesting frequency, lifetime, privacy status, etc.. in an object structure called ImportProfile. This API enables Read-Update-Delete operations on those objects. The type of action to performed is defined by `action` attribute: </p>
+<p>While pushing custom data using /api/push/*.json, loklak saves metadata of the push: collection frequency, lifetime, privacy status, etc.. in an object structure called ImportProfile. This API enables Read-Update-Delete operations on those objects. The type of action to performed is defined by `action` attribute: </p>
 <ul class="request">
 	<li><div class="tabcol0">action</div>
 		<div class="tabcol1">&nbsp;=&nbsp;&lt;action type&gt;</div>// accepted values are update|delete. Leave blank for read operation.
@@ -1081,21 +1229,24 @@ shortens this array to only one entry. The API also has reverse geocoding and fu
    </ul><br/>
 </p>
 <pre>{
+  "search_metadata" : {
+    "client" : "122.175.88.165"
+  },
   "user" : {
-    "retrieval_date" : "2015-07-20T13:41:53.097Z",
+    "retrieval_date" : "2016-04-24T09:18:18.699Z",
     "location" : "",
     "default_profile" : true,
+    "statuses_count" : 174,
     "profile_background_tile" : false,
-    "statuses_count" : 16,
     "lang" : "en",
     "profile_link_color" : "0084B4",
     "id" : 3090229939,
     "following" : false,
+    "favourites_count" : 321,
     "profile_location" : null,
-    "favourites_count" : 7,
     "protected" : false,
     "profile_text_color" : "333333",
-    "description" : "We do large-scale distibuted message harvesting and analysis with free and open source software from http://t.co/D8XmZwuU2Y #freedom of information",
+    "description" : "Large-scale distibuted tweet harvesting and analysis with free and open source software from http://t.co/D8XmZwuU2Y; maybe next-gen twitter alternative",
     "verified" : false,
     "contributors_enabled" : false,
     "profile_sidebar_border_color" : "C0DEED",
@@ -1104,19 +1255,18 @@ shortens this array to only one entry. The API also has reverse geocoding and fu
     "created_at" : "Mon Mar 16 16:48:17 +0000 2015",
     "is_translation_enabled" : false,
     "default_profile_image" : false,
-    "followers_count" : 9,
-    "profile_image_url_https" : "https://pbs.twimg.com/profile_images/577512240640733184/fizL4YIn_normal.png",
-    "has_extended_profile" : false,
+    "followers_count" : 46,
     "geo_enabled" : false,
+    "has_extended_profile" : false,
+    "profile_image_url_https" : "https://pbs.twimg.com/profile_images/577512240640733184/fizL4YIn_normal.png",
     "profile_background_image_url" : "http://abs.twimg.com/images/themes/theme1/bg.png",
     "profile_background_image_url_https" : "https://abs.twimg.com/images/themes/theme1/bg.png",
     "needs_phone_verification" : false,
-    "follow_request_sent" : false,
     "entities" : {
       "description" : {
         "urls" : [ {
           "expanded_url" : "http://loklak.org",
-          "indices" : [ 101, 123 ],
+          "indices" : [ 93, 115 ],
           "display_url" : "loklak.org",
           "url" : "http://t.co/D8XmZwuU2Y"
         } ]
@@ -1124,25 +1274,36 @@ shortens this array to only one entry. The API also has reverse geocoding and fu
       "url" : {
         "urls" : [ {
           "expanded_url" : "http://loklak.org",
-          "indices" : [ 0, 22 ],
+          "indices" : [ 0, 23 ],
           "display_url" : "loklak.org",
-          "url" : "http://t.co/D8XmZwuU2Y"
+          "url" : "https://t.co/D8XmZwdjbq"
         } ]
       }
     },
+    "follow_request_sent" : false,
+    "url" : "https://t.co/D8XmZwdjbq",
     "suspended" : false,
-    "url" : "http://t.co/D8XmZwuU2Y",
     "utc_offset" : -39600,
     "time_zone" : "International Date Line West",
     "notifications" : false,
+    "friends_count" : 14,
     "profile_use_background_image" : true,
-    "friends_count" : 8,
     "profile_sidebar_fill_color" : "DDEEF6",
     "screen_name" : "loklak_app",
     "id_str" : "3090229939",
     "profile_image_url" : "http://pbs.twimg.com/profile_images/577512240640733184/fizL4YIn_normal.png",
-    "listed_count" : 1,
-    "is_translator" : false
+    "is_translator" : false,
+    "listed_count" : 9
+  },
+  "topology" : {
+    "following" : [ ],
+    "followers" : [ ],
+    "unfollowing_count" : 0,
+    "unfollowers" : [ ],
+    "unfollowers_count" : 0,
+    "following_count" : 0,
+    "unfollowing" : [ ],
+    "followers_count" : 0
   }
 }
 </pre>
@@ -1158,10 +1319,20 @@ shortens this array to only one entry. The API also has reverse geocoding and fu
 </p>
 
 <pre>{
+  "search_metadata" : {
+    (client) 
+  }
   "user" : {
     (user data)
   },
   "topology" : {
+    "following" : [{
+      (user's friend's data)
+    }, {
+      (user's friend's data)
+    },
+    ...
+    ],
     "followers" : [ {
       (user's follower data)
     }, {
@@ -1169,13 +1340,18 @@ shortens this array to only one entry. The API also has reverse geocoding and fu
     },
     ...
     ],
-    "retrieval_date" : "2015-07-23T18:21:55.743Z",
+    "retrieval_date" : "2016-04-24T09:21:22.060Z",
     "unfollowers" : [ ],
+    "unfollowing_count" : 0,
     "complete" : true,
     "unfollowers_count" : 0,
-    "followers_count" : 9
+    "following_count" : 10,
+    "unfollowing" : [ ],
+    "followers_count" : 33,
+    "$P" : "I"
   }
-}</pre>
+}
+</pre>
 </section>
 
 <!-- ===================================================================== -->

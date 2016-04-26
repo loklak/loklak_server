@@ -30,9 +30,11 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.cluster.stats.ClusterStatsAction;
@@ -46,6 +48,8 @@ import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.get.MultiGetItemResponse;
+import org.elasticsearch.action.get.MultiGetResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -332,28 +336,47 @@ public class ElasticsearchClient {
      *   ...
      * }
      * 
-     * @param id
-     *            the unique identifier of a document
      * @param indexName
      *            the name of the index
      * @param typeName
      *            the type name, can be set to NULL for all types (see also: getType())
+     * @param id
+     *            the unique identifier of a document
      * @return the document, if it exists or null otherwise;
      */
-    public boolean exist(String indexName, final String id, String typeName) {
-        GetResponse getResponse = elasticsearchClient.prepareGet(indexName, typeName, id).execute().actionGet();
+    public boolean exist(String indexName, String typeName, final String id) {
+        GetResponse getResponse = elasticsearchClient
+                .prepareGet(indexName, typeName, id)
+                .setOperationThreaded(false)
+                .setFields(new String[]{})
+                .execute()
+                .actionGet();
         return getResponse.isExists();
-    }
+    }    
+
+    public Set<String> existBulk(String indexName, String typeName, final Collection<String> ids) {
+        MultiGetResponse multiGetItemResponses = elasticsearchClient.prepareMultiGet()
+                .add(indexName, typeName, ids)
+                .get();
+        Set<String> er = new HashSet<>();
+        for (MultiGetItemResponse itemResponse : multiGetItemResponses) { 
+            GetResponse response = itemResponse.getResponse();
+            if (response.isExists()) {                      
+                er.add(response.getId());
+            }
+        }
+        return er;
+    }    
     
     /**
      * Get the type name of a document or null if the document does not exist.
      * This is a replacement of the exist() method which does exactly the same as exist()
      * but is able to return the type name in case that exist is successful.
      * Please read the comment to exist() for details.
-     * @param id
-     *            the unique identifier of a document
      * @param indexName
      *            the name of the index
+     * @param id
+     *            the unique identifier of a document
      * @return the type name of the document if it exists, null otherwise
      */
     public String getType(String indexName, final String id) {
@@ -373,7 +396,7 @@ public class ElasticsearchClient {
      *            the unique identifier of a document
      * @return true if the document existed and was deleted, false otherwise
      */
-    public boolean delete(String indexName, final String id, String typeName) {
+    public boolean delete(String indexName, String typeName, final String id) {
         return elasticsearchClient.prepareDelete(indexName, typeName, id).execute().actionGet().isFound();
     }
 
@@ -385,7 +408,7 @@ public class ElasticsearchClient {
      *            a collection of the unique identifier of a document
      * @return the number of deleted documents
      */
-    public int deleteBulk(String indexName, Collection<String> ids, String typeName) {
+    public int deleteBulk(String indexName, String typeName, Collection<String> ids) {
         // bulk-delete the ids
         BulkRequestBuilder bulkRequest = elasticsearchClient.prepareBulk();
         for (String id : ids) {
@@ -404,7 +427,7 @@ public class ElasticsearchClient {
      * @param q
      * @return delete document count
      */
-    public int deleteByQuery(String indexName, final QueryBuilder q, String typeName) {
+    public int deleteByQuery(String indexName, String typeName, final QueryBuilder q) {
         List<String> ids = new ArrayList<>();
         // FIXME: deprecated, "will be removed in 3.0, you should do a regular scroll instead, ordered by `_doc`"
         @SuppressWarnings("deprecation")
@@ -422,7 +445,7 @@ public class ElasticsearchClient {
             if (response.getHits().getHits().length == 0)
                 break;
         }
-        return deleteBulk(indexName, ids, typeName);
+        return deleteBulk(indexName, typeName, ids);
     }
 
     /**
@@ -491,16 +514,17 @@ public class ElasticsearchClient {
      * This id should be unique for the json. The best way to calculate this id is, to use an existing
      * field from the jsonMap which contains a unique identifier for the jsonMap.
      * 
-     * @param jsonMap
-     *            the json document to be indexed in elasticsearch
-     * @param id
-     *            the unique identifier of a document
      * @param indexName
      *            the name of the index
+     * @param jsonMap
+     *            the json document to be indexed in elasticsearch
      * @param typeName
      *            the type of the index
+     * @param id
+     *            the unique identifier of a document
+     * @return true if the document with given id did not exist before, false if it existed and was overwritten
      */
-    public void writeMap(String indexName, final Map<String, Object> jsonMap, String id, String typeName) {
+    public boolean writeMap(String indexName, final Map<String, Object> jsonMap, String typeName, String id) {
         // get the version number out of the json, if any is given
         Long version = (Long) jsonMap.remove("_version");
         // put this to the index
@@ -513,6 +537,7 @@ public class ElasticsearchClient {
         // documentation about the versioning is available at
         // https://www.elastic.co/blog/elasticsearch-versioning-support
         // TODO: error handling
+        return r.isCreated();
     }
 
     /**
@@ -538,12 +563,10 @@ public class ElasticsearchClient {
                 .setVersionType(be.version == null ? VersionType.FORCE : VersionType.EXTERNAL));
         }
         BulkResponse bulkResponse = bulkRequest.get();
-
         List<Map.Entry<String, String>> errors = new ArrayList<>();
-        if (bulkResponse.hasFailures()) {
-            for (BulkItemResponse r: bulkResponse.getItems()) {
-                String err = r.getFailureMessage();
-                if (err == null) continue;
+        for (BulkItemResponse r: bulkResponse.getItems()) {
+            String err = r.getFailureMessage();
+            if (err != null) {
                 String id = r.getId();
                 errors.add(new AbstractMap.SimpleEntry<String, String>(id, err));
             }

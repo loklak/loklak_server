@@ -21,16 +21,22 @@ package org.loklak.data;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicLong;
 
+import org.json.JSONObject;
 import org.loklak.harvester.SourceType;
 import org.loklak.objects.AbstractIndexEntry;
 import org.loklak.objects.IndexEntry;
 import org.loklak.tools.CacheMap;
 import org.loklak.tools.CacheSet;
+import org.loklak.tools.CacheStats;
 
 /**
  * test calls:
@@ -47,6 +53,7 @@ public abstract class AbstractIndexFactory<Entry extends IndexEntry> implements 
     private CacheSet<String> existCache;
     protected final String index_name;
     private long lastBulkWrite;
+    private AtomicLong indexWrite, indexExist, indexGet;
     
     
     public AbstractIndexFactory(final ElasticsearchClient elasticsearch_client, final String index_name, final int cacheSize, final int existSize) {
@@ -55,76 +62,126 @@ public abstract class AbstractIndexFactory<Entry extends IndexEntry> implements 
         this.objectCache = new CacheMap<>(cacheSize);
         this.existCache = new CacheSet<>(existSize);
         this.lastBulkWrite = System.currentTimeMillis();
+        this.indexWrite = new AtomicLong(0);
+        this.indexExist = new AtomicLong(0);
+        this.indexGet = new AtomicLong(0);
+    }
+    
+    public CacheStats getObjectStats() {
+        return this.objectCache.getStats();
+    }
+    
+    public CacheStats getExistStats() {
+        return this.existCache.getStats();
+    }
+    
+    public JSONObject getStats() {
+        JSONObject json = new JSONObject(true);
+        json.put("name", index_name);
+        json.put("object_cache", this.objectCache.getStatsJson());
+        json.put("exist_cache", this.existCache.getStatsJson());
+        JSONObject index = new JSONObject();
+        index.put("write", this.indexWrite.get());
+        index.put("exist", this.indexExist.get());
+        index.put("get", this.indexGet.get());
+        json.put("index", index);
+        return json;
     }
     
     public Entry read(String id) throws IOException {
         assert id != null;
         if (id == null) return null;
-        Entry entry = objectCache.get(id);
-        if (entry != null) return entry;
+        Entry entry = this.objectCache.get(id);
+        if (entry != null) {
+            this.existCache.add(id);
+            return entry;
+        }
         Map<String, Object> map = readMap(id);
         if (map == null) return null;
         entry = init(map);
-        objectCache.put(id, entry);
-        existCache.add(id);
+        this.objectCache.put(id, entry);
+        this.existCache.add(id);
         return entry;
     }
     
     @Override
     public boolean exists(String id) {
         if (existsCache(id)) return true;
-        boolean exist = elasticsearch_client.exist(index_name, id, null);
+        boolean exist = elasticsearch_client.exist(index_name, null, id);
+        this.indexExist.incrementAndGet();
         if (exist) this.existCache.add(id);
         return exist;
     }
 
     @Override
+    public Set<String> existsBulk(Collection<String> ids) {
+        Set<String> result = new HashSet<>();
+        List<String> check = new ArrayList<>(ids.size());
+        for (String id: ids) {
+            if (existsCache(id)) result.add(id); else check.add(id);
+        }
+        this.indexExist.addAndGet(ids.size());
+        Set<String> test = this.elasticsearch_client.existBulk(this.index_name, (String) null, check);
+        for (String id: test) {
+            this.existCache.add(id);
+            result.add(id);
+            //assert elasticsearch_client.exist(index_name, null, id); // uncomment for production
+        }
+        return result;
+    }
+
+    @Override
     public boolean existsCache(String id) {
-        return (this.objectCache.exist(id) || this.existCache.contains(id));
+        return this.objectCache.exist(id) || this.existCache.contains(id);
     }
     
     @Override
     public boolean delete(String id, SourceType sourceType) {
         this.objectCache.remove(id);
         this.existCache.remove(id);
-        return elasticsearch_client.delete(index_name, id, sourceType.name());
+        return elasticsearch_client.delete(index_name, sourceType.name(), id);
     }
 
     @Override
     public Map<String, Object> readMap(String id) {
         Map<String, Object> json = elasticsearch_client.readMap(index_name, id);
         if (json != null) this.existCache.add(id);
+        this.indexGet.incrementAndGet();
         return json;
     }
-    
-    public void writeEntry(String id, String type, Entry entry, boolean bulk) throws IOException {
+
+    public boolean writeEntry(String id, String type, Entry entry) throws IOException {
         this.objectCache.put(id, entry);
         this.existCache.add(id);
-        if (bulk) {
-            ElasticsearchClient.BulkEntry be = new ElasticsearchClient.BulkEntry(id, type, AbstractIndexEntry.TIMESTAMP_FIELDNAME, null, entry.toMap());
-            if (be.jsonMap != null) try {
-                bulkCache.put(be);
-            } catch (InterruptedException e) {
-                throw new IOException(e.getMessage());
-            }
-            if (bulkCacheSize() >= MAX_BULK_SIZE || this.lastBulkWrite + MAX_BULK_TIME < System.currentTimeMillis()) bulkCacheFlush(); // protect against OOM
-        } else {
-            bulkCacheFlush();
-            // record user into search index
-            Map<String, Object> jsonMap = entry.toMap();
-            
-            /*
-             * best data format here would be XContentBuilder because the data is converted into
-             * this format always; in this case with these lines
-             *   XContentBuilder builder = XContentFactory.contentBuilder(XContentType.JSON);
-             *   builder.map(source);
-             */
-            if (jsonMap != null) {
-                if (!jsonMap.containsKey(AbstractIndexEntry.TIMESTAMP_FIELDNAME)) jsonMap.put(AbstractIndexEntry.TIMESTAMP_FIELDNAME, AbstractIndexEntry.utcFormatter.print(System.currentTimeMillis()));
-                elasticsearch_client.writeMap(this.index_name, jsonMap, id, type);
-                //System.out.println("writing 1 entry"); // debug
-            }
+        bulkCacheFlush();
+        // record user into search index
+        Map<String, Object> jsonMap = entry.toMap();
+        if (jsonMap == null) return false;
+        
+        /*
+         * best data format here would be XContentBuilder because the data is converted into
+         * this format always; in this case with these lines
+         *   XContentBuilder builder = XContentFactory.contentBuilder(XContentType.JSON);
+         *   builder.map(source);
+         */
+        if (!jsonMap.containsKey(AbstractIndexEntry.TIMESTAMP_FIELDNAME)) jsonMap.put(AbstractIndexEntry.TIMESTAMP_FIELDNAME, AbstractIndexEntry.utcFormatter.print(System.currentTimeMillis()));
+        boolean newDoc = elasticsearch_client.writeMap(this.index_name, jsonMap, type, id);
+        this.indexWrite.incrementAndGet();
+        return newDoc;
+    }
+
+    public void writeEntryBulk(String id, String type, Entry entry) throws IOException {
+        this.objectCache.put(id, entry);
+        this.existCache.add(id);
+        Map<String, Object> jsonMap = entry.toMap();
+        if (jsonMap == null) return;
+        ElasticsearchClient.BulkEntry be = new ElasticsearchClient.BulkEntry(id, type, AbstractIndexEntry.TIMESTAMP_FIELDNAME, null, jsonMap);
+        if (be.jsonMap != null) try {
+            bulkCache.put(be);
+        } catch (InterruptedException e) {
+            throw new IOException(e.getMessage());
         }
+        if (bulkCacheSize() >= MAX_BULK_SIZE || this.lastBulkWrite + MAX_BULK_TIME < System.currentTimeMillis()) bulkCacheFlush(); // protect against OOM
     }
     
     public int bulkCacheSize() {
@@ -146,7 +203,7 @@ public abstract class AbstractIndexFactory<Entry extends IndexEntry> implements 
         }
         if (count == 0) return new ArrayList<Map.Entry<String, String>>(0);
         List<Map.Entry<String, String>> errors = elasticsearch_client.writeMapBulk(this.index_name, jsonMapList);
-            
+        this.indexWrite.addAndGet(jsonMapList.size());
         return errors;
     }
     
