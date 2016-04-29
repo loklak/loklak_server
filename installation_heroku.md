@@ -5,7 +5,7 @@
 3. Login with heroku: `heroku login`
 4. Clone the Loklak server (if not already) : `git clone https://github.com/loklak/loklak_server.git`
 5. Create a heroku app: `heroku create`
-6. Set the buildpack: `heroku buildpacks:set https://github.com/aneeshd16/heroku-buildpack-ant-loklak.git`
+6. Set the buildpack. <br>Option 1: `cd` into the app folder and run `heroku buildpacks:set https://github.com/aneeshd16/heroku-buildpack-ant-loklak.git`<br>Option 2: Run `heroku buildpacks:set https://github.com/aneeshd16/heroku-buildpack-ant-loklak.git --app <your_app_name>`
 7. Push your app to heroku: `git push heroku master`
 8. Confirm the loklak server is running: `heroku logs --tail`
 9. Sometimes the server may take a while to start. The logs would show `State changed from starting to up` when the server is ready.
