@@ -4,7 +4,7 @@
 2. Download the Heroku toolbelt https://toolbelt.heroku.com/
 3. Login with heroku: `heroku login`
 4. Clone the Loklak server (if not already) : `git clone https://github.com/loklak/loklak_server.git`
-5. Create a heroku app: `heroku create`
+5. Create a heroku app: `heroku create`<br> To creat an app with customized name, use `heroku create --app <your_app_name>` where the app name must start with a letter and can only contain lowercase letters, numbers, and dashes.
 6. Set the buildpack. <br>Option 1: `cd` into the app folder and run `heroku buildpacks:set https://github.com/aneeshd16/heroku-buildpack-ant-loklak.git`<br>Option 2: Run `heroku buildpacks:set https://github.com/aneeshd16/heroku-buildpack-ant-loklak.git --app <your_app_name>`
 7. Push your app to heroku: `git push heroku master`
 8. Confirm the loklak server is running: `heroku logs --tail`
