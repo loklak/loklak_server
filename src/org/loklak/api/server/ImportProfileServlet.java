@@ -18,13 +18,8 @@
  */
 package org.loklak.api.server;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.common.xcontent.XContentParser;
-import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.harvester.SourceType;
@@ -39,8 +34,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Date;
@@ -97,21 +90,24 @@ public class ImportProfileServlet extends HttpServlet {
         boolean success;
 
         try {
-            XContentParser parser = JsonXContent.jsonXContent.createParser(data);
-            Map<String, Object> map = parser.map();
-            if (map.get("id_str") == null) {
+            JSONObject json = null;
+            try {json = new JSONObject(data);} catch (JSONException e) {}
+            if (json == null) {
+                throw new IOException("cannot parse json");
+            }
+            if (!json.has("id_str")) {
                 throw new IOException("id_str field missing");
             }
-            if (map.get("source_type") == null) {
+            if (!json.has("source_type")) {
                 throw new IOException("source_type field missing");
             }
-            ImportProfileEntry i = DAO.SearchLocalImportProfiles((String) map.get("id_str"));
+            ImportProfileEntry i = DAO.SearchLocalImportProfiles(json.getString("id_str"));
             if (i == null) {
-                throw new IOException("import profile id_str field '" + map.get("id_str") + "' not found");
+                throw new IOException("import profile id_str field '" + json.getString("id_str") + "' not found");
             }
             ImportProfileEntry importProfileEntry;
             try {
-                importProfileEntry = new ImportProfileEntry(map);
+                importProfileEntry = new ImportProfileEntry(json);
             } catch (IllegalArgumentException e) {
                 response.sendError(400, "Error updating import profile : " + e.getMessage());
                 return;
@@ -125,17 +121,15 @@ public class ImportProfileServlet extends HttpServlet {
         }
 
         post.setResponse(response, "application/javascript");
-        XContentBuilder json = XContentFactory.jsonBuilder().prettyPrint().lfAtEnd();
-        json.startObject();
-        json.field("status", "ok");
-        json.field("records", success ? 1 : 0);
-        json.field("message", "updated");
-        json.endObject();
+        JSONObject json = new JSONObject(true);
+        json.put("status", "ok");
+        json.put("records", success ? 1 : 0);
+        json.put("message", "updated");
         // write json
         response.setCharacterEncoding("UTF-8");
         PrintWriter sos = response.getWriter();
         if (jsonp) sos.print(callback + "(");
-        sos.print(json.string());
+        sos.print(json.toString(2));
         if (jsonp) sos.println(");");
         sos.println();
         post.finalize();
@@ -169,17 +163,15 @@ public class ImportProfileServlet extends HttpServlet {
             throw new IOException("Unable to delete import profile : " + entry.getId());
         }
         post.setResponse(response, "application/javascript");
-        XContentBuilder json = XContentFactory.jsonBuilder().prettyPrint().lfAtEnd();
-        json.startObject();
-        json.field("status", "ok");
-        json.field("records", sharerExists && successful ? 1 : 0);
-        json.field("message", "deleted");
-        json.endObject();
+        JSONObject json = new JSONObject(true);
+        json.put("status", "ok");
+        json.put("records", sharerExists && successful ? 1 : 0);
+        json.put("message", "deleted");
         // write json
         response.setCharacterEncoding("UTF-8");
         PrintWriter sos = response.getWriter();
         if (jsonp) sos.print(callback + "(");
-        sos.print(json.string());
+        sos.print(json.toString());
         if (jsonp) sos.println(");");
         sos.println();
     }

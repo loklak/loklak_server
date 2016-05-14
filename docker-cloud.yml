@@ -1,0 +1,6 @@
+web:
+  name: "loklak"
+  image: mariobehling/loklak
+  ports:
+    - "80"
+    - "443"

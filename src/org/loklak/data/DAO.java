@@ -42,8 +42,6 @@ import java.util.TreeMap;
 
 import org.eclipse.jetty.util.ConcurrentHashSet;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jackson.JsonLoader;
 import com.google.common.base.Charsets;
 
@@ -51,6 +49,8 @@ import org.eclipse.jetty.util.log.Log;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.search.sort.SortOrder;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.loklak.Caretaker;
 import org.loklak.api.client.SearchClient;
 import org.loklak.geo.GeoNames;
@@ -75,7 +75,7 @@ import org.loklak.tools.storage.JsonRepository;
 import org.loklak.tools.storage.JsonStreamReader;
 import org.loklak.tools.storage.JsonFactory;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * The Data Access Object for the message project.
@@ -99,9 +99,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 public class DAO {
 
     public final static com.fasterxml.jackson.core.JsonFactory jsonFactory = new com.fasterxml.jackson.core.JsonFactory();
-    public final static ObjectMapper jsonMapper = new ObjectMapper(DAO.jsonFactory);
-    public final static TypeReference<HashMap<String,Object>> jsonTypeRef = new TypeReference<HashMap<String,Object>>() {};
-
+    public final static com.fasterxml.jackson.databind.ObjectMapper jsonMapper = new com.fasterxml.jackson.databind.ObjectMapper(DAO.jsonFactory);
+    public final static com.fasterxml.jackson.core.type.TypeReference<HashMap<String,Object>> jsonTypeRef = new com.fasterxml.jackson.core.type.TypeReference<HashMap<String,Object>>() {};
+    
     public final static String MESSAGE_DUMP_FILE_PREFIX = "messages_";
     public final static String ACCOUNT_DUMP_FILE_PREFIX = "accounts_";
     public final static String USER_DUMP_FILE_PREFIX = "users_";
@@ -111,7 +111,7 @@ public class DAO {
     private static final String IMPORT_PROFILE_FILE_PREFIX = "profile_";
     
     public final static int CACHE_MAXSIZE =   10000;
-    public final static int EXIST_MAXSIZE = 3000000;
+    public final static int EXIST_MAXSIZE = 4000000;
     
     public  static File conf_dir, bin_dir, html_dir;
     private static File external_data, assets, dictionaries;
@@ -389,7 +389,7 @@ public class DAO {
                         try {
                             while ((accountEntry = dumpReader.take()) != JsonStreamReader.POISON_JSON_MAP) {
                                 try {
-                                    Map<String, Object> json = accountEntry.getJson();
+                                    JSONObject json = accountEntry.getJSON();
                                     AccountEntry a = new AccountEntry(json);
                                     DAO.writeAccount(a, false);
                                 } catch (IOException e) {
@@ -481,12 +481,12 @@ public class DAO {
         return JsonLoader.fromFile(schema);
     }
 
-    public static Map<String, Object> getConversionSchema(String key) throws IOException {
+    public static JSONObject getConversionSchema(String key) throws IOException {
         File schema = new File(conv_schema_dir, key);
         if (!schema.exists()) {
             throw new FileNotFoundException("No schema file with name " + key + " found");
         }
-        return DAO.jsonMapper.readValue(com.google.common.io.Files.toString(schema, Charsets.UTF_8), DAO.jsonTypeRef);
+        return new JSONObject(com.google.common.io.Files.toString(schema, Charsets.UTF_8));
     }
 
     public static boolean getConfig(String key, boolean default_val) {
@@ -528,7 +528,7 @@ public class DAO {
                 users.writeEntry(mw.u.getScreenName(), mw.t.getSourceType().name(), mw.u);
 
                 // record tweet into text file
-                if (mw.dump) message_dump.write(mw.t.toMap(mw.u, false, Integer.MAX_VALUE, ""));
+                if (mw.dump) message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
              }
             
             // teach the classifier
@@ -539,7 +539,7 @@ public class DAO {
         return true;
     }
 
-    public static void writeMessageBulk(Collection<MessageWrapper> mws) {
+    public static Set<String> writeMessageBulk(Collection<MessageWrapper> mws) {
         List<MessageWrapper> noDump = new ArrayList<>();
         List<MessageWrapper> dump = new ArrayList<>();
         for (MessageWrapper mw: mws) {
@@ -547,7 +547,7 @@ public class DAO {
             if (mw.dump) dump.add(mw); else noDump.add(mw);
         }
         writeMessageBulkNoDump(noDump);
-        writeMessageBulkDump(dump);
+        return writeMessageBulkDump(dump);
     }
 
 
@@ -568,7 +568,7 @@ public class DAO {
         }
     }
     
-    private static void writeMessageBulkDump(Collection<MessageWrapper> mws) {
+    private static Set<String> writeMessageBulkDump(Collection<MessageWrapper> mws) {
         // make a bulk exist request
         List<String> ids = new ArrayList<>();
         for (MessageWrapper mw: mws) {
@@ -588,7 +588,7 @@ public class DAO {
                 messages.writeEntryBulk(mw.t.getIdStr(), mw.t.getSourceType().name(), mw.t);
                  
                 // record tweet into text file
-                message_dump.write(mw.t.toMap(mw.u, false, Integer.MAX_VALUE, ""));
+                message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
              }
                 
             // teach the classifier
@@ -596,6 +596,10 @@ public class DAO {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        // flush bulk cache to make results available in search immediately
+        users.bulkCacheFlush();
+        messages.bulkCacheFlush();
+        return exists;
     }
     
     /**
@@ -608,7 +612,7 @@ public class DAO {
     public static boolean writeAccount(AccountEntry a, boolean dump) {
         try {
             // record account into text file
-            if (dump) account_dump.write(a.toMap(null));
+            if (dump) account_dump.write(a.toJSON(null));
 
             // record account into search index
             accounts.writeEntry(a.getScreenName(), a.getSourceType().name(), a);
@@ -627,7 +631,7 @@ public class DAO {
     public static boolean writeImportProfile(ImportProfileEntry i, boolean dump) {
         try {
             // record import profile into text file
-            if (dump) import_profile_dump.write(i.toMap());
+            if (dump) import_profile_dump.write(i.toJSON());
             // record import profile into search index
             importProfiles.writeEntry(i.getId(), i.getSourceType().name(), i);
         } catch (IOException e) {
@@ -704,7 +708,7 @@ public class DAO {
                     
             // evaluate search result
             for (Map<String, Object> map: query.result) {
-                MessageEntry tweet = new MessageEntry(map);
+                MessageEntry tweet = new MessageEntry(new JSONObject(map));
                 try {
                     UserEntry user = users.read(tweet.getScreenName());
                     assert user != null;
@@ -741,7 +745,7 @@ public class DAO {
         if (user_id == null || user_id.length() == 0) return null;
         Map<String, Object> map = elasticsearch_client.query(IndexName.users.name(), UserEntry.field_user_id, user_id);
         if (map == null) return null;
-        return new UserEntry(map);
+        return new UserEntry(new JSONObject(map));
     }
     
     /**
@@ -769,7 +773,7 @@ public class DAO {
         ResultList<Map<String, Object>> result = elasticsearch_client.fuzzyquery(IndexName.queries.name(), "query", q, resultCount, sort_field, default_sort_type, sort_order, since, until, range_field);
         queries.setHits(result.getHits());
         for (Map<String, Object> map: result) {
-            queries.add(new QueryEntry(map));
+            queries.add(new QueryEntry(new JSONObject(map)));
         }
         return queries;
     }
@@ -787,7 +791,7 @@ public class DAO {
         List<ImportProfileEntry> rawResults = new ArrayList<>();
         List<Map<String, Object>> result = elasticsearch_client.queryWithConstraints(IndexName.import_profiles.name(), "active_status", ImportProfileEntry.EntryStatus.ACTIVE.name().toLowerCase(), constraints, latest);
         for (Map<String, Object> map: result) {
-            rawResults.add(new ImportProfileEntry(map));
+            rawResults.add(new ImportProfileEntry(new JSONObject(map)));
         }
 
         if (!latest) {
@@ -841,7 +845,7 @@ public class DAO {
         QueryEntry qe = null;
         try {
             qe = queries.read(q);
-        } catch (IOException e1) {
+        } catch (IOException | JSONException e1) {
             e1.printStackTrace();
         }
         
@@ -987,8 +991,8 @@ public class DAO {
 
     public static void announceNewUserId(Number id) {
         JsonFactory mapcapsule = DAO.user_dump.get("id_str", id.toString());
-        Map<String, Object> map = null;
-        try {map = mapcapsule == null ? null : mapcapsule.getJson();} catch (IOException e) {}
+        JSONObject map = null;
+        try {map = mapcapsule == null ? null : mapcapsule.getJSON();} catch (IOException e) {}
         if (map == null) newUserIds.add(id);
     }
     

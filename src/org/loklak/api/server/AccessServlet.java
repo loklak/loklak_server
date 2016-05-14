@@ -22,15 +22,13 @@ package org.loklak.api.server;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Collection;
-import java.util.Map;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.http.RemoteAccess;
 import org.loklak.http.AccessTracker.Track;
@@ -55,33 +53,32 @@ public class AccessServlet extends HttpServlet {
         boolean jsonp = callback != null && callback.length() > 0;
         
         post.setResponse(response, "application/javascript");
-        Collection<Track> tracks = DAO.access.getTrack();
+        Collection<Track> tracks = DAO.access.getTracks();
         
         // generate json
-        XContentBuilder json = XContentFactory.jsonBuilder().prettyPrint().lfAtEnd();
-        json.startObject();
-        json.field("access").startArray();
+        JSONObject json = new JSONObject(true);
+        JSONArray access = new JSONArray();
+        json.put("access", access);
         int maxcount = anonymize ? 100 : 1000;
         for (Track track: tracks) {
             if (anonymize && !track.get("class").equals("SearchServlet")) continue;
-            json.startObject();
-            for (Map.Entry<String, Object> entry: track.entrySet()) {
-                if (anonymize && "host".equals(entry.getKey())) {
-                    json.field("host-anonymized", Integer.toHexString(Math.abs(entry.getValue().hashCode())));
+            JSONObject a = new JSONObject(true);
+            for (String key: track.keySet()) {
+                Object value = track.get(key);
+                if (anonymize && "host".equals(key)) {
+                    a.put("host-anonymized", Integer.toHexString(Math.abs(value.hashCode())));
                 } else {
-                    json.field(entry.getKey(), entry.getValue());
+                    a.put(key, value);
                 }
             }
-            json.endObject();
+            access.put(a);
             if (maxcount-- <= 0) break;
         }
-        json.endArray();
-        json.endObject(); // of root
 
         // write json
         PrintWriter sos = response.getWriter();
         if (jsonp) sos.print(callback + "(");
-        sos.print(json.string());
+        sos.print(json.toString(2));
         if (jsonp) sos.println(");");
         sos.println();
         post.finalize();

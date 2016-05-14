@@ -24,7 +24,6 @@ import java.io.PrintWriter;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -51,7 +50,6 @@ public class StatusServlet extends HttpServlet {
         doGet(request, response);
     }
     
-    @SuppressWarnings("unchecked")
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         RemoteAccess.Post post = RemoteAccess.evaluate(request);
@@ -65,11 +63,11 @@ public class StatusServlet extends HttpServlet {
         
         final String backend = DAO.getConfig("backend", "");
         final boolean backend_push = DAO.getConfig("backend.push.enabled", false);
-        Map<String, Object> backend_status = null;
-        Map<String, Object> backend_status_index_sizes = null;
+        JSONObject backend_status = null;
+        JSONObject backend_status_index_sizes = null;
         if (backend.length() > 0 && !backend_push) {
             backend_status = StatusClient.status(backend);
-            backend_status_index_sizes = backend_status == null ? null : (Map<String, Object>) backend_status.get("index_sizes");
+            backend_status_index_sizes = backend_status == null ? null : (JSONObject) backend_status.get("index_sizes");
         }
         long backend_messages = backend_status_index_sizes == null ? 0 : ((Number) backend_status_index_sizes.get("messages")).longValue();
         long backend_users = backend_status_index_sizes == null ? 0 : ((Number) backend_status_index_sizes.get("users")).longValue();
@@ -93,9 +91,14 @@ public class StatusServlet extends HttpServlet {
         system.put("load_system_cpu", OS.getSystemCpuLoad());
         system.put("load_process_cpu", OS.getProcessCpuLoad());
         system.put("server_threads", LoklakServer.getServerThreads());
+        system.put("server_uri", LoklakServer.getServerURI());
 
         JSONObject index = new JSONObject(true);
-        index.put("mps", Math.max(DAO.countLocalMessages(86400000) / 86400, DAO.countLocalMessages(600000) / 600)); // best of 24h and 10m
+        int mps24h = (int) (DAO.countLocalMessages(86400000) / 86400L);
+        int mps10m = (int) (DAO.countLocalMessages(600000) / 600L);
+        index.put("mps24h", mps24h);
+        index.put("mps10m", mps10m);
+        index.put("mps", Math.max(mps24h, mps10m)); // best of 24h and 10m
         JSONObject messages = new JSONObject(true);
         messages.put("size", local_messages + backend_messages);
         messages.put("size_local", local_messages);

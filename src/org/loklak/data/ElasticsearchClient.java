@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.eclipse.jetty.util.log.Log;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.cluster.stats.ClusterStatsAction;
 import org.elasticsearch.action.admin.cluster.stats.ClusterStatsNodes;
@@ -525,6 +526,7 @@ public class ElasticsearchClient {
      * @return true if the document with given id did not exist before, false if it existed and was overwritten
      */
     public boolean writeMap(String indexName, final Map<String, Object> jsonMap, String typeName, String id) {
+        long start = System.currentTimeMillis();
         // get the version number out of the json, if any is given
         Long version = (Long) jsonMap.remove("_version");
         // put this to the index
@@ -537,7 +539,9 @@ public class ElasticsearchClient {
         // documentation about the versioning is available at
         // https://www.elastic.co/blog/elasticsearch-versioning-support
         // TODO: error handling
-        return r.isCreated();
+        boolean successful = r.isCreated();
+        Log.getLog().info("elastic write entry to index " + indexName + ": " + (successful ? "successful":"error") + ", " + (System.currentTimeMillis() - start) + " milliseconds");
+        return successful;
     }
 
     /**
@@ -554,13 +558,14 @@ public class ElasticsearchClient {
      *            This must be a list, because keys may appear several times.
      */
     public List<Map.Entry<String, String>> writeMapBulk(final String indexName, final List<BulkEntry> jsonMapList) {
+        long start = System.currentTimeMillis();
         BulkRequestBuilder bulkRequest = elasticsearchClient.prepareBulk();
-        for (int i = 0; i < jsonMapList.size(); i++) {
-            BulkEntry be = jsonMapList.get(i);
+        for (BulkEntry be: jsonMapList) {
             if (be.id == null) continue;
-            bulkRequest.add(elasticsearchClient.prepareIndex(indexName, be.type, be.id).setSource(be.jsonMap)
-                .setVersion(be.version == null ? 1 : be.version.longValue())
-                .setVersionType(be.version == null ? VersionType.FORCE : VersionType.EXTERNAL));
+            bulkRequest.add(
+                    elasticsearchClient.prepareIndex(indexName, be.type, be.id).setSource(be.jsonMap)
+                        .setVersion(be.version == null ? 1 : be.version.longValue())
+                        .setVersionType(be.version == null ? VersionType.FORCE : VersionType.EXTERNAL));
         }
         BulkResponse bulkResponse = bulkRequest.get();
         List<Map.Entry<String, String>> errors = new ArrayList<>();
@@ -571,6 +576,7 @@ public class ElasticsearchClient {
                 errors.add(new AbstractMap.SimpleEntry<String, String>(id, err));
             }
         }
+        Log.getLog().info("elastic write bulk to index " + indexName + ": " + jsonMapList.size() + " entries, " + errors.size() + " errors, " + (System.currentTimeMillis() - start) + " milliseconds");
         return errors;
     }
 
