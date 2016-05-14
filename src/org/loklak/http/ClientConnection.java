@@ -108,11 +108,11 @@ public class ClientConnection {
      * @throws IOException
      */
     public ClientConnection(String urlstring, Map<String, byte[]> map) throws ClientProtocolException, IOException {
-        this.httpClient = HttpClients.custom()
-        		.useSystemProperties()
-        		.setConnectionManager(cm)
-        		.setDefaultRequestConfig(defaultRequestConfig)
-        		.build();
+    	this.httpClient = HttpClients.custom()
+    			.useSystemProperties()
+    			.setConnectionManager(cm)
+    			.setDefaultRequestConfig(defaultRequestConfig)
+    			.build();
         this.request = new HttpPost(urlstring);        
         MultipartEntityBuilder entityBuilder = MultipartEntityBuilder.create();
         entityBuilder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
