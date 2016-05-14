@@ -90,25 +90,11 @@ public class ClientConnection {
      * @throws IOException
      */
     public ClientConnection(String urlstring) throws IOException {
-<<<<<<< HEAD
-<<<<<<< 32b80c8d4c771cd2d2509b7d2b875fc4d81fc017
     	this.httpClient = HttpClients.custom()
     			.useSystemProperties()
     			.setConnectionManager(cm)
     			.setDefaultRequestConfig(defaultRequestConfig)
     			.build();
-=======
-=======
->>>>>>> 7947757a7cdce5f6543a6a13a6ca671d641e5214
-		this.httpClient = HttpClients.custom()
-				.useSystemProperties()
-				.setConnectionManager(cm)
-				.setDefaultRequestConfig(defaultRequestConfig)
-				.build();
-<<<<<<< HEAD
->>>>>>> fix merge conflict
-=======
->>>>>>> 7947757a7cdce5f6543a6a13a6ca671d641e5214
         this.request = new HttpGet(urlstring);
         this.request.setHeader("User-Agent", USER_AGENT);
         this.init();
