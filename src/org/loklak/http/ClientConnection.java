@@ -90,11 +90,11 @@ public class ClientConnection {
      * @throws IOException
      */
     public ClientConnection(String urlstring) throws IOException {
-    	this.httpClient = HttpClients.custom()
-        		.useSystemProperties()
-        		.setConnectionManager(cm)
-        		.setDefaultRequestConfig(defaultRequestConfig)
-        		.build();
+		this.httpClient = HttpClients.custom()
+				.useSystemProperties()
+				.setConnectionManager(cm)
+				.setDefaultRequestConfig(defaultRequestConfig)
+				.build();
         this.request = new HttpGet(urlstring);
         this.request.setHeader("User-Agent", USER_AGENT);
         this.init();
