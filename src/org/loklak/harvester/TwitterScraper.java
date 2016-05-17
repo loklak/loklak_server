@@ -521,7 +521,7 @@ public class TwitterScraper {
                 Matcher m = timeline_embed_pattern.matcher(text);
                 if (m.find()) {
                     String shorturl = RedirectUnshortener.unShorten(m.group(2));
-                    text = m.replaceFirst("https://pic.twitter.com/" + shorturl + " ");
+                    text = m.replaceFirst(" https://pic.twitter.com/" + shorturl + " ");
                     continue;
                 }
             } catch (Throwable e) {
