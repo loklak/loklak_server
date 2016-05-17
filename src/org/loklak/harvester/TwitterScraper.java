@@ -367,10 +367,10 @@ public class TwitterScraper {
     }
     
 
-    final static Pattern hashtag_pattern = Pattern.compile("<a .*?href=\"(.*?)\".*?class=\"twitter-hashtag.*?\".*?><s>#</s><b>(.*?)</b></a>");
-    final static Pattern timeline_link_pattern = Pattern.compile("<a .*?href=\"(.*?)\".*?data-expanded-url=\"(.*?)\".*?twitter-timeline-link.*?title=\"(.*?)\".*?>.*?</a>");
-    final static Pattern timeline_embed_pattern = Pattern.compile("<a .*?href=\"(.*?)\".*?twitter-timeline-link.*?>pic.twitter.com/(.*?)</a>");
-    final static Pattern emoji_pattern = Pattern.compile("<img .*?class=\"twitter-emoji\".*?alt=\"(.*?)\".*?>");
+    final static Pattern hashtag_pattern = Pattern.compile("<a href=\"/hashtag/(\\w+).*?</a>");
+    final static Pattern timeline_link_pattern = Pattern.compile("<a href=\"http.*?data-expanded-url=\"(.*?)\".*?</a>");
+    final static Pattern timeline_embed_pattern = Pattern.compile("<a href=\"https://.{17}class=\"twitter-timeline-link.*com/(\\w+)</a>");
+    final static Pattern emoji_pattern = Pattern.compile("<img.*?false\" alt=\"(.).*?>");
     final static Pattern doublespace_pattern = Pattern.compile("  ");
     final static Pattern cleanup_pattern = Pattern.compile(
         "</?(s|b|strong)>|" +
@@ -499,7 +499,7 @@ public class TwitterScraper {
             try {
                 Matcher m = hashtag_pattern.matcher(text);
                 if (m.find()) {
-                    text = m.replaceFirst(" #" + m.group(2) + " "); // the extra spaces are needed because twitter removes them if the hashtag is followed with a link
+                    text = m.replaceFirst(" #" + m.group(1) + " "); // the extra spaces are needed because twitter removes them if the hashtag is followed with a link
                     continue;
                 }
             } catch (Throwable e) {
@@ -509,8 +509,8 @@ public class TwitterScraper {
             try {
                 Matcher m = timeline_link_pattern.matcher(text);
                 if (m.find()) {
-                    String expanded = RedirectUnshortener.unShorten(m.group(2));
-                    text = m.replaceFirst(expanded);
+                    String expanded = RedirectUnshortener.unShorten(m.group(1));
+                    text = m.replaceFirst(" " + expanded);
                     continue;
                 }
             } catch (Throwable e) {
@@ -520,7 +520,7 @@ public class TwitterScraper {
             try {
                 Matcher m = timeline_embed_pattern.matcher(text);
                 if (m.find()) {
-                    String shorturl = RedirectUnshortener.unShorten(m.group(2));
+                    String shorturl = RedirectUnshortener.unShorten(m.group(1));
                     text = m.replaceFirst(" https://pic.twitter.com/" + shorturl + " ");
                     continue;
                 }
