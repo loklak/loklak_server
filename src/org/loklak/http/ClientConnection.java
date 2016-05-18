@@ -71,8 +71,8 @@ public class ClientConnection {
             .setConnectionRequestTimeout(60000)
             .setContentCompressionEnabled(true)
             .build();
-    private static HostnameVerifier trustAllHostsnameVerifier = new TrustAllHostNameVerifier();
-    private boolean trustAllCerts = "true".equals(DAO.getConfig("httpsclient.trustall", "true"));
+	private static HostnameVerifier trustAllHostsnameVerifier = new TrustAllHostNameVerifier();
+	private boolean trustAllCerts = "true".equals(DAO.getConfig("httpsclient.trustall", "true"));
     
     private int status;
     public BufferedInputStream inputStream;
@@ -96,17 +96,17 @@ public class ClientConnection {
      */
     public ClientConnection(String urlstring) throws IOException {
     	this.httpClient = trustAllCerts ? 
-    			HttpClients.custom()
-    			.useSystemProperties()
-    			.setConnectionManager(cm)
-    			.setDefaultRequestConfig(defaultRequestConfig)
-    			.setSSLHostnameVerifier(trustAllHostsnameVerifier)
-    			.build():
-				HttpClients.custom()
-    			.useSystemProperties()
-    			.setConnectionManager(cm)
-    			.setDefaultRequestConfig(defaultRequestConfig)
-    			.build();
+			HttpClients.custom()
+			.useSystemProperties()
+			.setConnectionManager(cm)
+			.setDefaultRequestConfig(defaultRequestConfig)
+			.setSSLHostnameVerifier(trustAllHostsnameVerifier)
+			.build():
+			HttpClients.custom()
+			.useSystemProperties()
+			.setConnectionManager(cm)
+			.setDefaultRequestConfig(defaultRequestConfig)
+			.build();
         this.request = new HttpGet(urlstring);
         this.request.setHeader("User-Agent", USER_AGENT);
         this.init();
@@ -121,17 +121,17 @@ public class ClientConnection {
      */
     public ClientConnection(String urlstring, Map<String, byte[]> map) throws ClientProtocolException, IOException {
     	this.httpClient = trustAllCerts ? 
-    			HttpClients.custom()
-    			.useSystemProperties()
-    			.setConnectionManager(cm)
-    			.setDefaultRequestConfig(defaultRequestConfig)
-    			.setSSLHostnameVerifier(trustAllHostsnameVerifier)
-    			.build():
-				HttpClients.custom()
-    			.useSystemProperties()
-    			.setConnectionManager(cm)
-    			.setDefaultRequestConfig(defaultRequestConfig)
-    			.build();
+			HttpClients.custom()
+			.useSystemProperties()
+			.setConnectionManager(cm)
+			.setDefaultRequestConfig(defaultRequestConfig)
+			.setSSLHostnameVerifier(trustAllHostsnameVerifier)
+			.build():
+			HttpClients.custom()
+			.useSystemProperties()
+			.setConnectionManager(cm)
+			.setDefaultRequestConfig(defaultRequestConfig)
+			.build();
         this.request = new HttpPost(urlstring);        
         MultipartEntityBuilder entityBuilder = MultipartEntityBuilder.create();
         entityBuilder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
