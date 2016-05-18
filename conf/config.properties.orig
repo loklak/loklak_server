@@ -7,15 +7,19 @@
 port.http=9000
 port.https=9443
 
+<<<<<<< HEAD
 # allow TLS connections with invalid certificates
 httpsclient.trustall=true
 
+#https.redirect=on/off/redirect (redirects http to https)
+=======
 # require http auth (true/false)
 http.auth=false
 
 # enable https connections (off/on/redirect/only)
 # 'redirect' forwards request to http port to https
 # 'only' deactivates http port, only listening on https port
+>>>>>>> 6a868d763ac51c7af73441c404cbdc87268914f3
 https.mode=off
 # use java keystore directly or have your key and cert files automatically converted
 # (keystore/key-cert)
