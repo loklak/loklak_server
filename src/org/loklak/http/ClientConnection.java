@@ -32,6 +32,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.net.ssl.HostnameVerifier;
+
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
@@ -48,6 +50,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
+import org.loklak.data.DAO;
 
 /**
  * Helper class to provide BufferedReader Objects for get and post connections
@@ -68,6 +71,8 @@ public class ClientConnection {
             .setConnectionRequestTimeout(60000)
             .setContentCompressionEnabled(true)
             .build();
+    private static HostnameVerifier trustAllHostsnameVerifier = new TrustAllHostNameVerifier();
+    private boolean trustAllCerts = "true".equals(DAO.getConfig("httpsclient.trustall", "true"));
     
     private int status;
     public BufferedInputStream inputStream;
@@ -90,7 +95,14 @@ public class ClientConnection {
      * @throws IOException
      */
     public ClientConnection(String urlstring) throws IOException {
-    	this.httpClient = HttpClients.custom()
+    	this.httpClient = trustAllCerts ? 
+    			HttpClients.custom()
+    			.useSystemProperties()
+    			.setConnectionManager(cm)
+    			.setDefaultRequestConfig(defaultRequestConfig)
+    			.setSSLHostnameVerifier(trustAllHostsnameVerifier)
+    			.build():
+				HttpClients.custom()
     			.useSystemProperties()
     			.setConnectionManager(cm)
     			.setDefaultRequestConfig(defaultRequestConfig)
@@ -108,7 +120,14 @@ public class ClientConnection {
      * @throws IOException
      */
     public ClientConnection(String urlstring, Map<String, byte[]> map) throws ClientProtocolException, IOException {
-    	this.httpClient = HttpClients.custom()
+    	this.httpClient = trustAllCerts ? 
+    			HttpClients.custom()
+    			.useSystemProperties()
+    			.setConnectionManager(cm)
+    			.setDefaultRequestConfig(defaultRequestConfig)
+    			.setSSLHostnameVerifier(trustAllHostsnameVerifier)
+    			.build():
+				HttpClients.custom()
     			.useSystemProperties()
     			.setConnectionManager(cm)
     			.setDefaultRequestConfig(defaultRequestConfig)
