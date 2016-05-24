@@ -24,6 +24,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.security.KeyFactory;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -48,6 +49,7 @@ public class JsonFile extends JSONObject {
 	private PrivateKey private_key = null;
 	private PublicKey public_key = null;
 	private String key_method = null;
+	private String peer_hash = null;
 
 	public JsonFile(File file) throws IOException{
 		super();
@@ -142,6 +144,22 @@ public class JsonFile extends JSONObject {
 		return key_method;
 	}
 	
+	public String getPeerHash(){
+		return peer_hash;
+	}
+	
+	public void setPeerHash(){
+		try {
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+			md.update(public_key.getEncoded());
+			peer_hash = Base64.getEncoder().encodeToString(md.digest());
+			return;
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		peer_hash = null;
+	}
+	
 	public boolean loadPrivateKey(){
 		if(!has("private_key") || !has("key_method")) return false;
 		
@@ -171,6 +189,7 @@ public class JsonFile extends JSONObject {
 		if(pub != null){
 			public_key = pub;
 			key_method = algorithm;
+			setPeerHash();
 			return true;
 		}
 		return false;
@@ -189,6 +208,7 @@ public class JsonFile extends JSONObject {
 		public_key = key;
 		put("key_method",algorithm);
 		key_method = algorithm;
+		setPeerHash();
 		return true;
 	}
 	
