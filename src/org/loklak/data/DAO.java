@@ -167,7 +167,7 @@ public class DAO {
 		}
         
         if(!private_settings.loadPrivateKey() || !public_settings.loadPublicKey()){
-        	System.out.println("Can't load key pair. Creating new one");
+        	log("Can't load key pair. Creating new one");
         	
         	// create new key pair
         	KeyPairGenerator keyGen;
@@ -181,10 +181,10 @@ public class DAO {
 			} catch (NoSuchAlgorithmException e) {
 				e.printStackTrace();
 			}
-			System.out.println("Key creation finished");
+			log("Key creation finished. Peer hash: " + public_settings.getPeerHash());
         }
         else{
-        	System.out.println("Key pair loaded from file");
+        	log("Key pair loaded from file. Peer hash: " + public_settings.getPeerHash());
         }
         
         File datadir = dataPath.toFile();

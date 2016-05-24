@@ -45,7 +45,7 @@ import org.json.JSONTokener;
  */
 public class JsonFile extends JSONObject {
 	
-	private File file;
+	private final File file;
 	private PrivateKey private_key = null;
 	private PublicKey public_key = null;
 	private String key_method = null;
@@ -53,16 +53,18 @@ public class JsonFile extends JSONObject {
 
 	public JsonFile(File file) throws IOException{
 		super();
-		this.file = file;
-		if(this.file.exists()){
+		
+		if(file == null) throw new IOException("File must not be null");
+		if(file.exists()){
 			JSONTokener tokener;
 			tokener = new JSONTokener(new FileReader(file));
 			putAll(new JSONObject(tokener));
 		}
 		else{
-			this.file.createNewFile();
+			file.createNewFile();
 			writeFile();
 		}
+		this.file = file;
 	}
 	
 	private void writeFile() throws JSONException{
