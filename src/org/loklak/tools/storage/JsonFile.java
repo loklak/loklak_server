@@ -162,11 +162,11 @@ public class JsonFile extends JSONObject {
 	}
 	
 	public String getKeyMethod(){
-		return key_method;
+		return new String(key_method);
 	}
 	
 	public String getPeerHash(){
-		return peer_hash;
+		return new String(peer_hash);
 	}
 	
 	public String getKeyAsString(Key key){
@@ -247,5 +247,11 @@ public class JsonFile extends JSONObject {
 	   		e.printStackTrace();
 	   	}
 		return null;
+	}
+	
+	public JSONObject toJSONObject(){
+		JSONObject res = new JSONObject();
+        res.putAll(this);
+        return res;
 	}
 }
