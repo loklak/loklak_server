@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.security.Key;
 import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -148,8 +149,16 @@ public class JsonFile extends JSONObject {
 		return private_key;
 	}
 	
+	public String getPrivateKeyAsString(){
+		return getKeyAsString(private_key);
+	}
+	
 	public PublicKey getPublicKey(){
 		return public_key;
+	}
+	
+	public String getPublicKeyAsString(){
+		return getKeyAsString(public_key);
 	}
 	
 	public String getKeyMethod(){
@@ -158,6 +167,10 @@ public class JsonFile extends JSONObject {
 	
 	public String getPeerHash(){
 		return peer_hash;
+	}
+	
+	public String getKeyAsString(Key key){
+		return Base64.getEncoder().encodeToString(key.getEncoded());
 	}
 	
 	public void setPeerHash(){
@@ -208,7 +221,7 @@ public class JsonFile extends JSONObject {
 	}
 	
 	public boolean setPrivateKey(PrivateKey key, String algorithm){
-		put("private_key", Base64.getEncoder().encodeToString(key.getEncoded()));
+		put("private_key", getKeyAsString(key));
 		private_key = key;
 		put("key_method",algorithm);
 		key_method = algorithm;
@@ -216,7 +229,7 @@ public class JsonFile extends JSONObject {
 	}
 	
 	public boolean setPublicKey(PublicKey key, String algorithm){
-		put("public_key", Base64.getEncoder().encodeToString(key.getEncoded()));
+		put("public_key", getKeyAsString(key));
 		public_key = key;
 		put("key_method",algorithm);
 		key_method = algorithm;
