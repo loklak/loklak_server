@@ -1,4 +1,4 @@
-angular.module('myApp', ['ngStorage', 'ngMaterial', 'ngMessages' ,'ngSanitize', 'angular-momentjs', 'ui.router', 'ngAnimate'])
+angular.module('myApp', ['ngStorage', 'ngMaterial', 'ngMessages' ,'ngSanitize', 'angular-momentjs', 'ui.router', 'ngAnimate','loklak'])
 
 // dataService.polltweets(@querytype, @queryterm) -> polls & adds to $localStorage
 // $localStorage.tweets: stores tweet objs in array
