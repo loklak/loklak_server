@@ -23,6 +23,16 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.security.Key;
+import java.security.KeyFactory;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Map;
 
@@ -36,18 +46,24 @@ import org.json.JSONTokener;
  */
 public class JsonFile extends JSONObject {
 	
-	private File file;
+	private final File file;
+	private PrivateKey private_key = null;
+	private PublicKey public_key = null;
+	private String key_method = null;
+	private String peer_hash = null;
 
 	public JsonFile(File file) throws IOException{
 		super();
+		if(file == null) throw new IOException("File must not be null");
+		
 		this.file = file;
-		if(this.file.exists()){
+		if(file.exists()){
 			JSONTokener tokener;
 			tokener = new JSONTokener(new FileReader(file));
 			putAll(new JSONObject(tokener));
 		}
 		else{
-			this.file.createNewFile();
+			file.createNewFile();
 			commit();
 		}
 	}
@@ -127,5 +143,115 @@ public class JsonFile extends JSONObject {
 		super.remove(key);
 		commit();
 		return this;
+	}
+	
+	public PrivateKey getPrivateKey(){
+		return private_key;
+	}
+	
+	public String getPrivateKeyAsString(){
+		return getKeyAsString(private_key);
+	}
+	
+	public PublicKey getPublicKey(){
+		return public_key;
+	}
+	
+	public String getPublicKeyAsString(){
+		return getKeyAsString(public_key);
+	}
+	
+	public String getKeyMethod(){
+		return new String(key_method);
+	}
+	
+	public String getPeerHash(){
+		return new String(peer_hash);
+	}
+	
+	public String getKeyAsString(Key key){
+		return Base64.getEncoder().encodeToString(key.getEncoded());
+	}
+	
+	public void setPeerHash(){
+		try {
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+			md.update(public_key.getEncoded());
+			peer_hash = Base64.getEncoder().encodeToString(md.digest());
+			return;
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		peer_hash = null;
+	}
+	
+	public boolean loadPrivateKey(){
+		if(!has("private_key") || !has("key_method")) return false;
+		
+		String encodedKey = getString("private_key");
+		String algorithm = getString("key_method");
+		
+		try{
+			PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(encodedKey));
+		    PrivateKey priv = KeyFactory.getInstance(algorithm).generatePrivate(keySpec);
+			private_key = priv;
+			key_method = algorithm;
+			return true;
+		}
+	   	catch(NoSuchAlgorithmException | InvalidKeySpecException e){
+	   		e.printStackTrace();
+	   	}
+		return false;
+	}
+	
+	public boolean loadPublicKey(){
+		if(!has("public_key") || !has("key_method")) return false;
+		
+		String encodedKey = getString("public_key");
+		String algorithm = getString("key_method");
+		
+		PublicKey pub = decodePublicKey(encodedKey, algorithm);
+		if(pub != null){
+			public_key = pub;
+			key_method = algorithm;
+			setPeerHash();
+			return true;
+		}
+		return false;
+	}
+	
+	public boolean setPrivateKey(PrivateKey key, String algorithm){
+		put("private_key", getKeyAsString(key));
+		private_key = key;
+		put("key_method",algorithm);
+		key_method = algorithm;
+		return true;
+	}
+	
+	public boolean setPublicKey(PublicKey key, String algorithm){
+		put("public_key", getKeyAsString(key));
+		public_key = key;
+		put("key_method",algorithm);
+		key_method = algorithm;
+		setPeerHash();
+		return true;
+	}
+	
+	public static PublicKey decodePublicKey(String encodedKey, String algorithm){
+		try{
+		    X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(encodedKey));
+		    PublicKey pub = KeyFactory.getInstance(algorithm).generatePublic(keySpec);
+		    return pub;
+		}
+	   	catch(NoSuchAlgorithmException | InvalidKeySpecException e){
+	   		e.printStackTrace();
+	   	}
+		return null;
+	}
+	
+	public JSONObject toJSONObject(){
+		JSONObject res = new JSONObject();
+        res.putAll(this);
+        return res;
 	}
 }
