@@ -1,4 +1,4 @@
-angular.module('myApp', ['ngStorage', 'ngMaterial', 'ngMessages' ,'ngSanitize', 'angular-momentjs'])
+angular.module('myApp', ['ngStorage', 'ngMaterial', 'ngMessages' ,'ngSanitize', 'angular-momentjs', 'ui.router', 'ngAnimate'])
 
 // dataService.polltweets(@querytype, @queryterm) -> polls & adds to $localStorage
 // $localStorage.tweets: stores tweet objs in array
@@ -8,17 +8,17 @@ angular.module('myApp', ['ngStorage', 'ngMaterial', 'ngMessages' ,'ngSanitize', 
 // queryterm: eg. "from:myhandle" (refer to http://loklak.org/api.html for more)
 
 
-.controller('MainCtrl', ['$scope', '$interval', '$localStorage', '$q','$sce', 'queryService',
-    function($scope, $interval, $localStorage, $q, $sce, queryService) {
+.controller('MainCtrl', ['$scope', '$interval', '$localStorage', '$q','$sce', 'queryService', '$location', 
+    function($scope, $interval, $localStorage, $q, $sce, queryService, $location) {
         
         var vm = this;
         // store promise so can cancel on next query
         var promise;
         
+        // settings for form
         $scope.apis = ('search suggest').split(' ').map(function(apitype) {
             return {type: apitype}
-        })
-        
+        })        
         $scope.maxDate = new Date();
         $scope.query = {
             type: 'search',
@@ -27,6 +27,7 @@ angular.module('myApp', ['ngStorage', 'ngMaterial', 'ngMessages' ,'ngSanitize', 
             maxHashtags: 3
         }
         
+        // storage for processed tweets for charts
         $scope.$storage = $localStorage.$default({
           tweets: [],
           wordFreq: {},
@@ -34,7 +35,20 @@ angular.module('myApp', ['ngStorage', 'ngMaterial', 'ngMessages' ,'ngSanitize', 
           hashtagDateFreq: [],
         })
         // $scope.$storage.tweets=[];
-        window.$scope = $scope;
+        // window.$scope = $scope;
+        
+        // Scope for selected chart
+        $scope.selectedIndex = 0;
+        $scope.$watch('selectedIndex', function(current, old) {
+            switch (current) {
+                case 0:
+                $location.url("/bars");
+                break;
+                case 1:
+                $location.url("/bubbles");
+                break;
+            }
+        });
         
         $scope.handlify = function(handle){
             return $sce.trustAsHtml("<a href=\"https://twitter.com/" + handle + "\">@" + handle + "</a>");
@@ -95,9 +109,25 @@ angular.module('myApp', ['ngStorage', 'ngMaterial', 'ngMessages' ,'ngSanitize', 
         }
     }
 ])
+
 .config(function($mdThemingProvider) {
   // Configure a dark theme with primary foreground yellow
   $mdThemingProvider.theme('docs-dark', 'default')
     .primaryPalette('yellow')
     .dark();
-});
+})
+
+.config(function($stateProvider, $urlRouterProvider){
+    $urlRouterProvider.otherwise('/bars');
+    $stateProvider
+        .state('barChart',{
+            name: 'barChart',
+            url: '/bars',
+            templateUrl: 'charts/barChart.html'
+        })
+        .state('bubbleCloud',{
+            name: 'bubbleCloud',
+            url: '/bubbles',
+            templateUrl: 'charts/bubbleCloud.html'
+        })
+})
