@@ -57,6 +57,7 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.security.Constraint;
 import org.eclipse.jetty.webapp.WebAppContext;
+import org.elasticsearch.transport.BindTransportException;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.HttpConnectionFactory;
@@ -216,7 +217,11 @@ public class LoklakServer {
         if (pid.exists()) pid.deleteOnExit(); // thats a signal for the stop.sh script that loklak has terminated
         
         // initialize all data        
-        DAO.init(config, data);
+        try{
+        	DAO.init(config, data); 
+        } catch(BindTransportException e){
+        	System.exit(-1);
+        }
         
         // init the http server
         try {
