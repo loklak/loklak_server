@@ -63,7 +63,7 @@
               <div class="form-group">
                 <label class="col-md-4 control-label" for="query">Query Text</label>  
                 <div class="col-md-8">
-                  <input id="query" name="query" type="text" placeholder="Query Text" class="form-control input-md" required="">
+                  <input id="query" id="query" name="query" type="text" placeholder="Query Text" class="form-control input-md" required="">
 
                 </div>
               </div>
@@ -72,8 +72,7 @@
               <div class="form-group">
                 <label class="col-md-4 control-label" for="timezoneoffset">Time Zone Offset</label>  
                 <div class="col-md-8">
-                  <input id="timezoneoffset" name="timezoneoffset" type="text" placeholder="Enter the time zone offset in minutes" class="form-control input-md">
-
+                  <input id="timezoneoffset" id="timezoneoffset" name="timezoneoffset" type="text" placeholder="Enter the time zone offset in minutes" class="form-control input-md">
                 </div>
               </div>
 
@@ -108,8 +107,9 @@
                 </div>
               </div>
 
+              <div id="searchOptions">
               <!-- Multiple Checkboxes -->
-              <div class="form-group">
+              <div class="form-group" id="aggregations">
                 <label class="col-md-4 control-label" for="aggregations">Aggregations Fields</label>
                 <div class="col-md-8">
                   <div class="checkbox">
@@ -133,6 +133,24 @@
                 <div class="col-md-8">
                   <input id="from" name="from" type="text" placeholder="Enter username here" class="form-control input-md">
                   <span class="help-block">this adds from:username and filters search for only the users</span>  
+                </div>
+              </div>
+
+              <!-- Text input-->
+              <div class="form-group">
+                <label class="col-md-4 control-label" for="from">Since Date</label>  
+                <div class="col-md-8">
+                  <input id="from" name="since" type="date" placeholder="Enter Since date here" class="form-control input-md">
+                  <span class="help-block">this adds since:YYYY-MM-DD and filters search for only the users</span>  
+                </div>
+              </div>
+
+              <!-- Text input-->
+              <div class="form-group">
+                <label class="col-md-4 control-label" for="from">Until Date</label>  
+                <div class="col-md-8">
+                  <input id="from" name="until" type="date" placeholder="Enter Until date here" class="form-control input-md">
+                  <span class="help-block">this adds until:YYYY-MM-DD and filters search for only the users</span>  
                 </div>
               </div>
 
@@ -176,26 +194,28 @@
                 </div>
               </div>
 
-              <!-- Multiple Checkboxes (inline) -->
+              <!-- Multiple Radio (inline) -->
               <div class="form-group">
                 <label class="col-md-4 control-label" for="minified">Minified Result</label>
                 <div class="col-md-8">
-                  <label class="checkbox-inline" for="minified-0">
-                    <input type="checkbox" name="minified" id="minified-0" value="true">
+                  <label class="radio-inline" for="minified-0">
+                    <input type="radio" name="minified" id="minified-0" value="true">
                     True
                   </label>
-                  <label class="checkbox-inline" for="minified-1">
-                    <input type="checkbox" name="minified" id="minified-1" value="false">
+                  <label class="radio-inline" for="minified-1">
+                    <input type="radio" name="minified" id="minified-1" value="false">
                     False
                   </label>
                 </div>
+              </div>
+
               </div>
 
               <!-- Button -->
               <div class="form-group">
                 <label class="col-md-4 control-label" for="submit"></label>
                 <div class="col-md-4">
-                  <button id="submit" name="submit" class="btn btn-success">Generate Query URL</button>
+                  <button id="submit" name="submit" class="btn btn-success" onclick="constructQuery()">Generate Query URL</button>
                 </div>
               </div>
 
@@ -210,7 +230,7 @@ http://loklak.org/api/search.json
           <div class="form-group">
             <label class="col-md-4 control-label" for="submitQuery"></label>
             <div class="col-md-4" style="margin-bottom: 10px;margin-top: 10px;">
-              <button id="submitQuery" name="submitQuery" class="btn btn-success">Query Loklak</button>
+              <button id="submitQuery" name="submitQuery" class="btn btn-success" onclick="queryLoklak()">Query Loklak</button>
             </div>
           </div>
           <!-- Button Ends -->
@@ -225,5 +245,6 @@ http://loklak.org/api/search.json
     <script src="../../js/bootstrap.min.js"></script>
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
     <script src="../../js/ie10-viewport-bug-workaround.js"></script>
+    <script src="lql.js"></script>
   </body>
   </html>
