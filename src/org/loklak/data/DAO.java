@@ -26,6 +26,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -46,7 +49,6 @@ import com.google.common.base.Charsets;
 
 import org.eclipse.jetty.util.log.Log;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
-import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.search.sort.SortOrder;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -68,6 +70,7 @@ import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
 import org.loklak.server.Accounting;
 import org.loklak.server.Query;
+import org.loklak.server.Settings;
 import org.loklak.tools.DateParser;
 import org.loklak.tools.OS;
 import org.loklak.tools.storage.JsonDataset;
@@ -117,7 +120,7 @@ public class DAO {
     
     public  static File conf_dir, bin_dir, html_dir;
     private static File external_data, assets, dictionaries;
-    public static JsonFile public_settings, private_settings;
+    public static Settings public_settings, private_settings;
     private static Path message_dump_dir, account_dump_dir, import_profile_dump_dir;
     public static JsonRepository message_dump;
     private static JsonRepository account_dump;
@@ -160,10 +163,32 @@ public class DAO {
         bin_dir = new File("bin");
         html_dir = new File("html");
         
-		public_settings = new JsonFile(new File("data/settings/public.settings.json"));
+        // initialize public and private keys
+		public_settings = new Settings(new File("data/settings/public.settings.json"));
 		File private_file = new File("data/settings/private.settings.json");
-		private_settings = new JsonFile(private_file);
+		private_settings = new Settings(private_file);
 		OS.protectPath(private_file.toPath());
+		
+		if(!private_settings.loadPrivateKey() || !public_settings.loadPublicKey()){
+        	log("Can't load key pair. Creating new one");
+        	
+        	// create new key pair
+        	KeyPairGenerator keyGen;
+			try {
+				String algorithm = "RSA";
+				keyGen = KeyPairGenerator.getInstance(algorithm);
+				keyGen.initialize(2048);
+				KeyPair keyPair = keyGen.genKeyPair();
+				private_settings.setPrivateKey(keyPair.getPrivate(), algorithm);
+				public_settings.setPublicKey(keyPair.getPublic(), algorithm);
+			} catch (NoSuchAlgorithmException e) {
+				e.printStackTrace();
+			}
+			log("Key creation finished. Peer hash: " + public_settings.getPeerHashAlgorithm() + " " + public_settings.getPeerHash());
+        }
+        else{
+        	log("Key pair loaded from file. Peer hash: " + public_settings.getPeerHashAlgorithm() + " " + public_settings.getPeerHash());
+        }
         
         File datadir = dataPath.toFile();
         // check if elasticsearch shall be accessed as external cluster
@@ -177,7 +202,8 @@ public class DAO {
             }
         } else {
             // use all config attributes with a key starting with "elasticsearch." to set elasticsearch settings
-            Settings.Builder settings = Settings.builder();
+
+            org.elasticsearch.common.settings.Settings.Builder settings = org.elasticsearch.common.settings.Settings.builder();
             for (Map.Entry<String, String> entry: config.entrySet()) {
                 String key = entry.getKey();
                 if (key.startsWith("elasticsearch.")) settings.put(key.substring(14), entry.getValue());
