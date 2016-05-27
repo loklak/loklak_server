@@ -17,7 +17,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.loklak.api.server.push;
+package org.loklak.api.iot;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -29,10 +29,10 @@ import org.loklak.data.DAO;
 import org.loklak.geo.LocationSource;
 import org.loklak.harvester.JsonFieldConverter;
 import org.loklak.harvester.JsonValidator;
-import org.loklak.harvester.SourceType;
 import org.loklak.http.ClientConnection;
 import org.loklak.http.RemoteAccess;
 import org.loklak.objects.MessageEntry;
+import org.loklak.objects.SourceType;
 import org.loklak.objects.QueryEntry.PlaceContext;
 import org.loklak.server.Query;
 

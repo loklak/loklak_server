@@ -16,16 +16,16 @@
  * along with this program in the file lgpl21.txt
  * If not, see <http://www.gnu.org/licenses/>.
  */
-package org.loklak.api.server.push;
+package org.loklak.api.iot;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.geo.LocationSource;
 import org.loklak.harvester.JsonFieldConverter;
-import org.loklak.harvester.SourceType;
 import org.loklak.http.ClientConnection;
 import org.loklak.http.RemoteAccess;
+import org.loklak.objects.SourceType;
 import org.loklak.server.Query;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;

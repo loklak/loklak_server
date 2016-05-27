@@ -1,12 +1,12 @@
-package org.loklak.api.server.push;
+package org.loklak.api.iot;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.harvester.HarvestingFrequency;
-import org.loklak.harvester.SourceType;
 import org.loklak.objects.ImportProfileEntry;
 import org.loklak.objects.MessageEntry;
+import org.loklak.objects.SourceType;
 import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
 import org.loklak.server.Query;

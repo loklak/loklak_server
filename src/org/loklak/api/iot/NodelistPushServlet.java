@@ -1,5 +1,5 @@
 /**
- * FreifunkNodePushServlet
+ * NodelistPushServlet
  * Copyright 16.07.2015 by Dang Hai An, @zyzo
  * <p/>
  * This library is free software; you can redistribute it and/or
@@ -16,31 +16,34 @@
  * along with this program in the file lgpl21.txt
  * If not, see <http://www.gnu.org/licenses/>.
  */
-package org.loklak.api.server.push;
+package org.loklak.api.iot;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.loklak.harvester.JsonFieldConverter;
 import org.loklak.harvester.JsonValidator;
-import org.loklak.harvester.SourceType;
+import org.loklak.objects.SourceType;
 
-public class FreifunkNodePushServlet extends AbstractPushServlet {
+import java.util.ArrayList;
+import java.util.List;
 
-    private static final long serialVersionUID = 563611786137243970L;
+public class NodelistPushServlet extends AbstractPushServlet {
+
+    private static final long serialVersionUID = -7526015654376919340L;
 
     @Override
     protected SourceType getSourceType() {
-        return SourceType.FREIFUNK_NODE;
+        return SourceType.NODELIST;
     }
 
     @Override
     protected JsonValidator.JsonSchemaEnum getValidatorSchema() {
-        return JsonValidator.JsonSchemaEnum.FREIFUNK_NODE;
+        return JsonValidator.JsonSchemaEnum.NODELIST;
     }
 
     @Override
     protected JsonFieldConverter.JsonConversionSchemaEnum getConversionSchema() {
-        return JsonFieldConverter.JsonConversionSchemaEnum.FREIFUNK_NODE;
+        return JsonFieldConverter.JsonConversionSchemaEnum.NODELIST_NODE;
     }
 
     @Override
@@ -49,5 +52,20 @@ public class FreifunkNodePushServlet extends AbstractPushServlet {
     }
 
     @Override
-    protected void customProcessing(JSONObject message) {}
+    protected void customProcessing(JSONObject message) {
+        JSONObject location = (JSONObject) message.get("position");
+
+        final Double longitude = Double.parseDouble((String) location.get("long"));
+        final Double latitude = Double.parseDouble((String) location.get("lat"));
+        List<Double> location_point = new ArrayList<>();
+        location_point.add(longitude);
+        location_point.add(latitude);
+        message.put("location_point", location_point);
+        message.put("location_mark", location_point);
+
+        JSONObject user = new JSONObject(true);
+        user.put("screen_name", "freifunk_" + message.get("name"));
+        user.put("name", message.get("name"));
+        message.put("user", user);
+    }
 }

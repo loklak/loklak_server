@@ -1,6 +1,6 @@
 /**
- *  PeersServlet
- *  Copyright 22.02.2015 by Michael Peter Christen, @0rb1t3r
+ *  AppsServlet
+ *  Copyright 08.01.2016 by Michael Peter Christen, @0rb1t3r
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -17,11 +17,18 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.loklak.api.server;
+package org.loklak.api.cms;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -30,12 +37,15 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.eclipse.jetty.util.log.Log;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.loklak.data.DAO;
 import org.loklak.http.RemoteAccess;
+import org.loklak.server.FileHandler;
 import org.loklak.server.Query;
 
-public class PeersServlet extends HttpServlet {
+public class AppsServlet extends HttpServlet {
 
     private static final long serialVersionUID = -2577184683745091648L;
 
@@ -47,48 +57,47 @@ public class PeersServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         Query post = RemoteAccess.evaluate(request);
-        
-        // manage DoS
-        String path = request.getServletPath();
-        if (post.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;}
-        String[] classes = post.get("classes", new String[0], ",");
-        if (classes.length == 0) classes = new String[]{"HelloServlet","SuggestServlet"};
-        Set<String> classcheck = new HashSet<>();
-        for (String c: classes) classcheck.add(c);
-        
+
         String callback = post.get("callback", "");
         boolean jsonp = callback != null && callback.length() > 0;
-        // String pingback = qm == null ? request.getParameter("pingback") : qm.get("pingback");
-        // pingback may be either filled with nothing, the term 'now' or the term 'later'
-
         post.setResponse(response, "application/javascript");
+
+        String categorySelection = post.get("category", "");
         
         // generate json
+        File apps = new File(DAO.html_dir, "apps");
         JSONObject json = new JSONObject(true);
-        JSONArray peers = new JSONArray();
-        json.put("peers", peers);
-        int count = 0;
-        for (Map.Entry<String, Map<String, RemoteAccess>> hmap: RemoteAccess.history.entrySet()) {
-            if (classcheck.contains(hmap.getKey())) {
-                JSONObject p = new JSONObject(true);
-                for (Map.Entry<String, RemoteAccess> peer: hmap.getValue().entrySet()) {
-                    p.put("class", hmap.getKey());
-                    p.put("host", peer.getKey());
-                    RemoteAccess remoteAccess = peer.getValue();
-                    p.put("port.http", remoteAccess.getLocalHTTPPort());
-                    p.put("port.https", remoteAccess.getLocalHTTPSPort());
-                    p.put("lastSeen", remoteAccess.getAccessTime());
-                    p.put("lastPath", remoteAccess.getLocalPath());
-                    p.put("peername", remoteAccess.getPeername());
-                    peers.put(p);
-                    count++;
-                }
+        JSONArray app_array = new JSONArray();
+        json.put("apps", app_array);
+        JSONObject categories = new JSONObject(true);
+        for (String appname: apps.list()) try {
+            File apppath = new File(apps, appname);
+            if (!apppath.isDirectory()) continue;
+            Set<String> files = new HashSet<>();
+            for (String f: apppath.list()) files.add(f);
+            if (!files.contains("index.html")) continue;
+            if (!files.contains("app.json")) continue;
+            File json_ld_file = new File(apppath, "app.json");
+            String jsonString = new String(Files.readAllBytes(json_ld_file.toPath()), StandardCharsets.UTF_8);
+            JSONObject json_ld = new JSONObject(jsonString);
+            if (json_ld.has("applicationCategory") && json_ld.has("name")) {
+                String cname = json_ld.getString("applicationCategory");
+                if (categorySelection.length() == 0 || categorySelection.equals(cname)) app_array.put(json_ld);
+                String aname = json_ld.getString("name");
+                if (!categories.has(cname)) categories.put(cname, new JSONArray());
+                JSONArray appnames = categories.getJSONArray(cname);
+                appnames.put(aname);
             }
+        } catch (Throwable e) {
+            Log.getLog().warn(e);
         }
-        json.put("count", count);
-
+        // write categories
+        json.put("categories", categories.keySet().toArray(new String[categories.length()]));
+        json.put("category", categories);
+        
         // write json
         response.setCharacterEncoding("UTF-8");
+        FileHandler.setCaching(response, 60);
         PrintWriter sos = response.getWriter();
         if (jsonp) sos.print(callback + "(");
         sos.print(json.toString(2));
