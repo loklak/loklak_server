@@ -53,6 +53,7 @@
       <!-- Fancy Form -->
       <div ng-controller="MainCtrl as main" ng-cloak="">
           
+          <div layout="column">
           <form ng-submit="poll(query.type, query.term, query.interval, query.dateFrom, query.dateTo, query.maxHashtags)" 
               class="layout-margin layout-fill" name="queryForm">
               <!-- form name for ng-messages -->
@@ -128,20 +129,17 @@
 
               </md-content>
           </form>
-              
-              <div ng-controller='barChartCtrl' layout="row" layout-align="center center">
-                  <!-- pass max from form -->
-                  <bar-chart 
-                      data="$storage.hashtagDateFreq" 
-                      max="query.maxHashtags" 
-                      title="Top Hashtags by day" >
-                  </bar-chart>
-              </div>
-              <!-- <div ng-controller='bubbleCloudCtrl' layout="row" layout-align="center center">
-                  <bubble-cloud data="$storage.mentionFreq" min ="1" title="Most Mentions"></bubble-cloud>
-                  <bubble-cloud data="$storage.wordFreq" min="2" title="Word Frequency"></bubble-cloud>     
-              </div> -->
           
+              <!-- Tabs to select chart -->
+              <md-tabs md-center-tabs="true" md-stretch-tabs md-selected="selectedIndex">
+                  <md-tab label="Stacked Bar Charts"></md-tab> 
+                  <md-tab label="Bubble Charts"></md-tab>
+              </md-tabs>
+              
+          </div>
+          <!-- Load charts directives as partials using UI Router -->
+          <div ui-view ng-class="transition"></div>
+
       </div>
       
       <!-- Angular deps, ngMaterial, ngMessages, localStorage, angulargrid, imgfallback -->
@@ -153,7 +151,7 @@
       <script src="../../js/angular-modules/angular-messages.min.js"></script>
       <script src="../../js/moment.min.js"></script>
       <script src="../../js/underscore-min.js"></script>
-
+      <script src="../../js/angular-modules/angular-ui-router.min.js"></script>
       <script src="../../js/angular-modules/angular-momentjs.min.js"></script>
       <script src="app.js"></script>
       

@@ -20,12 +20,12 @@
                     $localStorage.tweets = newTweets.concat($localStorage.tweets);
                 }           
                 
-                // process any new tweets
+                // process if any new tweets
                 if(!newTweets.length) {
                     console.log("no new tweets");
                 } else {
-                   // analyticService.updateWordFreq(newTweets);
-                   // analyticService.updateMentionFreq(newTweets);
+                   analyticService.updateWordFreq(newTweets);
+                   analyticService.updateMentionFreq(newTweets);
 
                    // process all for hashtagfreq
                    analyticService.updateHashtagDateFreq(data, maxHashtags);
