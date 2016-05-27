@@ -32,22 +32,25 @@ import org.json.JSONTokener;
 
 /**
  * This extends JSONObject to be a file which gets loaded and written to disk
+ * It also offers some key management tools
  *
  */
 public class JsonFile extends JSONObject {
 	
-	private File file;
+	private final File file;
 
 	public JsonFile(File file) throws IOException{
 		super();
+		if(file == null) throw new IOException("File must not be null");
+		
 		this.file = file;
-		if(this.file.exists()){
+		if(file.exists()){
 			JSONTokener tokener;
 			tokener = new JSONTokener(new FileReader(file));
 			putAll(new JSONObject(tokener));
 		}
 		else{
-			this.file.createNewFile();
+			file.createNewFile();
 			commit();
 		}
 	}
@@ -71,6 +74,16 @@ public class JsonFile extends JSONObject {
 		} catch (IOException e) {
 			throw new JSONException(e.getMessage());
 		}
+	}
+	
+	/**
+	 * Return a copy of the JSON content
+	 * @return JSONObject json
+	 */
+	public JSONObject toJSONObject(){
+		JSONObject res = new JSONObject();
+        res.putAll(this);
+        return res;
 	}
 
 	@Override

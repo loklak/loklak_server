@@ -130,9 +130,9 @@ public class Hello extends AbstractAPIHandler implements APIHandler {
     
     @Override
     public JSONObject serviceImpl(Query call, Authorization rights) {
-        JSONObject json = new JSONObject(true);
-        json.put("status", "ok");
-        return json;
+    	JSONObject res = DAO.public_settings.toJSONObject();
+    	res.put("status", "ok");
+    	return res;
     }
     
 }
