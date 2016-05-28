@@ -8,13 +8,52 @@ tzOffset[0].disabled = true;
 // depending on the API Chosen.
 $(document).ready(function(){
     $('input[type=radio]').click(function(){
-        if (this.value == 'search.json') {
+        if (this.value == 'search.json' || this.value == 'true' || this.value == 'false') {
+        	constructQuery();
         	$("#searchOptions").show();
         }
         else {
         	constructQuery();
         	$("#searchOptions").hide();
         }
+    });
+
+    $('input[type=checkbox]').click(function() {
+    	var aggregationsCheckboxObject = document.getElementsByName('aggregations');
+    	var aggregations = getCheckedCheckboxValue(aggregationsCheckboxObject);
+    	constructQuery();
+    });
+
+    $('#query').bind('input', function() {
+    	constructQuery();
+    });
+
+    $('#from').bind('input', function() {
+    	constructQuery();
+    });
+
+    $('#since').bind('input', function() {
+    	constructQuery();
+    });
+
+    $('#until').bind('input', function() {
+    	constructQuery();
+    });
+
+    $('#near').bind('input', function() {
+    	constructQuery();
+    });
+
+    $('#source').on('change', function() {
+    	constructQuery();
+    });
+
+    $('#count').bind('input', function() {
+    	constructQuery();
+    });
+
+    $('#limit').bind('input', function() {
+    	constructQuery();
     });
 });
 
@@ -58,9 +97,8 @@ function queryLoklak() {
 	// Generates the XHR and display's content
 	queryString = $('#queryGenerated').val();
 	$.getJSON(queryString, function (data, status) {
-		console.log(data);
 		$('#queryResult').val(JSON.stringify(data, null, 2));
-	})
+	});
 }
 
 function constructQuery() {
@@ -81,6 +119,62 @@ function constructQuery() {
 		$('#queryGenerated').val(constructedURL);
 	}
 	else {
-		$('#queryGenerated').val('You have to fill in the required values in search to constuct the URL');
+		var query = $('#query').val();
+		var timeZoneOffset = $('#timezoneoffset').val();
+		var serviceURL = $(location).attr('href').split('apps/LQL/')[0];
+		var constructedURL = serviceURL;
+		var from = $('#from').val();
+		var since = $('#since').val();
+		var until = $('#until').val();
+		var near = $('#near').val();
+		var source = $('#source').val();
+		var count = $('#count').val();
+		var limit = $('#limit').val();
+		var minified = minifiedType;
+
+		constructedURL += 'api/'+selectedAPI+'?';
+		if (query != '') {
+			// Query q construction
+			constructedURL += 'timezoneOffset='+timeZoneOffset;
+			if (from != '') {
+				query += ' from:'+from;
+			}
+			if (since != '') {
+				query += ' since:'+since;
+			}
+			if (until != '') {
+				query += ' until:'+until;
+			}
+			if (near != '') {
+				query += ' near:'+near;
+			}
+			constructedURL += '&q='+query;
+
+			// Aggregations fields
+			if (aggregations != '') {
+				var aggQuery = aggregations.join(",");
+				constructedURL += '&fields=' + aggQuery;
+			}
+
+			// Source type
+			if (source != '') {
+				constructedURL += '&source=' + source;
+			}
+
+			// Count
+			if (count != '') {
+				constructedURL += '&count='+count;
+			}
+
+			// Limit
+			if (limit != '') {
+				constructedURL += '&limit='+limit;
+			}
+
+			if (minified != '') {
+				constructedURL += '&minified='+minified;
+			}
+		}
+		$('#queryGenerated').val(constructedURL);
 	}
 }

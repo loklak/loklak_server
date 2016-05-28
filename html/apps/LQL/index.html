@@ -104,6 +104,18 @@
                       Status
                     </label>
                   </div>
+                  <div class="radio">
+                    <label for="api-4">
+                      <input type="radio" name="api" id="api-3" value="threaddump.txt">
+                      Threaddump.txt
+                    </label>
+                  </div>
+                  <div class="radio">
+                    <label for="api-5">
+                      <input type="radio" name="api" id="api-3" value="settings.json">
+                      settings.json <code>Localhost Only</code>
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -140,7 +152,7 @@
               <div class="form-group">
                 <label class="col-md-4 control-label" for="from">Since Date</label>  
                 <div class="col-md-8">
-                  <input id="from" name="since" type="date" placeholder="Enter Since date here" class="form-control input-md">
+                  <input id="since" name="since" type="date" placeholder="Enter Since date here" class="form-control input-md">
                   <span class="help-block">this adds since:YYYY-MM-DD and filters search for only the users</span>  
                 </div>
               </div>
@@ -149,7 +161,7 @@
               <div class="form-group">
                 <label class="col-md-4 control-label" for="from">Until Date</label>  
                 <div class="col-md-8">
-                  <input id="from" name="until" type="date" placeholder="Enter Until date here" class="form-control input-md">
+                  <input id="until" name="until" type="date" placeholder="Enter Until date here" class="form-control input-md">
                   <span class="help-block">this adds until:YYYY-MM-DD and filters search for only the users</span>  
                 </div>
               </div>
@@ -189,8 +201,8 @@
               <div class="form-group">
                 <label class="col-md-4 control-label" for="limit">Limit</label>  
                 <div class="col-md-8">
-                  <input id="count" name="count" type="text" placeholder="Integer value to limit number of results" class="form-control input-md">
-                  <span class="help-block">Use this field to limit number of results</span>  
+                  <input id="limit" name="limit" type="text" placeholder="Integer value to limit number of results" class="form-control input-md">
+                  <span class="help-block">Use this field to limit number of results from aggregations</span>  
                 </div>
               </div>
 
@@ -209,14 +221,6 @@
                 </div>
               </div>
 
-              </div>
-
-              <!-- Button -->
-              <div class="form-group">
-                <label class="col-md-4 control-label" for="submit"></label>
-                <div class="col-md-4">
-                  <button id="submit" name="submit" class="btn btn-success" onclick="constructQuery()">Generate Query URL</button>
-                </div>
               </div>
 
             </fieldset>

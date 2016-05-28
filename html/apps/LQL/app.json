@@ -1,7 +1,7 @@
 {
   "@context":"http://schema.org",
   "@type":"SoftwareApplication",
-  "name":"lql",
+  "name":"LQL",
   "headline":"Loklak Query Language",
   "alternativeHeadline":"Advanced Search Tool for Loklak",
   "applicationCategory":"About project",
