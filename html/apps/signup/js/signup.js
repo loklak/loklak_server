@@ -82,7 +82,16 @@ $(document).ready(function()
             alert("One or more fields are wrong / empty. Please correct");
         } else{
             alert("Success, send to Database");
-            //TODO: Send to Database
+            var mail = $('#email').val();
+            var pwd = $('#pass').val();
+            $.post("/api/signup.json",{
+            	email: mail,
+            	pass: pwd
+            },
+            function(result){
+            	var data = $.parseJSON(result);
+            	alert(data);
+            })
         }
     })
 
