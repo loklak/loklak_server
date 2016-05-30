@@ -84,7 +84,7 @@ $(document).ready(function()
             alert("Success, send to Database");
             var mail = $('#email').val();
             var pwd = $('#pass').val();
-            $.post("SignUpServlet",{
+            $.post("/api/signup.json",{
             	email: mail,
             	pass: pwd
             },
