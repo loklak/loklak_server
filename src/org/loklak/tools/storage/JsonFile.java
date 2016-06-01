@@ -55,7 +55,7 @@ public class JsonFile extends JSONObject {
 		}
 	}
 	
-	public File getFile() {
+	public synchronized File getFile() {
 	    return this.file;
 	}
 	
@@ -65,12 +65,16 @@ public class JsonFile extends JSONObject {
 	 * file writings themself.
 	 * @throws JSONException
 	 */
-	public void commit() throws JSONException {
-		FileWriter writer;
-		try {
-			writer = new FileWriter(file);
+	public synchronized void commit() throws JSONException {
+	    File tmpFile0 = new File(this.file.getParentFile(), this.file.getName() + "." + System.currentTimeMillis());
+	    File tmpFile1 = new File(tmpFile0.getParentFile(), tmpFile0.getName() + "1");
+        try {
+		    FileWriter writer = new FileWriter(tmpFile0);
 			writer.write(this.toString());
 			writer.close();
+            this.file.renameTo(tmpFile1);
+            tmpFile0.renameTo(this.file);
+            tmpFile1.delete();
 		} catch (IOException e) {
 			throw new JSONException(e.getMessage());
 		}
@@ -80,63 +84,63 @@ public class JsonFile extends JSONObject {
 	 * Return a copy of the JSON content
 	 * @return JSONObject json
 	 */
-	public JSONObject toJSONObject(){
+	public synchronized JSONObject toJSONObject(){
 		JSONObject res = new JSONObject();
         res.putAll(this);
         return res;
 	}
 
 	@Override
-	public JSONObject put(String key, boolean value) throws JSONException {
+	public synchronized JSONObject put(String key, boolean value) throws JSONException {
 		super.put(key, value);
 		commit();
 		return this;
 	}
 	
 	@Override
-	public JSONObject put(String key, double value) throws JSONException {
+	public synchronized JSONObject put(String key, double value) throws JSONException {
 		super.put(key, value);
 		commit();
 		return this;
 	}
 	
 	@Override
-	public JSONObject put(String key, Collection<?> value) throws JSONException {
+	public synchronized JSONObject put(String key, Collection<?> value) throws JSONException {
 		super.put(key, value);
 		commit();
 		return this;
 	}
 	
 	@Override
-	public JSONObject put(String key, int value) throws JSONException {
+	public synchronized JSONObject put(String key, int value) throws JSONException {
 		super.put(key, value);
 		commit();
 		return this;
 	}
 	
 	@Override
-	public JSONObject put(String key, long value) throws JSONException {
+	public synchronized JSONObject put(String key, long value) throws JSONException {
 		super.put(key, value);
 		commit();
 		return this;
 	}
 	
 	@Override
-	public JSONObject put(String key, Map<?, ?> value) throws JSONException {
+	public synchronized JSONObject put(String key, Map<?, ?> value) throws JSONException {
 		super.put(key, value);
 		commit();
 		return this;
 	}
 	
 	@Override
-	public JSONObject put(String key, Object value) throws JSONException {
+	public synchronized JSONObject put(String key, Object value) throws JSONException {
 		super.put(key, value);
 		commit();
 		return this;
 	}
 	
 	@Override
-	public Object remove(String key) {
+	public synchronized Object remove(String key) {
 		super.remove(key);
 		commit();
 		return this;

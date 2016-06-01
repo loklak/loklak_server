@@ -47,6 +47,9 @@ import org.eclipse.jetty.server.handler.IPAccessHandler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.server.handler.gzip.GzipHandler;
+import org.eclipse.jetty.server.session.HashSessionIdManager;
+import org.eclipse.jetty.server.session.HashSessionManager;
+import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
@@ -87,8 +90,11 @@ import org.loklak.api.search.ShortlinkFromTweetServlet;
 import org.loklak.api.search.SuggestServlet;
 import org.loklak.api.server.AccessServlet;
 import org.loklak.api.server.CampaignServlet;
+import org.loklak.api.server.LoginServlet;
+import org.loklak.api.server.LoginTestServlet;
 import org.loklak.api.server.UserServlet;
 import org.loklak.api.server.SettingsServlet;
+import org.loklak.api.server.SignUpServlet;
 import org.loklak.api.server.AccountServlet;
 import org.loklak.api.vis.MapServlet;
 import org.loklak.api.vis.MarkdownServlet;
@@ -519,6 +525,9 @@ public class LoklakServer {
         accountServletHolder.getRegistration().setMultipartConfig(new MultipartConfigElement(tmp.getAbsolutePath()));
         servletHandler.addServlet(accountServletHolder, "/api/account.json");
         servletHandler.addServlet(UserServlet.class, "/api/user.json");
+        servletHandler.addServlet(SignUpServlet.class, "/api/signup.json");
+        servletHandler.addServlet(LoginServlet.class, "/api/login.json");
+        servletHandler.addServlet(LoginTestServlet.class, "/api/logintest.json");
         servletHandler.addServlet(CampaignServlet.class, "/api/campaign.json");
         servletHandler.addServlet(ImportProfileServlet.class, "/api/import.json");
         servletHandler.addServlet(SettingsServlet.class, "/api/settings.json");
@@ -582,10 +591,16 @@ public class LoklakServer {
         gzipHandler.setIncludedMimeTypes("text/html,text/plain,text/xml,text/css,application/javascript,text/javascript,application/json");
         gzipHandler.setHandler(handlerlist2);
         
-        securityHandler.setHandler(gzipHandler);
+        HashSessionIdManager idmanager = new HashSessionIdManager();
+        LoklakServer.server.setSessionIdManager(idmanager);
+        SessionHandler sessions = new SessionHandler(new HashSessionManager());
+        sessions.setHandler(gzipHandler);
+        securityHandler.setHandler(sessions);
         ipaccess.setHandler(securityHandler);
         
         LoklakServer.server.setHandler(ipaccess);
+        
+        
     }
     
     private static void checkServerPorts(int httpPort, int httpsPort) throws IOException{
