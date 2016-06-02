@@ -24,6 +24,8 @@
     <script src="../../js/angular.min.js"></script>
     <script src="../../js/angular-route.min.js"></script>
     <script src="../../js/loklak.js"></script>
+    <script src="../../js/jquery.min.js"></script>
+    <script src="js/loginpage.js"></script>
   </head>
 
   <body>
@@ -31,6 +33,12 @@
     <nav class="navbar navbar-inverse navbar-fixed-top">
       <div class="container-fluid">
         <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
           <a class="navbar-brand" href="http://loklak.org"><img src="../../images/loklak_org.png" height="24" style="float:left;"></a>
         </div>
         <div id="navbar" class="navbar-collapse collapse" ng-controller="topmenu">
@@ -41,19 +49,33 @@
       </div>
     </nav>
     <br><br><br>
-    <p align="center">Log in to Loklak</p>
     <br>
-    <div class = "form">
-      <input type = "text" placeholder="Email" required>
+    <p style="margin-left:30%;">Log in to Loklak!</p>
+    <div class = "form"> 
+      <br><br>
+      <div class = "fields">
+        <input type = "text" id="email" placeholder="Email" required>
+        <label id = "emailfield"></label>
+      </div>
+
       <div class="bar">
           <i></i>
       </div>
-      <input name="pass" type="password" placeholder="Password" required>
+
+      <div class = "fields">
+        <input name = "pass" id="pass" type="password" placeholder="Password" required>
+        <label id = "passfield"></label>
+      </div>
       <br>
-      <a href="../signup/index.html"><p style="font-size:15px;float:left">Sign Up</p></a>
-      <p style="font-size:15px;float:right;">Forgot Password?</p>
-      <br><br><br>
-      <a href = "#"><button>Login</button></a>
+      <div class = "options">
+        <input type = "checkbox" id = "remember">
+        <label for = "remember" id = "rememberme">Remember me</label>
+        <a href="../signup/index.html"><p id = "signupopt">Sign Up</p></a>
+      </div>
+      <br><br>
+      <a href = "#"><button id = "login">Login</button></a>
+      <br><br>
+      <p style="font-size:15px; margin-left:24%;">Forgot Password?</p>  
     </div>
 
     <!-- Bootstrap core JavaScript
