@@ -48,6 +48,7 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
     private String[] serverProtocolHostStub = null;
     private static Long defaultCookieTime = (long) (60 * 60 * 24 * 7);
     private static Long defaultAnonymousTime = (long) (60 * 60 * 24);
+    private static final String expire_string = "expires_on";
 
     public AbstractAPIHandler() {
         this.serverProtocolHostStub = null;
@@ -283,7 +284,7 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
 	            				ClientCredential cookieCredential = new ClientCredential(ClientCredential.Type.cookie, loginToken);
 	            				JSONObject user_obj = new JSONObject();
 	            				user_obj.put("id",identity.toString());
-	            				user_obj.put("expires_on", Instant.now().getEpochSecond() + defaultCookieTime);
+	            				user_obj.put(expire_string, Instant.now().getEpochSecond() + defaultCookieTime);
 	            				DAO.authentication.put(cookieCredential.toString(), user_obj);
 	        	    			
 	            				response.addCookie(loginCookie);
@@ -337,7 +338,7 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
         else{
         	authentication_obj = new JSONObject();
         }
-        authentication_obj.put("expires_on", Instant.now().getEpochSecond() + defaultAnonymousTime);
+        authentication_obj.put(expire_string, Instant.now().getEpochSecond() + defaultAnonymousTime);
     	
         DAO.authentication.put(credential.toString(), authentication_obj);
         return new ClientIdentity(credential.toString());

@@ -75,6 +75,7 @@ import org.loklak.tools.DateParser;
 import org.loklak.tools.OS;
 import org.loklak.tools.storage.JsonDataset;
 import org.loklak.tools.storage.JsonFile;
+import org.loklak.tools.storage.JsonFileAAA;
 import org.loklak.tools.storage.JsonReader;
 import org.loklak.tools.storage.JsonRepository;
 import org.loklak.tools.storage.JsonStreamReader;
@@ -141,7 +142,7 @@ public class DAO {
     public static Peers peers = new Peers();
     
     // AAA Schema for server usage
-    public static JsonFile authentication;
+    public static JsonFileAAA authentication;
     public static JsonFile authorization;
     public static JsonFile accounting_persistent;
     public static Map<String, Accounting> accounting_temporary = new HashMap<>();
@@ -221,7 +222,7 @@ public class DAO {
         Path settings_dir = dataPath.resolve("settings");
         settings_dir.toFile().mkdirs();
         Path authentication_path = settings_dir.resolve("authentication.json");
-        authentication = new JsonFile(authentication_path.toFile());
+        authentication = new JsonFileAAA(authentication_path.toFile());
         OS.protectPath(authentication_path);
         Path authorization_path = settings_dir.resolve("authorization.json");
         authorization = new JsonFile(authorization_path.toFile());

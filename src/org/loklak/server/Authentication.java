@@ -31,6 +31,7 @@ public class Authentication {
 
     private JsonFile parent;
     private JSONObject json;
+    private static final String expire_string = "expires_on";
 
     /**
      * create a new authentication object. The given json object must be taken
@@ -56,12 +57,12 @@ public class Authentication {
     }
 
     public void setExpireTime(long time){
-    	this.json.put("expires_on", Instant.now().getEpochSecond() + time);
+    	this.json.put(expire_string, Instant.now().getEpochSecond() + time);
     	if (this.parent != null) this.parent.commit();
     }
     
     public boolean checkExpireTime(){
-    	if(this.json.has("expires_on") && this.json.getLong("expires_on") > Instant.now().getEpochSecond()) return true;
+    	if(this.json.has(expire_string) && this.json.getLong(expire_string) > Instant.now().getEpochSecond()) return true;
     	return false;
     }
 }

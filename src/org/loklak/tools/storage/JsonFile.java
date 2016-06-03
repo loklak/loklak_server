@@ -1,6 +1,6 @@
 /**
  *  JsonFile
- *  Copyright 22.02.2015 by Robert Mader, @treba123
+ *  Copyright 03.06.2016 by Robert Mader, @treba123
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -25,6 +25,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -142,6 +143,19 @@ public class JsonFile extends JSONObject {
 	@Override
 	public synchronized Object remove(String key) {
 		super.remove(key);
+		commit();
+		return this;
+	}
+	
+	/**
+	 * Remove multiple keys but write only once to disk
+	 * @param keys
+	 * @return
+	 */
+	public synchronized Object removeSet(Set<String> keys) {
+		for(String key : keys){
+			super.remove(key);
+		}
 		commit();
 		return this;
 	}
