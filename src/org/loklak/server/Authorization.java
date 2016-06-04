@@ -19,7 +19,6 @@
 
 package org.loklak.server;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.loklak.tools.storage.JsonFile;
 

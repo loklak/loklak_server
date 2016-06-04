@@ -104,6 +104,8 @@ import org.loklak.server.FileHandler;
 import org.loklak.server.HttpsMode;
 import org.loklak.tools.Browser;
 import org.loklak.tools.OS;
+import org.loklak.tools.storage.DatabaseCleanupThread;
+import org.loklak.tools.storage.JsonFileAAA;
 
 
 public class LoklakServer {
@@ -115,6 +117,7 @@ public class LoklakServer {
     private static Caretaker caretaker = null;
     public  static QueuedIndexing queuedIndexing = null;
     private static DumpImporter dumpImporter = null;
+    private static DatabaseCleanupThread databaseCleanup = null;
     private static HttpsMode httpsMode = HttpsMode.OFF;
     
     public static Map<String, String> readConfig(Path data) throws IOException {
@@ -230,7 +233,9 @@ public class LoklakServer {
         LoklakServer.queuedIndexing.start();
         LoklakServer.dumpImporter = new DumpImporter(Integer.MAX_VALUE);
         LoklakServer.dumpImporter.start();
-        
+        JsonFileAAA[] files = {DAO.authentication};
+        LoklakServer.databaseCleanup = new DatabaseCleanupThread(files);
+        LoklakServer.databaseCleanup.start();
         
         // read upgrade interval
         Caretaker.upgradeTime = Caretaker.startupTime + DAO.getConfig("upgradeInterval", 86400000);
@@ -255,6 +260,7 @@ public class LoklakServer {
                     LoklakServer.dumpImporter.shutdown();
                     LoklakServer.queuedIndexing.shutdown();
                     LoklakServer.caretaker.shutdown();
+                    LoklakServer.databaseCleanup.shutdown();
                     LoklakServer.server.stop();
                     DAO.close();
                     TwitterScraper.executor.shutdown();
