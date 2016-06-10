@@ -8,19 +8,12 @@ using System.Net;
 //using System.Text;
 using System.Threading.Tasks;
 
-namespace FacebookSaearch
-{
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            
-                string pageName=args[1];
-                y(pageName);
-            
-        }
 
-        static void y(string pageName) {
+    public class FacebookSaearch
+    {
+        public FacebookSaearch(){}
+
+        public static void y(string pageName) {
 
             WebClient fbaccess = new WebClient();
             fbaccess.Proxy.Credentials = CredentialCache.DefaultNetworkCredentials;
