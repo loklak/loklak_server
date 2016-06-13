@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
 import org.loklak.data.Classifier;
 import org.loklak.data.DAO;
@@ -38,22 +39,12 @@ import org.loklak.data.Classifier.Category;
 import org.loklak.data.Classifier.Context;
 import org.loklak.geo.GeoMark;
 import org.loklak.geo.LocationSource;
-import org.loklak.harvester.SourceType;
 import org.loklak.objects.QueryEntry.PlaceContext;
 import org.loklak.tools.bayes.Classification;
 
-public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
+public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
 
-    public static enum ProviderType {
     
-        NOONE,   // value assigned during instantiation phase
-        SCRAPED, // scraped with this peer from a remote service
-        IMPORT,  // external resource imported with special reader
-        GENERIC, // pushed as single message at this peer
-        REMOTE,  // pushed as message bulk from a remote peer
-        GEOJSON; // geojson feature collection provided from remote peer
-    
-    }
 
     public static final String RICH_TEXT_SEPARATOR = "\n***\n";
     
@@ -84,7 +75,7 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
         this.created_at = new Date();
         this.on = null;
         this.to = null;
-        this.source_type = SourceType.USER;
+        this.source_type = SourceType.TWITTER;
         this.provider_type = ProviderType.NOONE;
         this.provider_hash = "";
         this.screen_name = "";
@@ -119,15 +110,15 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
     }
 
     public MessageEntry(JSONObject json) {
-        Object timestamp_obj = lazyGet(json, AbstractIndexEntry.TIMESTAMP_FIELDNAME); this.timestamp = parseDate(timestamp_obj);
+        Object timestamp_obj = lazyGet(json, AbstractObjectEntry.TIMESTAMP_FIELDNAME); this.timestamp = parseDate(timestamp_obj);
         Object created_at_obj = lazyGet(json, "created_at"); this.created_at = parseDate(created_at_obj);
         Object on_obj = lazyGet(json, "on"); this.on = on_obj == null ? null : parseDate(on);
         Object to_obj = lazyGet(json, "to"); this.to = to_obj == null ? null : parseDate(to);
         String source_type_string = (String) lazyGet(json, "source_type");
         try {
-            this.source_type = source_type_string == null ? SourceType.USER : SourceType.valueOf(source_type_string);
+            this.source_type = source_type_string == null ? SourceType.TWITTER : new SourceType(source_type_string);
         } catch (IllegalArgumentException e) {
-            this.source_type = SourceType.USER;
+            this.source_type = SourceType.TWITTER;
         }
         String provider_type_string = (String) lazyGet(json, "provider_type");
         if (provider_type_string == null) provider_type_string = ProviderType.GENERIC.name();
@@ -416,7 +407,7 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
     }
     
     final static Pattern SPACEX_PATTERN = Pattern.compile("  +"); // two or more
-    final static Pattern URL_PATTERN = Pattern.compile("(?:\\b|^)(https?://.*?)(?:[) ]|$)"); // right boundary must be space since others may appear in urls
+    final static Pattern URL_PATTERN = Pattern.compile("(?:\\b|^)(https?://[-A-Za-z0-9+&@#/%?=~_()|!:,.;]*[-A-Za-z0-9+&@#/%=~_()|])"); // right boundary must be space or ) since others may appear in urls
     final static Pattern USER_PATTERN = Pattern.compile("(?:[ (]|^)(@..*?)(?:\\b|$)"); // left boundary must be space since the @ is itself a boundary
     final static Pattern HASHTAG_PATTERN = Pattern.compile("(?:[ (]|^)(#..*?)(?:\\b|$)"); // left boundary must be a space since the # is itself a boundary
 
@@ -526,7 +517,7 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
         JSONObject m = new JSONObject(true);
 
         // tweet data
-        m.put(AbstractIndexEntry.TIMESTAMP_FIELDNAME, utcFormatter.print(getTimestamp().getTime()));
+        m.put(AbstractObjectEntry.TIMESTAMP_FIELDNAME, utcFormatter.print(getTimestamp().getTime()));
         m.put("created_at", utcFormatter.print(getCreatedAt().getTime()));
         if (this.on != null) m.put("on", utcFormatter.print(this.on.getTime()));
         if (this.to != null) m.put("to", utcFormatter.print(this.to.getTime()));
@@ -537,7 +528,7 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
         m.put("id_str", this.id_str);
         if (this.canonical_id != null) m.put("canonical_id", this.canonical_id);
         if (this.parent != null) m.put("parent", this.parent);
-        m.put("source_type", this.source_type.name());
+        m.put("source_type", this.source_type.toString());
         m.put("provider_type", this.provider_type.name());
         if (this.provider_hash != null && this.provider_hash.length() > 0) m.put("provider_hash", this.provider_hash);
         m.put("retweet_count", this.retweet_count);
@@ -614,7 +605,7 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
                 s = s.substring(0, p) + ((unicode == 10 || unicode == 13) ? "\n" : ((char) unicode)) + s.substring(q + 1);
             }
         } catch (Throwable e) {
-            e.printStackTrace();
+        	Log.getLog().warn(e);
         }
         // octal coding \\u
         try {
@@ -624,7 +615,7 @@ public class MessageEntry extends AbstractIndexEntry implements IndexEntry {
                 s = s.substring(0, p) + r + s.substring(p + 6);
             }
         } catch (Throwable e) {
-            e.printStackTrace();
+        	Log.getLog().warn(e);
         }
         // remove tags
         s = A_END_TAG.matcher(s).replaceAll("");

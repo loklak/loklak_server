@@ -19,6 +19,7 @@
 
 package org.loklak.objects;
 
+import org.eclipse.jetty.util.log.Log;
 import org.elasticsearch.common.Base64;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -31,7 +32,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 
-public class UserEntry extends AbstractIndexEntry implements IndexEntry {
+public class UserEntry extends AbstractObjectEntry implements ObjectEntry {
 
     public final static String field_screen_name = "screen_name"; // used as id of the record
     public final static String field_user_id = "user_id"; // to reference the id of the providing service (here: twitter)
@@ -71,8 +72,13 @@ public class UserEntry extends AbstractIndexEntry implements IndexEntry {
     }
 
     
-    public String getType() {
-        return parseString((String) this.map.get("$type"));
+    public SourceType getType() {
+        try {
+            return new SourceType(parseString((String) this.map.get("$type")));
+        } catch (RuntimeException e) {
+        	Log.getLog().warn(e);
+            return null;
+        }
     }
     
     public Number getUser() {

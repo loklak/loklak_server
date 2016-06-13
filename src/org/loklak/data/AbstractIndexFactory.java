@@ -26,14 +26,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.json.JSONObject;
-import org.loklak.harvester.SourceType;
-import org.loklak.objects.AbstractIndexEntry;
-import org.loklak.objects.IndexEntry;
+import org.loklak.objects.AbstractObjectEntry;
+import org.loklak.objects.ObjectEntry;
+import org.loklak.objects.SourceType;
 import org.loklak.tools.CacheMap;
 import org.loklak.tools.CacheSet;
 import org.loklak.tools.CacheStats;
@@ -43,16 +41,13 @@ import org.loklak.tools.CacheStats;
  * curl "http://localhost:9000/api/account.json?screen_name=test"
  * curl -g "http://localhost:9000/api/account.json?action=update&data={\"screen_name\":\"test\",\"apps\":{\"wall\":{\"type\":\"vertical\"}}}"
  */
-public abstract class AbstractIndexFactory<Entry extends IndexEntry> implements IndexFactory<Entry> {
-    
-    private final static int MAX_BULK_SIZE = 1500;
+public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> implements IndexFactory<IndexObject> {
     
     protected final ElasticsearchClient elasticsearch_client;
-    protected final CacheMap<String, Entry> objectCache;
+    protected final CacheMap<String, IndexObject> objectCache;
     private CacheSet<String> existCache;
     protected final String index_name;
-    private AtomicLong indexWrite, indexExist, indexGet;    
-    private BlockingQueue<ElasticsearchClient.BulkEntry> bulkCache = new ArrayBlockingQueue<>(2 * MAX_BULK_SIZE);
+    private AtomicLong indexWrite, indexExist, indexGet;
 
     public AbstractIndexFactory(final ElasticsearchClient elasticsearch_client, final String index_name, final int cacheSize, final int existSize) {
         this.elasticsearch_client = elasticsearch_client;
@@ -85,10 +80,10 @@ public abstract class AbstractIndexFactory<Entry extends IndexEntry> implements 
         return json;
     }
     
-    public Entry read(String id) throws IOException {
+    public IndexObject read(String id) throws IOException {
         assert id != null;
         if (id == null) return null;
-        Entry entry = this.objectCache.get(id);
+        IndexObject entry = this.objectCache.get(id);
         if (entry != null) {
             this.existCache.add(id);
             return entry;
@@ -136,7 +131,7 @@ public abstract class AbstractIndexFactory<Entry extends IndexEntry> implements 
     public boolean delete(String id, SourceType sourceType) {
         this.objectCache.remove(id);
         this.existCache.remove(id);
-        return elasticsearch_client.delete(index_name, sourceType.name(), id);
+        return elasticsearch_client.delete(index_name, sourceType.toString(), id);
     }
 
     @Override
@@ -148,12 +143,12 @@ public abstract class AbstractIndexFactory<Entry extends IndexEntry> implements 
         return new JSONObject(map);
     }
 
-    public boolean writeEntry(String id, String type, Entry entry) throws IOException {
-        this.objectCache.put(id, entry);
-        this.existCache.add(id);
-        bulkCacheFlush();
+    @Override
+    public boolean writeEntry(IndexEntry<IndexObject> entry) throws IOException {
+        this.objectCache.put(entry.getId(), entry.getObject());
+        this.existCache.add(entry.getId());
         // record user into search index
-        JSONObject json = entry.toJSON();
+        JSONObject json = entry.getObject().toJSON();
         if (json == null) return false;
         
         /*
@@ -162,52 +157,36 @@ public abstract class AbstractIndexFactory<Entry extends IndexEntry> implements 
          *   XContentBuilder builder = XContentFactory.contentBuilder(XContentType.JSON);
          *   builder.map(source);
          */
-        if (!json.has(AbstractIndexEntry.TIMESTAMP_FIELDNAME)) json.put(AbstractIndexEntry.TIMESTAMP_FIELDNAME, AbstractIndexEntry.utcFormatter.print(System.currentTimeMillis()));
-        boolean newDoc = elasticsearch_client.writeMap(this.index_name, json.toMap(), type, id);
+        if (!json.has(AbstractObjectEntry.TIMESTAMP_FIELDNAME)) json.put(AbstractObjectEntry.TIMESTAMP_FIELDNAME, AbstractObjectEntry.utcFormatter.print(System.currentTimeMillis()));
+        boolean newDoc = elasticsearch_client.writeMap(this.index_name, json.toMap(), entry.getType().toString(), entry.getId());
         this.indexWrite.incrementAndGet();
         return newDoc;
     }
 
-    public void writeEntryBulk(String id, String type, Entry entry) throws IOException {
-        this.objectCache.put(id, entry);
-        this.existCache.add(id);
-        Map<String, Object> jsonMap = entry.toJSON().toMap();
-        assert jsonMap != null;
-        if (jsonMap == null) return;
-        ElasticsearchClient.BulkEntry be = new ElasticsearchClient.BulkEntry(id, type, AbstractIndexEntry.TIMESTAMP_FIELDNAME, null, jsonMap);
-        try {
-            bulkCache.put(be);
-        } catch (InterruptedException e) {
-            throw new IOException(e.getMessage());
-        } finally {
-            if (bulkCacheSize() >= MAX_BULK_SIZE) bulkCacheFlush(); // protect against OOM
-        }
-    }
-    
-    public int bulkCacheSize() {
-        return this.bulkCache.size();
-    }
+    @Override
+    public ElasticsearchClient.BulkWriteResult writeEntries(Collection<IndexEntry<IndexObject>> entries) throws IOException {
 
-    public List<Map.Entry<String, String>> bulkCacheFlush() {
-        if (this.bulkCache.size() == 0) return new ArrayList<Map.Entry<String, String>>(0);
-        
-        int count = 0;
         List<ElasticsearchClient.BulkEntry> jsonMapList = new ArrayList<ElasticsearchClient.BulkEntry>();
-        while (this.bulkCache.size() > 0) {
-            ElasticsearchClient.BulkEntry be = this.bulkCache.poll();
-            if (be == null) break;
+        
+        for (IndexEntry<IndexObject> entry: entries) {
+            this.objectCache.put(entry.getId(), entry.getObject());
+            this.existCache.add(entry.getId());
+
+            Map<String, Object> jsonMap = entry.getObject().toJSON().toMap();
+            assert jsonMap != null;
+            if (jsonMap == null) continue;
+            ElasticsearchClient.BulkEntry be = new ElasticsearchClient.BulkEntry(entry.getId(), entry.getType().toString(), AbstractObjectEntry.TIMESTAMP_FIELDNAME, null, jsonMap);
+
             jsonMapList.add(be);
-            count++;
-            if (count >= MAX_BULK_SIZE) break; // protect against OOM, the cache can be filled concurrently
         }
-        if (count == 0) return new ArrayList<Map.Entry<String, String>>(0);
-        List<Map.Entry<String, String>> errors = elasticsearch_client.writeMapBulk(this.index_name, jsonMapList);
+        if (jsonMapList.size() == 0) return ElasticsearchClient.EMPTY_BULK_RESULT;
+        
+        ElasticsearchClient.BulkWriteResult result = elasticsearch_client.writeMapBulk(this.index_name, jsonMapList);
         this.indexWrite.addAndGet(jsonMapList.size());
-        return errors;
+        return result;
     }
     
     public void close() {
-        this.bulkCacheFlush();
     }
 
 }

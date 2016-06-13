@@ -43,11 +43,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.eclipse.jetty.util.log.Log;
 import org.loklak.Caretaker;
 import org.loklak.QueuedIndexing;
 import org.loklak.data.DAO;
 import org.loklak.http.ClientConnection;
 import org.loklak.objects.MessageEntry;
+import org.loklak.objects.ProviderType;
+import org.loklak.objects.SourceType;
 import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
 
@@ -112,13 +115,13 @@ public class TwitterScraper {
                 BufferedReader br = new BufferedReader(new InputStreamReader(connection.inputStream, StandardCharsets.UTF_8));
                 timelines = search(br, order, writeToIndex, writeToBackend);
             } catch (IOException e) {
-               e.printStackTrace();
+            	Log.getLog().warn(e);
             } finally {
                 connection.close();
             }
         } catch (IOException e) {
             // this could mean that twitter rejected the connection (DoS protection?) or we are offline (we should be silent then)
-            // e.printStackTrace();
+            // Log.getLog().warn(e);
             if (timelines == null) timelines = new Timeline[]{new Timeline(order), new Timeline(order)};
         };
 
@@ -144,7 +147,7 @@ public class TwitterScraper {
             BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
             timelines = search(br, order, writeToIndex, writeToBackend);
         } catch (IOException e) {
-            e.printStackTrace();
+        	Log.getLog().warn(e);
         } finally {
             if (timelines == null) timelines = new Timeline[]{new Timeline(order), new Timeline(order)};
         }
@@ -221,6 +224,10 @@ public class TwitterScraper {
                 continue;
             }
             if ((p = input.indexOf("class=\"TweetTextSize")) > 0) {
+                // read until closing p tag to account for new lines in tweets
+                while (input.lastIndexOf("</p>") == -1){
+                  input = input + ' ' + br.readLine();
+                }
                 prop tweettext = new prop(input, p, null);
                 props.put("tweettext", tweettext);
                 continue;
@@ -367,10 +374,10 @@ public class TwitterScraper {
     }
     
 
-    final static Pattern hashtag_pattern = Pattern.compile("<a .*?href=\"(.*?)\".*?class=\"twitter-hashtag.*?\".*?><s>#</s><b>(.*?)</b></a>");
-    final static Pattern timeline_link_pattern = Pattern.compile("<a .*?href=\"(.*?)\".*?data-expanded-url=\"(.*?)\".*?twitter-timeline-link.*?title=\"(.*?)\".*?>.*?</a>");
-    final static Pattern timeline_embed_pattern = Pattern.compile("<a .*?href=\"(.*?)\".*?twitter-timeline-link.*?>pic.twitter.com/(.*?)</a>");
-    final static Pattern emoji_pattern = Pattern.compile("<img .*?class=\"twitter-emoji\".*?alt=\"(.*?)\".*?>");
+    final static Pattern hashtag_pattern = Pattern.compile("<a href=\"/hashtag/.*?\".*?class=\"twitter-hashtag.*?\".*?><s>#</s><b>(.*?)</b></a>");
+    final static Pattern timeline_link_pattern = Pattern.compile("<a href=\"https://(.*?)\".*? data-expanded-url=\"(.*?)\".*?twitter-timeline-link.*?title=\"(.*?)\".*?>.*?</a>");
+    final static Pattern timeline_embed_pattern = Pattern.compile("<a href=\"(https://t.co/\\w+)\" class=\"twitter-timeline-link.*?>pic.twitter.com/(.*?)</a>");
+    final static Pattern emoji_pattern = Pattern.compile("<img .*?class=\"Emoji Emoji--forText\".*?alt=\"(.*?)\".*?>");
     final static Pattern doublespace_pattern = Pattern.compile("  ");
     final static Pattern cleanup_pattern = Pattern.compile(
         "</?(s|b|strong)>|" +
@@ -460,7 +467,7 @@ public class TwitterScraper {
                 if (this.writeToBackend) Caretaker.transmitMessage(this, this.user);
                 //DAO.log("TwitterTweet [" + this.id_str + "] transmit  after " + (System.currentTimeMillis() - start) + "ms");
             } catch (Throwable e) {
-                e.printStackTrace();
+            	Log.getLog().warn(e);
             } finally {
                 this.ready.release(1000);
             }
@@ -493,39 +500,39 @@ public class TwitterScraper {
                     continue;
                 }
             } catch (Throwable e) {
-                e.printStackTrace();
+            	Log.getLog().warn(e);
                 break;
             }
             try {
                 Matcher m = hashtag_pattern.matcher(text);
                 if (m.find()) {
-                    text = m.replaceFirst(" #" + m.group(2) + " "); // the extra spaces are needed because twitter removes them if the hashtag is followed with a link
+                    text = m.replaceFirst(" #" + m.group(1) + " "); // the extra spaces are needed because twitter removes them if the hashtag is followed with a link
                     continue;
                 }
             } catch (Throwable e) {
-                e.printStackTrace();
+            	Log.getLog().warn(e);
                 break;
             }
             try {
                 Matcher m = timeline_link_pattern.matcher(text);
                 if (m.find()) {
                     String expanded = RedirectUnshortener.unShorten(m.group(2));
-                    text = m.replaceFirst(expanded);
+                    text = m.replaceFirst(" " + expanded);
                     continue;
                 }
             } catch (Throwable e) {
-                e.printStackTrace();
+            	Log.getLog().warn(e);
                 break;
             }
             try {
                 Matcher m = timeline_embed_pattern.matcher(text);
                 if (m.find()) {
                     String shorturl = RedirectUnshortener.unShorten(m.group(2));
-                    text = m.replaceFirst("https://pic.twitter.com/" + shorturl + " ");
+                    text = m.replaceFirst(" https://pic.twitter.com/" + shorturl + " ");
                     continue;
                 }
             } catch (Throwable e) {
-                e.printStackTrace();
+            	Log.getLog().warn(e);
                 break;
             }
             break;

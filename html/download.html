@@ -1,32 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" ng-app="loklak">
   <head>
-    <meta charset="utf-8">
-    <meta name="robots" content="index,follow">
-    <meta http-equiv="cache-control" content="public">
-    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="loklak.org - Download and Installation">
-    <meta name="Content-Language" content="en, english"/>
-    <meta name="keywords" lang="en-us" content="search,search engine,twitter,messages,microblogging,elasticsearch,json,api,kibana,loklak"/>
-    <meta name="author" content="@0rb1t3r">
-    <link rel="icon" type="image/png" href="artwork/favicon.png">
-    <title>loklak.org - Download</title>
-      
-    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <!--#include file="../ssi/common_head_front.include" -->
+    <meta name="description" content="loklak is free software, licensed with LGPL. To install loklak, you need JDK 1.8, git and ant.">
+    <meta name="author" content="Michael Peter Christen, @0rb1t3r">
+    <link rel="canonical" href="http://loklak.org/download.html" />
     <link href="css/dashboard.css" rel="stylesheet">
-    <link href="css/loklak.css" rel="stylesheet">
-
-    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
-    <!--[if lt IE 9]>
-      <script src="js/html5shiv.min.js"></script>
-      <script src="js/respond.min.js"></script>
-    <![endif]-->
+    <title>loklak.org - Download and Installation</title>
+    <!--#include file="../ssi/common_head_back.include" -->
+    <!--#include file="../data/ssi/custom_head.include" -->
   </head>
 
   <body data-spy="scroll" data-target="#navSidebar" data-offset="50">
-
+    <!--#include file="../data/ssi/custom_body_front.include" -->
+    <!--#include file="../ssi/common_body_front.include" -->
     <nav class="navbar navbar-inverse navbar-fixed-top">
       <div class="container-fluid">
         <div class="navbar-header">
@@ -36,23 +23,12 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="http://loklak.org"><img src="images/loklak_org.png" height="24" style="float:left;">: Download</a>
+          <a class="navbar-brand" href="http://loklak.org"><img src="/images/loklak_org.png" height="24" style="float: left;" alt="loklak.org" title="loklak.org message server">: Download</a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
           <ul class="nav navbar-nav navbar-right">
-            <li><a href="index.html">Home</a></li>
-            <li><a href="about.html">About</a></li>
-            <li><a href="showcase.html">Showcase</a></li>
-            <li><a href="architecture.html">Architecture</a></li>
-            <li class="active"><a href="download.html">Download</a></li>
-            <li><a href="tutorials.html">Tutorials</a></li>
-            <li><a href="api.html">API</a></li>
-            <li><a href="dump.html">Dumps</a></li>
-            <li><a href="apps/">Apps</a></li>
+            <!-- This will get populated -->
           </ul>
-          <!-- <form action="/api/search.json" class="navbar-form navbar-right">
-            <input name="q" id="query" type="text" class="form-control" placeholder="Search Tweets...">
-          </form> -->
         </div>
       </div>
     </nav>
@@ -73,7 +49,7 @@
         </div>
         <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
           <h1 class="page-header">Download and Installation</h1>
-          <p><code>loklak</code> is free software, licensed with LGPL. To install <code>loklak</code>, you need a JDK, git and ant. If you don't know what this is, then <code>loklak</code> is currently not something for you.</p>
+          <p><code>loklak</code> is free software, licensed with LGPL. To install <code>loklak</code>, you need JDK 1.8, git and ant. If you don't know what this is, then <code>loklak</code> is currently not something for you.</p>
         <p>At this time, <code>loklak</code> is not provided in compiled form, you must build it yourself. It's not difficult and done in one minute!</p>
 		  
 		  <br/><br/>
@@ -186,13 +162,7 @@
         </div>
       </div>
     </div>
-    
-    <!-- Bootstrap core JavaScript
-    ================================================== -->
-    <!-- Placed at the end of the document so the pages load faster -->
-    <script src="js/jquery.min.js" async></script>
-    <script src="js/bootstrap.min.js" async></script>
-    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
-    <script src="js/ie10-viewport-bug-workaround.js" async></script>
+    <!--#include file="../ssi/common_body_back.include" -->
+    <!--#include file="../data/ssi/custom_body_back.include" -->
   </body>
 </html>

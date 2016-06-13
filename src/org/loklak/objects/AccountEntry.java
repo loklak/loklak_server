@@ -22,9 +22,8 @@ package org.loklak.objects;
 import java.io.IOException;
 import java.util.Date;
 import org.json.JSONObject;
-import org.loklak.harvester.SourceType;
 
-public class AccountEntry extends AbstractIndexEntry implements IndexEntry {
+public class AccountEntry extends AbstractObjectEntry implements ObjectEntry {
 
     public enum Field {
         screen_name,
@@ -56,7 +55,7 @@ public class AccountEntry extends AbstractIndexEntry implements IndexEntry {
         if (this.json.has(Field.source_type.name())) {
             // verify the type
             try {
-                SourceType st = SourceType.valueOf((String) this.json.get(Field.source_type.name()));
+                SourceType st = new SourceType((String) this.json.get(Field.source_type.name()));
                 this.json.put(Field.source_type.name(), st.toString());
             } catch (IllegalArgumentException e) {
                 throw new IOException(Field.source_type.name() + " contains unknown type " + (String) this.json.get(Field.source_type.name()));
@@ -85,7 +84,7 @@ public class AccountEntry extends AbstractIndexEntry implements IndexEntry {
         Object st = this.json.get(Field.source_type.name());
         if (st == null) return SourceType.TWITTER;
         if (st instanceof SourceType) return (SourceType) st;
-        if (st instanceof String) return SourceType.valueOf((String) st);
+        if (st instanceof String) return new SourceType((String) st);
         return SourceType.TWITTER;
     }
 

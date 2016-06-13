@@ -21,12 +21,15 @@ package org.loklak;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
+import org.loklak.data.IndexEntry;
 import org.loklak.objects.MessageEntry;
 import org.loklak.objects.UserEntry;
 import org.loklak.tools.storage.JsonFactory;
@@ -86,6 +89,8 @@ public class DumpImporter extends Thread {
                     public void run() {
                         JsonFactory tweet;
                         try {
+                            List<IndexEntry<UserEntry>> userBulk = new ArrayList<>();
+                            List<IndexEntry<MessageEntry>> messageBulk = new ArrayList<>();
                             while ((tweet = dumpReader.take()) != JsonStreamReader.POISON_JSON_MAP) {
                                 try {
                                     JSONObject json = tweet.getJSON();
@@ -94,16 +99,28 @@ public class DumpImporter extends Thread {
                                     UserEntry u = new UserEntry(user);
                                     MessageEntry t = new MessageEntry(json);
                                     // record user into search index
-                                    DAO.users.writeEntryBulk(u.getScreenName(), t.getSourceType().name(), u);
-                                    DAO.messages.writeEntryBulk(t.getIdStr(), t.getSourceType().name(), t);
+                                    userBulk.add(new IndexEntry<UserEntry>(u.getScreenName(), t.getSourceType(), u));
+                                    messageBulk.add(new IndexEntry<MessageEntry>(t.getIdStr(), t.getSourceType(), t));
+                                    if (userBulk.size() > 1500 || messageBulk.size() > 1500) {
+                                        DAO.users.writeEntries(userBulk);
+                                        DAO.messages.writeEntries(messageBulk);
+                                        userBulk.clear();
+                                        messageBulk.clear();
+                                    }
                                     newTweets.incrementAndGet();
                                 } catch (IOException e) {
-                                    e.printStackTrace();
+                                	Log.getLog().warn(e);
                                 }
                                 if (LoklakServer.queuedIndexing.isBusy()) try {Thread.sleep(200);} catch (InterruptedException e) {}
                             }
+                            try {
+                                DAO.users.writeEntries(userBulk);
+                                DAO.messages.writeEntries(messageBulk);
+                            } catch (IOException e) {
+                            	Log.getLog().warn(e);
+                            }
                         } catch (InterruptedException e) {
-                            e.printStackTrace();
+                        	Log.getLog().warn(e);
                         }
                     }
                 };
@@ -124,9 +141,6 @@ public class DumpImporter extends Thread {
                 long count = newTweets.get() - startCount;
                 Log.getLog().info("imported " + newTweets.get() + " tweets at " + (count * 1000 / runtime) + " tweets per second from " + import_dump.getName());
             }
-            
-            DAO.users.bulkCacheFlush();
-            DAO.messages.bulkCacheFlush();
 
             // catch up the number of processed tweets
             Log.getLog().info("finished import of dump file " + import_dump.getAbsolutePath() + ", " + newTweets.get() + " new tweets");
@@ -137,6 +151,7 @@ public class DumpImporter extends Thread {
                     
         } catch (Throwable e) {
             Log.getLog().warn("DumpImporter THREAD", e);
+            try {Thread.sleep(10000);} catch (InterruptedException e1) {}
         }
 
         Log.getLog().info("DumpImporter terminated");

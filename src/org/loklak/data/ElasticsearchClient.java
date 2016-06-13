@@ -22,6 +22,7 @@ package org.loklak.data;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.AbstractMap;
@@ -32,11 +33,13 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.jetty.util.log.Log;
+import org.elasticsearch.action.ActionWriteResponse;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.cluster.stats.ClusterStatsAction;
 import org.elasticsearch.action.admin.cluster.stats.ClusterStatsNodes;
@@ -88,26 +91,42 @@ import org.loklak.tools.DateParser;
 
 public class ElasticsearchClient {
 
+    private static long throttling_time_threshold = 2000L; // update time high limit
+    private static long throttling_ops_threshold = 1000L; // messages per second low limit
+    private static double throttling_factor = 1.0d; // factor applied on update duration if both thresholds are passed
+    
+    public final static BulkWriteResult EMPTY_BULK_RESULT = new BulkWriteResult();
+    
     private Node elasticsearchNode;
     private Client elasticsearchClient;
 
     /**
      * create a elasticsearch transport client (remote elasticsearch)
-     * @param address
-     * @param port
+     * @param addresses an array of host:port addresses
      * @param clusterName
      */
-    public ElasticsearchClient(final InetAddress address, final int port, final String clusterName) {
+    public ElasticsearchClient(final String[] addresses, final String clusterName) {
         // create default settings and add cluster name
         Settings.Builder settings = Settings.builder()
                 .put("cluster.name", clusterName)
                 .put("cluster.routing.allocation.enable", "all")
                 .put("cluster.routing.allocation.allow_rebalance", "true");
         // create a client
-        this.elasticsearchClient = TransportClient.builder()
+        TransportClient tc = TransportClient.builder()
                 .settings(settings.build())
-                .build()
-                .addTransportAddress(new InetSocketTransportAddress(address, port));
+                .build();
+        for (String address: addresses) {
+            String a = address.trim();
+            int p = a.indexOf(':');
+            if (p >= 0) try {
+                InetAddress i = InetAddress.getByName(a.substring(0, p));
+                int port = Integer.parseInt(a.substring(p + 1));
+                tc.addTransportAddress(new InetSocketTransportAddress(i, port));
+            } catch (UnknownHostException e) {
+            	Log.getLog().warn(e);
+            }
+        }
+        this.elasticsearchClient = tc;
     }
     
     /**
@@ -173,7 +192,7 @@ public class ElasticsearchClient {
                 .setUpdateAllTypes(true)
                 .setType("_default_").execute().actionGet();
         } catch (Throwable e) {
-            e.printStackTrace();
+        	Log.getLog().warn(e);
         };
     }
 
@@ -184,7 +203,7 @@ public class ElasticsearchClient {
                 .setUpdateAllTypes(true)
                 .setType("_default_").execute().actionGet();
         } catch (Throwable e) {
-            e.printStackTrace();
+        	Log.getLog().warn(e);
         };
     }
 
@@ -195,7 +214,7 @@ public class ElasticsearchClient {
                 .setUpdateAllTypes(true)
                 .setType("_default_").execute().actionGet();
         } catch (Throwable e) {
-            e.printStackTrace();
+        	Log.getLog().warn(e);
         };
     }
 
@@ -208,7 +227,7 @@ public class ElasticsearchClient {
                 .execute()
                 .actionGet();
         } catch (Throwable e) {
-            e.printStackTrace();
+        	Log.getLog().warn(e);
         };
     }
 
@@ -276,7 +295,7 @@ public class ElasticsearchClient {
      * @return the count of all documents in the index
      */
     public long count(String indexName) {
-        return count(QueryBuilders.matchAllQuery(), indexName);
+        return count(QueryBuilders.constantScoreQuery(QueryBuilders.matchAllQuery()), indexName);
     }
 
 
@@ -297,12 +316,12 @@ public class ElasticsearchClient {
         try {
             SearchResponse response = elasticsearchClient.prepareSearch(index)
                 .setSize(0)
-                .setQuery(millis <= 0 ? QueryBuilders.matchAllQuery() : QueryBuilders.rangeQuery(histogram_timefield).from(new Date(System.currentTimeMillis() - millis)))
+                .setQuery(millis <= 0 ? QueryBuilders.constantScoreQuery(QueryBuilders.matchAllQuery()) : QueryBuilders.rangeQuery(histogram_timefield).from(new Date(System.currentTimeMillis() - millis)))
                 .execute()
                 .actionGet();
             return response.getHits().getTotalHits();
         } catch (Throwable e) {
-            e.printStackTrace();
+        	Log.getLog().warn(e);
             return 0;
         }
     }
@@ -316,7 +335,7 @@ public class ElasticsearchClient {
                 .actionGet();
             return response.getHits().getTotalHits();
         } catch (Throwable e) {
-            e.printStackTrace();
+        	Log.getLog().warn(e);
             return 0;
         }
     }
@@ -356,6 +375,7 @@ public class ElasticsearchClient {
     }    
 
     public Set<String> existBulk(String indexName, String typeName, final Collection<String> ids) {
+        if (ids == null || ids.size() == 0) return new HashSet<>();
         MultiGetResponse multiGetItemResponses = elasticsearchClient.prepareMultiGet()
                 .add(indexName, typeName, ids)
                 .get();
@@ -539,9 +559,15 @@ public class ElasticsearchClient {
         // documentation about the versioning is available at
         // https://www.elastic.co/blog/elasticsearch-versioning-support
         // TODO: error handling
-        boolean successful = r.isCreated();
-        Log.getLog().info("elastic write entry to index " + indexName + ": " + (successful ? "successful":"error") + ", " + (System.currentTimeMillis() - start) + " milliseconds");
-        return successful;
+        boolean created = r.isCreated(); // true means created, false means updated
+        long duration = Math.max(1, System.currentTimeMillis() - start);
+        long regulator = 0;
+        if (duration > throttling_time_threshold) {
+            regulator = (long) (throttling_factor * duration);
+            try {Thread.sleep(regulator);} catch (InterruptedException e) {}
+        }
+        Log.getLog().info("elastic write entry to index " + indexName + ": " + (created ? "created":"updated") + ", " + duration + " ms" + (regulator == 0 ? "" : ", throttled with " + regulator + " ms"));
+        return created;
     }
 
     /**
@@ -557,7 +583,7 @@ public class ElasticsearchClient {
      *            The method was only successful if this list is empty.
      *            This must be a list, because keys may appear several times.
      */
-    public List<Map.Entry<String, String>> writeMapBulk(final String indexName, final List<BulkEntry> jsonMapList) {
+    public BulkWriteResult writeMapBulk(final String indexName, final List<BulkEntry> jsonMapList) {
         long start = System.currentTimeMillis();
         BulkRequestBuilder bulkRequest = elasticsearchClient.prepareBulk();
         for (BulkEntry be: jsonMapList) {
@@ -568,16 +594,42 @@ public class ElasticsearchClient {
                         .setVersionType(be.version == null ? VersionType.FORCE : VersionType.EXTERNAL));
         }
         BulkResponse bulkResponse = bulkRequest.get();
-        List<Map.Entry<String, String>> errors = new ArrayList<>();
+        BulkWriteResult result = new BulkWriteResult();
         for (BulkItemResponse r: bulkResponse.getItems()) {
+            String id = r.getId();
+            ActionWriteResponse response = r.getResponse();
+            if (response instanceof IndexResponse) {
+                if (((IndexResponse) response).isCreated()) result.created.add(id);
+            }
             String err = r.getFailureMessage();
             if (err != null) {
-                String id = r.getId();
-                errors.add(new AbstractMap.SimpleEntry<String, String>(id, err));
+                result.errors.put(id, err);
             }
         }
-        Log.getLog().info("elastic write bulk to index " + indexName + ": " + jsonMapList.size() + " entries, " + errors.size() + " errors, " + (System.currentTimeMillis() - start) + " milliseconds");
-        return errors;
+        long duration = Math.max(1, System.currentTimeMillis() - start);
+        long regulator = 0;
+        long ops = result.created.size() * 1000 / duration;
+        if (duration > throttling_time_threshold && ops < throttling_ops_threshold) {
+            regulator = (long) (throttling_factor * duration);
+            try {Thread.sleep(regulator);} catch (InterruptedException e) {}
+        }
+        Log.getLog().info("elastic write bulk to index " + indexName + ": " + jsonMapList.size() + " entries, " + result.created.size() + " created, " + result.errors.size() + " errors, " + duration + " ms" + (regulator == 0 ? "" : ", throttled with " + regulator + " ms") + ", " + ops + " objects/second");
+        return result;
+    }
+    
+    public static class BulkWriteResult {
+        private Map<String, String> errors;
+        private Set<String> created;
+        public BulkWriteResult() {
+            this.errors = new LinkedHashMap<>();
+            this.created = new LinkedHashSet<>();
+        }
+        public Map<String, String> getErrors() {
+            return this.errors;
+        }
+        public Set<String> getCreated() {
+            return this.created;
+        }
     }
 
     private final static DateTimeFormatter utcFormatter = ISODateTimeFormat.dateTime().withZoneUTC();
@@ -587,12 +639,21 @@ public class ElasticsearchClient {
         private String type;
         private Long version;
         public Map<String, Object> jsonMap;
+        
+        /**
+         * initialize entry for bulk writes
+         * @param id the id of the entry
+         * @param type the type name
+         * @param timestamp_fieldname the name of the timestamp field, null for unused. If a name is given here, then this field is filled with the current time
+         * @param version the version number >= 0 for external versioning or null for forced updates without versioning
+         * @param jsonMap the payload object
+         */
         public BulkEntry(final String id, final String type, final String timestamp_fieldname, final Long version, final Map<String, Object> jsonMap) {
             this.id = id;
             this.type = type;
             this.version = version;
             this.jsonMap = jsonMap;
-            if (!this.jsonMap.containsKey(timestamp_fieldname)) this.jsonMap.put(timestamp_fieldname, utcFormatter.print(System.currentTimeMillis()));
+            if (timestamp_fieldname != null && !this.jsonMap.containsKey(timestamp_fieldname)) this.jsonMap.put(timestamp_fieldname, utcFormatter.print(System.currentTimeMillis()));
         }
     }
 
@@ -634,7 +695,7 @@ public class ElasticsearchClient {
         if (field_value == null || field_value.length() == 0) return null;
         // prepare request
         BoolQueryBuilder query = QueryBuilders.boolQuery();
-        query.must(QueryBuilders.termQuery(field_name, field_value));
+        query.filter(QueryBuilders.constantScoreQuery(QueryBuilders.termQuery(field_name, field_value)));
 
         SearchRequestBuilder request = elasticsearchClient.prepareSearch(indexName)
                 .setSearchType(SearchType.QUERY_THEN_FETCH)
@@ -787,11 +848,11 @@ public class ElasticsearchClient {
         
         if (range_field != null && range_field.length() > 0 && (since != null || until != null)) {
             query = QueryBuilders.boolQuery();
-            if (q.length() > 0) query.must(suggest);
+            if (q.length() > 0) query.filter(suggest);
             RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(range_field);
             if (since != null) rangeQuery.from(since).includeLower(true);
             if (until != null) rangeQuery.to(until).includeUpper(true);
-            query.must(rangeQuery);
+            query.filter(rangeQuery);
         } else {
             query = suggest;
         }
@@ -830,14 +891,14 @@ public class ElasticsearchClient {
                 .setFrom(0);
 
         BoolQueryBuilder bFilter = QueryBuilders.boolQuery();
-        bFilter.must(QueryBuilders.termQuery(fieldName, fieldValue));
+        bFilter.filter(QueryBuilders.constantScoreQuery(QueryBuilders.constantScoreQuery(QueryBuilders.termQuery(fieldName, fieldValue))));
         for (Object o : constraints.entrySet()) {
             @SuppressWarnings("rawtypes")
             Map.Entry entry = (Map.Entry) o;
-            bFilter.must(QueryBuilders.termQuery((String) entry.getKey(), ((String) entry.getValue()).toLowerCase()));
+            bFilter.filter(QueryBuilders.constantScoreQuery(QueryBuilders.termQuery((String) entry.getKey(), ((String) entry.getValue()).toLowerCase())));
         }
-        request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), bFilter));
-        DAO.log(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), bFilter).toString());
+        request.setQuery(bFilter);
+        
         // get response
         SearchResponse response = request.execute().actionGet();
 
@@ -856,7 +917,7 @@ public class ElasticsearchClient {
         // prepare request
         SearchRequestBuilder request = elasticsearchClient.prepareSearch(indexName)
                 .setSearchType(SearchType.QUERY_THEN_FETCH)
-                .setQuery(QueryBuilders.matchAllQuery())
+                .setQuery(QueryBuilders.constantScoreQuery(QueryBuilders.matchAllQuery()))
                 .setFrom(0)
                 .setSize(0);
         request.clearRescorers();

@@ -1,32 +1,21 @@
 <!DOCTYPE html>
 <html lang="en" ng-app="appListApp">
   <head>
-    <meta charset="utf-8">
-    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="Content-Language" content="en, english"/>
-    <meta name="author" content="@0rb1t3r"> <!-- CHANGE THIS -->
+    <!--#include file="../../../ssi/common_head_front.include" -->
+    <meta name="description" content="loklak provides an easy-to-extend app infrastructure. Here is a list of large-data evaluation applictions.">
     <link rel="icon" type="image/png" href="/artwork/favicon.png">
-    <title>loklak.org - App List</title> <!-- CHANGE THIS -->
-    
-    <link href="../../css/bootstrap.min.css" rel="stylesheet">
+    <title>loklak.org - Application List</title>
+    <script src="../../js/angular-touch.min.js"></script>
     <link href="../../css/dashboard.css" rel="stylesheet">
-    <link href="../../css/loklak.css" rel="stylesheet">
-
-
-    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
-    <!--[if lt IE 9]>
-      <script src="../../js/html5shiv.min.js"></script>
-      <script src="../../js/respond.min.js"></script>
-    <![endif]-->
-
-    <script src="../../js/angular.min.js"></script>
+    <link href="css/style.css" rel="stylesheet"/>
+    <link href="css/animate.css" rel="stylesheet"/>
     <script src="app_list.js"></script>
+    <!--#include file="../../../ssi/common_head_back.include" -->
+    <!--#include file="../../../data/ssi/custom_head.include" -->
   </head>
-
-  <body>
-
+  <body data-spy="scroll" data-target="#navSidebar" data-offset="50">
+    <!--#include file="../../../data/ssi/custom_body_front.include" -->
+    <!--#include file="../../../ssi/common_body_front.include" -->
     <nav class="navbar navbar-inverse navbar-fixed-top">
       <div class="container-fluid">
         <div class="navbar-header">
@@ -36,52 +25,55 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="http://loklak.org"><img src="../../images/loklak_org.png" height="24" style="float:left;">: App List</a>
+          <a class="navbar-brand" href="http://loklak.org">
+            <img src="../../images/loklak_org.png" height="24" style="float:left;">: App List
+          </a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
           <ul class="nav navbar-nav navbar-right">
-            <li><a href="../../index.html">Home</a></li>
-            <li><a href="../../about.html">About</a></li>
-            <li><a href="../../showcase.html">Showcase</a></li>
-            <li><a href="../../architecture.html">Architecture</a></li>
-            <li><a href="../../download.html">Download</a></li>
-            <li><a href="../../tutorials.html">Tutorials</a></li>
-            <li><a href="../../api.html">API</a></li>
-            <li><a href="../../dump.html">Dumps</a></li>
-            <li><a href="../../apps/">Apps</a></li>
+            <!-- This will get populated -->
           </ul>
         </div>
       </div>
     </nav>
-  
-  
-   <div class="container-fluid">
+    <div class="container-fluid" ng-app="loklak" ng-controller="app_list">
       <div class="row">
         <div class="col-sm-3 col-md-2 sidebar">
-          <h4>Front-End contributions.</h4>
-          <p>Read the <a href="https://github.com/loklak/loklak_server/blob/master/html/apps/apps.md">loklak app primer</a> to learn how you can contribute a loklak app!</p>
+          <div id="navSidebar">
+          <div><h4><center>CATEGORIES</center></h4></div>
+            <ul class="nav nav-sidebar" isolateClick>
+                <li ng-repeat="category in categoryKeys track by $index" class=""><a href="#{{category | nospace}}" ng-click="categoryFilter($event)" id="{{category | nospace}}">{{category}}</a></li>
+              </ul>
+          </div>
+            <p>Read the 
+            <a href="https://github.com/loklak/loklak_server/blob/master/html/apps/apps.md">loklak app primer</a> to learn how you can contribute a loklak app!</p>
         </div>
         <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
-          <div ng-controller="app_list">
-            <h1><code>loklak Apps</code></h1>
-            <div class="panel panel-primary" ng-repeat="app in apps track by $index">
-            <div class="panel-heading"><a href='../../apps/{{ app.name }}'>{{ app.headline }}</a></div>
-            <div class="panel-body">
-              <p>{{ app.alternativeHeadline }}</p>
-                 Author: <a href='{{ app.author.url }}'>{{ app.author.name }}</a>
+          <div>
+            <h1>
+              <code id="categoryName">Loklak Apps</code>
+            </h1>
+            <div class="content class" ng-repeat="app in apps track by $index">
+              <div class="span2 animated fadeInRight" id="{{app.applicationCategory | nospace}}">
+                <div class="reveal">
+                  <img ng-src="../{{ app.name }}/screenshot.png" />
+                  <div class="hidden">
+                    <div class="caption">
+                      <div class="centered">
+                        <p><a href='../../apps/{{ app.name }}'>{{ app.headline | uppercase}}</a></p>
+                        <p>{{ app.alternativeHeadline }}</p>
+                        <br/>
+                        <p>Author: <a href='{{ app.author.url }}'>{{ app.author.name | uppercase }}</a></p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-   </div>
-    
-    <!-- Bootstrap core JavaScript
-    ================================================== -->
-    <!-- Placed at the end of the document so the pages load faster -->
-    <script src="/js/jquery.min.js"></script>
-    <script src="/js/bootstrap.min.js"></script>
-    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
-    <script src="/js/ie10-viewport-bug-workaround.js"></script>
-  </body>
-</html>
+    <!--#include file="../../../ssi/common_body_back.include" -->
+    <!--#include file="../../../data/ssi/custom_body_back.include" -->
+      </body>
+    </html>

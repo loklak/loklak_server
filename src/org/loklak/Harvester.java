@@ -29,9 +29,10 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.loklak.api.client.PushClient;
-import org.loklak.api.client.SearchClient;
-import org.loklak.api.client.SuggestClient;
+import org.eclipse.jetty.util.log.Log;
+import org.loklak.api.p2p.PushServlet;
+import org.loklak.api.search.SearchServlet;
+import org.loklak.api.search.SuggestServlet;
 import org.loklak.data.DAO;
 import org.loklak.harvester.TwitterScraper;
 import org.loklak.objects.MessageEntry;
@@ -91,7 +92,7 @@ public class Harvester {
         // load more queries if pendingQueries is empty
         if (pendingQueries.size() == 0) {
             try {
-                ResultList<QueryEntry> rl = SuggestClient.suggest(backend, "", "query", Math.min(1000, Math.max(FETCH_RANDOM * 30, hitsOnBackend / 10)), "asc", "retrieval_next", DateParser.getTimezoneOffset(), null, "now", "retrieval_next", FETCH_RANDOM);
+                ResultList<QueryEntry> rl = SuggestServlet.suggest(backend, "", "query", Math.min(1000, Math.max(FETCH_RANDOM * 30, hitsOnBackend / 10)), "asc", "retrieval_next", DateParser.getTimezoneOffset(), null, "now", "retrieval_next", FETCH_RANDOM);
                 for (QueryEntry qe: rl) {
                     pendingQueries.add(qe.getQuery());
                 }
@@ -102,7 +103,7 @@ public class Harvester {
                     if (pendingContext.size() == 0) {
                         // try to fill the pendingContext using a matchall-query from the cache
                         // http://loklak.org/api/search.json?source=cache&q=
-                        Timeline tl = SearchClient.search(backend, "", Timeline.Order.CREATED_AT, "cache", 100, 0, SearchClient.backend_hash, 60000);
+                        Timeline tl = SearchServlet.search(backend, "", Timeline.Order.CREATED_AT, "cache", 100, 0, SearchServlet.backend_hash, 60000);
                         checkContext(tl, false);
                     }
                     // if we still don't have any context, we are a bit helpless and hope that this situation
@@ -110,7 +111,8 @@ public class Harvester {
                     if (pendingContext.size() == 0) try {Thread.sleep(10000);} catch (InterruptedException e) {}
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+            	Log.getLog().warn(e.getMessage());
+                try {Thread.sleep(10000);} catch (InterruptedException e1) {} // if the remote peer is down, throttle down
             }
         }
         
@@ -161,13 +163,12 @@ public class Harvester {
             for (int i = 0; i < 5; i++) {
                 try {
                     long start = System.currentTimeMillis();
-                    success = PushClient.push(new String[]{peer}, tl);
+                    success = PushServlet.push(new String[]{peer}, tl);
                     if (success) {
                         DAO.log("retrieval of " + tl.size() + " new messages for q = " + tl.getQuery() + ", pushed to backend synchronously in " + (System.currentTimeMillis() - start) + " ms; pendingQueries = " + pendingQueries.size() + ", pendingContext = " + pendingContext.size() + ", harvestedContext = " + harvestedContext.size());
                         return;
                     }
                 } catch (Throwable e) {
-                    //e.printStackTrace();
                     DAO.log("failed synchronous push to backend, attempt " + i);
                     try {Thread.sleep((i + 1) * 3000);} catch (InterruptedException e1) {}
                 }

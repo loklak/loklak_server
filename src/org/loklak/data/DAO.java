@@ -25,8 +25,10 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.InetAddress;
 import java.nio.file.Path;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -47,14 +49,14 @@ import com.google.common.base.Charsets;
 
 import org.eclipse.jetty.util.log.Log;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
-import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.logging.ESLoggerFactory;
+import org.elasticsearch.common.logging.slf4j.Slf4jESLoggerFactory;
 import org.elasticsearch.search.sort.SortOrder;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.loklak.Caretaker;
-import org.loklak.api.client.SearchClient;
+import org.loklak.api.search.SearchServlet;
 import org.loklak.geo.GeoNames;
-import org.loklak.harvester.SourceType;
 import org.loklak.harvester.TwitterScraper;
 import org.loklak.http.AccessTracker;
 import org.loklak.http.ClientConnection;
@@ -65,14 +67,19 @@ import org.loklak.objects.MessageEntry;
 import org.loklak.objects.Peers;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.ResultList;
+import org.loklak.objects.SourceType;
 import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
+import org.loklak.server.Accounting;
+import org.loklak.server.Query;
+import org.loklak.server.Settings;
 import org.loklak.tools.DateParser;
 import org.loklak.tools.OS;
 import org.loklak.tools.storage.JsonDataset;
 import org.loklak.tools.storage.JsonReader;
 import org.loklak.tools.storage.JsonRepository;
 import org.loklak.tools.storage.JsonStreamReader;
+import org.loklak.tools.storage.JsonTray;
 import org.loklak.tools.storage.JsonFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -115,6 +122,7 @@ public class DAO {
     
     public  static File conf_dir, bin_dir, html_dir;
     private static File external_data, assets, dictionaries;
+    public static Settings public_settings, private_settings;
     private static Path message_dump_dir, account_dump_dir, import_profile_dump_dir;
     public static JsonRepository message_dump;
     private static JsonRepository account_dump;
@@ -131,8 +139,14 @@ public class DAO {
     public static QueryFactory queries;
     private static ImportProfileFactory importProfiles;
     private static Map<String, String> config = new HashMap<>();
-    public  static GeoNames geoNames;
+    public  static GeoNames geoNames = null;
     public static Peers peers = new Peers();
+    
+    // AAA Schema for server usage
+    public static JsonTray authentication;
+    public static JsonTray authorization;
+    public static JsonTray accounting;
+    public static Map<String, Accounting> accounting_temporary = new HashMap<>();
     
     public static enum IndexName {
     	queries, messages, users, accounts, import_profiles;
@@ -142,7 +156,7 @@ public class DAO {
      * initialize the DAO
      * @param datadir the path to the data directory
      */
-    public static void init(Map<String, String> configMap, Path dataPath) {
+    public static void init(Map<String, String> configMap, Path dataPath) throws Exception{
 
         log("initializing loklak DAO");
         
@@ -150,201 +164,245 @@ public class DAO {
         conf_dir = new File("conf");
         bin_dir = new File("bin");
         html_dir = new File("html");
-        File datadir = dataPath.toFile();
-        try {
-            // check if elasticsearch shall be accessed as external cluster
-            String transport = configMap.get("elasticsearch_transport.enabled");
-            if (transport != null && "true".equals(transport)) {
-                InetAddress address = InetAddress.getByName(configMap.get("elasticsearch_transport.host"));
-                int port = Integer.parseInt(configMap.get("elasticsearch_transport.port"));
-                String cluster_name = configMap.get("elasticsearch_transport.cluster.name");
-                elasticsearch_client = new ElasticsearchClient(address, port, cluster_name);
-            } else {
-                // use all config attributes with a key starting with "elasticsearch." to set elasticsearch settings
-                Settings.Builder settings = Settings.builder();
-                for (Map.Entry<String, String> entry: config.entrySet()) {
-                    String key = entry.getKey();
-                    if (key.startsWith("elasticsearch.")) settings.put(key.substring(14), entry.getValue());
-                }
-                // patch the home path
-                settings.put("path.home", datadir.getAbsolutePath());
-                settings.put("path.data", datadir.getAbsolutePath());
-                settings.build();
-                
-                // start elasticsearch
-                elasticsearch_client = new ElasticsearchClient(settings);
-            }
-            
-            Path index_dir = dataPath.resolve("index");
-            if (index_dir.toFile().exists()) OS.protectPath(index_dir); // no other permissions to this path
-
-            // define the index factories
-            messages = new MessageFactory(elasticsearch_client, IndexName.messages.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
-            users = new UserFactory(elasticsearch_client, IndexName.users.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
-            accounts = new AccountFactory(elasticsearch_client, IndexName.accounts.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
-            queries = new QueryFactory(elasticsearch_client, IndexName.queries.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
-            importProfiles = new ImportProfileFactory(elasticsearch_client, IndexName.import_profiles.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
-
-            // create indices and set mapping (that shows how 'elastic' elasticsearch is: it's always good to define data types)
-            File mappingsDir = new File(new File(conf_dir, "elasticsearch"), "mappings");
-            int shards = Integer.parseInt(configMap.get("elasticsearch.index.number_of_shards"));
-            int replicas = Integer.parseInt(configMap.get("elasticsearch.index.number_of_replicas"));
-            for (IndexName index: IndexName.values()) {
-                log("initializing index '" + index.name() + "'...");
-            	try {
-            	    elasticsearch_client.createIndexIfNotExists(index.name(), shards, replicas);
-            	} catch (Throwable e) {
-            		e.printStackTrace();
-            	}
-                try {
-                    elasticsearch_client.setMapping(index.name(), new File(mappingsDir, index.name() + ".json"));
-                } catch (Throwable e) {
-                    e.printStackTrace();
-                }
-            }
-            // elasticsearch will probably take some time until it is started up. We do some other stuff meanwhile..
-
-            // create and document the data dump dir
-            assets = new File(datadir, "assets");
-            external_data = new File(datadir, "external");
-            dictionaries = new File(external_data, "dictionaries");
-            dictionaries.mkdirs();
-
-            // create message dump dir
-            String message_dump_readme =
-                "This directory contains dump files for messages which arrived the platform.\n" +
-                "There are three subdirectories for dump files:\n" +
-                "- own:      for messages received with this peer. There is one file for each month.\n" +
-                "- import:   hand-over directory for message dumps to be imported. Drop dumps here and they are imported.\n" +
-                "- imported: dump files which had been processed from the import directory are moved here.\n" +
-                "You can import dump files from other peers by dropping them into the import directory.\n" +
-                "Each dump file must start with the prefix '" + MESSAGE_DUMP_FILE_PREFIX + "' to be recognized.\n";
-            message_dump_dir = dataPath.resolve("dump");
-            message_dump = new JsonRepository(message_dump_dir.toFile(), MESSAGE_DUMP_FILE_PREFIX, message_dump_readme, JsonRepository.COMPRESSED_MODE, true, Runtime.getRuntime().availableProcessors());
-            
-            account_dump_dir = dataPath.resolve("accounts");
-            account_dump_dir.toFile().mkdirs();
-            OS.protectPath(account_dump_dir); // no other permissions to this path
-            account_dump = new JsonRepository(account_dump_dir.toFile(), ACCOUNT_DUMP_FILE_PREFIX, null, JsonRepository.REWRITABLE_MODE, false, Runtime.getRuntime().availableProcessors());
-
-            File user_dump_dir = new File(datadir, "accounts");
-            user_dump_dir.mkdirs();
-            user_dump = new JsonDataset(
-                    user_dump_dir,USER_DUMP_FILE_PREFIX,
-                    new JsonDataset.Column[]{new JsonDataset.Column("id_str", false), new JsonDataset.Column("screen_name", true)},
-                    "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
-                    JsonRepository.REWRITABLE_MODE, false, Integer.MAX_VALUE);
-            followers_dump = new JsonDataset(
-                    user_dump_dir, FOLLOWERS_DUMP_FILE_PREFIX,
-                    new JsonDataset.Column[]{new JsonDataset.Column("screen_name", true)},
-                    "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
-                    JsonRepository.REWRITABLE_MODE, false, Integer.MAX_VALUE);
-            following_dump = new JsonDataset(
-                    user_dump_dir, FOLLOWING_DUMP_FILE_PREFIX,
-                    new JsonDataset.Column[]{new JsonDataset.Column("screen_name", true)},
-                    "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
-                    JsonRepository.REWRITABLE_MODE, false, Integer.MAX_VALUE);
-            
-            Path log_dump_dir = dataPath.resolve("log");
-            log_dump_dir.toFile().mkdirs();
-            OS.protectPath(log_dump_dir); // no other permissions to this path
-            access = new AccessTracker(log_dump_dir.toFile(), ACCESS_DUMP_FILE_PREFIX, 60000, 3000);
-            access.start(); // start monitor
-
-	        import_profile_dump_dir = dataPath.resolve("import-profiles");
-            import_profile_dump = new JsonRepository(import_profile_dump_dir.toFile(), IMPORT_PROFILE_FILE_PREFIX, null, JsonRepository.COMPRESSED_MODE, false, Runtime.getRuntime().availableProcessors());
-
-            // load schema folder
-            conv_schema_dir = new File("conf/conversion");
-            schema_dir = new File("conf/schema");            
-
-            // load dictionaries if they are embedded here
-            // read the file allCountries.zip from http://download.geonames.org/export/dump/allCountries.zip
-            //File allCountries = new File(dictionaries, "allCountries.zip");
-            File cities1000 = new File(dictionaries, "cities1000.zip");
-            if (!cities1000.exists()) {
-                // download this file
-                ClientConnection.download("http://download.geonames.org/export/dump/cities1000.zip", cities1000);
-            }
-            
-            if (cities1000.exists()) {
-                geoNames = new GeoNames(cities1000, new File(conf_dir, "iso3166.json"), 1);
-            } else {
-                geoNames = null;
-            }
-            
-            // finally wait for healthy status of elasticsearch shards
-            ClusterHealthStatus required_status = ClusterHealthStatus.fromString(config.get("elasticsearch_requiredClusterHealthStatus"));
-            boolean ok;
-            do {
-                log("Waiting for elasticsearch " + required_status.name() + " status");
-                ok = elasticsearch_client.wait_ready(60000l, required_status);
-            } while (!ok);
-            /**
-            do {
-                log("Waiting for elasticsearch green status");
-                health = elasticsearch_client.admin().cluster().prepareHealth().setWaitForGreenStatus().execute().actionGet();
-            } while (health.isTimedOut());
-            **/
-            log("elasticsearch has started up!");
-
-            // start the classifier
-            new Thread(){
-                public void run() {
-                    log("initializing the classifier...");
-                    try {
-                        Classifier.init(10000, 1000);
-                    } catch (Throwable ee) {
-                        ee.printStackTrace();
-                    }
-                    log("classifier initialized!");
-                }
-            }.start();
-
-            log("initializing queries...");
-            // initialize query harvesting
-            //if (getConfig("retrieval.queries.enabled", false)) {
-                File harvestingPath = new File(datadir, "queries");
-                if (!harvestingPath.exists()) harvestingPath.mkdirs();
-                String[] list = harvestingPath.list();
-                for (String queryfile: list) {
-                    if (queryfile.startsWith(".") || queryfile.endsWith("~")) continue;
-                    try {
-                        BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(new File(harvestingPath, queryfile))));
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            line = line.trim().toLowerCase();
-                            if (line.length() == 0) continue;
-                            if (line.charAt(0) <= '9') {
-                                // truncate statistic
-                                int p = line.indexOf(' ');
-                                if (p < 0) continue;
-                                line = line.substring(p + 1).trim();
-                            }
-                            // write line into query database
-                            if (!existQuery(line)) {
-                                try {
-                                    queries.writeEntryBulk(
-                                            line,
-                                            SourceType.TWITTER.name(),
-                                            new QueryEntry(line, 0, 60000, SourceType.TWITTER, false));
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        }
-                        reader.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-                queries.bulkCacheFlush();
-            //}
-            log("queries initialized.");
-        } catch (Throwable e) {
-            e.printStackTrace();
+        
+        // initialize public and private keys
+		public_settings = new Settings(new File("data/settings/public.settings.json"));
+		File private_file = new File("data/settings/private.settings.json");
+		private_settings = new Settings(private_file);
+		OS.protectPath(private_file.toPath());
+		
+		if(!private_settings.loadPrivateKey() || !public_settings.loadPublicKey()){
+        	log("Can't load key pair. Creating new one");
+        	
+        	// create new key pair
+        	KeyPairGenerator keyGen;
+			try {
+				String algorithm = "RSA";
+				keyGen = KeyPairGenerator.getInstance(algorithm);
+				keyGen.initialize(2048);
+				KeyPair keyPair = keyGen.genKeyPair();
+				private_settings.setPrivateKey(keyPair.getPrivate(), algorithm);
+				public_settings.setPublicKey(keyPair.getPublic(), algorithm);
+			} catch (NoSuchAlgorithmException e) {
+				throw e;
+			}
+			log("Key creation finished. Peer hash: " + public_settings.getPeerHashAlgorithm() + " " + public_settings.getPeerHash());
         }
-        log("finished startup!");
+        else{
+        	log("Key pair loaded from file. Peer hash: " + public_settings.getPeerHashAlgorithm() + " " + public_settings.getPeerHash());
+        }
+        
+        File datadir = dataPath.toFile();
+        // check if elasticsearch shall be accessed as external cluster
+        String transport = configMap.get("elasticsearch_transport.enabled");
+        if (transport != null && "true".equals(transport)) {
+            String cluster_name = configMap.get("elasticsearch_transport.cluster.name");
+            String transport_addresses_string = configMap.get("elasticsearch_transport.addresses");
+            if (transport_addresses_string != null && transport_addresses_string.length() > 0) {
+                String[] transport_addresses = transport_addresses_string.split(",");
+                elasticsearch_client = new ElasticsearchClient(transport_addresses, cluster_name);
+            }
+        } else {
+            // use all config attributes with a key starting with "elasticsearch." to set elasticsearch settings
+        	
+        	ESLoggerFactory.setDefaultFactory(new Slf4jESLoggerFactory());
+            org.elasticsearch.common.settings.Settings.Builder settings = org.elasticsearch.common.settings.Settings.builder();
+            for (Map.Entry<String, String> entry: config.entrySet()) {
+                String key = entry.getKey();
+                if (key.startsWith("elasticsearch.")) settings.put(key.substring(14), entry.getValue());
+            }
+            // patch the home path
+            settings.put("path.home", datadir.getAbsolutePath());
+            settings.put("path.data", datadir.getAbsolutePath());
+            settings.build();
+            
+            // start elasticsearch
+            elasticsearch_client = new ElasticsearchClient(settings);
+        }
+        
+        // open AAA storage
+        Path settings_dir = dataPath.resolve("settings");
+        settings_dir.toFile().mkdirs();
+        Path authentication_path = settings_dir.resolve("authentication.json");
+        authentication = new JsonTray(authentication_path.toFile(), 10000);
+        OS.protectPath(authentication_path);
+        Path authorization_path = settings_dir.resolve("authorization.json");
+        authorization = new JsonTray(authorization_path.toFile(), 10000);
+        OS.protectPath(authorization_path);
+        
+        // open index
+        Path index_dir = dataPath.resolve("index");
+        if (index_dir.toFile().exists()) OS.protectPath(index_dir); // no other permissions to this path
+
+        // define the index factories
+        messages = new MessageFactory(elasticsearch_client, IndexName.messages.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        users = new UserFactory(elasticsearch_client, IndexName.users.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        accounts = new AccountFactory(elasticsearch_client, IndexName.accounts.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        queries = new QueryFactory(elasticsearch_client, IndexName.queries.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        importProfiles = new ImportProfileFactory(elasticsearch_client, IndexName.import_profiles.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+
+        // create indices and set mapping (that shows how 'elastic' elasticsearch is: it's always good to define data types)
+        File mappingsDir = new File(new File(conf_dir, "elasticsearch"), "mappings");
+        int shards = Integer.parseInt(configMap.get("elasticsearch.index.number_of_shards"));
+        int replicas = Integer.parseInt(configMap.get("elasticsearch.index.number_of_replicas"));
+        for (IndexName index: IndexName.values()) {
+            log("initializing index '" + index.name() + "'...");
+        	try {
+        	    elasticsearch_client.createIndexIfNotExists(index.name(), shards, replicas);
+        	} catch (Throwable e) {
+        		Log.getLog().warn(e);
+        	}
+            try {
+                elasticsearch_client.setMapping(index.name(), new File(mappingsDir, index.name() + ".json"));
+            } catch (Throwable e) {
+            	Log.getLog().warn(e);
+            }
+        }
+        // elasticsearch will probably take some time until it is started up. We do some other stuff meanwhile..
+
+        // create and document the data dump dir
+        assets = new File(datadir, "assets");
+        external_data = new File(datadir, "external");
+        dictionaries = new File(external_data, "dictionaries");
+        dictionaries.mkdirs();
+
+        // create message dump dir
+        String message_dump_readme =
+            "This directory contains dump files for messages which arrived the platform.\n" +
+            "There are three subdirectories for dump files:\n" +
+            "- own:      for messages received with this peer. There is one file for each month.\n" +
+            "- import:   hand-over directory for message dumps to be imported. Drop dumps here and they are imported.\n" +
+            "- imported: dump files which had been processed from the import directory are moved here.\n" +
+            "You can import dump files from other peers by dropping them into the import directory.\n" +
+            "Each dump file must start with the prefix '" + MESSAGE_DUMP_FILE_PREFIX + "' to be recognized.\n";
+        message_dump_dir = dataPath.resolve("dump");
+        message_dump = new JsonRepository(message_dump_dir.toFile(), MESSAGE_DUMP_FILE_PREFIX, message_dump_readme, JsonRepository.COMPRESSED_MODE, true, Runtime.getRuntime().availableProcessors());
+        
+        account_dump_dir = dataPath.resolve("accounts");
+        account_dump_dir.toFile().mkdirs();
+        OS.protectPath(account_dump_dir); // no other permissions to this path
+        account_dump = new JsonRepository(account_dump_dir.toFile(), ACCOUNT_DUMP_FILE_PREFIX, null, JsonRepository.REWRITABLE_MODE, false, Runtime.getRuntime().availableProcessors());
+
+        File user_dump_dir = new File(datadir, "accounts");
+        user_dump_dir.mkdirs();
+        user_dump = new JsonDataset(
+                user_dump_dir,USER_DUMP_FILE_PREFIX,
+                new JsonDataset.Column[]{new JsonDataset.Column("id_str", false), new JsonDataset.Column("screen_name", true)},
+                "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
+                JsonRepository.REWRITABLE_MODE, false, Integer.MAX_VALUE);
+        followers_dump = new JsonDataset(
+                user_dump_dir, FOLLOWERS_DUMP_FILE_PREFIX,
+                new JsonDataset.Column[]{new JsonDataset.Column("screen_name", true)},
+                "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
+                JsonRepository.REWRITABLE_MODE, false, Integer.MAX_VALUE);
+        following_dump = new JsonDataset(
+                user_dump_dir, FOLLOWING_DUMP_FILE_PREFIX,
+                new JsonDataset.Column[]{new JsonDataset.Column("screen_name", true)},
+                "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
+                JsonRepository.REWRITABLE_MODE, false, Integer.MAX_VALUE);
+        
+        Path log_dump_dir = dataPath.resolve("log");
+        log_dump_dir.toFile().mkdirs();
+        OS.protectPath(log_dump_dir); // no other permissions to this path
+        access = new AccessTracker(log_dump_dir.toFile(), ACCESS_DUMP_FILE_PREFIX, 60000, 3000);
+        access.start(); // start monitor
+
+        import_profile_dump_dir = dataPath.resolve("import-profiles");
+        import_profile_dump = new JsonRepository(import_profile_dump_dir.toFile(), IMPORT_PROFILE_FILE_PREFIX, null, JsonRepository.COMPRESSED_MODE, false, Runtime.getRuntime().availableProcessors());
+
+        // load schema folder
+        conv_schema_dir = new File("conf/conversion");
+        schema_dir = new File("conf/schema");            
+
+        // load dictionaries if they are embedded here
+        // read the file allCountries.zip from http://download.geonames.org/export/dump/allCountries.zip
+        //File allCountries = new File(dictionaries, "allCountries.zip");
+        File cities1000 = new File(dictionaries, "cities1000.zip");
+        if (!cities1000.exists()) {
+            // download this file
+            ClientConnection.download("http://download.geonames.org/export/dump/cities1000.zip", cities1000);
+        }
+        
+        if(cities1000.exists()){
+	        try{
+	        	geoNames = new GeoNames(cities1000, new File(conf_dir, "iso3166.json"), 1);
+	        }catch(IOException e){
+	        	Log.getLog().warn(e.getMessage());
+	        	cities1000.delete();
+	        	geoNames = null;
+	        }
+    	}
+        
+        // finally wait for healthy status of elasticsearch shards
+        ClusterHealthStatus required_status = ClusterHealthStatus.fromString(config.get("elasticsearch_requiredClusterHealthStatus"));
+        boolean ok;
+        do {
+            log("Waiting for elasticsearch " + required_status.name() + " status");
+            ok = elasticsearch_client.wait_ready(60000l, required_status);
+        } while (!ok);
+        /**
+        do {
+            log("Waiting for elasticsearch green status");
+            health = elasticsearch_client.admin().cluster().prepareHealth().setWaitForGreenStatus().execute().actionGet();
+        } while (health.isTimedOut());
+        **/
+        log("elasticsearch has started up!");
+
+        // start the classifier
+        new Thread(){
+            public void run() {
+                log("initializing the classifier...");
+                try {
+                    Classifier.init(10000, 1000);
+                } catch (Throwable e) {
+                	Log.getLog().warn(e);
+                }
+                log("classifier initialized!");
+            }
+        }.start();
+
+        log("initializing queries...");
+        File harvestingPath = new File(datadir, "queries");
+        if (!harvestingPath.exists()) harvestingPath.mkdirs();
+        String[] list = harvestingPath.list();
+        for (String queryfile: list) {
+            if (queryfile.startsWith(".") || queryfile.endsWith("~")) continue;
+            try {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(new File(harvestingPath, queryfile))));
+                String line;
+                List<IndexEntry<QueryEntry>> bulkEntries = new ArrayList<>();
+                while ((line = reader.readLine()) != null) {
+                    line = line.trim().toLowerCase();
+                    if (line.length() == 0) continue;
+                    if (line.charAt(0) <= '9') {
+                        // truncate statistic
+                        int p = line.indexOf(' ');
+                        if (p < 0) continue;
+                        line = line.substring(p + 1).trim();
+                    }
+                    // write line into query database
+                    if (!existQuery(line)) {
+                        bulkEntries.add(
+                            new IndexEntry<QueryEntry>(
+                                line,
+                                SourceType.TWITTER,
+                                new QueryEntry(line, 0, 60000, SourceType.TWITTER, false))
+                        );
+                    }
+                    if (bulkEntries.size() > 1000) {
+                        queries.writeEntries(bulkEntries);
+                        bulkEntries.clear();
+                    }
+                }
+                queries.writeEntries(bulkEntries);
+                reader.close();
+            } catch (IOException e) {
+            	Log.getLog().warn(e);
+            }
+        }
+        log("queries initialized.");
+        
+        log("finished DAO initialization");
     }
     
     public static boolean wait_ready(long maxtimemillis) {
@@ -393,11 +451,11 @@ public class DAO {
                                     AccountEntry a = new AccountEntry(json);
                                     DAO.writeAccount(a, false);
                                 } catch (IOException e) {
-                                    e.printStackTrace();
+                                	Log.getLog().warn(e);
                                 }
                             }
                         } catch (InterruptedException e) {
-                            e.printStackTrace();
+                        	Log.getLog().warn(e);
                         }
                     }
                 };
@@ -519,13 +577,13 @@ public class DAO {
         try {
             synchronized (DAO.class) {
                 // record tweet into search index and check if this is a new entry
-                boolean exists = messages.writeEntry(mw.t.getIdStr(), mw.t.getSourceType().name(), mw.t);
+                boolean exists = messages.writeEntry(new IndexEntry<MessageEntry>(mw.t.getIdStr(), mw.t.getSourceType(), mw.t));
 
                 // check if tweet exists in index
                 if (exists) return false; // we don't need to write the user and also not to the message dump
 
                 // write the user into the index
-                users.writeEntry(mw.u.getScreenName(), mw.t.getSourceType().name(), mw.u);
+                users.writeEntry(new IndexEntry<UserEntry>(mw.u.getScreenName(), mw.t.getSourceType(), mw.u));
 
                 // record tweet into text file
                 if (mw.dump) message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
@@ -534,7 +592,7 @@ public class DAO {
             // teach the classifier
             Classifier.learnPhrase(mw.t.getText(Integer.MAX_VALUE, ""));
         } catch (IOException e) {
-            e.printStackTrace();
+        	Log.getLog().warn(e);
         }
         return true;
     }
@@ -550,43 +608,45 @@ public class DAO {
         return writeMessageBulkDump(dump);
     }
 
-
-    private static void writeMessageBulkNoDump(Collection<MessageWrapper> mws) {
-        for (MessageWrapper mw: mws) try {
+    /**
+     * write messages without writing them to the dump file
+     * @param mws a collection of message wrappers
+     * @return a set of message IDs which had been created with this bulk write.
+     */
+    private static Set<String> writeMessageBulkNoDump(Collection<MessageWrapper> mws) {
+        if (mws.size() == 0) return new HashSet<>();
+        List<IndexEntry<UserEntry>> userBulk = new ArrayList<>();
+        List<IndexEntry<MessageEntry>> messageBulk = new ArrayList<>();
+        for (MessageWrapper mw: mws) {
+            if (messages.existsCache(mw.t.getIdStr())) continue; // we omit writing this again
             synchronized (DAO.class) {
                 // write the user into the index
-                users.writeEntryBulk(mw.u.getScreenName(), mw.t.getSourceType().name(), mw.u);
+                userBulk.add(new IndexEntry<UserEntry>(mw.u.getScreenName(), mw.t.getSourceType(), mw.u));
     
                 // record tweet into search index
-                messages.writeEntryBulk(mw.t.getIdStr(), mw.t.getSourceType().name(), mw.t);
+                messageBulk.add(new IndexEntry<MessageEntry>(mw.t.getIdStr(), mw.t.getSourceType(), mw.t));
              }
                 
             // teach the classifier
             Classifier.learnPhrase(mw.t.getText(Integer.MAX_VALUE, ""));
-        } catch (IOException e) {
-            e.printStackTrace();
         }
+        ElasticsearchClient.BulkWriteResult result = null;
+        try {
+            result = messages.writeEntries(messageBulk);
+            users.writeEntries(userBulk);
+        } catch (IOException e) {
+        	Log.getLog().warn(e);
+        }
+        if (result == null) return new HashSet<String>();
+        return result.getCreated();
     }
     
     private static Set<String> writeMessageBulkDump(Collection<MessageWrapper> mws) {
-        // make a bulk exist request
-        List<String> ids = new ArrayList<>();
-        for (MessageWrapper mw: mws) {
-            ids.add(mw.t.getIdStr());
-        }
-        Set<String> exists = messages.existsBulk(ids);
-        //System.out.println("*** " + mws.size() + " tested, " + exists.size() + " exists");
-        
+        Set<String> created = writeMessageBulkNoDump(mws);
+
         for (MessageWrapper mw: mws) try {
-            // check if tweet exists in index
-            if (exists.contains(mw.t.getIdStr())) continue; // we omit writing this again
+            if (!created.contains(mw.t.getIdStr())) continue;
             synchronized (DAO.class) {
-                // write the user into the index
-                users.writeEntryBulk(mw.u.getScreenName(), mw.t.getSourceType().name(), mw.u);
-    
-                // record tweet into search index
-                messages.writeEntryBulk(mw.t.getIdStr(), mw.t.getSourceType().name(), mw.t);
-                 
                 // record tweet into text file
                 message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
              }
@@ -594,12 +654,10 @@ public class DAO {
             // teach the classifier
             Classifier.learnPhrase(mw.t.getText(Integer.MAX_VALUE, ""));
         } catch (IOException e) {
-            e.printStackTrace();
+        	Log.getLog().warn(e);
         }
-        // flush bulk cache to make results available in search immediately
-        users.bulkCacheFlush();
-        messages.bulkCacheFlush();
-        return exists;
+        
+        return created;
     }
     
     /**
@@ -615,9 +673,9 @@ public class DAO {
             if (dump) account_dump.write(a.toJSON(null));
 
             // record account into search index
-            accounts.writeEntry(a.getScreenName(), a.getSourceType().name(), a);
+            accounts.writeEntry(new IndexEntry<AccountEntry>(a.getScreenName(), a.getSourceType(), a));
         } catch (IOException e) {
-            e.printStackTrace();
+        	Log.getLog().warn(e);
         }
         return true;
     }
@@ -633,9 +691,9 @@ public class DAO {
             // record import profile into text file
             if (dump) import_profile_dump.write(i.toJSON());
             // record import profile into search index
-            importProfiles.writeEntry(i.getId(), i.getSourceType().name(), i);
+            importProfiles.writeEntry(new IndexEntry<ImportProfileEntry>(i.getId(), i.getSourceType(), i));
         } catch (IOException e) {
-            e.printStackTrace();
+        	Log.getLog().warn(e);
         }
         return true;
     }
@@ -716,8 +774,7 @@ public class DAO {
                         timeline.add(tweet, user);
                     }
                 } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+                	Log.getLog().warn(e);
                 }
             }
             this.aggregations = query.aggregations;
@@ -736,7 +793,7 @@ public class DAO {
         try {
             return users.read(screen_name);
         } catch (IOException e) {
-            e.printStackTrace();
+        	Log.getLog().warn(e);
             return null;
         }
     }
@@ -756,7 +813,7 @@ public class DAO {
         try {
             return accounts.read(screen_name);
         } catch (IOException e) {
-            e.printStackTrace();
+        	Log.getLog().warn(e);
             return null;
         }
     }
@@ -782,7 +839,7 @@ public class DAO {
         try {
             return importProfiles.read(id);
         } catch (IOException e) {
-            e.printStackTrace();
+        	Log.getLog().warn(e);
             return null;
         }
     }
@@ -818,13 +875,13 @@ public class DAO {
         return latests.values();
     }
     
-    public static Timeline scrapeTwitter(final RemoteAccess.Post post, final String q, final Timeline.Order order, final int timezoneOffset, boolean byUserQuery, long timeout, boolean recordQuery) {
+    public static Timeline scrapeTwitter(final Query post, final String q, final Timeline.Order order, final int timezoneOffset, boolean byUserQuery, long timeout, boolean recordQuery) {
         // retrieve messages from remote server
         ArrayList<String> remote = DAO.getFrontPeers();
         Timeline tl;
         if (remote.size() > 0 && (peerLatency.get(remote.get(0)) == null || peerLatency.get(remote.get(0)).longValue() < 3000)) {
             long start = System.currentTimeMillis();
-            tl = searchOnOtherPeers(remote, q, order, 100, timezoneOffset, "all", SearchClient.frontpeer_hash, timeout); // all must be selected here to catch up missing tweets between intervals
+            tl = searchOnOtherPeers(remote, q, order, 100, timezoneOffset, "all", SearchServlet.frontpeer_hash, timeout); // all must be selected here to catch up missing tweets between intervals
             // at this point the remote list can be empty as a side-effect of the remote search attempt
             if (post != null && remote.size() > 0 && tl != null) post.recordEvent("remote_scraper_on_" + remote.get(0), System.currentTimeMillis() - start);
             if (tl == null || tl.size() == 0) {
@@ -845,11 +902,11 @@ public class DAO {
         QueryEntry qe = null;
         try {
             qe = queries.read(q);
-        } catch (IOException | JSONException e1) {
-            e1.printStackTrace();
+        } catch (IOException | JSONException e) {
+        	Log.getLog().warn(e);
         }
         
-        if (qe != null || (recordQuery && Caretaker.acceptQuery4Retrieval(q))) {
+        if (recordQuery && Caretaker.acceptQuery4Retrieval(q)) {
             if (qe == null) {
                 // a new query occurred
                 qe = new QueryEntry(q, timezoneOffset, tl.period(), SourceType.TWITTER, byUserQuery);
@@ -858,9 +915,9 @@ public class DAO {
                 qe.update(tl.period(), byUserQuery);
             }
             try {
-                queries.writeEntry(q, qe.source_type == null ? SourceType.TWITTER.name() : qe.source_type.name(), qe);
+                queries.writeEntry(new IndexEntry<QueryEntry>(q, qe.source_type == null ? SourceType.TWITTER : qe.source_type, qe));
             } catch (IOException e) {
-                e.printStackTrace();
+            	Log.getLog().warn(e);
             }
         } else {
             // accept rules may change, we want to delete the query then in the index
@@ -943,7 +1000,7 @@ public class DAO {
         List<String> remote = getBackendPeers();
         
         if (remote.size() > 0 /*&& (peerLatency.get(remote.get(0)) == null || peerLatency.get(remote.get(0)) < 3000)*/) { // condition deactivated because we need always at least one peer
-            Timeline tt = searchOnOtherPeers(remote, q, order, count, timezoneOffset, where, SearchClient.backend_hash, timeout);
+            Timeline tt = searchOnOtherPeers(remote, q, order, count, timezoneOffset, where, SearchServlet.backend_hash, timeout);
             if (tt != null) tt.writeToIndex();
             return tt;
         }
@@ -959,7 +1016,7 @@ public class DAO {
             String peer = remote.get(pick);
             long start = System.currentTimeMillis();
             try {
-                Timeline tl = SearchClient.search(peer, q, order, source, count, timezoneOffset, provider_hash, timeout);
+                Timeline tl = SearchServlet.search(peer, q, order, source, count, timezoneOffset, provider_hash, timeout);
                 peerLatency.put(peer, System.currentTimeMillis() - start);
                 // to show which peer was used for the retrieval, we move the picked peer to the front of the list
                 if (pick != 0) remote.add(0, remote.remove(pick));
