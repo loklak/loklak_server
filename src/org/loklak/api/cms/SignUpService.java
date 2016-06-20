@@ -22,11 +22,11 @@ package org.loklak.api.cms;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.file.Paths;
 import java.util.regex.Pattern;
 
 import javax.naming.ConfigurationException;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
 import org.loklak.LoklakEmailHandler;
 import org.loklak.data.DAO;
@@ -73,25 +73,32 @@ public class SignUpService extends AbstractAPIHandler implements APIHandler {
     	JSONObject result = new JSONObject();
     	
     	// if regex is requested
-    	if(post.get("getRegex", false)){
+    	if(post.get("getParameters", false)){
     		String passwordPattern = DAO.getConfig("users.password.regex", "^(?=.*\\d).{6,64}$");
     		String passwordPatternTooltip = DAO.getConfig("users.password.regex.tooltip", "Enter a combination of atleast six characters");
-    		result.put("status", "ok");
-    		result.put("reason", "ok");
+    		if("false".equals(DAO.getConfig("users.public.signup", "false"))){
+    			result.put("success", false);
+        		result.put("message", "Public signup disabled");
+        		return result;
+    		}
+    		
+    		result.put("success", true);
+    		result.put("message", "");
     		result.put("regex", passwordPattern);
     		result.put("regexTooltip", passwordPatternTooltip);
+    		
     		return result;
     	}
     	
     	// is this a verification?
-    	if(post.get("validateEmail", false) && serviceLevel == APIServiceLevel.LIMITED){
+    	if(post.get("validateEmail", false) && serviceLevel.isGreaterThan(APIServiceLevel.PUBLIC)){
     		ClientCredential credential = new ClientCredential(ClientCredential.Type.passwd_login, rights.getIdentity().getName());
     		Authentication authentication = new Authentication(credential, DAO.authentication);
     		
     		authentication.put("activated", true);
     		
-    		result.put("status", "ok");
-    		result.put("reason", "ok");
+    		result.put("success", true);
+    		result.put("message", "You successfully verified your account!");
     		return result;
     	}
     	
@@ -104,8 +111,8 @@ public class SignUpService extends AbstractAPIHandler implements APIHandler {
     	if(serviceLevel != APIServiceLevel.ADMIN){
     		switch(DAO.getConfig("users.public.signup", "false")){
     			case "false":
-    				result.put("status", "error");
-    	    		result.put("reason", "Public signup disabled");
+    				result.put("success", false);
+    	    		result.put("message", "Public signup disabled");
     	    		return result;
     			case "admin":
     				activated = false;
@@ -117,8 +124,8 @@ public class SignUpService extends AbstractAPIHandler implements APIHandler {
     	}
     	
     	if(post.get("signup",null) == null || post.get("password", null) == null){
-    		result.put("status", "error");
-    		result.put("reason", "signup or password empty");
+    		result.put("success", false);
+    		result.put("message", "signup or password empty");
     		return result;
     	}
     	
@@ -128,16 +135,16 @@ public class SignUpService extends AbstractAPIHandler implements APIHandler {
     		signup = URLDecoder.decode(post.get("signup",null),"UTF-8");
 			password = URLDecoder.decode(post.get("password",null),"UTF-8");
 		} catch (UnsupportedEncodingException e) {
-			result.put("status", "error");
-    		result.put("reason", "malformed query");
+			result.put("success", false);
+    		result.put("message", "malformed query");
     		return result;
 		}
     	
     	// check email pattern
     	Pattern pattern = Pattern.compile(LoklakEmailHandler.EMAIL_PATTERN);
     	if(!pattern.matcher(signup).matches()){
-    		result.put("status", "error");
-    		result.put("reason", "no valid email address");
+    		result.put("success", false);
+    		result.put("message", "no valid email address");
     		return result;
     	}
     	
@@ -147,8 +154,8 @@ public class SignUpService extends AbstractAPIHandler implements APIHandler {
     	pattern = Pattern.compile(passwordPattern);
     	
     	if(signup.equals(password) || !pattern.matcher(password).matches()){
-    		result.put("status", "error");
-    		result.put("reason", "invalid password");
+    		result.put("success", false);
+    		result.put("message", "invalid password");
     		return result;
     	}
     	
@@ -158,8 +165,8 @@ public class SignUpService extends AbstractAPIHandler implements APIHandler {
     	Authentication authentication = new Authentication(credential, DAO.authentication);
     	
     	if (authentication.getIdentity() != null) {
-    		result.put("status", "error");
-    		result.put("reason", "email already taken");
+    		result.put("success", false);
+    		result.put("message", "email already taken");
     		return result;
     	}
     	
@@ -175,8 +182,8 @@ public class SignUpService extends AbstractAPIHandler implements APIHandler {
         
         if(sendEmail){
 	        String token = createRandomString(30);
-	        ClientCredential loginToken = new ClientCredential(ClientCredential.Type.login_token, token);
-	        Authentication tokenAuthentication = new Authentication(loginToken, DAO.authentication);
+	        ClientCredential access_token = new ClientCredential(ClientCredential.Type.access_token, token);
+	        Authentication tokenAuthentication = new Authentication(access_token, DAO.authentication);
 	        tokenAuthentication.setIdentity(identity);
 	        tokenAuthentication.setExpireTime(7 * 24 * 60 * 60);
 	        tokenAuthentication.put("one_time", true);
@@ -184,21 +191,21 @@ public class SignUpService extends AbstractAPIHandler implements APIHandler {
 	        try {
 				LoklakEmailHandler.sendEmail(signup, "Loklak verification", getVerificationMailContent(token));
 				
-				result.put("reason", "You successfully signed-up! An email with a verification link was send to your address.");
+				result.put("message", "You successfully signed-up! An email with a verification link was send to your address.");
 			
 	        } 
 	        catch(ConfigurationException e){
-				result.put("reason", "You successfully signed-up, but no email was sent as it's disabled by the server.");
+				result.put("message", "You successfully signed-up, but no email was sent as it's disabled by the server.");
 			} 
 	        catch (Exception e) {
-	        	result.put("reason", "You successfully signed-up, but an error occurred while sending the verification mail.");
+	        	result.put("message", "You successfully signed-up, but an error occurred while sending the verification mail.");
 			}
         }
         else{
-        	result.put("reason", "You successfully signed-up!");
+        	result.put("message", "You successfully signed-up!");
         }
 
-    	result.put("status", "ok");
+    	result.put("success", true);
 		
 		return result;
     }
@@ -210,12 +217,12 @@ public class SignUpService extends AbstractAPIHandler implements APIHandler {
      */
     private String getVerificationMailContent(String token){
     	
-    	String verificationLink = DAO.getConfig("host.name", "http://localhost:9000") + "/api/signup.json?login_token="+token+"&validateEmail=true&request_session=true";
+    	String verificationLink = DAO.getConfig("host.name", "http://localhost:9000") + "/api/signup.json?access_token="+token+"&validateEmail=true&request_session=true";
     	
     	// get template file
     	String result;
     	try{
-    		result = IO.readFile(DAO.conf_dir + "/templates/verification-mail.txt");
+    		result = IO.readFileCached(Paths.get(DAO.conf_dir + "/templates/verification-mail.txt"));
     	} catch(IOException e){
     		result = "";
     	}
