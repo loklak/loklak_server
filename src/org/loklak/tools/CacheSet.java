@@ -26,80 +26,83 @@ import org.json.JSONObject;
 
 public class CacheSet<K> {
 
-    private int maxSize;
-    private LinkedHashSet<K> set;
-    private CacheStats stats;
-    
-    public CacheSet(int maxSize) {
-        this.maxSize = maxSize;
-        this.set = new LinkedHashSet<K>();
-        this.stats = new CacheStats();
-    }
+	private int maxSize;
+	private LinkedHashSet<K> set;
+	private CacheStats stats;
 
-    public void clear() {
-        this.set.clear();
-        this.stats.clear();
-    }
-    
-    public CacheStats getStats() {
-        return this.stats;
-    }
-    
-    public JSONObject getStatsJson() {
-        JSONObject json = this.stats.getJSON();
-        synchronized (this) {
-            json.put("size", this.set.size());
-            json.put("maxsize", this.maxSize);
-        }
-        return json;
-    }
-    
-    private void checkSize() {
-        if (this.set.size() >= this.maxSize) {
-            Iterator<K> i = this.set.iterator();
-            while (i.hasNext() && this.set.size() > this.maxSize) this.set.remove(i.next());
-        }
-    }
-    
-    public boolean full() {
-        return this.set.size() >= this.maxSize;
-    }
-    
-    public boolean add(K key) {
-        boolean oldval;
-        synchronized (this.set) {
-            // make room; this may remove entries from the beginning of the list
-            checkSize();
-            
-            // we remove the value first to ensure that the value gets at the end of the list
-            oldval = this.set.remove(key);
-            
-            // the new value gets to the end of the list
-            this.set.add(key);
-        }
-        this.stats.update();
-        return oldval;
-    }
-    
-    public boolean contains(K key) {
-        synchronized (this.set) {
-            // we remove the value to add it again at the end of the list
-            if (!this.set.remove(key)) {
-                this.stats.miss();
-                return false; // in case that the entry does not exist we are ready here
-            }
-            
-            // the new entry gets to the end of the list
-            this.set.add(key);
-        }
-        this.stats.hit();
-        return true;
-    }
-    
-    public boolean remove(K key) {
-        synchronized (this.set) {
-            return this.set.remove(key);
-        }
-    }
-    
+	public CacheSet(int maxSize) {
+		this.maxSize = maxSize;
+		this.set = new LinkedHashSet<K>();
+		this.stats = new CacheStats();
+	}
+
+	public void clear() {
+		this.set.clear();
+		this.stats.clear();
+	}
+
+	public CacheStats getStats() {
+		return this.stats;
+	}
+
+	public JSONObject getStatsJson() {
+		JSONObject json = this.stats.getJSON();
+		synchronized (this) {
+			json.put("size", this.set.size());
+			json.put("maxsize", this.maxSize);
+		}
+		return json;
+	}
+
+	private void checkSize() {
+		if (this.set.size() >= this.maxSize) {
+			Iterator<K> i = this.set.iterator();
+			while (i.hasNext() && this.set.size() > this.maxSize)
+				this.set.remove(i.next());
+		}
+	}
+
+	public boolean full() {
+		return this.set.size() >= this.maxSize;
+	}
+
+	public boolean add(K key) {
+		boolean oldval;
+		synchronized (this.set) {
+			// make room; this may remove entries from the beginning of the list
+			checkSize();
+
+			// we remove the value first to ensure that the value gets at the
+			// end of the list
+			oldval = this.set.remove(key);
+
+			// the new value gets to the end of the list
+			this.set.add(key);
+		}
+		this.stats.update();
+		return oldval;
+	}
+
+	public boolean contains(K key) {
+		synchronized (this.set) {
+			// we remove the value to add it again at the end of the list
+			if (!this.set.remove(key)) {
+				this.stats.miss();
+				return false; // in case that the entry does not exist we are
+								// ready here
+			}
+
+			// the new entry gets to the end of the list
+			this.set.add(key);
+		}
+		this.stats.hit();
+		return true;
+	}
+
+	public boolean remove(K key) {
+		synchronized (this.set) {
+			return this.set.remove(key);
+		}
+	}
+
 }

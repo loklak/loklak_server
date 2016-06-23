@@ -23,14 +23,16 @@ import org.loklak.objects.ImportProfileEntry;
 
 import java.io.IOException;
 
-public class ImportProfileFactory extends AbstractIndexFactory<ImportProfileEntry> implements IndexFactory<ImportProfileEntry> {
+public class ImportProfileFactory extends AbstractIndexFactory<ImportProfileEntry>
+		implements IndexFactory<ImportProfileEntry> {
 
-    public ImportProfileFactory(ElasticsearchClient elasticsearch_client, String index_name, int cacheSize, final int existSize) {
-        super(elasticsearch_client, index_name, cacheSize, existSize);
-    }
+	public ImportProfileFactory(ElasticsearchClient elasticsearch_client, String index_name, int cacheSize,
+			final int existSize) {
+		super(elasticsearch_client, index_name, cacheSize, existSize);
+	}
 
-    @Override
-    public ImportProfileEntry init(JSONObject map) throws IOException {
-        return new ImportProfileEntry(map);
-    }
+	@Override
+	public ImportProfileEntry init(JSONObject map) throws IOException {
+		return new ImportProfileEntry(map);
+	}
 }

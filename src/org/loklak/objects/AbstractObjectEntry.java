@@ -35,120 +35,141 @@ import com.fasterxml.jackson.core.JsonGenerator;
 
 public abstract class AbstractObjectEntry implements ObjectEntry {
 
-    public  final static String TIMESTAMP_FIELDNAME = "timestamp";
-    
-    public AbstractObjectEntry() {
-    }
-    
-    public String toString() {
-        return this.toJSON().toString();
-    }
+	public final static String TIMESTAMP_FIELDNAME = "timestamp";
 
-    public byte[] toJSONBytes() {
-        String s = toString();
-        return s == null ? null : UTF8.getBytes(s);
-    }
-    
-    // helper methods to write json
-    
-    public final static DateTimeFormatter utcFormatter = ISODateTimeFormat.dateTime().withZoneUTC();
-    
-    public static void writeDate(JsonGenerator json, String fieldName, long time) throws IOException {
-        json.writeObjectField(fieldName, utcFormatter.print(time));
-    }
-    
-    public static void writeArray(JsonGenerator json, String fieldName, Collection<String> array) throws IOException {
-        json.writeArrayFieldStart(fieldName);
-        for (String o: array) json.writeObject(o);
-        json.writeEndArray();
-    }
-    
-    public static void writeArray(JsonGenerator json, String fieldName, String[] array) throws IOException {
-        json.writeArrayFieldStart(fieldName);
-        for (String o: array) json.writeObject(o);
-        json.writeEndArray();
-    }
-    
-    public static void writeArray(JsonGenerator json, String fieldName, double[] array) throws IOException {
-        json.writeArrayFieldStart(fieldName);
-        for (double o: array) json.writeObject(o);
-        json.writeEndArray();
-    }
-    
-    // helper methods to read json
+	public AbstractObjectEntry() {
+	}
 
-    public static Date parseDate(Object d) {
-        if (d == null) return new Date();
-        if (d instanceof Date) return (Date) d;
-        if (d instanceof Long) return new Date(((Long) d).longValue());
-        if (d instanceof String) return ISODateTimeFormat.dateOptionalTimeParser().parseDateTime((String) d).toDate();
-        assert false;
-        return new Date();
-    }
-    
-    public static Date parseDate(Object d, Date dflt) {
-        if (d == null) return dflt;
-        if (d instanceof Long) return new Date(((Long) d).longValue());
-        if (d instanceof String) return ISODateTimeFormat.dateOptionalTimeParser().parseDateTime((String) d).toDate();
-        if (d instanceof Date) return (Date) d;
-        assert false;
-        return dflt;
-    }
+	public String toString() {
+		return this.toJSON().toString();
+	}
 
-    public static String parseString(Object s) {
-        assert s == null || s instanceof String: "type of object s: " + s.getClass().toString();
-        return s == null ? "" : (String) s;
-    }
-    
-    public static long parseLong(Object n) {
-        if (n instanceof String) {
-            return Long.parseLong((String) n);
-        }
-        assert n == null || n instanceof Number;
-        return n == null ? 0 : ((Number) n).longValue();
-    }
-    
-    @SuppressWarnings("unchecked")
-    public static LinkedHashSet<String> parseArrayList(Object l) {
-        assert l == null || l instanceof String  || l instanceof String[] || l instanceof Collection<?> || l instanceof JSONArray : "unexpected class in parseArrayList:" + l.getClass().getName();
-        if (l == null) return new LinkedHashSet<String>();
-        if (l instanceof String) {
-            LinkedHashSet<String> a = new LinkedHashSet<>();
-            a.add((String) l);
-            return a;
-        }
-        if (l instanceof String[]) {
-            LinkedHashSet<String> a = new LinkedHashSet<>();
-            for (String s: ((String[]) l)) if (s != null) a.add(s);
-            return a;
-        }
-        if (l instanceof LinkedHashSet<?>) {
-            LinkedHashSet<String> a = new LinkedHashSet<>();
-            for (String s: (LinkedHashSet<String>) l) if (s != null) a.add(s);
-            return a;
-        }
-        if (l instanceof JSONArray) {
-            LinkedHashSet<String> a = new LinkedHashSet<String>();
-            JSONArray la = (JSONArray) l;
-            for (int i = 0; i < la.length(); i++) {
-                try {
-                    String s = la.getString(i);
-                    if (s != null) a.add(s);
-                } catch (JSONException e) {}
-            }
-            return a;
-        }
-        LinkedHashSet<String> a = new LinkedHashSet<>();
-        for (Object s: ((Collection<?>) l)) if (s != null) a.add((String) s);
-        return a;
-    }
+	public byte[] toJSONBytes() {
+		String s = toString();
+		return s == null ? null : UTF8.getBytes(s);
+	}
 
-    public Object lazyGet(JSONObject json, String key) {
-        try {
-            Object o = json.get(key);
-            return o;
-        } catch (JSONException e) {
-            return null;
-        }
-    }
+	// helper methods to write json
+
+	public final static DateTimeFormatter utcFormatter = ISODateTimeFormat.dateTime().withZoneUTC();
+
+	public static void writeDate(JsonGenerator json, String fieldName, long time) throws IOException {
+		json.writeObjectField(fieldName, utcFormatter.print(time));
+	}
+
+	public static void writeArray(JsonGenerator json, String fieldName, Collection<String> array) throws IOException {
+		json.writeArrayFieldStart(fieldName);
+		for (String o : array)
+			json.writeObject(o);
+		json.writeEndArray();
+	}
+
+	public static void writeArray(JsonGenerator json, String fieldName, String[] array) throws IOException {
+		json.writeArrayFieldStart(fieldName);
+		for (String o : array)
+			json.writeObject(o);
+		json.writeEndArray();
+	}
+
+	public static void writeArray(JsonGenerator json, String fieldName, double[] array) throws IOException {
+		json.writeArrayFieldStart(fieldName);
+		for (double o : array)
+			json.writeObject(o);
+		json.writeEndArray();
+	}
+
+	// helper methods to read json
+
+	public static Date parseDate(Object d) {
+		if (d == null)
+			return new Date();
+		if (d instanceof Date)
+			return (Date) d;
+		if (d instanceof Long)
+			return new Date(((Long) d).longValue());
+		if (d instanceof String)
+			return ISODateTimeFormat.dateOptionalTimeParser().parseDateTime((String) d).toDate();
+		assert false;
+		return new Date();
+	}
+
+	public static Date parseDate(Object d, Date dflt) {
+		if (d == null)
+			return dflt;
+		if (d instanceof Long)
+			return new Date(((Long) d).longValue());
+		if (d instanceof String)
+			return ISODateTimeFormat.dateOptionalTimeParser().parseDateTime((String) d).toDate();
+		if (d instanceof Date)
+			return (Date) d;
+		assert false;
+		return dflt;
+	}
+
+	public static String parseString(Object s) {
+		assert s == null || s instanceof String : "type of object s: " + s.getClass().toString();
+		return s == null ? "" : (String) s;
+	}
+
+	public static long parseLong(Object n) {
+		if (n instanceof String) {
+			return Long.parseLong((String) n);
+		}
+		assert n == null || n instanceof Number;
+		return n == null ? 0 : ((Number) n).longValue();
+	}
+
+	@SuppressWarnings("unchecked")
+	public static LinkedHashSet<String> parseArrayList(Object l) {
+		assert l == null || l instanceof String || l instanceof String[] || l instanceof Collection<?>
+				|| l instanceof JSONArray : "unexpected class in parseArrayList:" + l.getClass().getName();
+		if (l == null)
+			return new LinkedHashSet<String>();
+		if (l instanceof String) {
+			LinkedHashSet<String> a = new LinkedHashSet<>();
+			a.add((String) l);
+			return a;
+		}
+		if (l instanceof String[]) {
+			LinkedHashSet<String> a = new LinkedHashSet<>();
+			for (String s : ((String[]) l))
+				if (s != null)
+					a.add(s);
+			return a;
+		}
+		if (l instanceof LinkedHashSet<?>) {
+			LinkedHashSet<String> a = new LinkedHashSet<>();
+			for (String s : (LinkedHashSet<String>) l)
+				if (s != null)
+					a.add(s);
+			return a;
+		}
+		if (l instanceof JSONArray) {
+			LinkedHashSet<String> a = new LinkedHashSet<String>();
+			JSONArray la = (JSONArray) l;
+			for (int i = 0; i < la.length(); i++) {
+				try {
+					String s = la.getString(i);
+					if (s != null)
+						a.add(s);
+				} catch (JSONException e) {
+				}
+			}
+			return a;
+		}
+		LinkedHashSet<String> a = new LinkedHashSet<>();
+		for (Object s : ((Collection<?>) l))
+			if (s != null)
+				a.add((String) s);
+		return a;
+	}
+
+	public Object lazyGet(JSONObject json, String key) {
+		try {
+			Object o = json.get(key);
+			return o;
+		} catch (JSONException e) {
+			return null;
+		}
+	}
 }

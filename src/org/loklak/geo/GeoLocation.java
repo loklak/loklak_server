@@ -27,75 +27,82 @@ import java.util.Comparator;
 
 public class GeoLocation extends IntegerGeoPoint implements Comparable<GeoLocation>, Comparator<GeoLocation> {
 
-    private Collection<String> names;
-    private String iso3166cc; 
-    private long population;
+	private Collection<String> names;
+	private String iso3166cc;
+	private long population;
 
-    public GeoLocation(final double lat, final double lon, final Collection<String> names, final String iso3166cc) {
-        super(lat, lon);
-        this.names = names;
-        this.iso3166cc = iso3166cc;
-    }
+	public GeoLocation(final double lat, final double lon, final Collection<String> names, final String iso3166cc) {
+		super(lat, lon);
+		this.names = names;
+		this.iso3166cc = iso3166cc;
+	}
 
-    public Collection<String> getNames() {
-        return this.names;
-    }
-    
-    public String getISO3166cc() {
-        return this.iso3166cc;
-    }
+	public Collection<String> getNames() {
+		return this.names;
+	}
 
-    public void setPopulation(long population2) {
-        this.population = population2;
-    }
+	public String getISO3166cc() {
+		return this.iso3166cc;
+	}
 
-    public long getPopulation() {
-        return this.population;
-    }
+	public void setPopulation(long population2) {
+		this.population = population2;
+	}
 
-    @Override
-    public String toString() {
-        return this.names.iterator().next() + "@" + super.toString();
-    }
+	public long getPopulation() {
+		return this.population;
+	}
 
-    @Override
-    public boolean equals(Object loc) {
-        if (!(loc instanceof GeoLocation)) return false;
-        if (!super.equals(loc)) return false;
-        for (String name: this.names) {
-            if (((GeoLocation) loc).names.contains(name)) return true;
-        }
-        return false;
-    }
+	@Override
+	public String toString() {
+		return this.names.iterator().next() + "@" + super.toString();
+	}
 
-    /**
-     * comparator that is needed to use the object inside TreeMap/TreeSet
-     * a Location is smaller than another if it has a _greater_ population
-     * this order is used to get sorted lists of locations where the first elements
-     * have the greatest population
-     */
-    @Override
-    public int compareTo(GeoLocation o) {
-        if (this.equals(o)) return 0;
-        long s = (ph(this.getPopulation()) << 30) + this.hashCode();
-        long t = (ph(o.getPopulation()) << 30) + o.hashCode();
-        if (s > t) return -1;
-        if (s < t) return  1;
-        return 0;
-    }
+	@Override
+	public boolean equals(Object loc) {
+		if (!(loc instanceof GeoLocation))
+			return false;
+		if (!super.equals(loc))
+			return false;
+		for (String name : this.names) {
+			if (((GeoLocation) loc).names.contains(name))
+				return true;
+		}
+		return false;
+	}
 
-    private static long ph(long population) {
-        if (population > 10000) population -= 10000;
-        return population;
-    }
+	/**
+	 * comparator that is needed to use the object inside TreeMap/TreeSet a
+	 * Location is smaller than another if it has a _greater_ population this
+	 * order is used to get sorted lists of locations where the first elements
+	 * have the greatest population
+	 */
+	@Override
+	public int compareTo(GeoLocation o) {
+		if (this.equals(o))
+			return 0;
+		long s = (ph(this.getPopulation()) << 30) + this.hashCode();
+		long t = (ph(o.getPopulation()) << 30) + o.hashCode();
+		if (s > t)
+			return -1;
+		if (s < t)
+			return 1;
+		return 0;
+	}
 
-    @Override
-    public int compare(GeoLocation o1, GeoLocation o2) {
-        return o1.compareTo(o2);
-    }
+	private static long ph(long population) {
+		if (population > 10000)
+			population -= 10000;
+		return population;
+	}
 
-    public static int degreeToKm(double degree) {
-        return (int) (degree * 111.32d);
-    }
+	@Override
+	public int compare(GeoLocation o1, GeoLocation o2) {
+		return o1.compareTo(o2);
+	}
+
+	public static int degreeToKm(double degree) {
+		return (int) (degree * 111.32d);
+	}
 
 }

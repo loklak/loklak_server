@@ -33,47 +33,68 @@ import java.util.zip.GZIPOutputStream;
 
 public class Compression {
 
-    public static void gzip(File source, File dest, boolean deleteSource) throws IOException {
-        byte[] buffer = new byte[2^20];
-        GZIPOutputStream out = new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(dest), 65536)){{def.setLevel(Deflater.BEST_COMPRESSION);}};
-        FileInputStream in = new FileInputStream(source);
-        int l; while ((l = in.read(buffer)) > 0) out.write(buffer, 0, l);
-        in.close(); out.finish(); out.close();
-        if (deleteSource && dest.exists()) source.delete();
-    }
-    
-    public static byte[] gzip(byte[] b) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream(b.length);
-            GZIPOutputStream out = new GZIPOutputStream(baos, Math.min(65536, b.length)){{def.setLevel(Deflater.BEST_COMPRESSION);}};
-            out.write(b, 0, b.length);
-            out.finish();
-            out.close();
-            return baos.toByteArray();
-        } catch (IOException e) {}
-        return null;
-    }
-    
-    public static void gunzip(File source, File dest, boolean deleteSource) throws IOException {
-        byte[] buffer = new byte[2^20];
-        FileOutputStream out = new FileOutputStream(dest);
-        GZIPInputStream in = new GZIPInputStream(new BufferedInputStream(new FileInputStream(source)));
-        int l; while ((l = in.read(buffer)) > 0) out.write(buffer, 0, l);
-        in.close(); out.close();
-        if (deleteSource && dest.exists()) source.delete();
-    }
-    
-    public static byte[] gunzip(byte[] b) {
-        byte[] buffer = new byte[Math.min(2^20, b.length)];
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream(b.length * 2);
-            GZIPInputStream in = new GZIPInputStream(new ByteArrayInputStream(b), Math.min(65536, b.length));
-            int l; while ((l = in.read(buffer)) > 0) baos.write(buffer, 0, l);
-            in.close();
-            baos.close();
-            return baos.toByteArray();
-        } catch (IOException e) {}
-        return null;
-    }
-    
+	public static void gzip(File source, File dest, boolean deleteSource) throws IOException {
+		byte[] buffer = new byte[2 ^ 20];
+		GZIPOutputStream out = new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(dest), 65536)) {
+			{
+				def.setLevel(Deflater.BEST_COMPRESSION);
+			}
+		};
+		FileInputStream in = new FileInputStream(source);
+		int l;
+		while ((l = in.read(buffer)) > 0)
+			out.write(buffer, 0, l);
+		in.close();
+		out.finish();
+		out.close();
+		if (deleteSource && dest.exists())
+			source.delete();
+	}
+
+	public static byte[] gzip(byte[] b) {
+		try {
+			ByteArrayOutputStream baos = new ByteArrayOutputStream(b.length);
+			GZIPOutputStream out = new GZIPOutputStream(baos, Math.min(65536, b.length)) {
+				{
+					def.setLevel(Deflater.BEST_COMPRESSION);
+				}
+			};
+			out.write(b, 0, b.length);
+			out.finish();
+			out.close();
+			return baos.toByteArray();
+		} catch (IOException e) {
+		}
+		return null;
+	}
+
+	public static void gunzip(File source, File dest, boolean deleteSource) throws IOException {
+		byte[] buffer = new byte[2 ^ 20];
+		FileOutputStream out = new FileOutputStream(dest);
+		GZIPInputStream in = new GZIPInputStream(new BufferedInputStream(new FileInputStream(source)));
+		int l;
+		while ((l = in.read(buffer)) > 0)
+			out.write(buffer, 0, l);
+		in.close();
+		out.close();
+		if (deleteSource && dest.exists())
+			source.delete();
+	}
+
+	public static byte[] gunzip(byte[] b) {
+		byte[] buffer = new byte[Math.min(2 ^ 20, b.length)];
+		try {
+			ByteArrayOutputStream baos = new ByteArrayOutputStream(b.length * 2);
+			GZIPInputStream in = new GZIPInputStream(new ByteArrayInputStream(b), Math.min(65536, b.length));
+			int l;
+			while ((l = in.read(buffer)) > 0)
+				baos.write(buffer, 0, l);
+			in.close();
+			baos.close();
+			return baos.toByteArray();
+		} catch (IOException e) {
+		}
+		return null;
+	}
+
 }

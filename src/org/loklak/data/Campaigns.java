@@ -43,136 +43,143 @@ import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
 
 public class Campaigns {
-    
-    public static enum State implements Comparable<State>, Comparator<State> {
-        FUTURE(0),    // campaigns in the future
-        ONGOING(1),   // campaigns are ongoing
-        WRAPPED(2);   // campaigns are over
-        
-        int card;
-        
-        private State(int card) {
-            this.card = card;
-        }
 
-        public int getCard() {
-            return this.card;
-        }
-        
-        @Override
-        public int compare(State o1, State o2) {
-            return o1.card - o2.card;
-        }
-        
-        public String toFileName() {
-            return this.card + "_" + this.name().toLowerCase();
-        }
-    }
-    
-    private File storagePath;
-    private TreeMap<State, TreeSet<Campaign>> campaigns;
-    
-    public Campaigns(File storagePath) {
-        storagePath.mkdirs();
-        this.storagePath = storagePath;
-        this.campaigns = new TreeMap<>();
-        for (State state: State.values()) {
-            File f = new File(storagePath, state.toFileName() + ".txt");
-            this.campaigns.put(state, load(f));
-        }
-    }
-    
-    public void processCampaigns() {
-        long duetime = System.currentTimeMillis();
-        Campaign e;
-        Iterator<Campaign> i;
-        Set<State> needsCommit = new HashSet<>();
-        i = this.campaigns.get(State.ONGOING).iterator();
-        while (i.hasNext()) {
-            e = i.next();
-            if (e.getEndTime() >= duetime) {
-                i.remove(); this.campaigns.get(State.WRAPPED).add(e);
-                needsCommit.add(State.ONGOING); needsCommit.add(State.WRAPPED);
-            }
-        }
-        i = this.campaigns.get(State.FUTURE).iterator();
-        while (i.hasNext()) {
-            e = i.next();
-            if (e.getStartTime() >= duetime) {
-                i.remove(); this.campaigns.get(State.ONGOING).add(e);
-                needsCommit.add(State.FUTURE); needsCommit.add(State.ONGOING);
-            }
-        }
-        for (State c: needsCommit) {
-            save(c);
-        }
-    }
+	public static enum State implements Comparable<State>, Comparator<State> {
+		FUTURE(0), // campaigns in the future
+		ONGOING(1), // campaigns are ongoing
+		WRAPPED(2); // campaigns are over
 
-    public void close() {
-        save();
-    }
-    
-    public void save() {
-        for (State state: State.values()) {
-            save(state);
-        }
-    }
+		int card;
 
-    public void save(State state) {
-        File f = new File(storagePath, state.toFileName() + ".txt");
-        save(f, this.campaigns.get(state));
-    }
-    
-    private TreeSet<Campaign> load(File dumpFile) {
-        TreeSet<Campaign> campaigns = new TreeSet<>();
-        try {
-            InputStream is = new FileInputStream(dumpFile);
-            String line;
-            BufferedReader br = null;
-            try {
-                if (dumpFile.getName().endsWith(".gz")) is = new GZIPInputStream(is);
-                br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
-                while ((line = br.readLine()) != null) {
-                    JSONObject campaign = new JSONObject(line);
-                    Campaign e = new Campaign(campaign);
-                    campaigns.add(e);
-                }
-            } catch (IOException e) {
-            	Log.getLog().warn(e);
-            } finally {
-                try {
-                    if (br != null) br.close();
-                } catch (IOException e) {
-                	Log.getLog().warn(e);
-                }
-            }
-        } catch (FileNotFoundException e) {
-        	Log.getLog().warn(e);
-        }
-        return campaigns;
-    }
-    
-    private void save(File dumpFile, TreeSet<Campaign> campaigns) {
-        try {
-            OutputStream os = new FileOutputStream(dumpFile);
-            BufferedWriter bw = null;
-            try {
-                bw = new BufferedWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8));
-                for (Campaign campaign: campaigns) {
-                    bw.write(campaign.toString());
-                    bw.write('\n');
-                }
-            } catch (IOException e) {
-            	Log.getLog().warn(e);
-            } finally {
-                try {
-                    if (bw != null) bw.close();
-                } catch (IOException e) {
-                	Log.getLog().warn(e);
-                }
-            }
-        } catch (FileNotFoundException e) {
-        	Log.getLog().warn(e);
-        }
-    }
+		private State(int card) {
+			this.card = card;
+		}
+
+		public int getCard() {
+			return this.card;
+		}
+
+		@Override
+		public int compare(State o1, State o2) {
+			return o1.card - o2.card;
+		}
+
+		public String toFileName() {
+			return this.card + "_" + this.name().toLowerCase();
+		}
+	}
+
+	private File storagePath;
+	private TreeMap<State, TreeSet<Campaign>> campaigns;
+
+	public Campaigns(File storagePath) {
+		storagePath.mkdirs();
+		this.storagePath = storagePath;
+		this.campaigns = new TreeMap<>();
+		for (State state : State.values()) {
+			File f = new File(storagePath, state.toFileName() + ".txt");
+			this.campaigns.put(state, load(f));
+		}
+	}
+
+	public void processCampaigns() {
+		long duetime = System.currentTimeMillis();
+		Campaign e;
+		Iterator<Campaign> i;
+		Set<State> needsCommit = new HashSet<>();
+		i = this.campaigns.get(State.ONGOING).iterator();
+		while (i.hasNext()) {
+			e = i.next();
+			if (e.getEndTime() >= duetime) {
+				i.remove();
+				this.campaigns.get(State.WRAPPED).add(e);
+				needsCommit.add(State.ONGOING);
+				needsCommit.add(State.WRAPPED);
+			}
+		}
+		i = this.campaigns.get(State.FUTURE).iterator();
+		while (i.hasNext()) {
+			e = i.next();
+			if (e.getStartTime() >= duetime) {
+				i.remove();
+				this.campaigns.get(State.ONGOING).add(e);
+				needsCommit.add(State.FUTURE);
+				needsCommit.add(State.ONGOING);
+			}
+		}
+		for (State c : needsCommit) {
+			save(c);
+		}
+	}
+
+	public void close() {
+		save();
+	}
+
+	public void save() {
+		for (State state : State.values()) {
+			save(state);
+		}
+	}
+
+	public void save(State state) {
+		File f = new File(storagePath, state.toFileName() + ".txt");
+		save(f, this.campaigns.get(state));
+	}
+
+	private TreeSet<Campaign> load(File dumpFile) {
+		TreeSet<Campaign> campaigns = new TreeSet<>();
+		try {
+			InputStream is = new FileInputStream(dumpFile);
+			String line;
+			BufferedReader br = null;
+			try {
+				if (dumpFile.getName().endsWith(".gz"))
+					is = new GZIPInputStream(is);
+				br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+				while ((line = br.readLine()) != null) {
+					JSONObject campaign = new JSONObject(line);
+					Campaign e = new Campaign(campaign);
+					campaigns.add(e);
+				}
+			} catch (IOException e) {
+				Log.getLog().warn(e);
+			} finally {
+				try {
+					if (br != null)
+						br.close();
+				} catch (IOException e) {
+					Log.getLog().warn(e);
+				}
+			}
+		} catch (FileNotFoundException e) {
+			Log.getLog().warn(e);
+		}
+		return campaigns;
+	}
+
+	private void save(File dumpFile, TreeSet<Campaign> campaigns) {
+		try {
+			OutputStream os = new FileOutputStream(dumpFile);
+			BufferedWriter bw = null;
+			try {
+				bw = new BufferedWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8));
+				for (Campaign campaign : campaigns) {
+					bw.write(campaign.toString());
+					bw.write('\n');
+				}
+			} catch (IOException e) {
+				Log.getLog().warn(e);
+			} finally {
+				try {
+					if (bw != null)
+						bw.close();
+				} catch (IOException e) {
+					Log.getLog().warn(e);
+				}
+			}
+		} catch (FileNotFoundException e) {
+			Log.getLog().warn(e);
+		}
+	}
 }

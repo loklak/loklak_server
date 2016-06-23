@@ -25,44 +25,44 @@ import org.loklak.server.*;
 
 public class ChangeUserRole extends AbstractAPIHandler implements APIHandler {
 
-    private static final long serialVersionUID = 5577184683745091648L;
+	private static final long serialVersionUID = 5577184683745091648L;
 
-    @Override
-    public String getAPIPath() {
-        return "/api/change-user-role.json";
-    }
+	@Override
+	public String getAPIPath() {
+		return "/api/change-user-role.json";
+	}
 
-    @Override
-    public BaseUserRole getMinimalBaseUserRole() { return BaseUserRole.USER; }
+	@Override
+	public BaseUserRole getMinimalBaseUserRole() {
+		return BaseUserRole.USER;
+	}
 
-    @Override
-    public JSONObject getDefaultPermissions(BaseUserRole baseUserRole) {
-        return null;
-    }
+	@Override
+	public JSONObject getDefaultPermissions(BaseUserRole baseUserRole) {
+		return null;
+	}
 
-    @Override
-    public JSONObject serviceImpl(Query query, Authorization auth) throws APIException {
-        JSONObject result = new JSONObject();
+	@Override
+	public JSONObject serviceImpl(Query query, Authorization auth) throws APIException {
+		JSONObject result = new JSONObject();
 
-        if(!query.isLocalhostAccess()){
-            throw new APIException(403, "Access only from localhost");
-        }
+		if (!query.isLocalhostAccess()) {
+			throw new APIException(403, "Access only from localhost");
+		}
 
-        String userRoleName = query.get("userRole", "");
-        if(!userRoleName.isEmpty()){
-            UserRole userRole = DAO.userRoles.getUserRoleFromString(userRoleName);
-            if(userRole != null){
-                auth.setUserRole(userRole);
-                result.put("message","user now has user-role: " + userRole.getDisplayName());
-            }
-            else{
-                throw new APIException(400, "unknown user-role");
-            }
-        }
-        else{
-            throw new APIException(400, "no user-role specified");
-        }
+		String userRoleName = query.get("userRole", "");
+		if (!userRoleName.isEmpty()) {
+			UserRole userRole = DAO.userRoles.getUserRoleFromString(userRoleName);
+			if (userRole != null) {
+				auth.setUserRole(userRole);
+				result.put("message", "user now has user-role: " + userRole.getDisplayName());
+			} else {
+				throw new APIException(400, "unknown user-role");
+			}
+		} else {
+			throw new APIException(400, "no user-role specified");
+		}
 
-        return result;
-    }
+		return result;
+	}
 }

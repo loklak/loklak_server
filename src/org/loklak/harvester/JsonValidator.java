@@ -17,7 +17,6 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.loklak.harvester;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -36,57 +35,59 @@ import java.io.IOException;
  */
 public class JsonValidator {
 
-    public enum JsonSchemaEnum {
-        FOSSASIA("fossasia.json", SourceType.FOSSASIA_API),
-        OPENWIFIMAP("openwifimap.json", SourceType.OPENWIFIMAP),
-        NODELIST("nodelist-1.0.1.json", SourceType.NODELIST),
-        FREIFUNK_NODE("freifunk-node.json", SourceType.FREIFUNK_NODE),
-        ;
-        private String filename;
-        private SourceType sourceType;
-        JsonSchemaEnum(String filename, SourceType sourceType) {
-            this.filename = filename;
-            this.sourceType = sourceType;
-        }
-        public String getFilename() { return filename; }
+	public enum JsonSchemaEnum {
+		FOSSASIA("fossasia.json", SourceType.FOSSASIA_API), OPENWIFIMAP("openwifimap.json",
+				SourceType.OPENWIFIMAP), NODELIST("nodelist-1.0.1.json",
+						SourceType.NODELIST), FREIFUNK_NODE("freifunk-node.json", SourceType.FREIFUNK_NODE),;
+		private String filename;
+		private SourceType sourceType;
 
-        public SourceType getSourceType() {
-            return sourceType;
-        }
+		JsonSchemaEnum(String filename, SourceType sourceType) {
+			this.filename = filename;
+			this.sourceType = sourceType;
+		}
 
-        public static JsonSchemaEnum valueOf(SourceType sourceType) {
-            for (JsonSchemaEnum schema : JsonSchemaEnum.values()) {
-                if (schema.getSourceType().equals(sourceType)) {
-                    return schema;
-                }
-            }
-            throw new IllegalArgumentException("Invalid sourceType value : " + sourceType);
-        }
+		public String getFilename() {
+			return filename;
+		}
 
-    }
+		public SourceType getSourceType() {
+			return sourceType;
+		}
 
-    private JsonSchema schema;
+		public static JsonSchemaEnum valueOf(SourceType sourceType) {
+			for (JsonSchemaEnum schema : JsonSchemaEnum.values()) {
+				if (schema.getSourceType().equals(sourceType)) {
+					return schema;
+				}
+			}
+			throw new IllegalArgumentException("Invalid sourceType value : " + sourceType);
+		}
 
-    public JsonValidator(JsonSchemaEnum schemaEnum) throws IOException {
-        JsonSchemaFactory schemaFactory = JsonSchemaFactory.byDefault();
-        JsonNode schemaInJson;
-        try {
-            schemaInJson = DAO.getSchema(schemaEnum.getFilename());
-            this.schema = schemaFactory.getJsonSchema(schemaInJson);
-        } catch (ProcessingException e) {
-            throw new IOException("Unable to parse json schema " + schemaEnum.getFilename());
-        }
-    }
+	}
 
-    public ProcessingReport validate(String jsonText) throws IOException {
+	private JsonSchema schema;
 
-        ProcessingReport report;
-        JsonNode toValidate = JsonLoader.fromString(jsonText);
-        try {
-            report = this.schema.validate(toValidate);
-        } catch (ProcessingException e) {
-            throw new IOException("Error validating json text : " +  e.getMessage());
-        }
-        return report;
-    }
+	public JsonValidator(JsonSchemaEnum schemaEnum) throws IOException {
+		JsonSchemaFactory schemaFactory = JsonSchemaFactory.byDefault();
+		JsonNode schemaInJson;
+		try {
+			schemaInJson = DAO.getSchema(schemaEnum.getFilename());
+			this.schema = schemaFactory.getJsonSchema(schemaInJson);
+		} catch (ProcessingException e) {
+			throw new IOException("Unable to parse json schema " + schemaEnum.getFilename());
+		}
+	}
+
+	public ProcessingReport validate(String jsonText) throws IOException {
+
+		ProcessingReport report;
+		JsonNode toValidate = JsonLoader.fromString(jsonText);
+		try {
+			report = this.schema.validate(toValidate);
+		} catch (ProcessingException e) {
+			throw new IOException("Error validating json text : " + e.getMessage());
+		}
+		return report;
+	}
 }

@@ -35,40 +35,44 @@ import org.loklak.server.Query;
 
 public class XMLServlet extends HttpServlet {
 
-    private static final long serialVersionUID = 8578478303032749879L;
-	
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        doGet(request, response);
-    }
-    
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Query post = RemoteAccess.evaluate(request);
+	private static final long serialVersionUID = 8578478303032749879L;
 
-        // manage DoS
-        if (post.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;}
+	@Override
+	protected void doPost(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+		doGet(request, response);
+	}
 
-        // evaluate get parameters
-        String data = post.get("data", "");
-        try {
-        	String jsonData = XML.toJSONObject(data).toString();
-        	JSONObject json = new JSONObject(jsonData);
-        	PrintWriter sos = response.getWriter();
-        	sos.print(json.toString(2));
-        	sos.println();
-        }
-        catch (IOException e) {
-        	Log.getLog().warn(e);
-        	JSONObject json = new JSONObject(true);
-        	json.put("error", "Malformed XML. Please check XML Again");
-        	json.put("type", "Error");
-        	PrintWriter sos = response.getWriter();
-        	sos.print(json.toString(2));
-        	sos.println();
-        }
+	@Override
+	protected void doGet(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+		Query post = RemoteAccess.evaluate(request);
 
-        post.finalize();
-    }
+		// manage DoS
+		if (post.isDoS_blackout()) {
+			response.sendError(503, "your request frequency is too high");
+			return;
+		}
+
+		// evaluate get parameters
+		String data = post.get("data", "");
+		try {
+			String jsonData = XML.toJSONObject(data).toString();
+			JSONObject json = new JSONObject(jsonData);
+			PrintWriter sos = response.getWriter();
+			sos.print(json.toString(2));
+			sos.println();
+		} catch (IOException e) {
+			Log.getLog().warn(e);
+			JSONObject json = new JSONObject(true);
+			json.put("error", "Malformed XML. Please check XML Again");
+			json.put("type", "Error");
+			PrintWriter sos = response.getWriter();
+			sos.print(json.toString(2));
+			sos.println();
+		}
+
+		post.finalize();
+	}
 
 }

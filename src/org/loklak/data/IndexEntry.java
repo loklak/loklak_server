@@ -23,27 +23,27 @@ import org.loklak.objects.ObjectEntry;
 import org.loklak.objects.SourceType;
 
 public class IndexEntry<IndexObject extends ObjectEntry> {
-    
-    private final String id;
-    private final SourceType type;
-    private final IndexObject obj;
-    
-    public IndexEntry(String id, SourceType type, IndexObject obj) {
-        this.id = id;
-        this.type = type;
-        this.obj = obj;
-    }
-    
-    public String getId() {
-        return this.id;
-    }
 
-    public SourceType getType() {
-        return this.type;
-    }
+	private final String id;
+	private final SourceType type;
+	private final IndexObject obj;
 
-    public IndexObject getObject() {
-        return this.obj;
-    }
+	public IndexEntry(String id, SourceType type, IndexObject obj) {
+		this.id = id;
+		this.type = type;
+		this.obj = obj;
+	}
+
+	public String getId() {
+		return this.id;
+	}
+
+	public SourceType getType() {
+		return this.type;
+	}
+
+	public IndexObject getObject() {
+		return this.obj;
+	}
 
 }

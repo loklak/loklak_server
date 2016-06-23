@@ -17,7 +17,6 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.loklak.harvester;
 
 import org.json.JSONArray;
@@ -30,105 +29,106 @@ import java.util.regex.Pattern;
 
 public class JsonFieldConverter {
 
-    public enum JsonConversionSchemaEnum {
-        FOSSASIA("fossasia.json"),
-        OPENWIFIMAP("openwifimap.json"),
-        NODELIST_NODE("nodelist-node.json"),
-        FREIFUNK_NODE("freifunk-node.json"),
-        NETMON_NODE("netmon-node.json"),
-        ;
-        private String filename;
-        JsonConversionSchemaEnum(String filename) {
-            this.filename = filename;
-        }
-        public String getFilename() { return filename; }
-    }
+	public enum JsonConversionSchemaEnum {
+		FOSSASIA("fossasia.json"), OPENWIFIMAP("openwifimap.json"), NODELIST_NODE("nodelist-node.json"), FREIFUNK_NODE(
+				"freifunk-node.json"), NETMON_NODE("netmon-node.json"),;
+		private String filename;
 
+		JsonConversionSchemaEnum(String filename) {
+			this.filename = filename;
+		}
 
-    private Map<String, List<String>> conversionRules;
+		public String getFilename() {
+			return filename;
+		}
+	}
 
-    @SuppressWarnings("unchecked")
+	private Map<String, List<String>> conversionRules;
+
+	@SuppressWarnings("unchecked")
 	public JsonFieldConverter(JsonConversionSchemaEnum conversionSchema) throws IOException {
-        final JSONObject convSchema = DAO.getConversionSchema(conversionSchema.getFilename());
+		final JSONObject convSchema = DAO.getConversionSchema(conversionSchema.getFilename());
 		List<List<?>> convRules = (List<List<?>>) convSchema.get("rules");
-        this.conversionRules = new HashMap<>();
-        for (List<?> rule : convRules) {
-            List<String> toInsert = new ArrayList<>();
-            this.conversionRules.put((String) rule.get(0), toInsert);
+		this.conversionRules = new HashMap<>();
+		for (List<?> rule : convRules) {
+			List<String> toInsert = new ArrayList<>();
+			this.conversionRules.put((String) rule.get(0), toInsert);
 
-            // the 2nd rule can be either a string
-            if (rule.get(1) instanceof String) {
-                toInsert.add((String) rule.get(1));
-            } else {
-                // or an array
-                for (String afterField : (List<String>) rule.get(1)) {
-                    toInsert.add(afterField);
-                }
-            }
-        }
-    }
+			// the 2nd rule can be either a string
+			if (rule.get(1) instanceof String) {
+				toInsert.add((String) rule.get(1));
+			} else {
+				// or an array
+				for (String afterField : (List<String>) rule.get(1)) {
+					toInsert.add(afterField);
+				}
+			}
+		}
+	}
 
-    public JSONArray convert(JSONArray initialJson) throws IOException {
-        JSONArray result = new JSONArray();
-        for (Object o : initialJson) {
-            result.put(this.convert((JSONObject) o));
-        }
-        return result;
-    }
+	public JSONArray convert(JSONArray initialJson) throws IOException {
+		JSONArray result = new JSONArray();
+		for (Object o : initialJson) {
+			result.put(this.convert((JSONObject) o));
+		}
+		return result;
+	}
 
-    public JSONObject convert(JSONObject initialJson) throws IOException {
-        Iterator<Map.Entry<String, List<String>>> it = this.conversionRules.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry<String, List<String>> entry = (Map.Entry<String, List<String>>) it.next();
-            String key = entry.getKey();
-            Object value = getFieldValue(initialJson, key);
+	public JSONObject convert(JSONObject initialJson) throws IOException {
+		Iterator<Map.Entry<String, List<String>>> it = this.conversionRules.entrySet().iterator();
+		while (it.hasNext()) {
+			Map.Entry<String, List<String>> entry = (Map.Entry<String, List<String>>) it.next();
+			String key = entry.getKey();
+			Object value = getFieldValue(initialJson, key);
 
-            if (value == null) { continue; }  // field not found
+			if (value == null) {
+				continue;
+			} // field not found
 
-            for (String newKey : entry.getValue()) {
-                putToField(initialJson, newKey, value);
-            }
-        }
-        return initialJson;
-    }
+			for (String newKey : entry.getValue()) {
+				putToField(initialJson, newKey, value);
+			}
+		}
+		return initialJson;
+	}
 
-    private static Object getFieldValue(JSONObject object, String key) {
-        if (key.contains(".")) {
-            String[] deepFields = key.split(Pattern.quote("."));
-            JSONObject currentLevel = object;
-            for (int lvl = 0; lvl < deepFields.length; lvl++) {
-                if (lvl == deepFields.length - 1) {
-                    return currentLevel.get(deepFields[lvl]);
-                } else {
-                    if (currentLevel.get(deepFields[lvl]) == null) {
-                        return null;
-                    }
-                    currentLevel = (JSONObject) currentLevel.get(deepFields[lvl]);
-                }
-            }
-        } else {
-            return object.get(key);
-        }
-        // unreachable code
-        return null;
-    }
+	private static Object getFieldValue(JSONObject object, String key) {
+		if (key.contains(".")) {
+			String[] deepFields = key.split(Pattern.quote("."));
+			JSONObject currentLevel = object;
+			for (int lvl = 0; lvl < deepFields.length; lvl++) {
+				if (lvl == deepFields.length - 1) {
+					return currentLevel.get(deepFields[lvl]);
+				} else {
+					if (currentLevel.get(deepFields[lvl]) == null) {
+						return null;
+					}
+					currentLevel = (JSONObject) currentLevel.get(deepFields[lvl]);
+				}
+			}
+		} else {
+			return object.get(key);
+		}
+		// unreachable code
+		return null;
+	}
 
-    private static void putToField(JSONObject object, String key, Object value) {
-        if (key.contains(".")) {
-            String[] deepFields = key.split(Pattern.quote("."));
-            JSONObject currentLevel = object;
-            for (int lvl = 0; lvl < deepFields.length; lvl++) {
-                if (lvl == deepFields.length - 1) {
-                    currentLevel.put(deepFields[lvl], value);
-                } else {
-                    if (currentLevel.get(deepFields[lvl]) == null) {
-                        currentLevel.put(deepFields[lvl], new HashMap<>());
-                    }
-                    currentLevel = (JSONObject) currentLevel.get(deepFields[lvl]);
-                }
-            }
-        } else {
-            object.put(key, value);
-        }
-    }
+	private static void putToField(JSONObject object, String key, Object value) {
+		if (key.contains(".")) {
+			String[] deepFields = key.split(Pattern.quote("."));
+			JSONObject currentLevel = object;
+			for (int lvl = 0; lvl < deepFields.length; lvl++) {
+				if (lvl == deepFields.length - 1) {
+					currentLevel.put(deepFields[lvl], value);
+				} else {
+					if (currentLevel.get(deepFields[lvl]) == null) {
+						currentLevel.put(deepFields[lvl], new HashMap<>());
+					}
+					currentLevel = (JSONObject) currentLevel.get(deepFields[lvl]);
+				}
+			}
+		} else {
+			object.put(key, value);
+		}
+	}
 }

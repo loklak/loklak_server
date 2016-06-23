@@ -24,14 +24,14 @@ import org.loklak.objects.MessageEntry;
 
 public class MessageFactory extends AbstractIndexFactory<MessageEntry> implements IndexFactory<MessageEntry> {
 
-    public MessageFactory(final ElasticsearchClient elasticsearch_client, final String index_name, final int cacheSize, final int existSize) {
-        super(elasticsearch_client, index_name, cacheSize, existSize);
-    }
+	public MessageFactory(final ElasticsearchClient elasticsearch_client, final String index_name, final int cacheSize,
+			final int existSize) {
+		super(elasticsearch_client, index_name, cacheSize, existSize);
+	}
 
-    @Override
-    public MessageEntry init(JSONObject json) {
-        return new MessageEntry(json);
-    }
-    
+	@Override
+	public MessageEntry init(JSONObject json) {
+		return new MessageEntry(json);
+	}
+
 }
-

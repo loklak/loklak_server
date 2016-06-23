@@ -23,56 +23,54 @@ package org.loklak.server;
  * A credential is used as key in DAO.authentication
  */
 public class ClientCredential extends Client {
-    
-    public enum Type {
-    	passwd_login(true),
-        cookie(false),
-        access_token(false),
-        resetpass_token(false),
-        host(false);
-        private final boolean persistent;
-        Type(final boolean persistent) {
-            this.persistent = persistent;
-        }
-        public boolean isPersistent() {
-            return this.persistent;
-        }
-    }
-    
-    private final boolean persistent;
 
-    public ClientCredential(String rawIdString) {
-        super(rawIdString);
-        this.persistent = Type.valueOf(super.getKey()).isPersistent();
-    }
-    
-    public ClientCredential(Type type, String untypedId) {
-        super(type.name(), untypedId);
-        this.persistent = type.isPersistent();
-    }
+	public enum Type {
+		passwd_login(true), cookie(false), access_token(false), resetpass_token(false), host(false);
+		private final boolean persistent;
 
-    public boolean isPersistent() {
-        return this.persistent;
-    }
-    
-    public boolean isPasswdLogin() {
-        return this.getKey().equals(Type.passwd_login.name());
-    }
-    
-    public boolean isCookie() {
-        return this.getKey().equals(Type.cookie.name());
-    }
-    
-    public boolean isToken() {
-        return this.getKey().equals(Type.access_token.name());
-    }
-    
-    public boolean isAnonymous() {
-        return this.getKey().equals(Type.host.name());
-    }
-    
-    public Type getType() {
-        return Type.valueOf(this.getKey());
-    }
-    
+		Type(final boolean persistent) {
+			this.persistent = persistent;
+		}
+
+		public boolean isPersistent() {
+			return this.persistent;
+		}
+	}
+
+	private final boolean persistent;
+
+	public ClientCredential(String rawIdString) {
+		super(rawIdString);
+		this.persistent = Type.valueOf(super.getKey()).isPersistent();
+	}
+
+	public ClientCredential(Type type, String untypedId) {
+		super(type.name(), untypedId);
+		this.persistent = type.isPersistent();
+	}
+
+	public boolean isPersistent() {
+		return this.persistent;
+	}
+
+	public boolean isPasswdLogin() {
+		return this.getKey().equals(Type.passwd_login.name());
+	}
+
+	public boolean isCookie() {
+		return this.getKey().equals(Type.cookie.name());
+	}
+
+	public boolean isToken() {
+		return this.getKey().equals(Type.access_token.name());
+	}
+
+	public boolean isAnonymous() {
+		return this.getKey().equals(Type.host.name());
+	}
+
+	public Type getType() {
+		return Type.valueOf(this.getKey());
+	}
+
 }

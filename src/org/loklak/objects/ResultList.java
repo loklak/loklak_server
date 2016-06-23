@@ -23,32 +23,34 @@ import java.util.ArrayList;
 
 public class ResultList<E> extends ArrayList<E> {
 
-    private static final long serialVersionUID = -982453065951290203L;
+	private static final long serialVersionUID = -982453065951290203L;
 
-    private long hits = -1;
-    
-    public ResultList() {
-        super();
-    }
- 
-    /**
-     * set the number of total hits this list has
-     * @param totalHits
-     */
-    public void setHits(long totalHits) {
-        this.hits = totalHits;
-    }
-    
-    /**
-     * get the number of total hits
-     * @return
-     */
-    public long getHits() {
-        return this.hits == -1 ? this.size() : this.hits;
-    }
-    
-    public void clear() {
-        super.clear();
-        this.hits = -1;
-    }
+	private long hits = -1;
+
+	public ResultList() {
+		super();
+	}
+
+	/**
+	 * set the number of total hits this list has
+	 * 
+	 * @param totalHits
+	 */
+	public void setHits(long totalHits) {
+		this.hits = totalHits;
+	}
+
+	/**
+	 * get the number of total hits
+	 * 
+	 * @return
+	 */
+	public long getHits() {
+		return this.hits == -1 ? this.size() : this.hits;
+	}
+
+	public void clear() {
+		super.clear();
+		this.hits = -1;
+	}
 }

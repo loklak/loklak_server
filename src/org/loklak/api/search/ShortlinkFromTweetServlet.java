@@ -33,27 +33,38 @@ import org.loklak.server.Query;
 
 public class ShortlinkFromTweetServlet extends HttpServlet {
 
-    private static final long serialVersionUID = 5632263908L;
+	private static final long serialVersionUID = 5632263908L;
 
-    @Override
-    protected void doPost(final HttpServletRequest request, final HttpServletResponse response) throws ServletException, IOException {
-        doGet(request, response);
-    }
-    
-    @Override
-    protected void doGet(final HttpServletRequest request, final HttpServletResponse response) throws ServletException, IOException {
-        final Query post = RemoteAccess.evaluate(request);
-        String id = post.get("id", "");
-        if (id.length() == 0) {response.sendError(503, "bad request (id missing)"); return;}
-        
-        // search for tweet with id
-        MessageEntry message = DAO.readMessage(id);
-        if (message == null) {response.sendError(503, "bad request (message with id=" + id + " unknown)"); return;}
-        
-        // read link in message
-        String[] links = message.getLinks();
-        if (links.length != 1) {response.sendError(503, "bad request (message with id=" + id + " must have exactly one link)"); return;}
-        
-        response.sendRedirect(links[0]);
-    }
+	@Override
+	protected void doPost(final HttpServletRequest request, final HttpServletResponse response)
+			throws ServletException, IOException {
+		doGet(request, response);
+	}
+
+	@Override
+	protected void doGet(final HttpServletRequest request, final HttpServletResponse response)
+			throws ServletException, IOException {
+		final Query post = RemoteAccess.evaluate(request);
+		String id = post.get("id", "");
+		if (id.length() == 0) {
+			response.sendError(503, "bad request (id missing)");
+			return;
+		}
+
+		// search for tweet with id
+		MessageEntry message = DAO.readMessage(id);
+		if (message == null) {
+			response.sendError(503, "bad request (message with id=" + id + " unknown)");
+			return;
+		}
+
+		// read link in message
+		String[] links = message.getLinks();
+		if (links.length != 1) {
+			response.sendError(503, "bad request (message with id=" + id + " must have exactly one link)");
+			return;
+		}
+
+		response.sendRedirect(links[0]);
+	}
 }

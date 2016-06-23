@@ -26,135 +26,145 @@ import org.json.JSONObject;
 import org.loklak.tools.DateParser;
 
 public class Campaign implements Comparator<Campaign>, Comparable<Campaign> {
-    
-    private JSONObject map;
-    private long start_time, end_time;
-    private String id;
-    
-    public Campaign() {
-        this.map = new JSONObject(true);
-    }
 
-    /**
-     * create an campaign with a dumped map
-     * @param campaignMap
-     */
-    public Campaign(JSONObject campaignMap) {
-        this();
-        this.map.putAll(campaignMap);
-        this.start_time = ((Date) this.map.get("start_date")).getTime();
-        this.end_time = ((Date) this.map.get("end_date")).getTime();
-        this.id = DateParser.minuteDateFormat.format((Date) this.map.get("start_date")).replace(' ', '_') + "-" + DateParser.minuteDateFormat.format((Date) this.map.get("end_date")).replace(' ', '_') + "-" + Math.abs(((String) this.map.get("query")).hashCode()) + "-" + Math.abs(((String) this.map.get("name")).hashCode());
-    }
-    
-    /**
-     * create an campaign
-     * @param query the query which can be used to harvest the campaign
-     * @param name the name of the campaign
-     * @param creation_date the creation time of the campaign
-     * @param start_date the start of the campaign
-     * @param end_date   the end of the campaign
-     * @param timezoneOffset the offset of the time zone of the creating client
-     */
-    public Campaign(
-            final String query, final String name, 
-            final Date creation_date,
-            final Date start_date, final Date end_date,
-            final int timezoneOffset
-            ) {
-        this();
-        this.map.put("start_date", start_date); // this must be first to make lists sortable in dump lists
-        this.map.put("end_date", end_date);
-        this.map.put("timezoneOffset", timezoneOffset);
-        this.map.put("creation_date", creation_date);
-        this.map.put("query", query);
-        this.map.put("name", name);
-        this.start_time = start_date.getTime();
-        this.end_time = end_date.getTime();
-        this.id = DateParser.minuteDateFormat.format(start_date).replace(' ', '_') + "-" + DateParser.minuteDateFormat.format(end_date).replace(' ', '_') + "-" + Math.abs(query.hashCode()) + "-" + Math.abs(name.hashCode());
-    }
+	private JSONObject map;
+	private long start_time, end_time;
+	private String id;
 
-    /**
-     * create an campaign
-     * @param query the query which can be used to harvest the campaign
-     * @param name the name of the campaign
-     * @param start_date "YYYY-MM-dd HH:mm" the start of the campaign
-     * @param end_date   "YYYY-MM-dd HH:mm" the end of the campaign
-     * @param timezoneOffset the offset of the time zone of the creating client, used to parse the date
-     */
-    public Campaign(
-            final String query, final String name,
-            final String start_date, final String end_date,
-            final int timezoneOffset
-            ) throws ParseException {
-        this(
-            name,
-            query,
-            new Date(),
-            DateParser.parse(start_date, timezoneOffset).getTime(),
-            DateParser.parse(end_date, timezoneOffset).getTime(),
-            timezoneOffset
-        );
-    }
+	public Campaign() {
+		this.map = new JSONObject(true);
+	}
 
-    public String getName() {
-        return (String) this.map.get("name");
-    }
+	/**
+	 * create an campaign with a dumped map
+	 * 
+	 * @param campaignMap
+	 */
+	public Campaign(JSONObject campaignMap) {
+		this();
+		this.map.putAll(campaignMap);
+		this.start_time = ((Date) this.map.get("start_date")).getTime();
+		this.end_time = ((Date) this.map.get("end_date")).getTime();
+		this.id = DateParser.minuteDateFormat.format((Date) this.map.get("start_date")).replace(' ', '_') + "-"
+				+ DateParser.minuteDateFormat.format((Date) this.map.get("end_date")).replace(' ', '_') + "-"
+				+ Math.abs(((String) this.map.get("query")).hashCode()) + "-"
+				+ Math.abs(((String) this.map.get("name")).hashCode());
+	}
 
-    public String getQuery() {
-        return (String) this.map.get("query");
-    }
+	/**
+	 * create an campaign
+	 * 
+	 * @param query
+	 *            the query which can be used to harvest the campaign
+	 * @param name
+	 *            the name of the campaign
+	 * @param creation_date
+	 *            the creation time of the campaign
+	 * @param start_date
+	 *            the start of the campaign
+	 * @param end_date
+	 *            the end of the campaign
+	 * @param timezoneOffset
+	 *            the offset of the time zone of the creating client
+	 */
+	public Campaign(final String query, final String name, final Date creation_date, final Date start_date,
+			final Date end_date, final int timezoneOffset) {
+		this();
+		this.map.put("start_date", start_date); // this must be first to make
+												// lists sortable in dump lists
+		this.map.put("end_date", end_date);
+		this.map.put("timezoneOffset", timezoneOffset);
+		this.map.put("creation_date", creation_date);
+		this.map.put("query", query);
+		this.map.put("name", name);
+		this.start_time = start_date.getTime();
+		this.end_time = end_date.getTime();
+		this.id = DateParser.minuteDateFormat.format(start_date).replace(' ', '_') + "-"
+				+ DateParser.minuteDateFormat.format(end_date).replace(' ', '_') + "-" + Math.abs(query.hashCode())
+				+ "-" + Math.abs(name.hashCode());
+	}
 
-    public Date getCreationDate() {
-        return (Date) this.map.get("creation_date");
-    }
+	/**
+	 * create an campaign
+	 * 
+	 * @param query
+	 *            the query which can be used to harvest the campaign
+	 * @param name
+	 *            the name of the campaign
+	 * @param start_date
+	 *            "YYYY-MM-dd HH:mm" the start of the campaign
+	 * @param end_date
+	 *            "YYYY-MM-dd HH:mm" the end of the campaign
+	 * @param timezoneOffset
+	 *            the offset of the time zone of the creating client, used to
+	 *            parse the date
+	 */
+	public Campaign(final String query, final String name, final String start_date, final String end_date,
+			final int timezoneOffset) throws ParseException {
+		this(name, query, new Date(), DateParser.parse(start_date, timezoneOffset).getTime(),
+				DateParser.parse(end_date, timezoneOffset).getTime(), timezoneOffset);
+	}
 
-    public long getStartTime() {
-        return this.start_time;
-    }
+	public String getName() {
+		return (String) this.map.get("name");
+	}
 
-    public long getEndTime() {
-        return this.end_time;
-    }
-    
-    public int getTimezoneOffset() {
-        return (Integer) this.map.get("timezoneOffset");
-    }
-    
-    public String getID() {
-        return this.id;
-    }
-    
-    public int hashCode() {
-        return this.id.hashCode();
-    }
+	public String getQuery() {
+		return (String) this.map.get("query");
+	}
 
-    @Override
-    public int compareTo(Campaign o) {
-        return compare(this, o);
-    }
+	public Date getCreationDate() {
+		return (Date) this.map.get("creation_date");
+	}
 
-    @Override
-    public int compare(Campaign o1, Campaign o2) {
-        int c = o1.getStartTime() < o2.getStartTime() ? -1 : o1.getStartTime() > o2.getStartTime() ? 1 : 0;
-        if (c == 0) c = o1.getEndTime() < o2.getEndTime() ? -1 : o1.getEndTime() > o2.getEndTime() ? 1 : 0;
-        if (c == 0) c = o1.hashCode() < o2.hashCode() ? -1 : o1.hashCode() > o2.hashCode() ? 1 : 0;
-        return c;
-    }
+	public long getStartTime() {
+		return this.start_time;
+	}
 
-    public JSONObject toJSON() {
-        return this.map;
-    }
-    
-    public String toString() {
-        return toJSON().toString();
-    }
-    
-    public static void main(String args[]) {
-        try {
-            Campaign campaign = new Campaign("FOSSASIA", "#fossasia", "2015-03-13 09:00", "2015-03-15 18:00", -420);
-            System.out.println(campaign.toString());
-        } catch (ParseException e1) {
-        }
-    }
+	public long getEndTime() {
+		return this.end_time;
+	}
+
+	public int getTimezoneOffset() {
+		return (Integer) this.map.get("timezoneOffset");
+	}
+
+	public String getID() {
+		return this.id;
+	}
+
+	public int hashCode() {
+		return this.id.hashCode();
+	}
+
+	@Override
+	public int compareTo(Campaign o) {
+		return compare(this, o);
+	}
+
+	@Override
+	public int compare(Campaign o1, Campaign o2) {
+		int c = o1.getStartTime() < o2.getStartTime() ? -1 : o1.getStartTime() > o2.getStartTime() ? 1 : 0;
+		if (c == 0)
+			c = o1.getEndTime() < o2.getEndTime() ? -1 : o1.getEndTime() > o2.getEndTime() ? 1 : 0;
+		if (c == 0)
+			c = o1.hashCode() < o2.hashCode() ? -1 : o1.hashCode() > o2.hashCode() ? 1 : 0;
+		return c;
+	}
+
+	public JSONObject toJSON() {
+		return this.map;
+	}
+
+	public String toString() {
+		return toJSON().toString();
+	}
+
+	public static void main(String args[]) {
+		try {
+			Campaign campaign = new Campaign("FOSSASIA", "#fossasia", "2015-03-13 09:00", "2015-03-15 18:00", -420);
+			System.out.println(campaign.toString());
+		} catch (ParseException e1) {
+		}
+	}
 }

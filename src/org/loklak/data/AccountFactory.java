@@ -25,14 +25,15 @@ import org.json.JSONObject;
 import org.loklak.objects.AccountEntry;
 
 public class AccountFactory extends AbstractIndexFactory<AccountEntry> implements IndexFactory<AccountEntry> {
-    
-    public AccountFactory(final ElasticsearchClient elasticsearch_client, final String index_name, final int cacheSize, final int existSize) {
-        super(elasticsearch_client, index_name, cacheSize, existSize);
-    }
 
-    @Override
-    public AccountEntry init(JSONObject map) throws IOException {
-        return new AccountEntry(map);
-    }
-    
+	public AccountFactory(final ElasticsearchClient elasticsearch_client, final String index_name, final int cacheSize,
+			final int existSize) {
+		super(elasticsearch_client, index_name, cacheSize, existSize);
+	}
+
+	@Override
+	public AccountEntry init(JSONObject map) throws IOException {
+		return new AccountEntry(map);
+	}
+
 }

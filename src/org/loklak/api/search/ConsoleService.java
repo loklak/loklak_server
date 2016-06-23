@@ -47,188 +47,240 @@ import com.google.common.util.concurrent.AtomicDouble;
  * http://localhost:9000/api/console.json?q=SELECT%20PERCENT(count)%20AS%20percent,%20screen_name%20FROM%20(SELECT%20COUNT(*)%20AS%20count,%20screen_name%20FROM%20messages%20WHERE%20query=%27loklak%27%20GROUP%20BY%20screen_name)%20WHERE%20screen_name%20IN%20(%27leonmakk%27,%27Daminisatya%27,%27sudheesh001%27,%27shiven_mian%27);
  */
 public class ConsoleService extends AbstractAPIHandler implements APIHandler {
-   
-    private static final long serialVersionUID = 8578478303032749879L;
 
-    @Override
-    public BaseUserRole getMinimalBaseUserRole() { return BaseUserRole.ANONYMOUS; }
+	private static final long serialVersionUID = 8578478303032749879L;
 
-    @Override
-    public JSONObject getDefaultPermissions(BaseUserRole baseUserRole) {
-        return null;
-    }
+	@Override
+	public BaseUserRole getMinimalBaseUserRole() {
+		return BaseUserRole.ANONYMOUS;
+	}
 
-    public String getAPIPath() {
-        return "/api/console.json";
-    }
+	@Override
+	public JSONObject getDefaultPermissions(BaseUserRole baseUserRole) {
+		return null;
+	}
 
-    private static LinkedHashMap<String, String> parseCommaList(String cl) {
-        LinkedHashMap<String, String> columns;
-        String[] column_list = cl.trim().split(",");
-        if (column_list.length == 1 && column_list[0].equals("*")) {
-            columns = null;
-        } else {
-            columns = new LinkedHashMap<>();
-            for (String column: column_list) {
-                String c = column.trim();
-                int p = c.indexOf(" AS ");
-                if (p < 0) {
-                    c = trimQuotes(c);
-                    columns.put(c, c);
-                } else {
-                    columns.put(trimQuotes(c.substring(0,  p).trim()), trimQuotes(c.substring(p + 4).trim()));
-                }
-            }
-        }
-        return columns;
-    }
-    private static String trimQuotes(String s) {
-        if (s.length() == 0) return s;
-        if (s.charAt(0) == '\'' || s.charAt(0) == '\"') s = s.substring(1);
-        if (s.charAt(s.length() - 1) == '\'' || s.charAt(s.length() - 1) == '\"') s = s.substring(0, s.length() - 1);
-        return s;
-    }
-    
-    private static class Columns {
-        private LinkedHashMap<String, String> columns;
-        
-        public Columns(String columnString) {
-            this.columns = parseCommaList(columnString);
-        }
-        
-        public JSONObject extractRow(JSONObject message) {
-            if (this.columns == null) return message;
-            JSONObject json = new JSONObject(true);
-            for (Map.Entry<String, String> c: columns.entrySet()) {
-                if (message.has(c.getKey())) json.put(c.getValue(), message.get(c.getKey()));
-            }
-            return json;
-        }
-        
-        public JSONArray extractTable(JSONArray rows) {
-            JSONArray a = new JSONArray();
-            if (this.columns != null && this.columns.size() == 1) {
-                // test if this has an aggregation key: AVG, COUNT, MAX, MIN, SUM
-                final String aggregator = this.columns.keySet().iterator().next();
-                final String aggregator_as = this.columns.get(aggregator);
-                if (aggregator.startsWith("COUNT(") && aggregator.endsWith(")")) { // TODO: there should be a special pattern for this to make it more efficient
-                    return a.put(new JSONObject().put(aggregator_as, rows.length()));
-                }
-                if (aggregator.startsWith("MAX(") && aggregator.endsWith(")")) {
-                    final AtomicDouble max = new AtomicDouble(Double.MIN_VALUE); String c = aggregator.substring(4, aggregator.length() - 1);
-                    rows.forEach(json -> max.set(Math.max(max.get(), ((JSONObject) json).getDouble(c))));
-                    return a.put(new JSONObject().put(aggregator_as, max.get()));
-                }
-                if (aggregator.startsWith("MIN(") && aggregator.endsWith(")")) {
-                    final AtomicDouble min = new AtomicDouble(Double.MAX_VALUE); String c = aggregator.substring(4, aggregator.length() - 1);
-                    rows.forEach(json -> min.set(Math.min(min.get(), ((JSONObject) json).getDouble(c))));
-                    return a.put(new JSONObject().put(aggregator_as, min.get()));
-                }
-                if (aggregator.startsWith("SUM(") && aggregator.endsWith(")")) {
-                    final AtomicDouble sum = new AtomicDouble(0.0d); String c = aggregator.substring(4, aggregator.length() - 1);
-                    rows.forEach(json -> sum.addAndGet(((JSONObject) json).getDouble(c)));
-                    return a.put(new JSONObject().put(aggregator_as, sum.get()));
-                }
-                if (aggregator.startsWith("AVG(") && aggregator.endsWith(")")) {
-                    final AtomicDouble sum = new AtomicDouble(0.0d); String c = aggregator.substring(4, aggregator.length() - 1);
-                    rows.forEach(json -> sum.addAndGet(((JSONObject) json).getDouble(c)));
-                    return a.put(new JSONObject().put(aggregator_as, sum.get() / rows.length()));
-                }
-            }
-            if (this.columns != null && this.columns.size() == 2) {
-                Iterator<String> ci = this.columns.keySet().iterator();
-                String aggregator = ci.next(); String column = ci.next();
-                if (column.indexOf('(') >= 0) {String s = aggregator; aggregator = column; column = s;}
-                final String aggregator_as = this.columns.get(aggregator);
-                final String column_as = this.columns.get(column);
-                final String column_final = column;
-                if (aggregator.startsWith("PERCENT(") && aggregator.endsWith(")")) {
-                    final AtomicDouble sum = new AtomicDouble(0.0d); String c = aggregator.substring(8, aggregator.length() - 1);
-                    rows.forEach(json -> sum.addAndGet(((JSONObject) json).getDouble(c)));
-                    rows.forEach(json -> a.put(new JSONObject()
-                            .put(aggregator_as, 100.0d * ((JSONObject) json).getDouble(c) / sum.get())
-                            .put(column_as, ((JSONObject) json).get(column_final))));
-                    return a;
-                }
-            }
-            for (Object json: rows) a.put(this.extractRow((JSONObject) json));
-            return a;
-        }
-        public String toString() {
-            return this.columns == null ? "NULL" : this.columns.toString();
-        }
-    }
-    
-    private final static LinkedHashMap<Pattern, Function<Matcher, JSONObject>> pattern = new LinkedHashMap<>();
-    static {
-        pattern.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?\\(\\h??SELECT\\h+?(.*?)\\h??\\)\\h+?WHERE\\h+?(.*?)\\h?+IN\\h?+\\((.*?)\\)\\h??;"), matcher -> {
-            Columns columns = new Columns(matcher.group(1));
-            String subquery = matcher.group(2).trim();
-            if (!subquery.endsWith(";")) subquery = subquery + ";";
-            String filter_name = matcher.group(3);
-            Set<String> filter_set = parseCommaList(matcher.group(4)).keySet();
-            JSONArray a0 = console("SELECT " + subquery).getJSONArray("data");
-            JSONArray a1 = new JSONArray();
-            a0.forEach(o -> {
-                JSONObject j = (JSONObject) o;
-                if (j.has(filter_name) && filter_set.contains(j.getString(filter_name))) a1.put(j);
-            });
-            return new JSONObject(true)
-                    .put("metadata", new JSONObject().put("offset", 0).put("hits", a0.length()).put("count", a1.length()))
-                    .put("data", columns.extractTable(a1));
-        });
-        pattern.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?messages\\h+?WHERE\\h+?id\\h??=\\h??'(.*?)'\\h??;"), matcher -> {
-            Columns columns = new Columns(matcher.group(1));
-            JSONObject message = DAO.messages.readJSON(matcher.group(2));
-            return message == null ? null : new JSONObject()
-                    .put("metadata", new JSONObject().put("offset", 0).put("hits", 1).put("count", 1))
-                    .put("data", (new JSONArray()).put(columns.extractRow(message)));
-        });
-        pattern.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?messages\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h?+GROUP\\h?+BY\\h?+(.*?)\\h??;"), matcher -> {
-            Columns columns = new Columns(matcher.group(1));
-            String group = matcher.group(3);
-            DAO.SearchLocalMessages messages = new DAO.SearchLocalMessages(matcher.group(2), Timeline.Order.CREATED_AT, 0, 0, 100, group);
-            JSONArray array = new JSONArray();
-            JSONObject aggregation = messages.getAggregations().getJSONObject(group);
-            
-            for (String key: aggregation.keySet()) array.put(new JSONObject(true).put(group, key).put("COUNT(*)", aggregation.get(key)));
-            JSONObject json = messages.timeline.toJSON(true, "metadata", "data");
-            return json.put("data", columns.extractTable(array));
-        });
-        pattern.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?messages\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h??;"), matcher -> {
-            Columns columns = new Columns(matcher.group(1));
-            DAO.SearchLocalMessages messages = new DAO.SearchLocalMessages(matcher.group(2), Timeline.Order.CREATED_AT, 0, 100, 0);
-            JSONObject json = messages.timeline.toJSON(true, "metadata", "data");
-            return json.put("data", columns.extractTable(json.getJSONArray("data")));
-        });
-    }
+	public String getAPIPath() {
+		return "/api/console.json";
+	}
 
-    private static JSONObject console(String q) {
-        if (q == null) return new JSONObject();
-        JSONObject json = null;
-        q = q.trim();
-        find_matcher: for (Map.Entry<Pattern, Function<Matcher, JSONObject>> pe: pattern.entrySet()) {
-            Pattern p = pe.getKey();
-            Matcher m = p.matcher(q);
-            if (m.find()) {
-                json = pe.getValue().apply(m);
-                if (json != null) break find_matcher;
-            }
-        }
-        
-        // return json
-        if (json == null) json = new JSONObject();
-        return json;
-    }
-    
-    @Override
-    public JSONObject serviceImpl(Query post, Authorization rights) throws APIException {
+	private static LinkedHashMap<String, String> parseCommaList(String cl) {
+		LinkedHashMap<String, String> columns;
+		String[] column_list = cl.trim().split(",");
+		if (column_list.length == 1 && column_list[0].equals("*")) {
+			columns = null;
+		} else {
+			columns = new LinkedHashMap<>();
+			for (String column : column_list) {
+				String c = column.trim();
+				int p = c.indexOf(" AS ");
+				if (p < 0) {
+					c = trimQuotes(c);
+					columns.put(c, c);
+				} else {
+					columns.put(trimQuotes(c.substring(0, p).trim()), trimQuotes(c.substring(p + 4).trim()));
+				}
+			}
+		}
+		return columns;
+	}
 
-        // parameters
-        String q = post.get("q", "");
-        //int timezoneOffset = post.get("timezoneOffset", 0);
-        
-        return console(q);
-    }
-    
+	private static String trimQuotes(String s) {
+		if (s.length() == 0)
+			return s;
+		if (s.charAt(0) == '\'' || s.charAt(0) == '\"')
+			s = s.substring(1);
+		if (s.charAt(s.length() - 1) == '\'' || s.charAt(s.length() - 1) == '\"')
+			s = s.substring(0, s.length() - 1);
+		return s;
+	}
+
+	private static class Columns {
+		private LinkedHashMap<String, String> columns;
+
+		public Columns(String columnString) {
+			this.columns = parseCommaList(columnString);
+		}
+
+		public JSONObject extractRow(JSONObject message) {
+			if (this.columns == null)
+				return message;
+			JSONObject json = new JSONObject(true);
+			for (Map.Entry<String, String> c : columns.entrySet()) {
+				if (message.has(c.getKey()))
+					json.put(c.getValue(), message.get(c.getKey()));
+			}
+			return json;
+		}
+
+		public JSONArray extractTable(JSONArray rows) {
+			JSONArray a = new JSONArray();
+			if (this.columns != null && this.columns.size() == 1) {
+				// test if this has an aggregation key: AVG, COUNT, MAX, MIN,
+				// SUM
+				final String aggregator = this.columns.keySet().iterator().next();
+				final String aggregator_as = this.columns.get(aggregator);
+				if (aggregator.startsWith("COUNT(") && aggregator.endsWith(")")) { // TODO:
+																					// there
+																					// should
+																					// be
+																					// a
+																					// special
+																					// pattern
+																					// for
+																					// this
+																					// to
+																					// make
+																					// it
+																					// more
+																					// efficient
+					return a.put(new JSONObject().put(aggregator_as, rows.length()));
+				}
+				if (aggregator.startsWith("MAX(") && aggregator.endsWith(")")) {
+					final AtomicDouble max = new AtomicDouble(Double.MIN_VALUE);
+					String c = aggregator.substring(4, aggregator.length() - 1);
+					rows.forEach(json -> max.set(Math.max(max.get(), ((JSONObject) json).getDouble(c))));
+					return a.put(new JSONObject().put(aggregator_as, max.get()));
+				}
+				if (aggregator.startsWith("MIN(") && aggregator.endsWith(")")) {
+					final AtomicDouble min = new AtomicDouble(Double.MAX_VALUE);
+					String c = aggregator.substring(4, aggregator.length() - 1);
+					rows.forEach(json -> min.set(Math.min(min.get(), ((JSONObject) json).getDouble(c))));
+					return a.put(new JSONObject().put(aggregator_as, min.get()));
+				}
+				if (aggregator.startsWith("SUM(") && aggregator.endsWith(")")) {
+					final AtomicDouble sum = new AtomicDouble(0.0d);
+					String c = aggregator.substring(4, aggregator.length() - 1);
+					rows.forEach(json -> sum.addAndGet(((JSONObject) json).getDouble(c)));
+					return a.put(new JSONObject().put(aggregator_as, sum.get()));
+				}
+				if (aggregator.startsWith("AVG(") && aggregator.endsWith(")")) {
+					final AtomicDouble sum = new AtomicDouble(0.0d);
+					String c = aggregator.substring(4, aggregator.length() - 1);
+					rows.forEach(json -> sum.addAndGet(((JSONObject) json).getDouble(c)));
+					return a.put(new JSONObject().put(aggregator_as, sum.get() / rows.length()));
+				}
+			}
+			if (this.columns != null && this.columns.size() == 2) {
+				Iterator<String> ci = this.columns.keySet().iterator();
+				String aggregator = ci.next();
+				String column = ci.next();
+				if (column.indexOf('(') >= 0) {
+					String s = aggregator;
+					aggregator = column;
+					column = s;
+				}
+				final String aggregator_as = this.columns.get(aggregator);
+				final String column_as = this.columns.get(column);
+				final String column_final = column;
+				if (aggregator.startsWith("PERCENT(") && aggregator.endsWith(")")) {
+					final AtomicDouble sum = new AtomicDouble(0.0d);
+					String c = aggregator.substring(8, aggregator.length() - 1);
+					rows.forEach(json -> sum.addAndGet(((JSONObject) json).getDouble(c)));
+					rows.forEach(json -> a.put(
+							new JSONObject().put(aggregator_as, 100.0d * ((JSONObject) json).getDouble(c) / sum.get())
+									.put(column_as, ((JSONObject) json).get(column_final))));
+					return a;
+				}
+			}
+			for (Object json : rows)
+				a.put(this.extractRow((JSONObject) json));
+			return a;
+		}
+
+		public String toString() {
+			return this.columns == null ? "NULL" : this.columns.toString();
+		}
+	}
+
+	private final static LinkedHashMap<Pattern, Function<Matcher, JSONObject>> pattern = new LinkedHashMap<>();
+	static {
+		pattern.put(
+				Pattern.compile(
+						"SELECT\\h+?(.*?)\\h+?FROM\\h+?\\(\\h??SELECT\\h+?(.*?)\\h??\\)\\h+?WHERE\\h+?(.*?)\\h?+IN\\h?+\\((.*?)\\)\\h??;"),
+				matcher -> {
+					Columns columns = new Columns(matcher.group(1));
+					String subquery = matcher.group(2).trim();
+					if (!subquery.endsWith(";"))
+						subquery = subquery + ";";
+					String filter_name = matcher.group(3);
+					Set<String> filter_set = parseCommaList(matcher.group(4)).keySet();
+					JSONArray a0 = console("SELECT " + subquery).getJSONArray("data");
+					JSONArray a1 = new JSONArray();
+					a0.forEach(o -> {
+						JSONObject j = (JSONObject) o;
+						if (j.has(filter_name) && filter_set.contains(j.getString(filter_name)))
+							a1.put(j);
+					});
+					return new JSONObject(true).put("metadata",
+							new JSONObject().put("offset", 0).put("hits", a0.length()).put("count", a1.length()))
+							.put("data", columns.extractTable(a1));
+				});
+		pattern.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?messages\\h+?WHERE\\h+?id\\h??=\\h??'(.*?)'\\h??;"),
+				matcher -> {
+					Columns columns = new Columns(matcher.group(1));
+					JSONObject message = DAO.messages.readJSON(matcher.group(2));
+					return message == null ? null
+							: new JSONObject()
+									.put("metadata", new JSONObject().put("offset", 0).put("hits", 1).put("count", 1))
+									.put("data", (new JSONArray()).put(columns.extractRow(message)));
+				});
+		pattern.put(
+				Pattern.compile(
+						"SELECT\\h+?(.*?)\\h+?FROM\\h+?messages\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h?+GROUP\\h?+BY\\h?+(.*?)\\h??;"),
+				matcher -> {
+					Columns columns = new Columns(matcher.group(1));
+					String group = matcher.group(3);
+					DAO.SearchLocalMessages messages = new DAO.SearchLocalMessages(matcher.group(2),
+							Timeline.Order.CREATED_AT, 0, 0, 100, group);
+					JSONArray array = new JSONArray();
+					JSONObject aggregation = messages.getAggregations().getJSONObject(group);
+
+					for (String key : aggregation.keySet())
+						array.put(new JSONObject(true).put(group, key).put("COUNT(*)", aggregation.get(key)));
+					JSONObject json = messages.timeline.toJSON(true, "metadata", "data");
+					return json.put("data", columns.extractTable(array));
+				});
+		pattern.put(
+				Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?messages\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h??;"),
+				matcher -> {
+					Columns columns = new Columns(matcher.group(1));
+					DAO.SearchLocalMessages messages = new DAO.SearchLocalMessages(matcher.group(2),
+							Timeline.Order.CREATED_AT, 0, 100, 0);
+					JSONObject json = messages.timeline.toJSON(true, "metadata", "data");
+					return json.put("data", columns.extractTable(json.getJSONArray("data")));
+				});
+	}
+
+	private static JSONObject console(String q) {
+		if (q == null)
+			return new JSONObject();
+		JSONObject json = null;
+		q = q.trim();
+		find_matcher: for (Map.Entry<Pattern, Function<Matcher, JSONObject>> pe : pattern.entrySet()) {
+			Pattern p = pe.getKey();
+			Matcher m = p.matcher(q);
+			if (m.find()) {
+				json = pe.getValue().apply(m);
+				if (json != null)
+					break find_matcher;
+			}
+		}
+
+		// return json
+		if (json == null)
+			json = new JSONObject();
+		return json;
+	}
+
+	@Override
+	public JSONObject serviceImpl(Query post, Authorization rights) throws APIException {
+
+		// parameters
+		String q = post.get("q", "");
+		// int timezoneOffset = post.get("timezoneOffset", 0);
+
+		return console(q);
+	}
+
 }

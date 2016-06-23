@@ -18,7 +18,6 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.loklak.tools.storage;
 
 import java.io.File;
@@ -29,83 +28,88 @@ import org.json.JSONObject;
 import org.loklak.tools.CacheMap;
 
 public class JsonTray {
-    
-    private JsonFile per;
-    private CacheMap<String, JSONObject> vol;
-    
-    public JsonTray(File file, int cachesize) throws IOException {
-        this.per = new JsonFile(file);
-        this.vol = new CacheMap<String, JSONObject>(cachesize);
-    }
-    
-    public boolean has(String key) {
-        synchronized(this.vol) {
-            if (this.vol.exist(key)) return true;
-        }
-        return this.per.has(key);
-    }
-    
-    public JsonTray put(String key, JSONObject value, boolean persistent) {
-        if (persistent) putPersistent(key, value); else putVolatile(key, value);
-        return this;
-    }
-    
-    public JsonTray putPersistent(String key, JSONObject value) {
-        this.per.put(key, value);
-        return this;
-    }
-    
-    public JsonTray putVolatile(String key, JSONObject value) {
-        synchronized (this.vol) {
-            this.vol.put(key, value);
-        }
-        return this;
-    }
-    
-    public JsonTray remove(String key){
-    	synchronized(this.vol) {
-            if (this.vol.exist(key)){
-            	this.vol.remove(key);
-            	return this;
-            }
-        }
-    	if(this.per.has(key)){
-    		this.per.remove(key);
-    	}
-    	return this;
-    }
-    
-    public JsonTray commit() {
-        this.per.commit();
-        return this;
-    }
-    
-    public JSONObject getJSONObject(String key) {
-        synchronized(this.vol) {
-            JSONObject value = this.vol.get(key);
-            if (value != null) return value;
-        }
-        return this.per.getJSONObject(key);
-    }
-    
-    // for debug reasons
-    public JSONObject getPersistent(){
-    	JSONObject res = new JSONObject();
-    	for(String key : this.per.keySet()){
-    		res.put(key, this.per.get(key));
-    	}
-    	return res;
-    }
-    
-    // for debug reasons
-    public JSONObject getVolatile(){
-    	JSONObject res = new JSONObject();
-    	synchronized(this.vol) {
-    		LinkedHashMap<String,JSONObject> map = this.vol.getMap();
-	    	for(String key : map.keySet()){
-	    		res.put(key, map.get(key));
-	    	}
-    	}
-    	return res;
-    }
+
+	private JsonFile per;
+	private CacheMap<String, JSONObject> vol;
+
+	public JsonTray(File file, int cachesize) throws IOException {
+		this.per = new JsonFile(file);
+		this.vol = new CacheMap<String, JSONObject>(cachesize);
+	}
+
+	public boolean has(String key) {
+		synchronized (this.vol) {
+			if (this.vol.exist(key))
+				return true;
+		}
+		return this.per.has(key);
+	}
+
+	public JsonTray put(String key, JSONObject value, boolean persistent) {
+		if (persistent)
+			putPersistent(key, value);
+		else
+			putVolatile(key, value);
+		return this;
+	}
+
+	public JsonTray putPersistent(String key, JSONObject value) {
+		this.per.put(key, value);
+		return this;
+	}
+
+	public JsonTray putVolatile(String key, JSONObject value) {
+		synchronized (this.vol) {
+			this.vol.put(key, value);
+		}
+		return this;
+	}
+
+	public JsonTray remove(String key) {
+		synchronized (this.vol) {
+			if (this.vol.exist(key)) {
+				this.vol.remove(key);
+				return this;
+			}
+		}
+		if (this.per.has(key)) {
+			this.per.remove(key);
+		}
+		return this;
+	}
+
+	public JsonTray commit() {
+		this.per.commit();
+		return this;
+	}
+
+	public JSONObject getJSONObject(String key) {
+		synchronized (this.vol) {
+			JSONObject value = this.vol.get(key);
+			if (value != null)
+				return value;
+		}
+		return this.per.getJSONObject(key);
+	}
+
+	// for debug reasons
+	public JSONObject getPersistent() {
+		JSONObject res = new JSONObject();
+		for (String key : this.per.keySet()) {
+			res.put(key, this.per.get(key));
+		}
+		return res;
+	}
+
+	// for debug reasons
+	public JSONObject getVolatile() {
+		JSONObject res = new JSONObject();
+		synchronized (this.vol) {
+			LinkedHashMap<String, JSONObject> map = this.vol.getMap();
+			for (String key : map.keySet()) {
+				res.put(key, map.get(key));
+			}
+		}
+		return res;
+	}
 }
