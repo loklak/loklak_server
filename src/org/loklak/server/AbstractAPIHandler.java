@@ -42,6 +42,7 @@ import org.loklak.data.DAO;
 import org.loklak.http.ClientConnection;
 import org.loklak.http.RemoteAccess;
 import org.loklak.tools.UTF8;
+import org.loklak.tools.storage.JSONObjectWithDefault;
 
 @SuppressWarnings("serial")
 public abstract class AbstractAPIHandler extends HttpServlet implements APIHandler {
@@ -69,6 +70,7 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
 	@Override
 	public abstract JSONObject getDefaultPermissions(BaseUserRole baseUserRole);
 
+<<<<<<< HEAD
 	@Override
 	public JSONObject[] service(Query call, Authorization rights) throws APIException {
 
@@ -141,6 +143,65 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
 
 		// user identification
 		ClientIdentity identity;
+=======
+    @Override
+    public JSONObject[] service(Query call, Authorization rights) throws APIException {
+
+        // make call to the embedded api
+        if (this.serverProtocolHostStub == null) return new JSONObject[]{serviceImpl(call, rights, new JSONObjectWithDefault(rights.getPermissions(this)))};
+        
+        // make call(s) to a remote api(s)
+        JSONObject[] results = new JSONObject[this.serverProtocolHostStub.length];
+        for (int rc = 0; rc < results.length; rc++) {
+            try {
+                StringBuilder urlquery = new StringBuilder();
+                for (String key: call.getKeys()) {
+                    urlquery.append(urlquery.length() == 0 ? '?' : '&').append(key).append('=').append(call.get(key, ""));
+                }
+                String urlstring = this.serverProtocolHostStub[rc] + this.getAPIPath() + urlquery.toString();
+                byte[] jsonb = ClientConnection.download(urlstring);
+                if (jsonb == null || jsonb.length == 0) throw new IOException("empty content from " + urlstring);
+                String jsons = UTF8.String(jsonb);
+                JSONObject json = new JSONObject(jsons);
+                if (json == null || json.length() == 0) {
+                    results[rc] = null;
+                    continue;
+                };
+                results[rc] = json;
+            } catch (Throwable e) {
+            	Log.getLog().warn(e);
+            }
+        }
+        return results;
+    }
+    
+    public abstract JSONObject serviceImpl(Query call, Authorization rights,  final JSONObjectWithDefault permissions) throws APIException;
+
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        Query post = RemoteAccess.evaluate(request);
+        process(request, response, post);
+    }
+    
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        Query query = RemoteAccess.evaluate(request);
+        query.initPOST(RemoteAccess.getPostMap(request));
+        process(request, response, query);
+    }
+    
+    private void process(HttpServletRequest request, HttpServletResponse response, Query query) throws ServletException, IOException {
+        
+        // basic protection
+        BaseUserRole minimalBaseUserRole = getMinimalBaseUserRole() != null ? getMinimalBaseUserRole() : BaseUserRole.ANONYMOUS;
+
+        if (query.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;} // DoS protection
+        if (DAO.getConfig("users.admin.localonly", true) && minimalBaseUserRole == BaseUserRole.ADMIN && !query.isLocalhostAccess()) {response.sendError(503, "access only allowed from localhost, your request comes from " + query.getClientHost()); return;} // danger! do not remove this!
+        
+        
+        // user identification
+        ClientIdentity identity;
+>>>>>>> aac1787db3815d09c0c35cd0d2f43caad15ad536
 		try {
 			identity = getIdentity(request, response);
 		} catch (APIException e) {
@@ -213,6 +274,7 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
 		} catch (APIException e) {
 			response.sendError(e.getStatusCode(), e.getMessage());
 			return;
+<<<<<<< HEAD
 		}
 	}
 
@@ -228,6 +290,69 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
 		if ("true".equals(request.getParameter("logout"))) { // logout if
 																// requested
 
+=======
+        }
+
+        // user accounting: we maintain static and persistent user data; we again search the accounts using the usder identity string
+        //JSONObject accounting_persistent_obj = DAO.accounting_persistent.has(user_id) ? DAO.accounting_persistent.getJSONObject(anon_id) : DAO.accounting_persistent.put(user_id, new JSONObject()).getJSONObject(user_id);
+        Accounting accounting_temporary = DAO.accounting_temporary.get(identity.toString());
+        if (accounting_temporary == null) {
+            accounting_temporary = new Accounting();
+            DAO.accounting_temporary.put(identity.toString(), accounting_temporary);
+        }
+        
+        // the accounting data is assigned to the authorization
+        authorization.setAccounting(accounting_temporary);
+        
+        // extract standard query attributes
+        String callback = query.get("callback", "");
+        boolean jsonp = callback.length() > 0;
+        boolean minified = query.get("minified", false);
+        
+        try {
+            JSONObject json = serviceImpl(query, authorization, new JSONObjectWithDefault(authorization.getPermissions(this)));
+            if  (json == null) {
+                response.sendError(400, "your request does not contain the required data");
+                return;
+             }
+    
+            // evaluate special fields
+            if (json.has("$EXPIRES")) {
+                int expires = json.getInt("$EXPIRES");
+                FileHandler.setCaching(response, expires);
+                json.remove("$EXPIRES");
+            }
+        
+            // add session information
+            JSONObject session = new JSONObject(true);
+            session.put("identity", identity.toJSON());
+            json.put("session", session);
+            
+            // write json
+            query.setResponse(response, "application/javascript");
+            response.setCharacterEncoding("UTF-8");
+            PrintWriter sos = response.getWriter();
+            if (jsonp) sos.print(callback + "(");
+            sos.print(json.toString(minified ? 0 : 2));
+            if (jsonp) sos.println(");");
+            sos.println();
+            query.finalize();
+        } catch (APIException e) {
+            response.sendError(e.getStatusCode(), e.getMessage());
+            return;
+        }
+    }
+    
+    /**
+     * Checks a request for valid login data, send via cookie or parameters
+     * @return user identity if some login is active, anonymous identity otherwise
+     */
+    private ClientIdentity getIdentity(HttpServletRequest request, HttpServletResponse response) throws APIException{
+    	
+    	// check for login information
+		if("true".equals(request.getParameter("logout"))){	// logout if requested
+			
+>>>>>>> aac1787db3815d09c0c35cd0d2f43caad15ad536
 			// invalidate session
 			request.getSession().invalidate();
 

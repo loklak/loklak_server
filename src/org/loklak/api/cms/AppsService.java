@@ -35,6 +35,7 @@ import org.loklak.server.AbstractAPIHandler;
 import org.loklak.server.Authorization;
 import org.loklak.server.BaseUserRole;
 import org.loklak.server.Query;
+import org.loklak.tools.storage.JSONObjectWithDefault;
 
 public class AppsService extends AbstractAPIHandler implements APIHandler {
 
@@ -55,8 +56,13 @@ public class AppsService extends AbstractAPIHandler implements APIHandler {
 		return null;
 	}
 
+<<<<<<< HEAD
 	@Override
 	public JSONObject serviceImpl(Query query, Authorization auth) throws APIException {
+=======
+    @Override
+    public JSONObject serviceImpl(Query query, Authorization auth, final JSONObjectWithDefault permissions) throws APIException {
+>>>>>>> aac1787db3815d09c0c35cd0d2f43caad15ad536
 
 		String categorySelection = query.get("category", "");
 

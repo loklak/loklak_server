@@ -40,6 +40,7 @@ import org.loklak.server.ClientCredential;
 import org.loklak.server.ClientIdentity;
 import org.loklak.server.Query;
 import org.loklak.tools.IO;
+import org.loklak.tools.storage.JSONObjectWithDefault;
 
 public class SignUpService extends AbstractAPIHandler implements APIHandler {
 
@@ -57,6 +58,7 @@ public class SignUpService extends AbstractAPIHandler implements APIHandler {
 	}
 
 	public BaseUserRole getCustomServiceLevel(Authorization rights) {
+<<<<<<< HEAD
 		if (rights.isAdmin()) {
 			return BaseUserRole.ADMIN;
 		} else if (rights.getIdentity() != null) {
@@ -110,6 +112,32 @@ public class SignUpService extends AbstractAPIHandler implements APIHandler {
 		if (serviceLevel != BaseUserRole.ADMIN) {
 			switch (DAO.getConfig("users.public.signup", "false")) {
 			case "false":
+=======
+        if(rights.isAdmin()){
+        	return BaseUserRole.ADMIN;
+        } else if(rights.getIdentity() != null){
+        	return BaseUserRole.USER;
+        }
+        return BaseUserRole.ANONYMOUS;
+    }
+
+    public String getAPIPath() {
+        return "/api/signup.json";
+    }
+    
+    @Override
+    public JSONObject serviceImpl(Query post, Authorization rights, final JSONObjectWithDefault permissions) throws APIException {
+
+    	BaseUserRole serviceLevel = getCustomServiceLevel(rights);
+    	
+    	JSONObject result = new JSONObject();
+    	
+    	// if regex is requested
+    	if(post.get("getParameters", false)){
+    		String passwordPattern = DAO.getConfig("users.password.regex", "^(?=.*\\d).{6,64}$");
+    		String passwordPatternTooltip = DAO.getConfig("users.password.regex.tooltip", "Enter a combination of atleast six characters");
+    		if("false".equals(DAO.getConfig("users.public.signup", "false"))){
+>>>>>>> aac1787db3815d09c0c35cd0d2f43caad15ad536
 				throw new APIException(403, "Public signup disabled");
 			case "admin":
 				activated = false;

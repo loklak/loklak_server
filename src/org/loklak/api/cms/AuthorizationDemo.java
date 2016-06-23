@@ -22,6 +22,7 @@ package org.loklak.api.cms;
 import org.json.JSONObject;
 import org.loklak.server.*;
 import org.loklak.server.BaseUserRole;
+import org.loklak.tools.storage.JSONObjectWithDefault;
 
 public class AuthorizationDemo extends AbstractAPIHandler implements APIHandler {
 
@@ -65,7 +66,14 @@ public class AuthorizationDemo extends AbstractAPIHandler implements APIHandler 
 	@Override
 	public JSONObject serviceImpl(Query post, Authorization rights) throws APIException {
 
+<<<<<<< HEAD
 		JSONObject result = new JSONObject();
+=======
+    @Override
+    public JSONObject serviceImpl(Query post, Authorization rights, final JSONObjectWithDefault permissions) throws APIException {
+    	
+    	JSONObject result = new JSONObject();
+>>>>>>> aac1787db3815d09c0c35cd0d2f43caad15ad536
 
 		result.put("user", rights.getIdentity().getName());
 		result.put("user role", rights.getUserRole().getDisplayName());

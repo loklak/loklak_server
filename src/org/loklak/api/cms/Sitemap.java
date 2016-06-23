@@ -55,7 +55,7 @@ public class Sitemap extends HttpServlet {
 		// String baseurl = siteurl.substring(0, siteurl.length() -
 		// request.getRequestURI().length()) + request.getContextPath() + "/";
 		String baseurl = "http://loklak.org/";
-		JSONObject TopMenuJsonObject = new TopMenuService().serviceImpl(post, null);
+		JSONObject TopMenuJsonObject = new TopMenuService().serviceImpl(post, null, null);
 		JSONArray sitesarr = TopMenuJsonObject.getJSONArray("items");
 		response.setCharacterEncoding("UTF-8");
 		PrintWriter sos = response.getWriter();

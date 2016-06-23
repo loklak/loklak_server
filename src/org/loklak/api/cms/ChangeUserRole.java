@@ -22,6 +22,7 @@ package org.loklak.api.cms;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.server.*;
+import org.loklak.tools.storage.JSONObjectWithDefault;
 
 public class ChangeUserRole extends AbstractAPIHandler implements APIHandler {
 
@@ -42,9 +43,15 @@ public class ChangeUserRole extends AbstractAPIHandler implements APIHandler {
 		return null;
 	}
 
+<<<<<<< HEAD
 	@Override
 	public JSONObject serviceImpl(Query query, Authorization auth) throws APIException {
 		JSONObject result = new JSONObject();
+=======
+    @Override
+    public JSONObject serviceImpl(Query query, Authorization auth, final JSONObjectWithDefault permissions) throws APIException {
+        JSONObject result = new JSONObject();
+>>>>>>> aac1787db3815d09c0c35cd0d2f43caad15ad536
 
 		if (!query.isLocalhostAccess()) {
 			throw new APIException(403, "Access only from localhost");

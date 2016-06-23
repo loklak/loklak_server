@@ -141,6 +141,21 @@ public class JsonFile extends JSONObject {
 		return this;
 	}
 
+<<<<<<< HEAD
+=======
+	public synchronized JSONObject put(String key, JSONObject value) throws JSONException {
+		super.put(key, value);
+		commit();
+		return this;
+	}
+
+	@Override
+	public synchronized void putAll(JSONObject other){
+		super.putAll(other);
+		commit();
+	}
+	
+>>>>>>> aac1787db3815d09c0c35cd0d2f43caad15ad536
 	@Override
 	public synchronized Object remove(String key) {
 		super.remove(key);
