@@ -36,65 +36,80 @@ import org.loklak.server.Query;
 import twitter4j.TwitterException;
 
 public class UserServlet extends HttpServlet {
-   
-    private static final long serialVersionUID = 8578478303032749879L;
 
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        doGet(request, response);
-    }
-    
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Query post = RemoteAccess.evaluate(request);
-     
-        // manage DoS
-        if (post.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;}
-        
-        // parameters
-        String callback = post.get("callback", "");
-        boolean jsonp = callback != null && callback.length() > 0;
-        boolean minified = post.get("minified", false);
-        String[] screen_names = post.get("screen_name", "").split(",");
-        String followers = screen_names.length == 1 ? post.get("followers", "0") : "0";
-        String following = screen_names.length == 1 ? post.get("following", "0") : "0";
-        int maxFollowers = Integer.parseInt(followers);
-        int maxFollowing = Integer.parseInt(following);
-        
-        JSONArray twitterUserEntries = new JSONArray();
-        for (String screen_name: screen_names) {
-            try {
-                JSONObject twitterUserEntry = TwitterAPI.getUser(screen_name, false);
-                if (twitterUserEntry != null) {
-                    TwitterAPI.enrichLocation(twitterUserEntry);
-                    twitterUserEntries.put(twitterUserEntry);
-                }
-            } catch (TwitterException e) {}
-        }
-        JSONObject topology = null;
-        try {topology = TwitterAPI.getNetwork(screen_names[0], maxFollowers, maxFollowing);} catch (TwitterException e) {}
-        
-        post.setResponse(response, "application/javascript");
-        
-        // generate json
-        JSONObject m = new JSONObject(true);
-        JSONObject metadata = new JSONObject(true);
-        metadata.put("client", post.getClientHost());
-        m.put("search_metadata", metadata);
+	private static final long serialVersionUID = 8578478303032749879L;
 
-        if (twitterUserEntries.length() == 1) m.put("user", twitterUserEntries.iterator().next());
-        if (twitterUserEntries.length() > 1) m.put("users", twitterUserEntries);
-        if (topology != null) m.put("topology", topology);
-        
-        // write json
-        response.setCharacterEncoding("UTF-8");
-        PrintWriter sos = response.getWriter();
-        if (jsonp) sos.print(callback + "(");
-        sos.print(m.toString(minified ? 0 : 2));
-        if (jsonp) sos.println(");");
-        sos.println();
-        sos.flush(); sos.close();
-        post.finalize();
-    }
-    
+	@Override
+	protected void doPost(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+		doGet(request, response);
+	}
+
+	@Override
+	protected void doGet(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+		Query post = RemoteAccess.evaluate(request);
+
+		// manage DoS
+		if (post.isDoS_blackout()) {
+			response.sendError(503, "your request frequency is too high");
+			return;
+		}
+
+		// parameters
+		String callback = post.get("callback", "");
+		boolean jsonp = callback != null && callback.length() > 0;
+		boolean minified = post.get("minified", false);
+		String[] screen_names = post.get("screen_name", "").split(",");
+		String followers = screen_names.length == 1 ? post.get("followers", "0") : "0";
+		String following = screen_names.length == 1 ? post.get("following", "0") : "0";
+		int maxFollowers = Integer.parseInt(followers);
+		int maxFollowing = Integer.parseInt(following);
+
+		JSONArray twitterUserEntries = new JSONArray();
+		for (String screen_name : screen_names) {
+			try {
+				JSONObject twitterUserEntry = TwitterAPI.getUser(screen_name, false);
+				if (twitterUserEntry != null) {
+					TwitterAPI.enrichLocation(twitterUserEntry);
+					twitterUserEntries.put(twitterUserEntry);
+				}
+			} catch (TwitterException e) {
+			}
+		}
+		JSONObject topology = null;
+		try {
+			topology = TwitterAPI.getNetwork(screen_names[0], maxFollowers, maxFollowing);
+		} catch (TwitterException e) {
+		}
+
+		post.setResponse(response, "application/javascript");
+
+		// generate json
+		JSONObject m = new JSONObject(true);
+		JSONObject metadata = new JSONObject(true);
+		metadata.put("client", post.getClientHost());
+		m.put("search_metadata", metadata);
+
+		if (twitterUserEntries.length() == 1)
+			m.put("user", twitterUserEntries.iterator().next());
+		if (twitterUserEntries.length() > 1)
+			m.put("users", twitterUserEntries);
+		if (topology != null)
+			m.put("topology", topology);
+
+		// write json
+		response.setCharacterEncoding("UTF-8");
+		PrintWriter sos = response.getWriter();
+		if (jsonp)
+			sos.print(callback + "(");
+		sos.print(m.toString(minified ? 0 : 2));
+		if (jsonp)
+			sos.println(");");
+		sos.println();
+		sos.flush();
+		sos.close();
+		post.finalize();
+	}
+
 }

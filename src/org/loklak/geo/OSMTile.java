@@ -40,163 +40,194 @@ import javax.imageio.ImageIO;
 import org.loklak.data.DAO;
 import org.loklak.graphics.RasterPlotter;
 
-
 public class OSMTile {
 
-    // helper methods to load map images from openstreetmap.org
+	// helper methods to load map images from openstreetmap.org
 
-    /**
-     * generate a image according to a given coordinate of a middle tile
-     * and a width and height of tile numbers. The tile number width and height must
-     * always be impair since the given tile must be always in the middle
-     * @param t the middle tile
-     * @param width number of tiles
-     * @param height number of tiles
-     * @return the image
-     */
-    public static RasterPlotter getCombinedTiles(final TileCoordinates t, int width, int height) {
-        final int w = (width - 1) / 2;
-        width = w * 2 + 1;
-        final int h = (height - 1) / 2;
-        height = h * 2 + 1;
-        final RasterPlotter m = new RasterPlotter(256 * width, 256 * height, RasterPlotter.DrawMode.MODE_REPLACE, "FFFFFF");
-        final List<Place> tileLoader = new ArrayList<Place>();
-        Place place;
-        // start tile loading concurrently
-        for (int i = 0; i < width; i++) {
-            for (int j = 0; j < height; j++) {
-                place = new Place(m, t.xtile - w + i, t.ytile - h + j, 256 * i, 256 * j, t.zoom);
-                place.start();
-                tileLoader.add(place);
-                if (t.zoom >= 17) try {Thread.sleep(100);} catch (final InterruptedException e) {} // be nice with tile server for uncached tiles
-            }
-        }
-        // wait until all tiles are loaded
-        for (final Place p: tileLoader) try { p.join(); } catch (final InterruptedException e) {}
-        return m;
-    }
+	/**
+	 * generate a image according to a given coordinate of a middle tile and a
+	 * width and height of tile numbers. The tile number width and height must
+	 * always be impair since the given tile must be always in the middle
+	 * 
+	 * @param t
+	 *            the middle tile
+	 * @param width
+	 *            number of tiles
+	 * @param height
+	 *            number of tiles
+	 * @return the image
+	 */
+	public static RasterPlotter getCombinedTiles(final TileCoordinates t, int width, int height) {
+		final int w = (width - 1) / 2;
+		width = w * 2 + 1;
+		final int h = (height - 1) / 2;
+		height = h * 2 + 1;
+		final RasterPlotter m = new RasterPlotter(256 * width, 256 * height, RasterPlotter.DrawMode.MODE_REPLACE,
+				"FFFFFF");
+		final List<Place> tileLoader = new ArrayList<Place>();
+		Place place;
+		// start tile loading concurrently
+		for (int i = 0; i < width; i++) {
+			for (int j = 0; j < height; j++) {
+				place = new Place(m, t.xtile - w + i, t.ytile - h + j, 256 * i, 256 * j, t.zoom);
+				place.start();
+				tileLoader.add(place);
+				if (t.zoom >= 17)
+					try {
+						Thread.sleep(100);
+					} catch (final InterruptedException e) {
+					} // be nice with tile server for uncached tiles
+			}
+		}
+		// wait until all tiles are loaded
+		for (final Place p : tileLoader)
+			try {
+				p.join();
+			} catch (final InterruptedException e) {
+			}
+		return m;
+	}
 
-    static class Place extends Thread {
-        RasterPlotter m;
-        int xt, yt, xc, yc, z;
-        public Place(final RasterPlotter m, final int xt, final int yt, final int xc, final int yc, final int z) {
-            this.m = m; this.xt = xt; this.yt = yt; this.xc = xc; this.yc = yc; this.z = z;
-        }
-        @Override
-        public void run() {
-            final TileCoordinates t = new TileCoordinates(this.xt, this.yt, this.z);
-            BufferedImage bi = null;
-            for (int i = 0; i < 5; i++) {
-                bi = getSingleTile(t, i);
-                if (bi != null) {
-                    this.m.insertBitmap(bi, this.xc, this.yc);
-                    return;
-                }
-                // don't DoS OSM when trying again
-                try {Thread.sleep(300 + 100 * i);} catch (final InterruptedException e) {}
-            }
-        }
-    }
+	static class Place extends Thread {
+		RasterPlotter m;
+		int xt, yt, xc, yc, z;
 
-    public static BufferedImage getSingleTile(final TileCoordinates tile, final int retry) {
-        URL tileURL;
-        try {
-            tileURL = new URL(tile.url(retry));
-        } catch (MalformedURLException e1) {
-            return null;
-        }
-        
-        // download resource using the crawler and keep resource in memory if possible
-        InputStream is;
-        try {
-            is = tileURL.openStream();
-        } catch (IOException e) {
-            DAO.log("OSMTile: cannot open stream: " + e.getMessage());
-            return null;
-        }
-        byte[] buffer = new byte[2048];
-        int c;
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try {
-            while ((c = is.read(buffer)) > 0) baos.write(buffer, 0, c);
-        } catch (IOException e) {
-            DAO.log("OSMTile: cannot read stream: " + e.getMessage());
-        }
-        byte[] tileb = baos.toByteArray();
-        
-        try {
-            ImageIO.setUseCache(false); // do not write a cache to disc; keep in RAM
-            return ImageIO.read(new ByteArrayInputStream(tileb));
-        } catch (final EOFException e) {
-            DAO.log("OSMTile: cannot parse image: " + e.getMessage());
-            return null;
-        } catch (final IOException e) {
-            DAO.log("OSMTile: cannot open image: " + e.getMessage());
-            return null;
-        }
-    }
+		public Place(final RasterPlotter m, final int xt, final int yt, final int xc, final int yc, final int z) {
+			this.m = m;
+			this.xt = xt;
+			this.yt = yt;
+			this.xc = xc;
+			this.yc = yc;
+			this.z = z;
+		}
 
-    public static class TileCoordinates {
+		@Override
+		public void run() {
+			final TileCoordinates t = new TileCoordinates(this.xt, this.yt, this.z);
+			BufferedImage bi = null;
+			for (int i = 0; i < 5; i++) {
+				bi = getSingleTile(t, i);
+				if (bi != null) {
+					this.m.insertBitmap(bi, this.xc, this.yc);
+					return;
+				}
+				// don't DoS OSM when trying again
+				try {
+					Thread.sleep(300 + 100 * i);
+				} catch (final InterruptedException e) {
+				}
+			}
+		}
+	}
 
-        public int xtile, ytile, zoom, n;
-        public double north_lat, south_lat, east_lon, west_lon;   
-          
-        public TileCoordinates(final double lat_deg, final double lon_deg, final int zoom) {
-            // see http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
-            // X goes from 0 (left edge is 180 W) to 2^zoom 1 (right edge is 180 E)
-            // Y goes from 0 (top edge is 85.0511 N) to 2^zoom 1 (bottom edge is 85.0511 S) in a Mercator projection
-            // the number 85.0511 is the result of arctan(sinh()). By using this bound, the entire map becomes a (very large) square.
+	public static BufferedImage getSingleTile(final TileCoordinates tile, final int retry) {
+		URL tileURL;
+		try {
+			tileURL = new URL(tile.url(retry));
+		} catch (MalformedURLException e1) {
+			return null;
+		}
 
-            // Lon./lat. to tile numbers
-            // n = 2 ^ zoom
-            // xtile = n * ((lon_deg + 180) / 360)
-            // ytile = n * (1 - (log(tan(lat_rad) + sec(lat_rad)) / )) / 2
+		// download resource using the crawler and keep resource in memory if
+		// possible
+		InputStream is;
+		try {
+			is = tileURL.openStream();
+		} catch (IOException e) {
+			DAO.log("OSMTile: cannot open stream: " + e.getMessage());
+			return null;
+		}
+		byte[] buffer = new byte[2048];
+		int c;
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		try {
+			while ((c = is.read(buffer)) > 0)
+				baos.write(buffer, 0, c);
+		} catch (IOException e) {
+			DAO.log("OSMTile: cannot read stream: " + e.getMessage());
+		}
+		byte[] tileb = baos.toByteArray();
 
-            // Tile numbers to lon./lat.
-            // n = 2 ^ zoom
-            // lon_deg = xtile / n * 360.0 - 180.0
-            // lat_rad = arctan(sinh( * (1 - 2 * ytile / n)))
-            // lat_deg = lat_rad * 180.0 
-            
-            this.zoom = zoom;
-            this.n = 1 << zoom;
-            this.xtile = (int) Math.floor((lon_deg + 180) / 360 * this.n);
-            double lat_rad = lat_deg * RasterPlotter.PI180;
-            this.ytile = (int) Math.floor((1 - Math.log(Math.tan(lat_rad) + 1 / Math.cos(lat_rad)) / Math.PI) / 2 * this.n);
-            tile2boundingBox();
-        }
-        
-        public TileCoordinates(final int xtile, final int ytile, final int zoom) {
-            this.zoom = zoom;
-            this.xtile = xtile;
-            this.ytile = ytile;
-            tile2boundingBox();
-        }
-        
-        private void tile2boundingBox() {
-            this.north_lat = tile2lat(this.ytile);
-            this.south_lat = tile2lat(this.ytile + 1);
-            this.west_lon = tile2lon(this.xtile);
-            this.east_lon = tile2lon(this.xtile + 1);
-        }
-         
-        private double tile2lon(int x) {
-            return x * 360.0d / this.n - 180.0d;
-        }
-         
-        private double tile2lat(int y) {
-            //return Math.toDegrees(Math.atan(Math.sinh(Math.PI * (1 - 2 * y) / this.n)));
-            return Math.toDegrees(Math.atan(Math.sinh(Math.PI - 2.0 * Math.PI * y / this.n)));
-        }
+		try {
+			ImageIO.setUseCache(false); // do not write a cache to disc; keep in
+										// RAM
+			return ImageIO.read(new ByteArrayInputStream(tileb));
+		} catch (final EOFException e) {
+			DAO.log("OSMTile: cannot parse image: " + e.getMessage());
+			return null;
+		} catch (final IOException e) {
+			DAO.log("OSMTile: cannot open image: " + e.getMessage());
+			return null;
+		}
+	}
 
-        public String url(final int retry) {
-            // see http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
-            final int hash = (this.xtile + 7 * this.ytile + 13 * this.zoom + retry) % 4;
-            final String host = (hash == 3) ? "tile.openstreetmap.org" : ((char) ('a' + hash)) + ".tile.openstreetmap.org";
-            final String url = "http://" + host + "/" + this.zoom + "/" + this.xtile + "/" + this.ytile + ".png";
-            //System.out.println("OSM URL = " + url);
-            return url;
-        }
+	public static class TileCoordinates {
 
-    }
+		public int xtile, ytile, zoom, n;
+		public double north_lat, south_lat, east_lon, west_lon;
+
+		public TileCoordinates(final double lat_deg, final double lon_deg, final int zoom) {
+			// see http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
+			// X goes from 0 (left edge is 180 W) to 2^zoom 1 (right edge is 180
+			// E)
+			// Y goes from 0 (top edge is 85.0511 N) to 2^zoom 1 (bottom edge is
+			// 85.0511 S) in a Mercator projection
+			// the number 85.0511 is the result of arctan(sinh()). By using this
+			// bound, the entire map becomes a (very large) square.
+
+			// Lon./lat. to tile numbers
+			// n = 2 ^ zoom
+			// xtile = n * ((lon_deg + 180) / 360)
+			// ytile = n * (1 - (log(tan(lat_rad) + sec(lat_rad)) / )) / 2
+
+			// Tile numbers to lon./lat.
+			// n = 2 ^ zoom
+			// lon_deg = xtile / n * 360.0 - 180.0
+			// lat_rad = arctan(sinh( * (1 - 2 * ytile / n)))
+			// lat_deg = lat_rad * 180.0
+
+			this.zoom = zoom;
+			this.n = 1 << zoom;
+			this.xtile = (int) Math.floor((lon_deg + 180) / 360 * this.n);
+			double lat_rad = lat_deg * RasterPlotter.PI180;
+			this.ytile = (int) Math
+					.floor((1 - Math.log(Math.tan(lat_rad) + 1 / Math.cos(lat_rad)) / Math.PI) / 2 * this.n);
+			tile2boundingBox();
+		}
+
+		public TileCoordinates(final int xtile, final int ytile, final int zoom) {
+			this.zoom = zoom;
+			this.xtile = xtile;
+			this.ytile = ytile;
+			tile2boundingBox();
+		}
+
+		private void tile2boundingBox() {
+			this.north_lat = tile2lat(this.ytile);
+			this.south_lat = tile2lat(this.ytile + 1);
+			this.west_lon = tile2lon(this.xtile);
+			this.east_lon = tile2lon(this.xtile + 1);
+		}
+
+		private double tile2lon(int x) {
+			return x * 360.0d / this.n - 180.0d;
+		}
+
+		private double tile2lat(int y) {
+			// return Math.toDegrees(Math.atan(Math.sinh(Math.PI * (1 - 2 * y) /
+			// this.n)));
+			return Math.toDegrees(Math.atan(Math.sinh(Math.PI - 2.0 * Math.PI * y / this.n)));
+		}
+
+		public String url(final int retry) {
+			// see http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
+			final int hash = (this.xtile + 7 * this.ytile + 13 * this.zoom + retry) % 4;
+			final String host = (hash == 3) ? "tile.openstreetmap.org"
+					: ((char) ('a' + hash)) + ".tile.openstreetmap.org";
+			final String url = "http://" + host + "/" + this.zoom + "/" + this.xtile + "/" + this.ytile + ".png";
+			// System.out.println("OSM URL = " + url);
+			return url;
+		}
+
+	}
 }

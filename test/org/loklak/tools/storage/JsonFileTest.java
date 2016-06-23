@@ -10,28 +10,28 @@ import junit.framework.TestCase;
 
 public class JsonFileTest extends TestCase {
 
-    private File testFile;
-    private JsonFile testJsonFile;
-    
-    @Before
-    public void setUp() throws Exception {
-        this.testFile = BufferedRandomAccessFile.Test.getTestFile();
-        this.testJsonFile = new JsonFile(this.testFile);
-    }
+	private File testFile;
+	private JsonFile testJsonFile;
 
-    @After
-    public void tearDown() throws Exception {
-        this.testFile.delete();
-    }
+	@Before
+	public void setUp() throws Exception {
+		this.testFile = BufferedRandomAccessFile.Test.getTestFile();
+		this.testJsonFile = new JsonFile(this.testFile);
+	}
 
-    public void test() throws IOException {
-        
-        long start = System.currentTimeMillis();
-        for (int i = 0; i < 100; i++) {
-            this.testJsonFile.put("key", i);
-        }
-        long stop = System.currentTimeMillis();
-        System.out.println("runtime: " + (stop - start) + " milliseconds");
-        
-    }
+	@After
+	public void tearDown() throws Exception {
+		this.testFile.delete();
+	}
+
+	public void test() throws IOException {
+
+		long start = System.currentTimeMillis();
+		for (int i = 0; i < 100; i++) {
+			this.testJsonFile.put("key", i);
+		}
+		long stop = System.currentTimeMillis();
+		System.out.println("runtime: " + (stop - start) + " milliseconds");
+
+	}
 }

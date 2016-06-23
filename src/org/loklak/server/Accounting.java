@@ -28,48 +28,66 @@ import org.json.JSONObject;
  */
 public class Accounting extends JSONObject {
 
-    private static final TreeMap<Long, String> EMPTY_MAP = new TreeMap<>();
-    private static final long ONE_HOUR_MILLIS = 1000 * 60 * 60;
+	private static final TreeMap<Long, String> EMPTY_MAP = new TreeMap<>();
+	private static final long ONE_HOUR_MILLIS = 1000 * 60 * 60;
 
-    private static long uc = 0;
-    
-    public Accounting() {
-        super();
-    }
-    
-    /**
-     * cleanup deletes all old entries and frees up the memory.
-     * some outside process muss call this frequently
-     * @return self
-     */
-    public Accounting cleanup() {
-        if (!this.has("requests")) return this;
-        JSONObject requests = this.getJSONObject("requests");
-        for (String path: requests.keySet()) {
-            TreeMap<Long, String> events = (TreeMap<Long, String>) requests.get(path);
-            // shrink that map and delete everything which is older than now minus one hour
-            long pivotTime = System.currentTimeMillis() - ONE_HOUR_MILLIS;
-            while (events.size() > 0 && events.firstKey().longValue() < pivotTime) events.remove(events.firstKey());
-            if (events.size() == 0) requests.remove(path);
-        }
-        return this;
-    }
-    
-    public synchronized Accounting addRequest(String path, String query) {
-        if (!this.has("requests")) this.put("requests", new JSONObject());
-        JSONObject requests = this.getJSONObject("requests");
-        if (!requests.has(path)) requests.put(path, new TreeMap<Long, String>());
-        TreeMap<Long, String> events = (TreeMap<Long, String>) requests.get(path);
-        events.put(System.currentTimeMillis() + ((uc ++) % 1000), query); // the counter is used to distinguish very fast concurrent requests
-        return this;
-    }
-    
-    public synchronized TreeMap<Long, String> getRequests(String path) {
-        if (!this.has("requests")) return EMPTY_MAP;
-        JSONObject requests = this.getJSONObject("requests");
-        if (!requests.has(path)) return EMPTY_MAP;
-        TreeMap<Long, String> events = (TreeMap<Long, String>) requests.get(path);
-        return events;
-    }
-    
+	private static long uc = 0;
+
+	public Accounting() {
+		super();
+	}
+
+	/**
+	 * cleanup deletes all old entries and frees up the memory. some outside
+	 * process muss call this frequently
+	 * 
+	 * @return self
+	 */
+	public Accounting cleanup() {
+		if (!this.has("requests"))
+			return this;
+		JSONObject requests = this.getJSONObject("requests");
+		for (String path : requests.keySet()) {
+			TreeMap<Long, String> events = (TreeMap<Long, String>) requests.get(path);
+			// shrink that map and delete everything which is older than now
+			// minus one hour
+			long pivotTime = System.currentTimeMillis() - ONE_HOUR_MILLIS;
+			while (events.size() > 0 && events.firstKey().longValue() < pivotTime)
+				events.remove(events.firstKey());
+			if (events.size() == 0)
+				requests.remove(path);
+		}
+		return this;
+	}
+
+	public synchronized Accounting addRequest(String path, String query) {
+		if (!this.has("requests"))
+			this.put("requests", new JSONObject());
+		JSONObject requests = this.getJSONObject("requests");
+		if (!requests.has(path))
+			requests.put(path, new TreeMap<Long, String>());
+		TreeMap<Long, String> events = (TreeMap<Long, String>) requests.get(path);
+		events.put(System.currentTimeMillis() + ((uc++) % 1000), query); // the
+																			// counter
+																			// is
+																			// used
+																			// to
+																			// distinguish
+																			// very
+																			// fast
+																			// concurrent
+																			// requests
+		return this;
+	}
+
+	public synchronized TreeMap<Long, String> getRequests(String path) {
+		if (!this.has("requests"))
+			return EMPTY_MAP;
+		JSONObject requests = this.getJSONObject("requests");
+		if (!requests.has(path))
+			return EMPTY_MAP;
+		TreeMap<Long, String> events = (TreeMap<Long, String>) requests.get(path);
+		return events;
+	}
+
 }

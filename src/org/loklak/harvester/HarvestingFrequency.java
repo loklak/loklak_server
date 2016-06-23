@@ -20,34 +20,37 @@
 package org.loklak.harvester;
 
 public enum HarvestingFrequency {
-    THIRTY_MIN(30),           // every half-hour
-    AN_HOUR(60),              // every hour
-    THREE_HOURS(180),          // every three hours
-    SIX_HOURS(360),            // every six hours
-    A_DAY(1440),              // every day
-    NEVER(Integer.MAX_VALUE); // never update
+	THIRTY_MIN(30), // every half-hour
+	AN_HOUR(60), // every hour
+	THREE_HOURS(180), // every three hours
+	SIX_HOURS(360), // every six hours
+	A_DAY(1440), // every day
+	NEVER(Integer.MAX_VALUE); // never update
 
-    int frequency;
-    HarvestingFrequency(int frequency) {
-        this.frequency = frequency;
-    }
+	int frequency;
 
-    /**
-     * @return int : frequency in minutes
-     */
-    public int getFrequency() {
-        return frequency;
-    }
+	HarvestingFrequency(int frequency) {
+		this.frequency = frequency;
+	}
 
-    /**
-     * @throws IllegalArgumentException when frequency value is not permitted (not declared as an enum)
-     */
-    public static HarvestingFrequency valueOf(int frequency) {
-        for (HarvestingFrequency f: HarvestingFrequency.values()) {
-            if (f.getFrequency() == frequency) {
-                return f;
-            }
-        }
-        throw new IllegalArgumentException();
-    }
+	/**
+	 * @return int : frequency in minutes
+	 */
+	public int getFrequency() {
+		return frequency;
+	}
+
+	/**
+	 * @throws IllegalArgumentException
+	 *             when frequency value is not permitted (not declared as an
+	 *             enum)
+	 */
+	public static HarvestingFrequency valueOf(int frequency) {
+		for (HarvestingFrequency f : HarvestingFrequency.values()) {
+			if (f.getFrequency() == frequency) {
+				return f;
+			}
+		}
+		throw new IllegalArgumentException();
+	}
 }

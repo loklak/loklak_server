@@ -25,50 +25,50 @@ import org.json.JSONObject;
 
 public class CacheStats {
 
-    private AtomicLong update, hit, miss;
-    
-    public CacheStats() {
-        this.update = new AtomicLong(0);
-        this.hit = new AtomicLong(0);
-        this.miss = new AtomicLong(0);
-    }
+	private AtomicLong update, hit, miss;
 
-    public void clear() {
-        this.update.set(0);
-        this.hit.set(0);
-        this.miss.set(0);
-    }
+	public CacheStats() {
+		this.update = new AtomicLong(0);
+		this.hit = new AtomicLong(0);
+		this.miss = new AtomicLong(0);
+	}
 
-    public void update() {
-        this.update.incrementAndGet();
-    }
+	public void clear() {
+		this.update.set(0);
+		this.hit.set(0);
+		this.miss.set(0);
+	}
 
-    public void hit() {
-        this.hit.incrementAndGet();
-    }
+	public void update() {
+		this.update.incrementAndGet();
+	}
 
-    public void miss() {
-        this.miss.incrementAndGet();
-    }
-    
-    public long getUpdate() {
-        return this.update.get();
-    }
+	public void hit() {
+		this.hit.incrementAndGet();
+	}
 
-    public long getHit() {
-        return this.hit.get();
-    }
+	public void miss() {
+		this.miss.incrementAndGet();
+	}
 
-    public long getMiss() {
-        return this.miss.get();
-    }
-    
-    public JSONObject getJSON() {
-        JSONObject json = new JSONObject(true);
-        json.put("update", getUpdate());
-        json.put("hit", getHit());
-        json.put("miss", getMiss());
-        return json;
-    }
-    
+	public long getUpdate() {
+		return this.update.get();
+	}
+
+	public long getHit() {
+		return this.hit.get();
+	}
+
+	public long getMiss() {
+		return this.miss.get();
+	}
+
+	public JSONObject getJSON() {
+		JSONObject json = new JSONObject(true);
+		json.put("update", getUpdate());
+		json.put("hit", getHit());
+		json.put("miss", getMiss());
+		return json;
+	}
+
 }

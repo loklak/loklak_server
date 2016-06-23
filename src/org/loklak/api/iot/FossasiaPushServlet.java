@@ -27,43 +27,43 @@ import org.loklak.objects.SourceType;
 
 public class FossasiaPushServlet extends AbstractPushServlet {
 
-    private static final long serialVersionUID = 248613410547240115L;
+	private static final long serialVersionUID = 248613410547240115L;
 
-    @Override
-    protected SourceType getSourceType() {
-        return SourceType.FOSSASIA_API;
-    }
+	@Override
+	protected SourceType getSourceType() {
+		return SourceType.FOSSASIA_API;
+	}
 
-    @Override
-    protected JsonValidator.JsonSchemaEnum getValidatorSchema() {
-        return JsonValidator.JsonSchemaEnum.FOSSASIA;
-    }
+	@Override
+	protected JsonValidator.JsonSchemaEnum getValidatorSchema() {
+		return JsonValidator.JsonSchemaEnum.FOSSASIA;
+	}
 
-    @Override
-    protected JsonFieldConverter.JsonConversionSchemaEnum getConversionSchema() {
-        return JsonFieldConverter.JsonConversionSchemaEnum.FOSSASIA;
-    }
+	@Override
+	protected JsonFieldConverter.JsonConversionSchemaEnum getConversionSchema() {
+		return JsonFieldConverter.JsonConversionSchemaEnum.FOSSASIA;
+	}
 
-    @Override
-    protected JSONArray extractMessages(JSONObject data) {
-        // each fossasia api file contains only 1 message
-        JSONArray array = new JSONArray();
-        array.put(data);
-        return array;
-    }
+	@Override
+	protected JSONArray extractMessages(JSONObject data) {
+		// each fossasia api file contains only 1 message
+		JSONArray array = new JSONArray();
+		array.put(data);
+		return array;
+	}
 
-    @Override
-    protected void customProcessing(JSONObject message) {
+	@Override
+	protected void customProcessing(JSONObject message) {
 
-        JSONObject location = (JSONObject) message.get("location");
+		JSONObject location = (JSONObject) message.get("location");
 
-        final Double longitude = (Double) location.get("lon");
-        final Double latitude = (Double) location.get("lat");
+		final Double longitude = (Double) location.get("lon");
+		final Double latitude = (Double) location.get("lat");
 
-        JSONArray location_point = new JSONArray();
-        location_point.put(longitude);
-        location_point.put(latitude);
-        message.put("location_point", location_point);
-        message.put("location_mark", location_point);
-    }
+		JSONArray location_point = new JSONArray();
+		location_point.put(longitude);
+		location_point.put(latitude);
+		message.put("location_point", location_point);
+		message.put("location_mark", location_point);
+	}
 }

@@ -23,14 +23,15 @@ import org.json.JSONObject;
 import org.loklak.objects.UserEntry;
 
 public class UserFactory extends AbstractIndexFactory<UserEntry> implements IndexFactory<UserEntry> {
-    
-    public UserFactory(final ElasticsearchClient elasticsearch_client, final String index_name, final int cacheSize, final int existSize) {
-        super(elasticsearch_client, index_name, cacheSize, existSize);
-    }
 
-    @Override
-    public UserEntry init(JSONObject json) {
-        return new UserEntry(json);
-    }
-    
+	public UserFactory(final ElasticsearchClient elasticsearch_client, final String index_name, final int cacheSize,
+			final int existSize) {
+		super(elasticsearch_client, index_name, cacheSize, existSize);
+	}
+
+	@Override
+	public UserEntry init(JSONObject json) {
+		return new UserEntry(json);
+	}
+
 }

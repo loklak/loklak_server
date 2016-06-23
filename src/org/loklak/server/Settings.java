@@ -36,196 +36,208 @@ import org.eclipse.jetty.util.log.Log;
 import org.loklak.tools.storage.JsonFile;
 
 public class Settings extends JsonFile {
-    
 
-    public Settings(File file) throws IOException {
-        super(file);
-    }
+	public Settings(File file) throws IOException {
+		super(file);
+	}
 
-    private PrivateKey private_key = null;
-    private PublicKey public_key = null;
-    private String key_algorithm = null;
-    private String peer_hash = null;
-    private String hash_algorithm = null;
+	private PrivateKey private_key = null;
+	private PublicKey public_key = null;
+	private String key_algorithm = null;
+	private String peer_hash = null;
+	private String hash_algorithm = null;
 
-    /**
-     * Get the private key as PrivateKey
-     * @return PrivateKey private_key
-     */
-    public synchronized PrivateKey getPrivateKey(){
-        return private_key;
-    }
-    
-    /**
-     * Get the private key as String
-     * @return String representation of the private key
-     */
-    public synchronized String getPrivateKeyAsString(){
-        return getKeyAsString(private_key);
-    }
-    
-    /**
-     * Get the public key as PublicKey
-     * @return PublicKey public_key
-     */
-    public synchronized PublicKey getPublicKey(){
-        return public_key;
-    }
-    
-    /**
-     * Get the public key as String
-     * @return String representation of the public key
-     */
-    public synchronized String getPublicKeyAsString(){
-        return getKeyAsString(public_key);
-    }
-    
-    /**
-     * Get the key algorithm e.g. RSA
-     * @return String algorithm
-     */
-    public synchronized String getKeyAlgorithm(){
-        return new String(key_algorithm);
-    }
-    
-    /**
-     * Get the hash of the public key
-     * @return String hash
-     */
-    public synchronized String getPeerHash(){
-        return new String(peer_hash);
-    }
-    
-    /**
-     * Get the hash algorithm for the public key
-     * @return String hash_algorithm
-     */
-    public synchronized String getPeerHashAlgorithm(){
-        return new String(hash_algorithm);
-    }
-    
-    /**
-     * Get String representation of a key
-     * @param key
-     * @return String representation of a key
-     */
-    public synchronized String getKeyAsString(Key key){
-        return Base64.getEncoder().encodeToString(key.getEncoded());
-    }
-    
-    /**
-     * Calculate the hash of the public key
-     */
-    private synchronized void setPeerHash(){
-        hash_algorithm = "SHA-256";
-        peer_hash = getKeyHash(public_key, hash_algorithm);
-        put("peer_hash",peer_hash);
-        put("peer_hash_algorithm",hash_algorithm);
-        
-    }
-    
-    /**
-     * Create hash for a key
-     * @param pubkey
-     * @param algorithm
-     * @return String hash
-     */
-    public synchronized static String getKeyHash(PublicKey pubkey, String algorithm){
-        try {
-            MessageDigest md = MessageDigest.getInstance(algorithm);
-            md.update(pubkey.getEncoded());
-            return Base64.getEncoder().encodeToString(md.digest());
-        } catch (NoSuchAlgorithmException e) {
-        	Log.getLog().warn(e);
-        }
-        return null;
-    }
-    
-    /**
-     * Load private key from file
-     * @return true if a valid key is found in file
-     */
-    public synchronized boolean loadPrivateKey(){
-        if(!has("private_key") || !has("key_algorithm")) return false;
-        
-        String encodedKey = getString("private_key");
-        String algorithm = getString("key_algorithm");
-        
-        try{
-            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(encodedKey));
-            PrivateKey priv = KeyFactory.getInstance(algorithm).generatePrivate(keySpec);
-            private_key = priv;
-            key_algorithm = algorithm;
-            return true;
-        }
-        catch(NoSuchAlgorithmException | InvalidKeySpecException e){
-        	Log.getLog().warn(e);
-        }
-        return false;
-    }
-    
-    /**
-     * Load public key from file
-     * @return true if a valid key is found in file
-     */
-    public synchronized boolean loadPublicKey(){
-        if(!has("public_key") || !has("key_algorithm")) return false;
-        
-        String encodedKey = getString("public_key");
-        String algorithm = getString("key_algorithm");
-        
-        PublicKey pub = decodePublicKey(encodedKey, algorithm);
-        if(pub != null){
-            public_key = pub;
-            key_algorithm = algorithm;
-            setPeerHash();
-            return true;
-        }
-        return false;
-    }
-    
-    /**
-     * Set the private key
-     * @param key
-     * @param algorithm
-     */
-    public synchronized void setPrivateKey(PrivateKey key, String algorithm){
-        put("private_key", getKeyAsString(key));
-        private_key = key;
-        put("key_algorithm",algorithm);
-        key_algorithm = algorithm;
-    }
-    
-    /**
-     * Set the public key
-     * @param key
-     * @param algorithm
-     */
-    public synchronized void setPublicKey(PublicKey key, String algorithm){
-        put("public_key", getKeyAsString(key));
-        public_key = key;
-        put("key_algorithm",algorithm);
-        key_algorithm = algorithm;
-        setPeerHash();
-    }
-    
-    /**
-     * Create PublicKey from String representation
-     * @param encodedKey
-     * @param algorithm
-     * @return PublicKey public_key
-     */
-    public synchronized static PublicKey decodePublicKey(String encodedKey, String algorithm){
-        try{
-            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(encodedKey));
-            PublicKey pub = KeyFactory.getInstance(algorithm).generatePublic(keySpec);
-            return pub;
-        }
-        catch(NoSuchAlgorithmException | InvalidKeySpecException e){
-        	Log.getLog().warn(e);
-        }
-        return null;
-    }
-    
+	/**
+	 * Get the private key as PrivateKey
+	 * 
+	 * @return PrivateKey private_key
+	 */
+	public synchronized PrivateKey getPrivateKey() {
+		return private_key;
+	}
+
+	/**
+	 * Get the private key as String
+	 * 
+	 * @return String representation of the private key
+	 */
+	public synchronized String getPrivateKeyAsString() {
+		return getKeyAsString(private_key);
+	}
+
+	/**
+	 * Get the public key as PublicKey
+	 * 
+	 * @return PublicKey public_key
+	 */
+	public synchronized PublicKey getPublicKey() {
+		return public_key;
+	}
+
+	/**
+	 * Get the public key as String
+	 * 
+	 * @return String representation of the public key
+	 */
+	public synchronized String getPublicKeyAsString() {
+		return getKeyAsString(public_key);
+	}
+
+	/**
+	 * Get the key algorithm e.g. RSA
+	 * 
+	 * @return String algorithm
+	 */
+	public synchronized String getKeyAlgorithm() {
+		return new String(key_algorithm);
+	}
+
+	/**
+	 * Get the hash of the public key
+	 * 
+	 * @return String hash
+	 */
+	public synchronized String getPeerHash() {
+		return new String(peer_hash);
+	}
+
+	/**
+	 * Get the hash algorithm for the public key
+	 * 
+	 * @return String hash_algorithm
+	 */
+	public synchronized String getPeerHashAlgorithm() {
+		return new String(hash_algorithm);
+	}
+
+	/**
+	 * Get String representation of a key
+	 * 
+	 * @param key
+	 * @return String representation of a key
+	 */
+	public synchronized String getKeyAsString(Key key) {
+		return Base64.getEncoder().encodeToString(key.getEncoded());
+	}
+
+	/**
+	 * Calculate the hash of the public key
+	 */
+	private synchronized void setPeerHash() {
+		hash_algorithm = "SHA-256";
+		peer_hash = getKeyHash(public_key, hash_algorithm);
+		put("peer_hash", peer_hash);
+		put("peer_hash_algorithm", hash_algorithm);
+
+	}
+
+	/**
+	 * Create hash for a key
+	 * 
+	 * @param pubkey
+	 * @param algorithm
+	 * @return String hash
+	 */
+	public synchronized static String getKeyHash(PublicKey pubkey, String algorithm) {
+		try {
+			MessageDigest md = MessageDigest.getInstance(algorithm);
+			md.update(pubkey.getEncoded());
+			return Base64.getEncoder().encodeToString(md.digest());
+		} catch (NoSuchAlgorithmException e) {
+			Log.getLog().warn(e);
+		}
+		return null;
+	}
+
+	/**
+	 * Load private key from file
+	 * 
+	 * @return true if a valid key is found in file
+	 */
+	public synchronized boolean loadPrivateKey() {
+		if (!has("private_key") || !has("key_algorithm"))
+			return false;
+
+		String encodedKey = getString("private_key");
+		String algorithm = getString("key_algorithm");
+
+		try {
+			PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(encodedKey));
+			PrivateKey priv = KeyFactory.getInstance(algorithm).generatePrivate(keySpec);
+			private_key = priv;
+			key_algorithm = algorithm;
+			return true;
+		} catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+			Log.getLog().warn(e);
+		}
+		return false;
+	}
+
+	/**
+	 * Load public key from file
+	 * 
+	 * @return true if a valid key is found in file
+	 */
+	public synchronized boolean loadPublicKey() {
+		if (!has("public_key") || !has("key_algorithm"))
+			return false;
+
+		String encodedKey = getString("public_key");
+		String algorithm = getString("key_algorithm");
+
+		PublicKey pub = decodePublicKey(encodedKey, algorithm);
+		if (pub != null) {
+			public_key = pub;
+			key_algorithm = algorithm;
+			setPeerHash();
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Set the private key
+	 * 
+	 * @param key
+	 * @param algorithm
+	 */
+	public synchronized void setPrivateKey(PrivateKey key, String algorithm) {
+		put("private_key", getKeyAsString(key));
+		private_key = key;
+		put("key_algorithm", algorithm);
+		key_algorithm = algorithm;
+	}
+
+	/**
+	 * Set the public key
+	 * 
+	 * @param key
+	 * @param algorithm
+	 */
+	public synchronized void setPublicKey(PublicKey key, String algorithm) {
+		put("public_key", getKeyAsString(key));
+		public_key = key;
+		put("key_algorithm", algorithm);
+		key_algorithm = algorithm;
+		setPeerHash();
+	}
+
+	/**
+	 * Create PublicKey from String representation
+	 * 
+	 * @param encodedKey
+	 * @param algorithm
+	 * @return PublicKey public_key
+	 */
+	public synchronized static PublicKey decodePublicKey(String encodedKey, String algorithm) {
+		try {
+			X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(encodedKey));
+			PublicKey pub = KeyFactory.getInstance(algorithm).generatePublic(keySpec);
+			return pub;
+		} catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+			Log.getLog().warn(e);
+		}
+		return null;
+	}
 
 }

@@ -39,37 +39,41 @@ public class CSVServlet extends HttpServlet {
 	private static final long serialVersionUID = 8578478303032749879L;
 
 	@Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        doGet(request, response);
-    }
-    
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Query post = RemoteAccess.evaluate(request);
+	protected void doPost(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+		doGet(request, response);
+	}
 
-        // manage DoS
-        if (post.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;}
+	@Override
+	protected void doGet(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+		Query post = RemoteAccess.evaluate(request);
 
-        // evaluate get parameters
-        String data = post.get("data", "");
-        try {
-        	String json = data;
-            JSONArray array = CDL.toJSONArray(json);
-        	PrintWriter sos = response.getWriter();
-        	sos.print(array.toString(2));
-        	sos.println();
-        }
-        catch (IOException e) {
-        	Log.getLog().warn(e);
-        	JSONObject json = new JSONObject(true);
-        	json.put("error", "Malformed CSV. Please check CSV Again");
-        	json.put("type", "Error");
-        	PrintWriter sos = response.getWriter();
-        	sos.print(json.toString(2));
-        	sos.println();
-        }
+		// manage DoS
+		if (post.isDoS_blackout()) {
+			response.sendError(503, "your request frequency is too high");
+			return;
+		}
 
-        post.finalize();
-    }
+		// evaluate get parameters
+		String data = post.get("data", "");
+		try {
+			String json = data;
+			JSONArray array = CDL.toJSONArray(json);
+			PrintWriter sos = response.getWriter();
+			sos.print(array.toString(2));
+			sos.println();
+		} catch (IOException e) {
+			Log.getLog().warn(e);
+			JSONObject json = new JSONObject(true);
+			json.put("error", "Malformed CSV. Please check CSV Again");
+			json.put("type", "Error");
+			PrintWriter sos = response.getWriter();
+			sos.print(json.toString(2));
+			sos.println();
+		}
+
+		post.finalize();
+	}
 
 }

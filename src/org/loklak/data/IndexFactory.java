@@ -29,22 +29,22 @@ import org.loklak.objects.SourceType;
 
 public interface IndexFactory<Entry extends ObjectEntry> {
 
-    public Entry init(JSONObject json) throws IOException;
+	public Entry init(JSONObject json) throws IOException;
 
-    public boolean exists(String id);
-    
-    public boolean existsCache(String id);
-    
-    public Set<String> existsBulk(Collection<String> ids);
-    
-    public boolean delete(String id, SourceType sourceType);
+	public boolean exists(String id);
 
-    public JSONObject readJSON(String id);
+	public boolean existsCache(String id);
 
-    public boolean writeEntry(IndexEntry<Entry> entry) throws IOException;
-    
-    public ElasticsearchClient.BulkWriteResult writeEntries(Collection<IndexEntry<Entry>> entries) throws IOException;
-    
-    public void close();
-    
+	public Set<String> existsBulk(Collection<String> ids);
+
+	public boolean delete(String id, SourceType sourceType);
+
+	public JSONObject readJSON(String id);
+
+	public boolean writeEntry(IndexEntry<Entry> entry) throws IOException;
+
+	public ElasticsearchClient.BulkWriteResult writeEntries(Collection<IndexEntry<Entry>> entries) throws IOException;
+
+	public void close();
+
 }

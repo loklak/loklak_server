@@ -51,21 +51,26 @@ public class GenericScraper extends HttpServlet {
 	private static final long serialVersionUID = 4653635987712691127L;
 
 	@Override
-	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+	protected void doPost(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
 		doGet(request, response);
 	}
 
 	@Override
-	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+	protected void doGet(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
 		Query post = RemoteAccess.evaluate(request);
 
 		// manage DoS
-		if (post.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;}
+		if (post.isDoS_blackout()) {
+			response.sendError(503, "your request frequency is too high");
+			return;
+		}
 
 		// evaluate get parameters
 		String url = post.get("url", "");
 		JSONObject obj = new JSONObject();
-		//loading the data from the URL
+		// loading the data from the URL
 		Document page = Jsoup.connect(url).get();
 		String title = page.title();
 
@@ -95,81 +100,81 @@ public class GenericScraper extends HttpServlet {
 
 		String language = taglang.attr("lang");
 		for (Element link : links) {
-			if(link.attr("href") != null && link.attr("href").length() != 0){
+			if (link.attr("href") != null && link.attr("href").length() != 0) {
 				linkHref.add(link.attr("href"));
 			}
-			if(link.text() != null && link.text().length() != 0){
+			if (link.text() != null && link.text().length() != 0) {
 				linkText.add(link.text());
 			}
 		}
 		for (Element link : links2) {
-			if(link.attr("href") != null && link.attr("href").length() != 0){
+			if (link.attr("href") != null && link.attr("href").length() != 0) {
 				linkHref.add(link.attr("href"));
 			}
 		}
 		for (Element link : srciptLinks) {
-			if(link.attr("src") != null && link.attr("src").length() != 0){
+			if (link.attr("src") != null && link.attr("src").length() != 0) {
 				src.add(link.attr("src"));
 			}
 		}
 		for (Element link : imageLinks) {
-			if(link.attr("src") != null && link.attr("src").length() != 0){
+			if (link.attr("src") != null && link.attr("src").length() != 0) {
 				image.add(link.attr("src"));
 			}
 		}
-		for (Element article : articles){
-			if(article.text() != null && article.text().length() != 0){
+		for (Element article : articles) {
+			if (article.text() != null && article.text().length() != 0) {
 				articleTags.add(article.text());
 			}
 		}
-		for (Element pre : pres){
-			if(pre.text() != null && pre.text().length() != 0){
+		for (Element pre : pres) {
+			if (pre.text() != null && pre.text().length() != 0) {
 				preTags.add(pre.text());
 			}
 		}
-		for (Element code : codes){
-			if(code.text() != null && code.text().length() != 0){
+		for (Element code : codes) {
+			if (code.text() != null && code.text().length() != 0) {
 				codeTags.add(code.text());
 			}
 		}
 		for (Element link : audios) {
 			Elements audioSources = link.getElementsByTag("source");
-			if(!(audioSources.isEmpty())){
-				for(Element audioLink : audioSources){
-					if(audioLink.attr("src") != null && audioLink.attr("src").length() != 0){
+			if (!(audioSources.isEmpty())) {
+				for (Element audioLink : audioSources) {
+					if (audioLink.attr("src") != null && audioLink.attr("src").length() != 0) {
 						audio.add(audioLink.attr("src"));
 					}
 				}
 			}
-			if(link.attr("src") != null && link.attr("src").length() != 0){
+			if (link.attr("src") != null && link.attr("src").length() != 0) {
 				audio.add(link.attr("src"));
 			}
 		}
 		for (Element link : videos) {
 			Elements videoSources = link.getElementsByTag("source");
-			if(!(videoSources.isEmpty())){
-				for(Element videoLink : videoSources){
-					if(videoLink.attr("src") != null && videoLink.attr("src").length() != 0){
+			if (!(videoSources.isEmpty())) {
+				for (Element videoLink : videoSources) {
+					if (videoLink.attr("src") != null && videoLink.attr("src").length() != 0) {
 						video.add(videoLink.attr("src"));
 					}
 				}
 			}
-			if(link.attr("src") != null && link.attr("src").length() != 0){
+			if (link.attr("src") != null && link.attr("src").length() != 0) {
 				video.add(link.attr("src"));
 			}
 		}
 		for (Element link : videos2) {
-			if(link.attr("src") != null && link.attr("src").length() != 0){
+			if (link.attr("src") != null && link.attr("src").length() != 0) {
 				video.add(link.attr("src"));
 			}
 		}
 		for (Element link : videos3) {
-			if(link.attr("src") != null && link.attr("src").length() != 0){
+			if (link.attr("src") != null && link.attr("src").length() != 0) {
 				video.add(link.attr("src"));
 			}
 		}
 		for (Element link : videos4) {
-			if(link.attr("src") != null && link.attr("src").length() != 0){
+			if (link.attr("src") != null && link.attr("src").length() != 0) {
 				video.add(link.attr("src"));
 			}
 		}
@@ -185,7 +190,7 @@ public class GenericScraper extends HttpServlet {
 		obj.put("Audio", new JSONArray(audio));
 		obj.put("Video", new JSONArray(video));
 
-		//print JSON 
+		// print JSON
 		response.setCharacterEncoding("UTF-8");
 		PrintWriter sos = response.getWriter();
 		sos.print(obj.toString(2));

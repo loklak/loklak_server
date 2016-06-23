@@ -18,6 +18,7 @@
  */
 
 package org.loklak;
+
 import java.util.Date;
 import java.util.Properties;
 import java.util.regex.Pattern;
@@ -41,13 +42,13 @@ public class LoklakEmailHandler {
 			+ "[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$";
 
 	public static void sendEmail(String addressTo, String subject, String text) throws Exception {
-		
+
 		if (!"true".equals(DAO.getConfig("smtp.mails.enabled", "false"))) {
 			throw new ConfigurationException("Mail sending disabled");
 		}
-		
+
 		pattern = Pattern.compile(EMAIL_PATTERN);
-		
+
 		ClientCredential credential = new ClientCredential(ClientCredential.Type.passwd_login, addressTo);
 		String sender = DAO.getConfig("smtp.host.senderid", "server@loklak.org");
 		String pass = DAO.getConfig("smtp.host.senderpass", "randomxyz");

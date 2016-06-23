@@ -11,6 +11,46 @@ import org.loklak.server.Query;
 import org.loklak.tools.storage.JSONObjectWithDefault;
 
 public class TopMenuService extends AbstractAPIHandler implements APIHandler {
+<<<<<<< HEAD
+
+	private static final long serialVersionUID = 1839868262296635665L;
+
+	@Override
+	public BaseUserRole getMinimalBaseUserRole() {
+		return BaseUserRole.ANONYMOUS;
+	}
+
+	@Override
+	public JSONObject getDefaultPermissions(BaseUserRole baseUserRole) {
+		return null;
+	}
+
+	@Override
+	public String getAPIPath() {
+		return "/cms/topmenu.json";
+	}
+
+	@Override
+	public JSONObject serviceImpl(Query call, Authorization rights) {
+
+		int limited_count = (int) DAO.getConfig("download.limited.count", (long) Integer.MAX_VALUE);
+
+		JSONObject json = new JSONObject(true);
+		JSONArray topmenu = new JSONArray().put(new JSONObject().put("Home", "index.html"))
+				.put(new JSONObject().put("About", "about.html")).put(new JSONObject().put("Showcase", "showcase.html"))
+				.put(new JSONObject().put("Architecture", "architecture.html"))
+				.put(new JSONObject().put("Download", "download.html"))
+				.put(new JSONObject().put("Tutorials", "tutorials.html")).put(new JSONObject().put("API", "api.html"));
+		if (limited_count > 0)
+			topmenu.put(new JSONObject().put("Dumps", "dump.html"));
+		topmenu.put(new JSONObject().put("Apps", "apps/applist/index.html"));
+		json.put("items", topmenu);
+
+		// modify caching
+		json.put("$EXPIRES", 600);
+		return json;
+	}
+=======
     
     private static final long serialVersionUID = 1839868262296635665L;
 
@@ -49,4 +89,5 @@ public class TopMenuService extends AbstractAPIHandler implements APIHandler {
         json.put("$EXPIRES", 600);
         return json;
     }
+>>>>>>> aac1787db3815d09c0c35cd0d2f43caad15ad536
 }

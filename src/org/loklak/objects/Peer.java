@@ -23,10 +23,11 @@ import org.json.JSONObject;
 
 public class Peer extends JSONObject {
 
-    public static enum Status {
-        CANDIDATE, // a new peer which was not tested for an open port or a SENIOR which could not be connected
-        JUNIOR,    // a candidate which was tested for an open port unsuccessfully
-        SENIOR;    // a candidate which was tested for an open port successfully
-    }
-    
+	public static enum Status {
+		CANDIDATE, // a new peer which was not tested for an open port or a
+					// SENIOR which could not be connected
+		JUNIOR, // a candidate which was tested for an open port unsuccessfully
+		SENIOR; // a candidate which was tested for an open port successfully
+	}
+
 }

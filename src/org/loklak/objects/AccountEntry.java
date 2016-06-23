@@ -25,107 +25,112 @@ import org.json.JSONObject;
 
 public class AccountEntry extends AbstractObjectEntry implements ObjectEntry {
 
-    public enum Field {
-        screen_name,
-        source_type,
-        oauth_token,
-        oauth_token_secret,
-        authentication_first,
-        authentication_latest,
-        apps;
-    }
-    
-    private final JSONObject json;
+	public enum Field {
+		screen_name, source_type, oauth_token, oauth_token_secret, authentication_first, authentication_latest, apps;
+	}
 
-    private AccountEntry() {
-        this.json = new JSONObject(true);
-    }
-    
-    public AccountEntry(final JSONObject map) throws IOException {
-        this();
-        this.init(map);
-    }
-    
-    public void init(final JSONObject extmap) throws IOException {
-        this.json.putAll(extmap);
-        Date now = new Date();
-        this.json.put(Field.authentication_first.name(), this.json.has(Field.authentication_first.name()) ? parseDate(this.json.get(Field.authentication_first.name()), now) : now);
-        this.json.put(Field.authentication_latest.name(), this.json.has(Field.authentication_latest.name()) ? parseDate(this.json.get(Field.authentication_latest.name()), now) : now);
-        boolean containsAuth = this.json.has(Field.oauth_token.name()) && this.json.has(Field.oauth_token_secret.name());
-        if (this.json.has(Field.source_type.name())) {
-            // verify the type
-            try {
-                SourceType st = new SourceType((String) this.json.get(Field.source_type.name()));
-                this.json.put(Field.source_type.name(), st.toString());
-            } catch (IllegalArgumentException e) {
-                throw new IOException(Field.source_type.name() + " contains unknown type " + (String) this.json.get(Field.source_type.name()));
-            }
-        } else {
-            this.json.put(Field.source_type.name(), SourceType.TWITTER);
-        }
-        if (!this.json.has(Field.apps.name()) && !containsAuth) {
-            throw new IOException("account data must either contain authentication details or an apps setting");
-        }
-    }
-    
-    public String getScreenName() {
-        return parseString((String) this.json.get(Field.screen_name.name()));
-    }
+	private final JSONObject json;
 
-    public Date getAuthenticationFirst() {
-        return parseDate(this.json.get(Field.authentication_first.name()));
-    }
+	private AccountEntry() {
+		this.json = new JSONObject(true);
+	}
 
-    public Date getAuthenticationLatest() {
-        return parseDate(this.json.get(Field.authentication_latest.name()));
-    }
+	public AccountEntry(final JSONObject map) throws IOException {
+		this();
+		this.init(map);
+	}
 
-    public SourceType getSourceType() {
-        Object st = this.json.get(Field.source_type.name());
-        if (st == null) return SourceType.TWITTER;
-        if (st instanceof SourceType) return (SourceType) st;
-        if (st instanceof String) return new SourceType((String) st);
-        return SourceType.TWITTER;
-    }
+	public void init(final JSONObject extmap) throws IOException {
+		this.json.putAll(extmap);
+		Date now = new Date();
+		this.json.put(Field.authentication_first.name(), this.json.has(Field.authentication_first.name())
+				? parseDate(this.json.get(Field.authentication_first.name()), now) : now);
+		this.json.put(Field.authentication_latest.name(), this.json.has(Field.authentication_latest.name())
+				? parseDate(this.json.get(Field.authentication_latest.name()), now) : now);
+		boolean containsAuth = this.json.has(Field.oauth_token.name())
+				&& this.json.has(Field.oauth_token_secret.name());
+		if (this.json.has(Field.source_type.name())) {
+			// verify the type
+			try {
+				SourceType st = new SourceType((String) this.json.get(Field.source_type.name()));
+				this.json.put(Field.source_type.name(), st.toString());
+			} catch (IllegalArgumentException e) {
+				throw new IOException(Field.source_type.name() + " contains unknown type "
+						+ (String) this.json.get(Field.source_type.name()));
+			}
+		} else {
+			this.json.put(Field.source_type.name(), SourceType.TWITTER);
+		}
+		if (!this.json.has(Field.apps.name()) && !containsAuth) {
+			throw new IOException("account data must either contain authentication details or an apps setting");
+		}
+	}
 
-    public String getOauthToken () {
-        return (String) this.json.get(Field.oauth_token.name());
-    }
+	public String getScreenName() {
+		return parseString((String) this.json.get(Field.screen_name.name()));
+	}
 
-    public String getOauthTokenSecret () {
-        return (String) this.json.get(Field.oauth_token_secret.name());
-    }
+	public Date getAuthenticationFirst() {
+		return parseDate(this.json.get(Field.authentication_first.name()));
+	}
 
-    public String getApps() {
-        return (String) this.json.get(Field.apps.name());
-    }
-    
-    @Override
-    public JSONObject toJSON() {
-        return toJSON(null);
-    }
-    
-    public JSONObject toJSON(UserEntry user) {
-        JSONObject m = new JSONObject();
-        m.put(Field.authentication_latest.name(), utcFormatter.print(getAuthenticationLatest().getTime()));
-        m.put(Field.authentication_first.name(), utcFormatter.print(getAuthenticationFirst().getTime()));
-        m.put(Field.source_type.name(), getSourceType().toString());
-        m.put(Field.screen_name.name(), getScreenName());
-        if (this.json.has(Field.oauth_token.name())) m.put(Field.oauth_token.name(), this.json.get(Field.oauth_token.name()));
-        if (this.json.has(Field.oauth_token_secret.name())) m.put(Field.oauth_token_secret.name(), this.json.get(Field.oauth_token_secret.name()));
-        if (this.json.has(Field.apps.name())) {
-            m.put(Field.apps.name(), this.json.get(Field.apps.name()));
-        }
-        // add user
-        if (user != null) m.put("user", user.toJSON());
-        return m;
-    }
-    
-    public static JSONObject toEmptyAccountJson(UserEntry user) {
-        assert user != null;
-        JSONObject m = new JSONObject();
-        if (user != null) m.put("user", user.toJSON());
-        return m;
-    }
-    
+	public Date getAuthenticationLatest() {
+		return parseDate(this.json.get(Field.authentication_latest.name()));
+	}
+
+	public SourceType getSourceType() {
+		Object st = this.json.get(Field.source_type.name());
+		if (st == null)
+			return SourceType.TWITTER;
+		if (st instanceof SourceType)
+			return (SourceType) st;
+		if (st instanceof String)
+			return new SourceType((String) st);
+		return SourceType.TWITTER;
+	}
+
+	public String getOauthToken() {
+		return (String) this.json.get(Field.oauth_token.name());
+	}
+
+	public String getOauthTokenSecret() {
+		return (String) this.json.get(Field.oauth_token_secret.name());
+	}
+
+	public String getApps() {
+		return (String) this.json.get(Field.apps.name());
+	}
+
+	@Override
+	public JSONObject toJSON() {
+		return toJSON(null);
+	}
+
+	public JSONObject toJSON(UserEntry user) {
+		JSONObject m = new JSONObject();
+		m.put(Field.authentication_latest.name(), utcFormatter.print(getAuthenticationLatest().getTime()));
+		m.put(Field.authentication_first.name(), utcFormatter.print(getAuthenticationFirst().getTime()));
+		m.put(Field.source_type.name(), getSourceType().toString());
+		m.put(Field.screen_name.name(), getScreenName());
+		if (this.json.has(Field.oauth_token.name()))
+			m.put(Field.oauth_token.name(), this.json.get(Field.oauth_token.name()));
+		if (this.json.has(Field.oauth_token_secret.name()))
+			m.put(Field.oauth_token_secret.name(), this.json.get(Field.oauth_token_secret.name()));
+		if (this.json.has(Field.apps.name())) {
+			m.put(Field.apps.name(), this.json.get(Field.apps.name()));
+		}
+		// add user
+		if (user != null)
+			m.put("user", user.toJSON());
+		return m;
+	}
+
+	public static JSONObject toEmptyAccountJson(UserEntry user) {
+		assert user != null;
+		JSONObject m = new JSONObject();
+		if (user != null)
+			m.put("user", user.toJSON());
+		return m;
+	}
+
 }

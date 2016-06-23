@@ -36,35 +36,45 @@ import org.loklak.server.Query;
  * submit all setting values where the settings key starts with "client."
  */
 public class SettingsServlet extends HttpServlet {
-    
-    private static final long serialVersionUID = 1839868262296635665L;
 
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        doGet(request, response);
-    }
-    
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Query post = RemoteAccess.evaluate(request);
-        if (post.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;}
-        if (!post.isLocalhostAccess()) {response.sendError(503, "access only allowed from localhost, your request comes from " + post.getClientHost()); return;}
-        
-        post.setResponse(response, "application/javascript");
-        
-        // generate json: NO jsonp here on purpose!
-        JSONObject json = new JSONObject(true);
-        for (String key: DAO.getConfigKeys()) {
-            if (key.startsWith("client.")) json.put(key.substring(7), DAO.getConfig(key, ""));
-        }
+	private static final long serialVersionUID = 1839868262296635665L;
 
-        // write json
-        response.setCharacterEncoding("UTF-8");
-        PrintWriter sos = response.getWriter();
-        sos.print(json.toString(2));
-        sos.println();
+	@Override
+	protected void doPost(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+		doGet(request, response);
+	}
 
-        post.finalize();
-    }
-    
+	@Override
+	protected void doGet(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+		Query post = RemoteAccess.evaluate(request);
+		if (post.isDoS_blackout()) {
+			response.sendError(503, "your request frequency is too high");
+			return;
+		}
+		if (!post.isLocalhostAccess()) {
+			response.sendError(503,
+					"access only allowed from localhost, your request comes from " + post.getClientHost());
+			return;
+		}
+
+		post.setResponse(response, "application/javascript");
+
+		// generate json: NO jsonp here on purpose!
+		JSONObject json = new JSONObject(true);
+		for (String key : DAO.getConfigKeys()) {
+			if (key.startsWith("client."))
+				json.put(key.substring(7), DAO.getConfig(key, ""));
+		}
+
+		// write json
+		response.setCharacterEncoding("UTF-8");
+		PrintWriter sos = response.getWriter();
+		sos.print(json.toString(2));
+		sos.println();
+
+		post.finalize();
+	}
+
 }

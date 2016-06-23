@@ -26,31 +26,33 @@ import org.loklak.tools.storage.JSONObjectWithDefault;
 
 public class AuthorizationDemo extends AbstractAPIHandler implements APIHandler {
 
-    private static final long serialVersionUID = 8678478303032749879L;
+	private static final long serialVersionUID = 8678478303032749879L;
 
-    @Override
-    public BaseUserRole getMinimalBaseUserRole() { return BaseUserRole.ANONYMOUS; }
+	@Override
+	public BaseUserRole getMinimalBaseUserRole() {
+		return BaseUserRole.ANONYMOUS;
+	}
 
 	@Override
 	public JSONObject getDefaultPermissions(BaseUserRole baseUserRole) {
 		JSONObject result = new JSONObject();
 
-		switch(baseUserRole){
-			case ADMIN:
-				result.put("download_limit", -1);
-				break;
-			case PRIVILEGED:
-				result.put("download_limit", 1000);
-				break;
-			case USER:
-				result.put("download_limit", 100);
-				break;
-			case ANONYMOUS:
-				result.put("download_limit", 10);
-				break;
-			default:
-				result.put("download_limit", 0);
-				break;
+		switch (baseUserRole) {
+		case ADMIN:
+			result.put("download_limit", -1);
+			break;
+		case PRIVILEGED:
+			result.put("download_limit", 1000);
+			break;
+		case USER:
+			result.put("download_limit", 100);
+			break;
+		case ANONYMOUS:
+			result.put("download_limit", 10);
+			break;
+		default:
+			result.put("download_limit", 0);
+			break;
 		}
 
 		return result;
@@ -58,19 +60,26 @@ public class AuthorizationDemo extends AbstractAPIHandler implements APIHandler 
 
 	@Override
 	public String getAPIPath() {
-        return "/api/authorization-demo.json";
-    }
+		return "/api/authorization-demo.json";
+	}
 
+	@Override
+	public JSONObject serviceImpl(Query post, Authorization rights) throws APIException {
+
+<<<<<<< HEAD
+		JSONObject result = new JSONObject();
+=======
     @Override
     public JSONObject serviceImpl(Query post, Authorization rights, final JSONObjectWithDefault permissions) throws APIException {
     	
     	JSONObject result = new JSONObject();
+>>>>>>> aac1787db3815d09c0c35cd0d2f43caad15ad536
 
 		result.put("user", rights.getIdentity().getName());
-        result.put("user role", rights.getUserRole().getDisplayName());
-        result.put("base user role", rights.getBaseUserRole().name());
-		result.put("permissions",rights.getPermissions(this));
-		
+		result.put("user role", rights.getUserRole().getDisplayName());
+		result.put("base user role", rights.getBaseUserRole().name());
+		result.put("permissions", rights.getPermissions(this));
+
 		return result;
-    }
+	}
 }

@@ -29,43 +29,43 @@ import java.util.List;
 
 public class NodelistPushServlet extends AbstractPushServlet {
 
-    private static final long serialVersionUID = -7526015654376919340L;
+	private static final long serialVersionUID = -7526015654376919340L;
 
-    @Override
-    protected SourceType getSourceType() {
-        return SourceType.NODELIST;
-    }
+	@Override
+	protected SourceType getSourceType() {
+		return SourceType.NODELIST;
+	}
 
-    @Override
-    protected JsonValidator.JsonSchemaEnum getValidatorSchema() {
-        return JsonValidator.JsonSchemaEnum.NODELIST;
-    }
+	@Override
+	protected JsonValidator.JsonSchemaEnum getValidatorSchema() {
+		return JsonValidator.JsonSchemaEnum.NODELIST;
+	}
 
-    @Override
-    protected JsonFieldConverter.JsonConversionSchemaEnum getConversionSchema() {
-        return JsonFieldConverter.JsonConversionSchemaEnum.NODELIST_NODE;
-    }
+	@Override
+	protected JsonFieldConverter.JsonConversionSchemaEnum getConversionSchema() {
+		return JsonFieldConverter.JsonConversionSchemaEnum.NODELIST_NODE;
+	}
 
-    @Override
-    protected JSONArray extractMessages(JSONObject data) {
-        return data.getJSONArray("nodes");
-    }
+	@Override
+	protected JSONArray extractMessages(JSONObject data) {
+		return data.getJSONArray("nodes");
+	}
 
-    @Override
-    protected void customProcessing(JSONObject message) {
-        JSONObject location = (JSONObject) message.get("position");
+	@Override
+	protected void customProcessing(JSONObject message) {
+		JSONObject location = (JSONObject) message.get("position");
 
-        final Double longitude = Double.parseDouble((String) location.get("long"));
-        final Double latitude = Double.parseDouble((String) location.get("lat"));
-        List<Double> location_point = new ArrayList<>();
-        location_point.add(longitude);
-        location_point.add(latitude);
-        message.put("location_point", location_point);
-        message.put("location_mark", location_point);
+		final Double longitude = Double.parseDouble((String) location.get("long"));
+		final Double latitude = Double.parseDouble((String) location.get("lat"));
+		List<Double> location_point = new ArrayList<>();
+		location_point.add(longitude);
+		location_point.add(latitude);
+		message.put("location_point", location_point);
+		message.put("location_mark", location_point);
 
-        JSONObject user = new JSONObject(true);
-        user.put("screen_name", "freifunk_" + message.get("name"));
-        user.put("name", message.get("name"));
-        message.put("user", user);
-    }
+		JSONObject user = new JSONObject(true);
+		user.put("screen_name", "freifunk_" + message.get("name"));
+		user.put("name", message.get("name"));
+		message.put("user", user);
+	}
 }

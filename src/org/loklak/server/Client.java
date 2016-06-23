@@ -23,38 +23,38 @@ import org.json.JSONObject;
 
 public class Client {
 
-    private final static char SEPARATOR = ':';
-    
-    private String id;
-    private int separatorPos;
+	private final static char SEPARATOR = ':';
 
-    protected Client(String rawIdString) {
-        this.separatorPos = rawIdString.indexOf(SEPARATOR);
-        assert this.separatorPos >= 0;
-        this.id = rawIdString;
-    }
+	private String id;
+	private int separatorPos;
 
-    protected Client(String typeName, String untypedId) {
-        this.id = typeName + SEPARATOR + untypedId;
-        this.separatorPos = typeName.length();
-    }
-    
-    protected String getKey() {
-        return id.substring(0, this.separatorPos);
-    }
-    
-    public String getName() {
-        return this.id.substring(this.separatorPos + 1);
-    }
-    
-    public String toString() {
-        return this.id;
-    }
-    
-    public JSONObject toJSON() {
-        JSONObject json = new JSONObject(true);
-        json.put("type", getKey());
-        json.put("name", this.getName());
-        return json;
-    }
+	protected Client(String rawIdString) {
+		this.separatorPos = rawIdString.indexOf(SEPARATOR);
+		assert this.separatorPos >= 0;
+		this.id = rawIdString;
+	}
+
+	protected Client(String typeName, String untypedId) {
+		this.id = typeName + SEPARATOR + untypedId;
+		this.separatorPos = typeName.length();
+	}
+
+	protected String getKey() {
+		return id.substring(0, this.separatorPos);
+	}
+
+	public String getName() {
+		return this.id.substring(this.separatorPos + 1);
+	}
+
+	public String toString() {
+		return this.id;
+	}
+
+	public JSONObject toJSON() {
+		JSONObject json = new JSONObject(true);
+		json.put("type", getKey());
+		json.put("name", this.getName());
+		return json;
+	}
 }

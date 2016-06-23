@@ -27,28 +27,29 @@ import org.loklak.objects.SourceType;
 
 public class OpenWifiMapPushServlet extends AbstractPushServlet {
 
-    private static final long serialVersionUID = -5983742254182146642L;
+	private static final long serialVersionUID = -5983742254182146642L;
 
-    @Override
-    protected SourceType getSourceType() {
-        return SourceType.OPENWIFIMAP;
-    }
+	@Override
+	protected SourceType getSourceType() {
+		return SourceType.OPENWIFIMAP;
+	}
 
-    @Override
-    protected JsonValidator.JsonSchemaEnum getValidatorSchema() {
-        return JsonValidator.JsonSchemaEnum.OPENWIFIMAP;
-    }
+	@Override
+	protected JsonValidator.JsonSchemaEnum getValidatorSchema() {
+		return JsonValidator.JsonSchemaEnum.OPENWIFIMAP;
+	}
 
-    @Override
-    protected JsonFieldConverter.JsonConversionSchemaEnum getConversionSchema() {
-        return JsonFieldConverter.JsonConversionSchemaEnum.OPENWIFIMAP;
-    }
+	@Override
+	protected JsonFieldConverter.JsonConversionSchemaEnum getConversionSchema() {
+		return JsonFieldConverter.JsonConversionSchemaEnum.OPENWIFIMAP;
+	}
 
-    @Override
-    protected JSONArray extractMessages(JSONObject data) {
-        return data.getJSONArray("rows");
-    }
+	@Override
+	protected JSONArray extractMessages(JSONObject data) {
+		return data.getJSONArray("rows");
+	}
 
-    @Override
-    protected void customProcessing(JSONObject message) {}
+	@Override
+	protected void customProcessing(JSONObject message) {
+	}
 }

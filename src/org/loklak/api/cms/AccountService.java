@@ -35,6 +35,86 @@ import org.loklak.server.Query;
 import org.loklak.tools.storage.JSONObjectWithDefault;
 
 public class AccountService extends AbstractAPIHandler implements APIHandler {
+<<<<<<< HEAD
+
+	private static final long serialVersionUID = 8578478303032749879L;
+
+	@Override
+	public BaseUserRole getMinimalBaseUserRole() {
+		return BaseUserRole.ADMIN;
+	}
+
+	@Override
+	public JSONObject getDefaultPermissions(BaseUserRole baseUserRole) {
+		return null;
+	}
+
+	@Override
+	public String getAPIPath() {
+		return "/api/account.json";
+	}
+
+	@Override
+	public JSONObject serviceImpl(Query post, Authorization rights) throws APIException {
+
+		// parameters
+		boolean update = "update".equals(post.get("action", ""));
+		String screen_name = post.get("screen_name", "");
+
+		String data = post.get("data", "");
+		if (update) {
+			if (data == null || data.length() == 0) {
+				throw new APIException(400, "your request does not contain a data object.");
+			}
+
+			JSONObject json = new JSONObject(data);
+			Object accounts_obj = json.has("accounts") ? json.get("accounts") : null;
+			JSONArray accounts;
+			if (accounts_obj != null && accounts_obj instanceof JSONArray) {
+				accounts = (JSONArray) accounts_obj;
+			} else {
+				accounts = new JSONArray();
+				accounts.put(json);
+			}
+			for (Object account_obj : accounts) {
+				if (account_obj == null)
+					continue;
+				try {
+					AccountEntry a = new AccountEntry((JSONObject) account_obj);
+					DAO.writeAccount(a, true);
+				} catch (IOException e) {
+					throw new APIException(400, "submitted data is not well-formed: " + e.getMessage());
+				}
+			}
+			if (accounts.length() == 1) {
+				screen_name = (String) ((JSONObject) accounts.iterator().next()).get("screen_name");
+			}
+		}
+
+		UserEntry userEntry = DAO.searchLocalUserByScreenName(screen_name);
+		AccountEntry accountEntry = DAO.searchLocalAccount(screen_name);
+
+		// generate json
+		JSONObject m = new JSONObject(true);
+		JSONObject metadata = new JSONObject(true);
+		metadata.put("count", userEntry == null ? "0" : "1");
+		metadata.put("client", post.getClientHost());
+		m.put("search_metadata", metadata);
+
+		// create a list of accounts. Why a list? Because the same user may have
+		// accounts for several services.
+		JSONArray accounts = new JSONArray();
+		if (accountEntry == null) {
+			if (userEntry != null)
+				accounts.put(AccountEntry.toEmptyAccountJson(userEntry));
+		} else {
+			accounts.put(accountEntry.toJSON(userEntry));
+		}
+		m.put("accounts", accounts);
+
+		return m;
+	}
+=======
    
     private static final long serialVersionUID = 8578478303032749879L;
 
@@ -109,4 +189,5 @@ public class AccountService extends AbstractAPIHandler implements APIHandler {
         
         return m;
     }
+>>>>>>> aac1787db3815d09c0c35cd0d2f43caad15ad536
 }

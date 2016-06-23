@@ -33,65 +33,68 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 
 public class AnimationPlotter {
-    
-    public static class Frame {
-        BufferedImage image;
-        int delayMillis;
-        public Frame(BufferedImage image, int delayMillis) {
-            this.image = image;
-            this.delayMillis = delayMillis;
-        }
-    }
-    
-    private final List<Frame> frames;
-    
-    
-    public AnimationPlotter() {
-        this.frames = new ArrayList<Frame>();
-    }
-    
-    public void addFrame(final BufferedImage image, final int delayMillis) {
-        this.frames.add(new Frame(image, delayMillis));
-    }
-    
 
-    public void save(final File path, final String filestub, final String type) throws IOException {
-        assert path.isDirectory();
-        for (int i = 0; i < this.frames.size(); i++) {
-            Frame frame = this.frames.get(i);
-            File file = new File(path, filestub + "_" + intformat(i) + '.' + type);
-            final FileOutputStream fos = new FileOutputStream(file);
-            ImageIO.write(frame.image, type, fos);
-            fos.close();
-        }
-    }
-    
-    private String intformat(final int i) {
-        String n = Integer.toString(i);
-        while (n.length() < 6) n = '0' + n;
-        return n;
-    }
+	public static class Frame {
+		BufferedImage image;
+		int delayMillis;
 
-    /**
-     * show the images as stream of JFrame on desktop
-     */
-    public void show() {
-        JFrame f = new JFrame();
-        f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        f.setVisible(true);
-        JLabel label = null;
-        while (true) {
-            for (int i = 0; i < this.frames.size(); i++) {
-                Frame frame = this.frames.get(i);
-                if (label == null) {
-                    label = new JLabel(new ImageIcon(frame.image));
-                    f.getContentPane().add(label);
-                    f.pack();
-                } else {
-                    label.getGraphics().drawImage(frame.image,0,0, label);
-                }
-                try {Thread.sleep(frame.delayMillis);} catch (InterruptedException e) {}
-            }
-        }
-    }
+		public Frame(BufferedImage image, int delayMillis) {
+			this.image = image;
+			this.delayMillis = delayMillis;
+		}
+	}
+
+	private final List<Frame> frames;
+
+	public AnimationPlotter() {
+		this.frames = new ArrayList<Frame>();
+	}
+
+	public void addFrame(final BufferedImage image, final int delayMillis) {
+		this.frames.add(new Frame(image, delayMillis));
+	}
+
+	public void save(final File path, final String filestub, final String type) throws IOException {
+		assert path.isDirectory();
+		for (int i = 0; i < this.frames.size(); i++) {
+			Frame frame = this.frames.get(i);
+			File file = new File(path, filestub + "_" + intformat(i) + '.' + type);
+			final FileOutputStream fos = new FileOutputStream(file);
+			ImageIO.write(frame.image, type, fos);
+			fos.close();
+		}
+	}
+
+	private String intformat(final int i) {
+		String n = Integer.toString(i);
+		while (n.length() < 6)
+			n = '0' + n;
+		return n;
+	}
+
+	/**
+	 * show the images as stream of JFrame on desktop
+	 */
+	public void show() {
+		JFrame f = new JFrame();
+		f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		f.setVisible(true);
+		JLabel label = null;
+		while (true) {
+			for (int i = 0; i < this.frames.size(); i++) {
+				Frame frame = this.frames.get(i);
+				if (label == null) {
+					label = new JLabel(new ImageIcon(frame.image));
+					f.getContentPane().add(label);
+					f.pack();
+				} else {
+					label.getGraphics().drawImage(frame.image, 0, 0, label);
+				}
+				try {
+					Thread.sleep(frame.delayMillis);
+				} catch (InterruptedException e) {
+				}
+			}
+		}
+	}
 }

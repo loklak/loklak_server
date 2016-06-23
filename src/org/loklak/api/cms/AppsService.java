@@ -39,69 +39,84 @@ import org.loklak.tools.storage.JSONObjectWithDefault;
 
 public class AppsService extends AbstractAPIHandler implements APIHandler {
 
-    private static final long serialVersionUID = -2577184683745091648L;
+	private static final long serialVersionUID = -2577184683745091648L;
 
-    @Override
-    public String getAPIPath() {
-        return "/api/apps.json";
-    }
+	@Override
+	public String getAPIPath() {
+		return "/api/apps.json";
+	}
 
-    @Override
-    public BaseUserRole getMinimalBaseUserRole() { return BaseUserRole.ANONYMOUS; }
+	@Override
+	public BaseUserRole getMinimalBaseUserRole() {
+		return BaseUserRole.ANONYMOUS;
+	}
 
-    @Override
-    public JSONObject getDefaultPermissions(BaseUserRole baseUserRole) {
-        return null;
-    }
+	@Override
+	public JSONObject getDefaultPermissions(BaseUserRole baseUserRole) {
+		return null;
+	}
 
+<<<<<<< HEAD
+	@Override
+	public JSONObject serviceImpl(Query query, Authorization auth) throws APIException {
+=======
     @Override
     public JSONObject serviceImpl(Query query, Authorization auth, final JSONObjectWithDefault permissions) throws APIException {
+>>>>>>> aac1787db3815d09c0c35cd0d2f43caad15ad536
 
-        String categorySelection = query.get("category", "");
-        
-        // generate json
-        File apps = new File(DAO.html_dir, "apps");
-        JSONObject json = new JSONObject(true);
-        JSONArray app_array = new JSONArray();
-        json.put("apps", app_array);
-        JSONObject categories = new JSONObject(true);
-        for (String appname: apps.list()) try {
-            // read app and verify the structure of the app
-            File apppath = new File(apps, appname);
-            if (!apppath.isDirectory()) continue;
-            Set<String> files = new HashSet<>();
-            for (String f: apppath.list()) files.add(f);
-            if (!files.contains("index.html")) continue;
-            if (!files.contains("app.json")) continue;
-            File json_ld_file = new File(apppath, "app.json");
-            String jsonString = new String(Files.readAllBytes(json_ld_file.toPath()), StandardCharsets.UTF_8);
-            JSONObject json_ld = new JSONObject(jsonString);
-            
-            // translate permissions
-            if (json_ld.has("permissions")) {
-                String p = json_ld.getString("permissions");
-                String[] ps = p.split(",");
-                JSONArray a = new JSONArray();
-                for (String s: ps) a.put(s);
-                json_ld.put("permissions", a);
-            }
-            
-            // check category
-            if (json_ld.has("applicationCategory") && json_ld.has("name")) {
-                String cname = json_ld.getString("applicationCategory");
-                if (categorySelection.length() == 0 || categorySelection.equals(cname)) app_array.put(json_ld);
-                String aname = json_ld.getString("name");
-                if (!categories.has(cname)) categories.put(cname, new JSONArray());
-                JSONArray appnames = categories.getJSONArray(cname);
-                appnames.put(aname);
-            }
-        } catch (Throwable e) {
-            Log.getLog().warn(e);
-        }
-        // write categories
-        json.put("categories", categories.keySet().toArray(new String[categories.length()]));
-        json.put("category", categories);
+		String categorySelection = query.get("category", "");
 
-        return json;
-    }
+		// generate json
+		File apps = new File(DAO.html_dir, "apps");
+		JSONObject json = new JSONObject(true);
+		JSONArray app_array = new JSONArray();
+		json.put("apps", app_array);
+		JSONObject categories = new JSONObject(true);
+		for (String appname : apps.list())
+			try {
+				// read app and verify the structure of the app
+				File apppath = new File(apps, appname);
+				if (!apppath.isDirectory())
+					continue;
+				Set<String> files = new HashSet<>();
+				for (String f : apppath.list())
+					files.add(f);
+				if (!files.contains("index.html"))
+					continue;
+				if (!files.contains("app.json"))
+					continue;
+				File json_ld_file = new File(apppath, "app.json");
+				String jsonString = new String(Files.readAllBytes(json_ld_file.toPath()), StandardCharsets.UTF_8);
+				JSONObject json_ld = new JSONObject(jsonString);
+
+				// translate permissions
+				if (json_ld.has("permissions")) {
+					String p = json_ld.getString("permissions");
+					String[] ps = p.split(",");
+					JSONArray a = new JSONArray();
+					for (String s : ps)
+						a.put(s);
+					json_ld.put("permissions", a);
+				}
+
+				// check category
+				if (json_ld.has("applicationCategory") && json_ld.has("name")) {
+					String cname = json_ld.getString("applicationCategory");
+					if (categorySelection.length() == 0 || categorySelection.equals(cname))
+						app_array.put(json_ld);
+					String aname = json_ld.getString("name");
+					if (!categories.has(cname))
+						categories.put(cname, new JSONArray());
+					JSONArray appnames = categories.getJSONArray(cname);
+					appnames.put(aname);
+				}
+			} catch (Throwable e) {
+				Log.getLog().warn(e);
+			}
+		// write categories
+		json.put("categories", categories.keySet().toArray(new String[categories.length()]));
+		json.put("category", categories);
+
+		return json;
+	}
 }

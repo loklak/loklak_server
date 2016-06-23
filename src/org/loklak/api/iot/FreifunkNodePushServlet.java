@@ -26,28 +26,29 @@ import org.loklak.objects.SourceType;
 
 public class FreifunkNodePushServlet extends AbstractPushServlet {
 
-    private static final long serialVersionUID = 563611786137243970L;
+	private static final long serialVersionUID = 563611786137243970L;
 
-    @Override
-    protected SourceType getSourceType() {
-        return SourceType.FREIFUNK_NODE;
-    }
+	@Override
+	protected SourceType getSourceType() {
+		return SourceType.FREIFUNK_NODE;
+	}
 
-    @Override
-    protected JsonValidator.JsonSchemaEnum getValidatorSchema() {
-        return JsonValidator.JsonSchemaEnum.FREIFUNK_NODE;
-    }
+	@Override
+	protected JsonValidator.JsonSchemaEnum getValidatorSchema() {
+		return JsonValidator.JsonSchemaEnum.FREIFUNK_NODE;
+	}
 
-    @Override
-    protected JsonFieldConverter.JsonConversionSchemaEnum getConversionSchema() {
-        return JsonFieldConverter.JsonConversionSchemaEnum.FREIFUNK_NODE;
-    }
+	@Override
+	protected JsonFieldConverter.JsonConversionSchemaEnum getConversionSchema() {
+		return JsonFieldConverter.JsonConversionSchemaEnum.FREIFUNK_NODE;
+	}
 
-    @Override
-    protected JSONArray extractMessages(JSONObject data) {
-        return data.getJSONArray("nodes");
-    }
+	@Override
+	protected JSONArray extractMessages(JSONObject data) {
+		return data.getJSONArray("nodes");
+	}
 
-    @Override
-    protected void customProcessing(JSONObject message) {}
+	@Override
+	protected void customProcessing(JSONObject message) {
+	}
 }

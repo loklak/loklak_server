@@ -23,14 +23,14 @@ import org.json.JSONObject;
 
 public interface APIHandler {
 
-    public String[] getServerProtocolHostStub();
+	public String[] getServerProtocolHostStub();
 
-    public BaseUserRole getMinimalBaseUserRole();
+	public BaseUserRole getMinimalBaseUserRole();
 
-    public JSONObject getDefaultPermissions(BaseUserRole baseUserRole);
-    
-    public String getAPIPath();
+	public JSONObject getDefaultPermissions(BaseUserRole baseUserRole);
 
-    public JSONObject[] service(Query call, Authorization rights) throws APIException;
-    
+	public String getAPIPath();
+
+	public JSONObject[] service(Query call, Authorization rights) throws APIException;
+
 }

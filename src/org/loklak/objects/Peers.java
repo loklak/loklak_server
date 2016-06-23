@@ -23,14 +23,14 @@ import java.util.HashMap;
 
 public class Peers extends HashMap<String, Peer> {
 
-    private static final long serialVersionUID = 2767548867468641625L;
+	private static final long serialVersionUID = 2767548867468641625L;
 
-    public Peers() {
-        super();
-    }
-    
-    public void update(Peer peer) {
-        
-    }
-    
+	public Peers() {
+		super();
+	}
+
+	public void update(Peer peer) {
+
+	}
+
 }
