@@ -17,6 +17,7 @@ org.loklak.http
 org.loklak.objects
 org.loklak.rss
 org.loklak.server
+org.loklak.susi
 org.loklak.tools
 org.loklak.tools.bayes
 org.loklak.tools.storage
