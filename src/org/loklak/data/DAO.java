@@ -41,6 +41,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 import org.eclipse.jetty.util.ConcurrentHashSet;
 
@@ -51,6 +52,8 @@ import org.eclipse.jetty.util.log.Log;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
 import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.logging.slf4j.Slf4jESLoggerFactory;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -70,17 +73,11 @@ import org.loklak.objects.ResultList;
 import org.loklak.objects.SourceType;
 import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
-import org.loklak.server.Accounting;
-import org.loklak.server.Query;
-import org.loklak.server.Settings;
+import org.loklak.server.*;
+import org.loklak.susi.SusiMemory;
 import org.loklak.tools.DateParser;
 import org.loklak.tools.OS;
-import org.loklak.tools.storage.JsonDataset;
-import org.loklak.tools.storage.JsonReader;
-import org.loklak.tools.storage.JsonRepository;
-import org.loklak.tools.storage.JsonStreamReader;
-import org.loklak.tools.storage.JsonTray;
-import org.loklak.tools.storage.JsonFactory;
+import org.loklak.tools.storage.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -136,6 +133,9 @@ public class DAO {
     public static UserFactory users;
     private static AccountFactory accounts;
     public static MessageFactory messages;
+    public static MessageFactory messages_hour;
+    public static MessageFactory messages_day;
+    public static MessageFactory messages_week;
     public static QueryFactory queries;
     private static ImportProfileFactory importProfiles;
     private static Map<String, String> config = new HashMap<>();
@@ -146,15 +146,31 @@ public class DAO {
     public static JsonTray authentication;
     public static JsonTray authorization;
     public static JsonTray accounting;
+    public static UserRoles userRoles;
+    public static JsonTray passwordreset;
     public static Map<String, Accounting> accounting_temporary = new HashMap<>();
     
+    // built-in artificial intelligence
+    public static SusiMemory susi;
+    
     public static enum IndexName {
-    	queries, messages, users, accounts, import_profiles;
+    	messages_hour("messages.json"), messages_day("messages.json"), messages_week("messages.json"), messages, queries, users, accounts, import_profiles;
+        private String schemaFileName;
+    	private IndexName() {
+    	    schemaFileName = this.name() + ".json";
+    	}
+    	private IndexName(String filename) {
+            schemaFileName = filename;
+        }
+    	public String getSchemaFilename() {
+    	    return this.schemaFileName;
+    	}
     }
     
     /**
      * initialize the DAO
-     * @param datadir the path to the data directory
+     * @param configMap
+     * @param dataPath the path to the data directory
      */
     public static void init(Map<String, String> configMap, Path dataPath) throws Exception{
 
@@ -164,6 +180,10 @@ public class DAO {
         conf_dir = new File("conf");
         bin_dir = new File("bin");
         html_dir = new File("html");
+        
+        // wake up susi
+        susi = new SusiMemory();
+        susi.add(new File(new File(conf_dir, "susi"), "susi_cognition_000.json"));
         
         // initialize public and private keys
 		public_settings = new Settings(new File("data/settings/public.settings.json"));
@@ -229,13 +249,37 @@ public class DAO {
         Path authorization_path = settings_dir.resolve("authorization.json");
         authorization = new JsonTray(authorization_path.toFile(), 10000);
         OS.protectPath(authorization_path);
-        
+        Path passwordreset_path = settings_dir.resolve("passwordreset.json");
+        passwordreset = new JsonTray(passwordreset_path.toFile(), 10000);
+        OS.protectPath(passwordreset_path);
+        Path accounting_path = settings_dir.resolve("accounting.json");
+        accounting = new JsonTray(accounting_path.toFile(), 10000);
+        OS.protectPath(accounting_path);
+
+
+        Log.getLog().info("Initializing user roles");
+
+        Path userRoles_path = settings_dir.resolve("userRoles.json");
+        userRoles = new UserRoles(new JsonFile(userRoles_path.toFile()));
+        OS.protectPath(userRoles_path);
+
+        try{
+            userRoles.loadUserRolesFromObject();
+            Log.getLog().info("Loaded user roles from file");
+        }catch (IllegalArgumentException e){
+            Log.getLog().info("Load default user roles");
+            userRoles.loadDefaultUserRoles();
+        }
+
         // open index
         Path index_dir = dataPath.resolve("index");
         if (index_dir.toFile().exists()) OS.protectPath(index_dir); // no other permissions to this path
 
         // define the index factories
         messages = new MessageFactory(elasticsearch_client, IndexName.messages.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        messages_hour = new MessageFactory(elasticsearch_client, IndexName.messages_hour.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        messages_day = new MessageFactory(elasticsearch_client, IndexName.messages_day.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        messages_week = new MessageFactory(elasticsearch_client, IndexName.messages_week.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
         users = new UserFactory(elasticsearch_client, IndexName.users.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
         accounts = new AccountFactory(elasticsearch_client, IndexName.accounts.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
         queries = new QueryFactory(elasticsearch_client, IndexName.queries.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
@@ -253,7 +297,7 @@ public class DAO {
         		Log.getLog().warn(e);
         	}
             try {
-                elasticsearch_client.setMapping(index.name(), new File(mappingsDir, index.name() + ".json"));
+                elasticsearch_client.setMapping(index.name(), new File(mappingsDir, index.getSchemaFilename()));
             } catch (Throwable e) {
             	Log.getLog().warn(e);
             }
@@ -487,6 +531,9 @@ public class DAO {
         
         // close the index factories (flushes the caches)
         messages.close();
+        messages_hour.close();
+        messages_day.close();
+        messages_week.close();
         users.close();
         accounts.close();
         queries.close();
@@ -577,10 +624,22 @@ public class DAO {
         try {
             synchronized (DAO.class) {
                 // record tweet into search index and check if this is a new entry
-                boolean exists = messages.writeEntry(new IndexEntry<MessageEntry>(mw.t.getIdStr(), mw.t.getSourceType(), mw.t));
-
-                // check if tweet exists in index
-                if (exists) return false; // we don't need to write the user and also not to the message dump
+                // and check if the message exists
+                boolean exists = false;
+                if (mw.t.getCreatedAt().after(DateParser.oneHourAgo())) {
+                    exists = messages_hour.writeEntry(new IndexEntry<MessageEntry>(mw.t.getIdStr(), mw.t.getSourceType(), mw.t));
+                    if (exists) return false;
+                }
+                if (mw.t.getCreatedAt().after(DateParser.oneDayAgo())) {
+                    exists = messages_day.writeEntry(new IndexEntry<MessageEntry>(mw.t.getIdStr(), mw.t.getSourceType(), mw.t));
+                    if (exists) return false;
+                }
+                if (mw.t.getCreatedAt().after(DateParser.oneWeekAgo())) {
+                    exists = messages_week.writeEntry(new IndexEntry<MessageEntry>(mw.t.getIdStr(), mw.t.getSourceType(), mw.t));
+                    if (exists) return false;
+                }
+                exists = messages.writeEntry(new IndexEntry<MessageEntry>(mw.t.getIdStr(), mw.t.getSourceType(), mw.t));
+                if (exists) return false;
 
                 // write the user into the index
                 users.writeEntry(new IndexEntry<UserEntry>(mw.u.getScreenName(), mw.t.getSourceType(), mw.u));
@@ -632,8 +691,45 @@ public class DAO {
         }
         ElasticsearchClient.BulkWriteResult result = null;
         try {
-            result = messages.writeEntries(messageBulk);
+            final Date limitDate = new Date();
+            List<IndexEntry<MessageEntry>> macc;
+            final Set<String> existed = new HashSet<>();
+
+            DAO.log("***DEBUG messages     INIT: " + messageBulk.size());
+            
+            limitDate.setTime(DateParser.oneHourAgo().getTime());
+            macc = messageBulk.stream().filter(i -> i.getObject().getCreatedAt().after(limitDate)).collect(Collectors.toList());
+            DAO.log("***DEBUG messages for HOUR: " + macc.size());
+            result = messages_hour.writeEntries(macc);
+            DAO.log("***DEBUG messages for HOUR: " + result.getCreated().size() + "  created");
+            for (IndexEntry<MessageEntry> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
+            DAO.log("***DEBUG messages for HOUR: " + existed.size() + "  existed");
+            
+            limitDate.setTime(DateParser.oneDayAgo().getTime());
+            macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getIdStr()))).filter(i -> i.getObject().getCreatedAt().after(limitDate)).collect(Collectors.toList());
+            DAO.log("***DEBUG messages for  DAY : " + macc.size());
+            result = messages_day.writeEntries(macc);
+            DAO.log("***DEBUG messages for  DAY: " + result.getCreated().size() + " created");
+            for (IndexEntry<MessageEntry> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
+            DAO.log("***DEBUG messages for  DAY: " + existed.size()  + "  existed");
+            
+            limitDate.setTime(DateParser.oneWeekAgo().getTime());
+            macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getIdStr()))).filter(i -> i.getObject().getCreatedAt().after(limitDate)).collect(Collectors.toList());
+            DAO.log("***DEBUG messages for WEEK: " + macc.size());
+            result = messages_week.writeEntries(macc);
+            DAO.log("***DEBUG messages for WEEK: " + result.getCreated().size() + "  created");
+            for (IndexEntry<MessageEntry> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
+            DAO.log("***DEBUG messages for WEEK: " + existed.size()  + "  existed");
+            
+            macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getIdStr()))).collect(Collectors.toList());
+            DAO.log("***DEBUG messages for  ALL : " + macc.size());
+            result = messages.writeEntries(macc);
+            DAO.log("***DEBUG messages for  ALL: " + result.getCreated().size() + "  created");
+            for (IndexEntry<MessageEntry> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
+            DAO.log("***DEBUG messages for  ALL: " + existed.size()  + "  existed");
+            
             users.writeEntries(userBulk);
+            
         } catch (IOException e) {
         	Log.getLog().warn(e);
         }
@@ -664,7 +760,7 @@ public class DAO {
      * Store an account together with a user into the search index
      * This method is synchronized to prevent concurrent IO caused by this call.
      * @param a an account 
-     * @param u a user
+     * @param dump
      * @return true if the record was stored because it did not exist, false if it was not stored because the record existed already
      */
     public static boolean writeAccount(AccountEntry a, boolean dump) {
@@ -706,6 +802,18 @@ public class DAO {
         return elasticsearch_client.count(IndexName.messages.name(), "timestamp", millis);
     }
     
+    public static long countLocalHourMessages(long millis) {
+        return elasticsearch_client.count(IndexName.messages_hour.name(), "timestamp", millis);
+    }
+    
+    public static long countLocalDayMessages(long millis) {
+        return elasticsearch_client.count(IndexName.messages_day.name(), "timestamp", millis);
+    }
+    
+    public static long countLocalWeekMessages(long millis) {
+        return elasticsearch_client.count(IndexName.messages_week.name(), "timestamp", millis);
+    }
+    
     public static long countLocalUsers() {
         return elasticsearch_client.count(IndexName.users.name(), "timestamp", -1);
     }
@@ -719,11 +827,18 @@ public class DAO {
     }
 
     public static MessageEntry readMessage(String id) throws IOException {
-        return messages.read(id);
+        MessageEntry m = null;
+        return messages_hour != null && ((m = messages_hour.read(id)) != null) ? m :
+               messages_day  != null && ((m = messages_day.read(id))  != null) ? m :
+               messages_week != null && ((m = messages_week.read(id)) != null) ? m :
+               messages.read(id);
     }
     
     public static boolean existMessage(String id) {
-        return messages != null && messages.exists(id);
+        return messages_hour != null && messages_hour.exists(id) ||
+               messages_day  != null && messages_day.exists(id)  ||
+               messages_week != null && messages_week.exists(id) ||
+               messages      != null && messages.exists(id);
     }
     
     public static boolean existUser(String id) {
@@ -738,8 +853,13 @@ public class DAO {
         return queries.delete(id, sourceType);
     }
 
-    public  static boolean deleteImportProfile(String id, SourceType sourceType) {
+    public static boolean deleteImportProfile(String id, SourceType sourceType) {
         return importProfiles.delete(id, sourceType);
+    }
+    
+    public static int deleteOld(IndexName indexName, Date createDateLimit) {
+        RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery("created_at").to(createDateLimit);
+        return elasticsearch_client.deleteByQuery(indexName.name(), rangeQuery);
     }
     
     public static class SearchLocalMessages {
@@ -753,7 +873,6 @@ public class DAO {
          * @param order_field - the field to order the results, i.e. Timeline.Order.CREATED_AT
          * @param timezoneOffset - an offset in minutes that is applied on dates given in the query of the form since:date until:date
          * @param resultCount - the number of messages in the result; can be zero if only aggregations are wanted
-         * @param dateHistogrammInterval - the date aggregation interval or null, if no aggregation wanted
          * @param aggregationLimit - the maximum count of facet entities, not search results
          * @param aggregationFields - names of the aggregation fields. If no aggregation is wanted, pass no (zero) field(s)
          */
@@ -761,8 +880,17 @@ public class DAO {
             this.timeline = new Timeline(order_field);
             QueryEntry.ElasticsearchQuery sq = new QueryEntry.ElasticsearchQuery(q, timezoneOffset);
             long interval = sq.until.getTime() - sq.since.getTime();
-            this.query =  elasticsearch_client.query(IndexName.messages.name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
+            IndexName resultIndex;
+            this.query = elasticsearch_client.query((resultIndex = IndexName.messages_hour).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
+            if (!q.contains("since:hour") && insufficient(this.query, resultCount, aggregationLimit, aggregationFields)) {
+                this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_day).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
+                if (!q.contains("since:day") && insufficient(this.query, resultCount, aggregationLimit, aggregationFields)) {
+                    this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_week).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
+                    if (!q.contains("since:week") && insufficient(this.query, resultCount, aggregationLimit, aggregationFields)) {
+                        this.query =  elasticsearch_client.query((resultIndex = IndexName.messages).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
+            }}}
             timeline.setHits(query.hitCount);
+            timeline.setResultIndex(resultIndex);
                     
             // evaluate search result
             for (Map<String, Object> map: query.result) {
@@ -780,6 +908,10 @@ public class DAO {
             this.aggregations = query.aggregations;
         }
         
+        private static boolean insufficient(ElasticsearchClient.Query query, int resultCount, int aggregationLimit, String... aggregationFields) {
+            return query.hitCount < resultCount || (aggregationFields.length > 0 && getAggregationResultLimit(query.aggregations) < aggregationLimit);
+        }
+
         public JSONObject getAggregations() {
             JSONObject json = new JSONObject(true);
             if (aggregations == null) return json;
@@ -792,6 +924,13 @@ public class DAO {
                 json.put(aggregation.getKey(), facet);
             }
             return json;
+        }
+        
+        private static int getAggregationResultLimit(Map<String, List<Map.Entry<String, Long>>> agg) {
+            if (agg == null) return 0;
+            int l = 0;
+            for (List<Map.Entry<String, Long>> a: agg.values()) l = Math.max(l, a.size());
+            return l;
         }
     }
 

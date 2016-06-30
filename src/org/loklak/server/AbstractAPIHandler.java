@@ -42,6 +42,7 @@ import org.loklak.data.DAO;
 import org.loklak.http.ClientConnection;
 import org.loklak.http.RemoteAccess;
 import org.loklak.tools.UTF8;
+import org.loklak.tools.storage.JSONObjectWithDefault;
 
 @SuppressWarnings("serial")
 public abstract class AbstractAPIHandler extends HttpServlet implements APIHandler {
@@ -64,16 +65,16 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
     }
 
     @Override
-    public abstract APIServiceLevel getDefaultServiceLevel();
+    public abstract BaseUserRole getMinimalBaseUserRole();
 
-    @Override
-    public abstract APIServiceLevel getCustomServiceLevel(Authorization auth);
+	@Override
+	public abstract JSONObject getDefaultPermissions(BaseUserRole baseUserRole);
 
     @Override
     public JSONObject[] service(Query call, Authorization rights) throws APIException {
 
         // make call to the embedded api
-        if (this.serverProtocolHostStub == null) return new JSONObject[]{serviceImpl(call, rights)};
+        if (this.serverProtocolHostStub == null) return new JSONObject[]{serviceImpl(call, rights, new JSONObjectWithDefault(rights.getPermissions(this)))};
         
         // make call(s) to a remote api(s)
         JSONObject[] results = new JSONObject[this.serverProtocolHostStub.length];
@@ -100,7 +101,7 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
         return results;
     }
     
-    public abstract JSONObject serviceImpl(Query call, Authorization rights) throws APIException;
+    public abstract JSONObject serviceImpl(Query call, Authorization rights,  final JSONObjectWithDefault permissions) throws APIException;
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -118,28 +119,29 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
     private void process(HttpServletRequest request, HttpServletResponse response, Query query) throws ServletException, IOException {
         
         // basic protection
-        APIServiceLevel serviceLevel = getDefaultServiceLevel();
+        BaseUserRole minimalBaseUserRole = getMinimalBaseUserRole() != null ? getMinimalBaseUserRole() : BaseUserRole.ANONYMOUS;
+
         if (query.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;} // DoS protection
-        if (serviceLevel == APIServiceLevel.ADMIN && !query.isLocalhostAccess()) {response.sendError(503, "access only allowed from localhost, your request comes from " + query.getClientHost()); return;} // danger! do not remove this!
+        if (DAO.getConfig("users.admin.localonly", true) && minimalBaseUserRole == BaseUserRole.ADMIN && !query.isLocalhostAccess()) {response.sendError(503, "access only allowed from localhost, your request comes from " + query.getClientHost()); return;} // danger! do not remove this!
         
         
         // user identification
         ClientIdentity identity;
 		try {
 			identity = getIdentity(request, response);
-		} catch (LoginException e) {
-			response.sendError(422, e.getMessage());
+		} catch (APIException e) {
+			response.sendError(e.getStatusCode(), e.getMessage());
 			return;
 		}
         
         // user authorization: we use the identification of the user to get the assigned authorization
-        Authorization authorization = new Authorization(identity, DAO.authorization);
+        Authorization authorization = new Authorization(identity, DAO.authorization, DAO.userRoles);
 
-        if(getCustomServiceLevel(authorization).isSmallerThan(serviceLevel)){
-        	response.sendError(401, "Unauthorized");
+        if(authorization.getBaseUserRole().ordinal() < minimalBaseUserRole.ordinal()){
+        	response.sendError(401, "Base user role not sufficient. Your base user role is '" + authorization.getBaseUserRole().name() + "', your user role is '" + authorization.getUserRole().getDisplayName() + "'");
 			return;
         }
-        
+
         // user accounting: we maintain static and persistent user data; we again search the accounts using the usder identity string
         //JSONObject accounting_persistent_obj = DAO.accounting_persistent.has(user_id) ? DAO.accounting_persistent.getJSONObject(anon_id) : DAO.accounting_persistent.put(user_id, new JSONObject()).getJSONObject(user_id);
         Accounting accounting_temporary = DAO.accounting_temporary.get(identity.toString());
@@ -157,7 +159,7 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
         boolean minified = query.get("minified", false);
         
         try {
-            JSONObject json = serviceImpl(query, authorization);
+            JSONObject json = serviceImpl(query, authorization, new JSONObjectWithDefault(authorization.getPermissions(this)));
             if  (json == null) {
                 response.sendError(400, "your request does not contain the required data");
                 return;
@@ -194,7 +196,7 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
      * Checks a request for valid login data, send via cookie or parameters
      * @return user identity if some login is active, anonymous identity otherwise
      */
-    private ClientIdentity getIdentity(HttpServletRequest request, HttpServletResponse response) throws LoginException{
+    private ClientIdentity getIdentity(HttpServletRequest request, HttpServletResponse response) throws APIException{
     	
     	// check for login information
 		if("true".equals(request.getParameter("logout"))){	// logout if requested
@@ -267,11 +269,11 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
 	    				
 						String passwordHash = authentication.getString("passwordHash");
 						String salt = authentication.getString("salt");
-						
-	    				ClientIdentity identity = authentication.getIdentity();
-						
+
 		    			if(getHash(password, salt).equals(passwordHash)){
 		    				
+		    				ClientIdentity identity = authentication.getIdentity();
+
 		    				// only create a cookie or session if requested (by login page)
 		    				if("true".equals(request.getParameter("request_cookie"))){
 	            				
@@ -296,23 +298,23 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
 		            			request.getSession().setAttribute("identity",identity);
 		            		}
 		    				
-		    				Log.getLog().info("login for user: " + identity.getName() + " via passwd from host: " + request.getRemoteHost());
+		    				Log.getLog().info("login for user: " + credential.getName() + " via passwd from host: " + request.getRemoteHost());
 		            		
 		            		return identity;
 		    			}
-		    			Log.getLog().info("Invalid login try for user: " + identity.getName() + " via passwd from host: " + request.getRemoteHost());
-		    			throw new LoginException("Invalid credentials");
+		    			Log.getLog().info("Invalid login try for user: " + credential.getName() + " via passwd from host: " + request.getRemoteHost());
+		    			throw new APIException(422, "Invalid credentials");
 	    			}
 	    			Log.getLog().info("Invalid login try for user: " + credential.getName() + " from host: " + request.getRemoteHost() + " : password or salt missing in database");
-	    			throw new LoginException("Invalid credentials");
+	    			throw new APIException(422, "Invalid credentials");
     			}
     			Log.getLog().info("Invalid login try for user: " + credential.getName() + " from host: " + request.getRemoteHost() + " : user not activated yet");
-    			throw new LoginException("User not yet activated");
+    			throw new APIException(422, "User not yet activated");
     		}
     		else{
     			authentication.delete();
     			Log.getLog().info("Invalid login try for unknown user: " + credential.getName() + " via passwd from host: " + request.getRemoteHost());
-    			throw new LoginException("Invalid credentials");
+    			throw new APIException(422, "Invalid credentials");
     		}
     	}
     	else if (request.getParameter("access_token") != null){
@@ -337,11 +339,11 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
     			}
     			Log.getLog().info("Invalid login try for user: " + identity.getName() + " via expired access token from host: " + request.getRemoteHost());
     			authentication.delete();
-    			throw new LoginException("Invalid access token");
+    			throw new APIException(422, "Invalid access token");
     		}
     		Log.getLog().info("Invalid access token from host: " + request.getRemoteHost());
     		authentication.delete();
-    		throw new LoginException("Invalid access token");
+    		throw new APIException(422, "Invalid access token");
     	}
     	
         return getAnonymousIdentity(request);

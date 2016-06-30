@@ -105,14 +105,17 @@ public class StatusServlet extends HttpServlet {
         system.put("server_uri", LoklakServer.getServerURI());
 
         JSONObject index = new JSONObject(true);
-        int mps24h = (int) (DAO.countLocalMessages(86400000) / 86400L);
-        int mps10m = (int) (DAO.countLocalMessages(600000) / 600L);
+        int mps24h = (int) (DAO.countLocalWeekMessages(86400000) / 86400L);
+        int mps10m = (int) (DAO.countLocalHourMessages(600000) / 600L);
         index.put("mps24h", mps24h);
         index.put("mps10m", mps10m);
         index.put("mps", Math.max(mps24h, mps10m)); // best of 24h and 10m
         JSONObject messages = new JSONObject(true);
         messages.put("size", local_messages + backend_messages);
         messages.put("size_local", local_messages);
+        messages.put("size_local_hour", DAO.countLocalHourMessages(-1));
+        messages.put("size_local_day", DAO.countLocalDayMessages(-1));
+        messages.put("size_local_week", DAO.countLocalWeekMessages(-1));
         messages.put("size_backend", backend_messages);
         messages.put("stats", DAO.messages.getStats());
         JSONObject queue = new JSONObject(true);

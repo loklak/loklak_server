@@ -5,27 +5,22 @@ $(document).ready(function()
 	// get password parameters
 	var regex;
 	$.ajax(	"/api/signup.json", {
-			data: { getParameters: true },
-			dataType: 'json',
-			success: function (response) {
-				if(response.success){
-					regex = response.regex;
-					var regexTooltip = response.regexTooltip;
-					$('#pass').tooltip({'trigger':'focus', 'placement': 'left', 'title': regexTooltip});
-				}
-				else{
-					$('#status-box').text(response.message);
-					$('#status-box').addClass("error");
-					$('#email').prop( "disabled", true );
-					$('#pass').prop( "disabled", true );
-					$('#confirmpass').prop( "disabled", true );
-					$('#signup').prop( "disabled", true );
-				}
-			},
-			error: function (xhr, ajaxOptions, thrownError) {
-				console.log(thrownError);
-			},
-	});
+       data: { getParameters: true },
+       dataType: 'json',
+       success: function (response) {
+        regex = response.regex;
+        var regexTooltip = response.regexTooltip;
+        $('#pass').tooltip({'trigger':'focus', 'placement': 'left', 'title': regexTooltip});
+    },
+    error: function (xhr, ajaxOptions, thrownError) {
+       $('#status-box').text(thrownError);
+       $('#status-box').addClass("error");
+       $('#email').prop( "disabled", true );
+       $('#pass').prop( "disabled", true );
+       $('#confirmpass').prop( "disabled", true );
+       $('#signup').prop( "disabled", true );
+   },
+});
 
     $('#pass').keyup(function(){
         $('#passtrength').text(strengthlvl($('#pass').val()));
@@ -51,10 +46,10 @@ $(document).ready(function()
             }
         }
         else{
-                $('#valid').text("Required field!");
-                $('#email').addClass("error");
-                $('#valid').addClass("error");
-                emailerr = true;
+            $('#valid').text("Required field!");
+            $('#email').addClass("error");
+            $('#valid').addClass("error");
+            emailerr = true;
         }
     })
 
@@ -95,8 +90,8 @@ $(document).ready(function()
                 confirmerr = true;
             }
         } else {
-                $(this).removeClass();
-                $('#matching').text("");
+            $(this).removeClass();
+            $('#matching').text("");
         }
     });
 
@@ -108,24 +103,36 @@ $(document).ready(function()
             var pwd = encodeURIComponent($('#pass').val());
 
             $.ajax(	"/api/signup.json", {
-					data: { signup: mail, password: pwd },
-					dataType: 'json',
-					success: function (response) {
-						$('#status-box').text(response.message);
-						if(!response.success){
-							$('#status-box').addClass("error");
-						}
-						else{
-							$('#status-box').removeClass();
-						}
-					},
-					error: function (xhr, ajaxOptions, thrownError) {
-						$('#status-box').text(thrownError);
-						$('#status-box').addClass("error");
-					},
-			});
+             data: { signup: mail, password: pwd },
+             dataType: 'json',
+             success: function (response) {
+                 resetFields();
+                 $('#status-box').text(response.message);
+             },
+             error: function (xhr, ajaxOptions, thrownError) {
+              $('#status-box').text(thrownError);
+              $('#status-box').addClass("error");
+          },
+      });
         }
     });
+
+    function resetFields(){
+        $('#status-box').text("");
+        $('#status-box').removeClass();
+        $('#email').val("");
+        $('#email').removeClass();
+        $('#pass').val("");
+        $('#pass').removeClass();
+        $('#confirmpass').val("");
+        $('#confirmpass').removeClass();
+        $('#valid').text("");
+        $('#valid').removeClass();
+        $('#matching').text("");
+        $('#matching').removeClass();
+        $('#passtrength').text("");
+        $('#passtrength').removeClass();
+    }
 
     function strengthlvl(pass){
 
@@ -135,10 +142,10 @@ $(document).ready(function()
             return "";
         }
         if(!pass.match(regex)){
-			$('#passtrength').addClass("error");
-            passerr = true;
-            return "Insufficient password";
-		}
+           $('#passtrength').addClass("error");
+           passerr = true;
+           return "Insufficient password";
+       }
 
         if (pass.length >=7) { //sufficient length
             strength += 1;
@@ -159,6 +166,7 @@ $(document).ready(function()
 
         passerr = false;
         $('#pass').removeClass();
+        $('#pass').addClass("success");
         $('#passtrength').removeClass();
         if (strength < 2 )
         {

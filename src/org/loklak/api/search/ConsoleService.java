@@ -33,12 +33,14 @@ import org.loklak.data.DAO;
 import org.loklak.objects.Timeline;
 import org.loklak.server.APIException;
 import org.loklak.server.APIHandler;
-import org.loklak.server.APIServiceLevel;
+import org.loklak.server.BaseUserRole;
 import org.loklak.server.AbstractAPIHandler;
 import org.loklak.server.Authorization;
 import org.loklak.server.Query;
+import org.loklak.susi.SusiData;
 
 import com.google.common.util.concurrent.AtomicDouble;
+import org.loklak.tools.storage.JSONObjectWithDefault;
 
 /* examples:
  * http://localhost:9000/api/console.json?q=SELECT%20*%20FROM%20messages%20WHERE%20id=%27742384468560912386%27;
@@ -51,13 +53,11 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
     private static final long serialVersionUID = 8578478303032749879L;
 
     @Override
-    public APIServiceLevel getDefaultServiceLevel() {
-        return APIServiceLevel.PUBLIC;
-    }
+    public BaseUserRole getMinimalBaseUserRole() { return BaseUserRole.ANONYMOUS; }
 
     @Override
-    public APIServiceLevel getCustomServiceLevel(Authorization rights) {
-        return APIServiceLevel.PUBLIC;
+    public JSONObject getDefaultPermissions(BaseUserRole baseUserRole) {
+        return null;
     }
 
     public String getAPIPath() {
@@ -161,7 +161,7 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
         }
     }
     
-    private final static LinkedHashMap<Pattern, Function<Matcher, JSONObject>> pattern = new LinkedHashMap<>();
+    private final static LinkedHashMap<Pattern, Function<Matcher, SusiData>> pattern = new LinkedHashMap<>();
     static {
         pattern.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?\\(\\h??SELECT\\h+?(.*?)\\h??\\)\\h+?WHERE\\h+?(.*?)\\h?+IN\\h?+\\((.*?)\\)\\h??;"), matcher -> {
             Columns columns = new Columns(matcher.group(1));
@@ -175,16 +175,16 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
                 JSONObject j = (JSONObject) o;
                 if (j.has(filter_name) && filter_set.contains(j.getString(filter_name))) a1.put(j);
             });
-            return new JSONObject(true)
-                    .put("metadata", new JSONObject().put("offset", 0).put("hits", a0.length()).put("count", a1.length()))
-                    .put("data", columns.extractTable(a1));
+            return new SusiData()
+                    .setOffset(0).setHits(a0.length()).setCount(a1.length())
+                    .setData(columns.extractTable(a1));
         });
         pattern.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?messages\\h+?WHERE\\h+?id\\h??=\\h??'(.*?)'\\h??;"), matcher -> {
             Columns columns = new Columns(matcher.group(1));
             JSONObject message = DAO.messages.readJSON(matcher.group(2));
-            return message == null ? null : new JSONObject()
-                    .put("metadata", new JSONObject().put("offset", 0).put("hits", 1).put("count", 1))
-                    .put("data", (new JSONArray()).put(columns.extractRow(message)));
+            return message == null ? null : new SusiData()
+                    .setOffset(0).setHits(1).setCount(1)
+                    .setData((new JSONArray()).put(columns.extractRow(message)));
         });
         pattern.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?messages\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h?+GROUP\\h?+BY\\h?+(.*?)\\h??;"), matcher -> {
             Columns columns = new Columns(matcher.group(1));
@@ -194,22 +194,22 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
             JSONObject aggregation = messages.getAggregations().getJSONObject(group);
             
             for (String key: aggregation.keySet()) array.put(new JSONObject(true).put(group, key).put("COUNT(*)", aggregation.get(key)));
-            JSONObject json = messages.timeline.toJSON(true, "metadata", "data");
-            return json.put("data", columns.extractTable(array));
+            SusiData json = messages.timeline.toSusi(true);
+            return json.setData(columns.extractTable(array));
         });
         pattern.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?messages\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h??;"), matcher -> {
             Columns columns = new Columns(matcher.group(1));
             DAO.SearchLocalMessages messages = new DAO.SearchLocalMessages(matcher.group(2), Timeline.Order.CREATED_AT, 0, 100, 0);
-            JSONObject json = messages.timeline.toJSON(true, "metadata", "data");
-            return json.put("data", columns.extractTable(json.getJSONArray("data")));
+            SusiData json = messages.timeline.toSusi(true);
+            return json.setData(columns.extractTable(json.getJSONArray("data")));
         });
     }
 
-    private static JSONObject console(String q) {
-        if (q == null) return new JSONObject();
-        JSONObject json = null;
+    public static SusiData console(String q) {
+        if (q == null) return new SusiData();
+        SusiData json = null;
         q = q.trim();
-        find_matcher: for (Map.Entry<Pattern, Function<Matcher, JSONObject>> pe: pattern.entrySet()) {
+        find_matcher: for (Map.Entry<Pattern, Function<Matcher, SusiData>> pe: pattern.entrySet()) {
             Pattern p = pe.getKey();
             Matcher m = p.matcher(q);
             if (m.find()) {
@@ -219,12 +219,12 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
         }
         
         // return json
-        if (json == null) json = new JSONObject();
+        if (json == null) json = new SusiData();
         return json;
     }
     
     @Override
-    public JSONObject serviceImpl(Query post, Authorization rights) throws APIException {
+    public JSONObject serviceImpl(Query post, Authorization rights, final JSONObjectWithDefault permissions) throws APIException {
 
         // parameters
         String q = post.get("q", "");
