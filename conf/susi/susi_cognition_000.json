@@ -43,6 +43,15 @@
 					  ]}]
 		},
 		{
+			"keys"   :["test"],
+			"score"  :1,
+			"phrases":[	{"type":"pattern", "expression":"*test*"} ],
+			"process":[],
+			"actions":[	{"type":"answer", "select":"random", "phrases":[
+							"Test me"
+					  ]}]
+		},
+		{
 			"keys"   :["sorry"],
 			"score"  :1,
 			"phrases":[	{"type":"pattern", "expression":"*sorry*"} ],
@@ -73,18 +82,51 @@
 					  ]}]
 		},
 		{
+			"keys"   :["famous"],
+			"score"  :1,
+			"phrases":[	{"type":"pattern", "expression":"*Am I famous *"} ],
+			"process":[],
+			"actions":[	{"type":"answer", "select":"random", "phrases":[
+							"Yes you are!",
+							"Try hard, you can be."
+					  ]}]
+		},
+		{
 			"keys"   :["euro2016","soccer"],
 			"score"  :100,
 			"comment":"a statistical app which tries to predict euro2016",
 			"phrases":[	{"type":"regex", "expression":"Who (?:will win|wins) #euro2016.*"},
-						{"type":"regex", "expression":"Who will (?:be|become) european soccer champion 2016.*"}
+					{"type":"regex", "expression":"Who will (?:be|become) european soccer champion 2016.*"}
 					  ],
-			"process":[	{"type":"console", "expression":"SELECT PERCENT(count) AS percent, hashtag AS country FROM (SELECT COUNT(*) AS count, hashtags AS hashtag FROM messages WHERE query='euro2016' GROUP BY hashtags) WHERE hashtag IN ('england','france','portugal','germany','belgium','italia','ireland’);"}],
+			"process":[	{"type":"console", "expression":"SELECT PERCENT(count) AS percent, hashtag AS country FROM (SELECT COUNT(*) AS count, hashtags AS hashtag FROM messages WHERE query='euro2016' GROUP BY hashtags) WHERE hashtag IN ('france','portugal','germany','belgium','italia','ireland’);"}],
 			"actions":[	{"type":"answer", "select":"random", "phrases":[
+							"I believe the winner will be $country$ with a likelihood of $percent$ percent but I a not sure. Here is even more:",
 							"I can calculate a likelihood, here is my guess:",
 							"I am not good at football, but here is what other people say:"
 						]},
 						{"type":"piechart", "total":100, "key": "country", "value":"percent", "unit":"%"}]
-		}
+		},
+		{
+			"keys"   :["who"],
+			"score"  :100,
+			"phrases":[	{"type":"pattern", "expression":"Who tweeted most about *"},
+					{"type":"pattern", "expression":"The top tweeter about *"}
+					  ],
+			"process":[	{"type":"console", "expression":"SELECT COUNT(*) AS count, screen_name FROM messages WHERE query='$1$ since:day' GROUP BY screen_name;"}],
+			"actions":[	{"type":"answer", "select":"random", "phrases":[
+							"In the last 24 hours $screen_name$ tweeted most, $count$ times"
+						]}]
+		},
+		{
+			"keys"   :["who"],
+			"score"  :100,
+			"phrases":[	{"type":"pattern", "expression":"How many times was * tweeted in the last 24 hours"}
+					  ],
+			"process":[	{"type":"console", "expression":"SELECT COUNT(*) AS count FROM messages WHERE query='$1$ since:day';"}],
+			"actions":[	{"type":"answer", "select":"random", "phrases":[
+							"Here you go, $count$ times!"
+						]}]
+		},
+		
 	]
 }

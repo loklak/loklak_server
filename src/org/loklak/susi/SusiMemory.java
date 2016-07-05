@@ -22,7 +22,9 @@ package org.loklak.susi;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -36,34 +38,57 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
+import org.loklak.data.DAO;
 
 public class SusiMemory {
     
-    private Map<String,String> synonyms; // a map from a synonym to a canonical expression
-    private Map<String,String> categories; // a map from an expression to an associated category name
-    private Set<String> filler; // a set of words that can be ignored completely
-    private Map<String, List<SusiRule>> ruletrigger; // a map from a keyword to a list of actions
+    private final Map<String,String> synonyms; // a map from a synonym to a canonical expression
+    private final Map<String,String> categories; // a map from an expression to an associated category name
+    private final Set<String> filler; // a set of words that can be ignored completely
+    private final Map<String, List<SusiRule>> ruletrigger; // a map from a keyword to a list of actions
+    private final File watchpath; // a path where the memory looks for new additions of knowledge with memory files
+    private final Map<File, Long> observations; // a mapping of mind memory files to the time when the file was read the last time
     
-
-    public SusiMemory() {
+    public SusiMemory(File watchpath) {
         // initialize class objects
+        this.watchpath = watchpath;
+        this.watchpath.mkdirs();
         this.synonyms = new ConcurrentHashMap<>();
         this.categories = new ConcurrentHashMap<>();
         this.filler = new HashSet<>();
         this.ruletrigger = new ConcurrentHashMap<>();
+        this.observations = new HashMap<>();
+    }
+    
+    public SusiMemory observe() throws IOException {
+        for (File f: this.watchpath.listFiles()) {
+            if (!f.isDirectory() && f.getName().endsWith(".json")) {
+                if (!observations.containsKey(f) || f.lastModified() > observations.get(f)) {
+                    observations.put(f, System.currentTimeMillis());
+                    try {
+                        add(f);
+                    } catch (Throwable e) {
+                        DAO.log(e.getMessage());
+                    }
+                }
+            }
+        }
+        return this;
     }
     
     public SusiMemory add(File file) throws JSONException, FileNotFoundException {
-        return add(new JSONObject(new JSONTokener(new FileReader(file))));
+        JSONObject json = new JSONObject(new JSONTokener(new FileReader(file)));
+        //System.out.println(json.toString(2)); // debug
+        return add(json);
     }
     
     public SusiMemory add(JSONObject json) {
 
         // initialize temporary json objects
-        JSONObject syn = json.getJSONObject("synonyms");
-        JSONArray fill = json.getJSONArray("filler");
-        JSONObject cat = json.getJSONObject("categories");
-        JSONArray rules = json.getJSONArray("rules");
+        JSONObject syn = json.has("synonyms") ? json.getJSONObject("synonyms") : new JSONObject();
+        JSONArray fill = json.has("filler") ? json.getJSONArray("filler") : new JSONArray();
+        JSONObject cat = json.has("categories") ? json.getJSONObject("categories") : new JSONObject();
+        JSONArray rules = json.has("rules") ? json.getJSONArray("rules") : new JSONArray();
         
         // add synonyms
         for (String canonical: syn.keySet()) {
@@ -124,24 +149,6 @@ public class SusiMemory {
         return mrules;
     }
 
-    public List<SusiData> apply(String query, List<SusiRule> rules) {
-        return rules.stream().map(rule -> apply(query, rule)).collect(Collectors.toList());
-    }
-    
-    public SusiData apply(String query, SusiRule rule) {
-        SusiData data = new SusiData(rule.matcher(query));
-        for (SusiProcess process: rule.getProcess()) {
-            data = process.apply(data);
-        }
-        // add actions of rule
-        List<SusiAction> actions = new ArrayList<>();
-        for (SusiAction action: rule.getActions()) {
-            actions.add(action.apply(data));
-        }
-        data.setActions(actions);
-        return data;
-    }
-    
     private List<String> token(String query) {
         List<String> t = new ArrayList<>();
         query = query.replaceAll("\\?", " ?").replaceAll("\\!", " !").replaceAll("\\.", " .").replaceAll("\\,", " ,").replaceAll("\\;", " ;").replaceAll("\\:", " :").replaceAll("  ", " ");
@@ -158,23 +165,20 @@ public class SusiMemory {
         return t;
     }
     
-    public List<SusiData> answer(String query, int maxcount) {
-        query = query.toLowerCase();
+    public List<SusiArgument> answer(final String query, int maxcount) {
         List<SusiRule> rules = getRules(query, maxcount);
-        List<SusiData> datalist = apply(query, rules);
-        // replace data entities in answers
-        return datalist;
+        return rules.stream().map(rule -> rule.consideration(query)).collect(Collectors.toList());
     }
     
     public String answer(String query) {
-        List<SusiData> datalist = answer(query, 1);
-        SusiData data = datalist.get(0);
-        return data.getActions().get(0).apply(data).getStringAttr("expression");
+        List<SusiArgument> datalist = answer(query, 1);
+        SusiArgument bestargument = datalist.get(0);
+        return bestargument.mindstate().getActions().get(0).apply(bestargument).getStringAttr("expression");
     }
     
     public static void main(String[] args) {
         try {
-            SusiMemory mem = new SusiMemory();
+            SusiMemory mem = new SusiMemory(new File(new File("data"), "susi"));
             mem.add(new File("conf/susi/susi_cognition_000.json"));
             //System.out.println(mem.answer("who will win euro2016?", 3));
             System.out.println(mem.answer("I feel funny"));
