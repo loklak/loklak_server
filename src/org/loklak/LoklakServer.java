@@ -93,6 +93,7 @@ import org.loklak.api.search.EventbriteCrawler;
 import org.loklak.api.search.UserServlet;
 import org.loklak.api.search.WordpressCrawler;
 import org.loklak.api.search.GenericScraper;
+import org.loklak.api.search.InstagramProfileCrawler;
 import org.loklak.api.search.RSSReader;
 import org.loklak.api.tools.CSVServlet;
 import org.loklak.api.tools.XMLServlet;
@@ -552,6 +553,7 @@ public class LoklakServer {
         servletHandler.addServlet(RSSReader.class, "/api/rssreader.json");
         servletHandler.addServlet(EventbriteCrawler.class, "/api/eventbritecrawler.json");
         servletHandler.addServlet(WordpressCrawler.class, "/api/wordpresscrawler.json");
+        servletHandler.addServlet(InstagramProfileCrawler.class, "/api/instagramprofilecrawler.json");
         ServletHolder pushServletHolder = new ServletHolder(PushServlet.class);
         pushServletHolder.getRegistration().setMultipartConfig(multipartConfig);
         servletHandler.addServlet(pushServletHolder, "/api/push.json");
