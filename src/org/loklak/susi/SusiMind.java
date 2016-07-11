@@ -32,7 +32,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
-import java.util.stream.Collectors;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -40,17 +39,19 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.loklak.data.DAO;
 
-public class SusiMemory {
+public class SusiMind {
     
     private final Map<String,String> synonyms; // a map from a synonym to a canonical expression
     private final Map<String,String> categories; // a map from an expression to an associated category name
     private final Set<String> filler; // a set of words that can be ignored completely
     private final Map<String, List<SusiRule>> ruletrigger; // a map from a keyword to a list of actions
-    private final File watchpath; // a path where the memory looks for new additions of knowledge with memory files
+    private final File initpath, watchpath; // a path where the memory looks for new additions of knowledge with memory files
     private final Map<File, Long> observations; // a mapping of mind memory files to the time when the file was read the last time
     
-    public SusiMemory(File watchpath) {
+    public SusiMind(File initpath, File watchpath) {
         // initialize class objects
+        this.initpath = initpath;
+        this.initpath.mkdirs();
         this.watchpath = watchpath;
         this.watchpath.mkdirs();
         this.synonyms = new ConcurrentHashMap<>();
@@ -59,30 +60,35 @@ public class SusiMemory {
         this.ruletrigger = new ConcurrentHashMap<>();
         this.observations = new HashMap<>();
     }
+
+    public SusiMind observe() throws IOException {
+        observe(this.initpath);
+        observe(this.watchpath);
+        return this;
+    }
     
-    public SusiMemory observe() throws IOException {
-        for (File f: this.watchpath.listFiles()) {
+    private void observe(File path) throws IOException {
+        for (File f: path.listFiles()) {
             if (!f.isDirectory() && f.getName().endsWith(".json")) {
                 if (!observations.containsKey(f) || f.lastModified() > observations.get(f)) {
                     observations.put(f, System.currentTimeMillis());
                     try {
-                        add(f);
+                        learn(f);
                     } catch (Throwable e) {
-                        DAO.log(e.getMessage());
+                        DAO.severe(e.getMessage());
                     }
                 }
             }
         }
-        return this;
     }
     
-    public SusiMemory add(File file) throws JSONException, FileNotFoundException {
+    public SusiMind learn(File file) throws JSONException, FileNotFoundException {
         JSONObject json = new JSONObject(new JSONTokener(new FileReader(file)));
         //System.out.println(json.toString(2)); // debug
-        return add(json);
+        return learn(json);
     }
     
-    public SusiMemory add(JSONObject json) {
+    public SusiMind learn(JSONObject json) {
 
         // initialize temporary json objects
         JSONObject syn = json.has("synonyms") ? json.getJSONObject("synonyms") : new JSONObject();
@@ -118,19 +124,20 @@ public class SusiMemory {
         return this;
     }
     
-    public List<SusiRule> getRules(String query, int maxcount) {
+    public List<SusiRule> associate(String query, int maxcount) {
         // tokenize query to have hint for rule collection
         List<SusiRule> rules = new ArrayList<>();
         token(query).forEach(token -> {List<SusiRule> r = this.ruletrigger.get(token); if (r != null) rules.addAll(r);});
 
         // add catchall rules always
-        List<SusiRule> ca = this.ruletrigger.get("*"); if (ca != null) rules.addAll(ca);
+        List<SusiRule> ca = this.ruletrigger.get(SusiRule.CATCHALL_KEY); if (ca != null) rules.addAll(ca);
         
         // create list of all rules that might apply
         TreeMap<Integer, List<SusiRule>> scored = new TreeMap<>();
         rules.forEach(rule -> {
+            //System.out.println("rule.phrase-1:" + rule.getPhrases().toString());
             int score = rule.getScore();
-            List<SusiRule> r = scored.get(score);
+            List<SusiRule> r = scored.get(-score);
             if (r == null) {r = new ArrayList<>(); scored.put(-score, r);}
             r.add(rule);
         });
@@ -141,6 +148,10 @@ public class SusiMemory {
         // test rules and collect those which match up to maxcount
         List<SusiRule> mrules = new ArrayList<>(Math.min(10, maxcount));
         for (SusiRule rule: rules) {
+            //System.out.println("rule.phrase-2:" + rule.getPhrases().toString());
+            if (rule.getActions().size() == 0) continue;
+            if (rule.getActions().get(0).getPhrases().size() == 0) continue;
+            if (rule.getActions().get(0).getPhrases().get(0).length() == 0) continue;
             Matcher m = rule.matcher(query);
             if (m == null) continue;
             mrules.add(rule);
@@ -165,24 +176,40 @@ public class SusiMemory {
         return t;
     }
     
-    public List<SusiArgument> answer(final String query, int maxcount) {
-        List<SusiRule> rules = getRules(query, maxcount);
-        return rules.stream().map(rule -> rule.consideration(query)).collect(Collectors.toList());
+    /**
+     * react on a user input: this causes the selection of deduction rules and the evaluation of the process steps
+     * in every rule up to the moment where enough rules have been applied as consideration. The reaction may also
+     * cause the evaluation of operational steps which may cause learning effects wihtin the SusiMind.
+     * @param query
+     * @param maxcount
+     * @return
+     */
+    public List<SusiArgument> react(final String query, int maxcount) {
+        List<SusiArgument> answers = new ArrayList<>();
+        List<SusiRule> rules = associate(query, 100);
+        for (SusiRule rule: rules) {
+            SusiArgument argument = rule.consideration(query);
+            if (argument != null) answers.add(argument);
+            if (answers.size() >= maxcount) break;
+        }
+        return answers;
     }
     
-    public String answer(String query) {
-        List<SusiArgument> datalist = answer(query, 1);
+    public String react(String query) {
+        List<SusiArgument> datalist = react(query, 1);
         SusiArgument bestargument = datalist.get(0);
         return bestargument.mindstate().getActions().get(0).apply(bestargument).getStringAttr("expression");
     }
     
     public static void main(String[] args) {
         try {
-            SusiMemory mem = new SusiMemory(new File(new File("data"), "susi"));
-            mem.add(new File("conf/susi/susi_cognition_000.json"));
+            File init = new File(new File("conf"), "susi");
+            File watch = new File(new File("data"), "susi");
+            SusiMind mem = new SusiMind(init, watch);
+            mem.learn(new File("conf/susi/susi_cognition_000.json"));
             //System.out.println(mem.answer("who will win euro2016?", 3));
-            System.out.println(mem.answer("I feel funny"));
-            System.out.println(mem.answer("Help me!"));
+            System.out.println(mem.react("I feel funny"));
+            System.out.println(mem.react("Help me!"));
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }

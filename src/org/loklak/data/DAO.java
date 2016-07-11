@@ -75,7 +75,7 @@ import org.loklak.objects.SourceType;
 import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
 import org.loklak.server.*;
-import org.loklak.susi.SusiMemory;
+import org.loklak.susi.SusiMind;
 import org.loklak.tools.DateParser;
 import org.loklak.tools.OS;
 import org.loklak.tools.storage.*;
@@ -152,7 +152,7 @@ public class DAO {
     public static Map<String, Accounting> accounting_temporary = new HashMap<>();
     
     // built-in artificial intelligence
-    public static SusiMemory susi;
+    public static SusiMind susi;
     
     public static enum IndexName {
     	messages_hour("messages.json"), messages_day("messages.json"), messages_week("messages.json"), messages, queries, users, accounts, import_profiles;
@@ -183,11 +183,11 @@ public class DAO {
         html_dir = new File("html");
         
         // wake up susi
-        File watchpath = new File(new File("data"), "susi");
-        susi = new SusiMemory(watchpath);
-        susi.add(new File(new File(conf_dir, "susi"), "susi_cognition_000.json"));
+        File susiinitpath = new File(conf_dir, "susi");
+        File sudiwatchpath = new File(new File("data"), "susi");
+        susi = new SusiMind(susiinitpath, sudiwatchpath);
         String susi_boilerplate_name = "susi_cognition_boilerplate.json";
-        File susi_boilerplate_file = new File(watchpath, susi_boilerplate_name);
+        File susi_boilerplate_file = new File(sudiwatchpath, susi_boilerplate_name);
         if (!susi_boilerplate_file.exists()) Files.copy(new File(conf_dir, "susi/" + susi_boilerplate_name + ".example"), susi_boilerplate_file);
         
         // initialize public and private keys
@@ -700,38 +700,38 @@ public class DAO {
             List<IndexEntry<MessageEntry>> macc;
             final Set<String> existed = new HashSet<>();
 
-            DAO.log("***DEBUG messages     INIT: " + messageBulk.size());
+            //DAO.log("***DEBUG messages     INIT: " + messageBulk.size());
             
             limitDate.setTime(DateParser.oneHourAgo().getTime());
             macc = messageBulk.stream().filter(i -> i.getObject().getCreatedAt().after(limitDate)).collect(Collectors.toList());
-            DAO.log("***DEBUG messages for HOUR: " + macc.size());
+            //DAO.log("***DEBUG messages for HOUR: " + macc.size());
             result = messages_hour.writeEntries(macc);
-            DAO.log("***DEBUG messages for HOUR: " + result.getCreated().size() + "  created");
+            //DAO.log("***DEBUG messages for HOUR: " + result.getCreated().size() + "  created");
             for (IndexEntry<MessageEntry> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
-            DAO.log("***DEBUG messages for HOUR: " + existed.size() + "  existed");
+            //DAO.log("***DEBUG messages for HOUR: " + existed.size() + "  existed");
             
             limitDate.setTime(DateParser.oneDayAgo().getTime());
             macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getIdStr()))).filter(i -> i.getObject().getCreatedAt().after(limitDate)).collect(Collectors.toList());
-            DAO.log("***DEBUG messages for  DAY : " + macc.size());
+            //DAO.log("***DEBUG messages for  DAY : " + macc.size());
             result = messages_day.writeEntries(macc);
-            DAO.log("***DEBUG messages for  DAY: " + result.getCreated().size() + " created");
+            //DAO.log("***DEBUG messages for  DAY: " + result.getCreated().size() + " created");
             for (IndexEntry<MessageEntry> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
-            DAO.log("***DEBUG messages for  DAY: " + existed.size()  + "  existed");
+            //DAO.log("***DEBUG messages for  DAY: " + existed.size()  + "  existed");
             
             limitDate.setTime(DateParser.oneWeekAgo().getTime());
             macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getIdStr()))).filter(i -> i.getObject().getCreatedAt().after(limitDate)).collect(Collectors.toList());
-            DAO.log("***DEBUG messages for WEEK: " + macc.size());
+            //DAO.log("***DEBUG messages for WEEK: " + macc.size());
             result = messages_week.writeEntries(macc);
-            DAO.log("***DEBUG messages for WEEK: " + result.getCreated().size() + "  created");
+            //DAO.log("***DEBUG messages for WEEK: " + result.getCreated().size() + "  created");
             for (IndexEntry<MessageEntry> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
-            DAO.log("***DEBUG messages for WEEK: " + existed.size()  + "  existed");
+            //DAO.log("***DEBUG messages for WEEK: " + existed.size()  + "  existed");
             
             macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getIdStr()))).collect(Collectors.toList());
-            DAO.log("***DEBUG messages for  ALL : " + macc.size());
+            //DAO.log("***DEBUG messages for  ALL : " + macc.size());
             result = messages.writeEntries(macc);
-            DAO.log("***DEBUG messages for  ALL: " + result.getCreated().size() + "  created");
+            //DAO.log("***DEBUG messages for  ALL: " + result.getCreated().size() + "  created");
             for (IndexEntry<MessageEntry> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
-            DAO.log("***DEBUG messages for  ALL: " + existed.size()  + "  existed");
+            //DAO.log("***DEBUG messages for  ALL: " + existed.size()  + "  existed");
             
             users.writeEntries(userBulk);
             
@@ -886,14 +886,28 @@ public class DAO {
             QueryEntry.ElasticsearchQuery sq = new QueryEntry.ElasticsearchQuery(q, timezoneOffset);
             long interval = sq.until.getTime() - sq.since.getTime();
             IndexName resultIndex;
-            this.query = elasticsearch_client.query((resultIndex = IndexName.messages_hour).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
-            if (!q.contains("since:hour") && insufficient(this.query, resultCount, aggregationLimit, aggregationFields)) {
-                this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_day).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
-                if (!q.contains("since:day") && insufficient(this.query, resultCount, aggregationLimit, aggregationFields)) {
+            boolean wholetime = aggregationFields.length > 0;
+            if (wholetime) {
+                if (q.contains("since:hour")) {
+                    this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_hour).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
+                } else if (q.contains("since:day")) {
+                    this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_day).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
+                } else if (q.contains("since:week")) {
                     this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_week).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
-                    if (!q.contains("since:week") && insufficient(this.query, resultCount, aggregationLimit, aggregationFields)) {
-                        this.query =  elasticsearch_client.query((resultIndex = IndexName.messages).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
-            }}}
+                } else {
+                    this.query = elasticsearch_client.query((resultIndex = IndexName.messages_hour).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
+                }
+            } else {
+                // use only a time frame that is sufficient for a result
+                this.query = elasticsearch_client.query((resultIndex = IndexName.messages_hour).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
+                if (!q.contains("since:hour") && insufficient(this.query, resultCount, aggregationLimit, aggregationFields)) {
+                    this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_day).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
+                    if (!q.contains("since:day") && insufficient(this.query, resultCount, aggregationLimit, aggregationFields)) {
+                        this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_week).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
+                        if (!q.contains("since:week") && insufficient(this.query, resultCount, aggregationLimit, aggregationFields)) {
+                            this.query =  elasticsearch_client.query((resultIndex = IndexName.messages).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
+                }}}
+            }
             timeline.setHits(query.hitCount);
             timeline.setResultIndex(resultIndex);
                     
@@ -1221,9 +1235,21 @@ public class DAO {
         }
         return chunk;
     }
-    
+
     public static void log(String line) {
         Log.getLog().info(line);
+    }
+
+    public static void severe(String line) {
+        Log.getLog().warn(line);
+    }
+
+    public static void severe(String line, Throwable e) {
+        Log.getLog().warn(line, e);
+    }
+    
+    public static void severe(Throwable e) {
+        Log.getLog().warn(e);
     }
 
 }

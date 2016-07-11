@@ -34,10 +34,11 @@ import org.json.JSONObject;
 public class SusiPhrase {
 
     public static enum Type {regex, pattern;}
-    
+
+    private final static String CATCHALL_CAPTURE_GROUP_STRING = "(.*)"; // greedy capturing everything is the best choice: that covers words phrases as well
+    private final static Pattern CATCHALL_CAPTURE_GROUP_PATTERN = Pattern.compile(Pattern.quote(CATCHALL_CAPTURE_GROUP_STRING));
     private final static Pattern dspace = Pattern.compile("  ");
-    
-    private final Type type; 
+
     private final Pattern pattern;
     
     /**
@@ -50,24 +51,25 @@ public class SusiPhrase {
      */
     public SusiPhrase(JSONObject json) throws PatternSyntaxException {
         if (!json.has("type")) throw new PatternSyntaxException("type missing", "", 0);
+        Type type = Type.pattern;
         try {
-            this.type = Type.valueOf(json.getString("type"));
+            type = Type.valueOf(json.getString("type"));
         } catch (IllegalArgumentException e) {throw new PatternSyntaxException("type value is wrong", json.getString("type"), 0);}
         if (!json.has("expression")) throw new PatternSyntaxException("expression missing", "", 0);
         String expression = json.getString("expression");
         expression = expression.toLowerCase().replaceAll("\\#", "  ");
         Matcher m;
         while ((m = dspace.matcher(expression)).find()) expression = m.replaceAll(" ");
-        if (this.type == Type.pattern) expression = expression.replaceAll("\\*", "(.*)");
+        if (type == Type.pattern) {
+            if (expression.length() == 0 || expression.equals("*")) expression = CATCHALL_CAPTURE_GROUP_STRING;
+            if ("?!:.".indexOf(expression.charAt(expression.length() - 1)) >= 0) expression = expression.substring(0, expression.length() - 1);
+            if (expression.startsWith("* ")) expression = CATCHALL_CAPTURE_GROUP_STRING + " ?" + expression.substring(2);
+            if (expression.startsWith("*")) expression = CATCHALL_CAPTURE_GROUP_STRING + " ?" + expression.substring(1);
+            if (expression.endsWith(" *")) expression = expression.substring(0, expression.length() - 2) + " ?" + CATCHALL_CAPTURE_GROUP_STRING;
+            if (expression.endsWith("*")) expression = expression.substring(0, expression.length() - 1) + " ?" + CATCHALL_CAPTURE_GROUP_STRING;
+            expression = expression.replaceAll(" \\* ", " " + CATCHALL_CAPTURE_GROUP_STRING + " ");
+        }
         this.pattern = Pattern.compile(expression);
-    }
-    
-    /**
-     * get the phrase type name
-     * @return the type name
-     */
-    public Type getType() {
-        return this.type;
     }
     
     /**
@@ -76,5 +78,25 @@ public class SusiPhrase {
      */
     public Pattern getPattern() {
         return this.pattern;
+    }
+    
+    public String toString() {
+        return this.toJSON().toString();
+    }
+    
+    public JSONObject toJSON() {
+        JSONObject json = new JSONObject(true);
+        String p = this.pattern.pattern();
+        if (CATCHALL_CAPTURE_GROUP_PATTERN.matcher(p).find()) {
+            p = p.replaceAll(CATCHALL_CAPTURE_GROUP_PATTERN.pattern(), "*");
+        }
+        if (p.indexOf('.') >= 0 || p.indexOf('\\') > 0) {
+            json.put("type", Type.regex.name());
+            json.put("expression", this.pattern.pattern());
+        } else {
+            json.put("type", Type.pattern.name());
+            json.put("expression", p);
+        }
+        return json;
     }
 }

@@ -28,6 +28,7 @@ import java.util.regex.PatternSyntaxException;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.loklak.data.DAO;
 
 /**
  * A Rule in the Susi AI framework is a collection of phrases, inference processes and actions that are applied
@@ -37,10 +38,15 @@ import org.json.JSONObject;
  */
 public class SusiRule {
 
-    private JSONObject json;
+    public final static String CATCHALL_KEY = "*";
+    public final static int    DEFAULT_SCORE = 10;
+    
     private List<SusiPhrase> phrases;
     private List<SusiInference> inferences;
     private List<SusiAction> actions;
+    private Set<String> keys;
+    private String comment;
+    private int score;
 
     /**
      * Create a rule by parsing of the rule description
@@ -48,25 +54,68 @@ public class SusiRule {
      * @throws PatternSyntaxException
      */
     public SusiRule(JSONObject json) throws PatternSyntaxException {
-        this.json = json;
         
         // extract the phrases
-        if (!this.json.has("phrases")) throw new PatternSyntaxException("phrases missing", "", 0);
-        JSONArray p = (JSONArray) this.json.remove("phrases");
+        if (!json.has("phrases")) throw new PatternSyntaxException("phrases missing", "", 0);
+        JSONArray p = (JSONArray) json.remove("phrases");
         this.phrases = new ArrayList<>(p.length());
         p.forEach(q -> this.phrases.add(new SusiPhrase((JSONObject) q)));
 
-        // extract the inferences
-        if (!this.json.has("process")) throw new PatternSyntaxException("process missing", "", 0);
-        p = (JSONArray) this.json.remove("process");
-        this.inferences = new ArrayList<>(p.length());
-        p.forEach(q -> this.inferences.add(new SusiInference((JSONObject) q)));
-        
         // extract the actions
-        if (!this.json.has("actions")) throw new PatternSyntaxException("actions missing", "", 0);
-        p = (JSONArray) this.json.remove("actions");
+        if (!json.has("actions")) throw new PatternSyntaxException("actions missing", "", 0);
+        p = (JSONArray) json.remove("actions");
         this.actions = new ArrayList<>(p.length());
         p.forEach(q -> this.actions.add(new SusiAction((JSONObject) q)));
+        
+        // extract the inferences; there may be none
+        if (json.has("process")) {
+            p = (JSONArray) json.remove("process");
+            this.inferences = new ArrayList<>(p.length());
+            p.forEach(q -> this.inferences.add(new SusiInference((JSONObject) q)));
+        } else {
+            this.inferences = new ArrayList<>(0);
+        }
+        
+        // extract (or compute) the keys; there may be none key given, then they will be computed
+        this.keys = new HashSet<>();
+        JSONArray k;
+        if (json.has("keys")) {
+            k = json.getJSONArray("keys");
+            if (k.length() == 0) k = computeKeysFromPhrases(this.phrases);
+        } else {
+            k = computeKeysFromPhrases(this.phrases);
+        }
+        
+        k.forEach(o -> this.keys.add((String) o));
+        
+        // extract the comment
+        this.comment = json.has("comment") ? json.getString("comment") : "";
+        
+        // extract the score
+        this.score = json.has("score") ? json.getInt("score") : DEFAULT_SCORE;
+    }
+    
+    /*
+    public String toString() {
+        String s = 
+            "{\n" +
+            "  \"phrases\":[{\"type\": \"pattern\", \"expression\": \"\"}],\n" +
+            "  \"actions\":[{\"type\": \"answer\", \"select\": \"random\", \"phrases\": [\n" +
+            "  \"\"\n" +
+            "  \"]\n" +
+            "  \"}]\n" +
+            "\"}\";\n";
+        return s;
+    }
+    */
+    
+    /**
+     * if no keys are given, we compute them from the given phrases
+     * @param phrases
+     * @return
+     */
+    private static JSONArray computeKeysFromPhrases(List<SusiPhrase> phrases) {
+        return new JSONArray().put(CATCHALL_KEY);
     }
     
     /**
@@ -76,9 +125,7 @@ public class SusiRule {
      * @return the keys which must appear in an input to allow that this rule can be applied
      */
     public Set<String> getKeys() {
-        Set<String> set = new HashSet<>();
-        if (json.has("keys")) json.getJSONArray("keys").forEach(o -> set.add((String) o));
-        return set;
+        return this.keys;
     }
     
     /**
@@ -86,7 +133,7 @@ public class SusiRule {
      * @return the rule comment
      */
     public String getComment() {
-        return json.has("comment") ? json.getString("comment") : "";
+        return this.comment;
     }
 
     /**
@@ -102,7 +149,7 @@ public class SusiRule {
      * @return a score which is used for sorting of the rules. The higher the better. Highest score wins.
      */
     public int getScore() {
-        return json.has("score") ? json.getInt("score") : 0;
+        return this.score;
     }
 
     /**
@@ -152,10 +199,10 @@ public class SusiRule {
 
     /**
      * If a rule is applied to an input stream, it must follow a specific process which is implemented
-     * in this considerartion method. It is called a consideration in the context of an AI process which
+     * in this consideration method. It is called a consideration in the context of an AI process which
      * tries different rules to get the optimum result, thus considering different rules.
      * @param query the user input
-     * @return the result of the application of the rule, a thought argument containing the thoughts which terminated into a final mindstate
+     * @return the result of the application of the rule, a thought argument containing the thoughts which terminated into a final mindstate or NULL if the consideration should be rejected
      */
     public SusiArgument consideration(final String query) {
         
@@ -164,10 +211,18 @@ public class SusiRule {
         
         // that argument is filled with an idea which consist of the query where we extract the identified data entities
         SusiThought idea = new SusiThought(this.matcher(query));
+        DAO.log("Susi has an idea: " + idea.toString());
         argument.think(idea);
         
         // lets apply the rules that belong to this specific consideration
-        this.getInferences().forEach(inference -> argument.deducewith(inference));
+        for (SusiInference inference: this.getInferences()) {
+            SusiThought nextThought = inference.applyon(argument);
+            DAO.log("Susi is thinking about: " + idea.toString());
+            // make sure that we are not stuck
+            if (argument.mindstate().equals(nextThought) || nextThought.getCount() == 0) return null; // TODO: do this only if specific marker is in rule
+            // think
+            argument.think(nextThought);
+        }
         
         // we deduced thoughts from the inferences in the rules. Now apply the actions of rule to produce results
         List<SusiAction> actions = new ArrayList<>();
