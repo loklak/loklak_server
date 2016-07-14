@@ -47,7 +47,8 @@ public class SusiRule {
     private Set<String> keys;
     private String comment;
     private int score;
-
+    private long id;
+    
     /**
      * Create a rule by parsing of the rule description
      * @param json the rule description
@@ -81,7 +82,7 @@ public class SusiRule {
         JSONArray k;
         if (json.has("keys")) {
             k = json.getJSONArray("keys");
-            if (k.length() == 0) k = computeKeysFromPhrases(this.phrases);
+            if (k.length() == 0 || (k.length() == 1 && k.getString(0).length() == 0)) k = computeKeysFromPhrases(this.phrases);
         } else {
             k = computeKeysFromPhrases(this.phrases);
         }
@@ -93,6 +94,9 @@ public class SusiRule {
         
         // extract the score
         this.score = json.has("score") ? json.getInt("score") : DEFAULT_SCORE;
+        
+        // calculate the id
+        this.id = (this.keys.toString() + this.score).hashCode() << 16 + this.phrases.toString().hashCode();
     }
     
     /*
@@ -108,6 +112,10 @@ public class SusiRule {
         return s;
     }
     */
+    
+    public long getID() {
+        return this.id;
+    }
     
     /**
      * if no keys are given, we compute them from the given phrases
@@ -202,26 +210,30 @@ public class SusiRule {
      * in this consideration method. It is called a consideration in the context of an AI process which
      * tries different rules to get the optimum result, thus considering different rules.
      * @param query the user input
+     * @param intent the key from the user query which matched the rule keys (also considering category matching)
      * @return the result of the application of the rule, a thought argument containing the thoughts which terminated into a final mindstate or NULL if the consideration should be rejected
      */
-    public SusiArgument consideration(final String query) {
+    public SusiArgument consideration(final String query, SusiReader.Token intent) {
         
         // we start with an empty argument
         final SusiArgument argument = new SusiArgument();
         
         // that argument is filled with an idea which consist of the query where we extract the identified data entities
-        SusiThought idea = new SusiThought(this.matcher(query));
-        DAO.log("Susi has an idea: " + idea.toString());
-        argument.think(idea);
+        SusiThought keynote = new SusiThought(this.matcher(query));
+        keynote.addObservation("intent_original", intent.original);
+        keynote.addObservation("intent_canonical", intent.canonical);
+        keynote.addObservation("intent_categorized", intent.categorized);
+        DAO.log("Susi has an idea: " + keynote.toString());
+        argument.think(keynote);
         
         // lets apply the rules that belong to this specific consideration
         for (SusiInference inference: this.getInferences()) {
-            SusiThought nextThought = inference.applyon(argument);
-            DAO.log("Susi is thinking about: " + idea.toString());
+            SusiThought implication = inference.applyon(argument);
+            DAO.log("Susi is thinking about: " + implication.toString());
             // make sure that we are not stuck
-            if (argument.mindstate().equals(nextThought) || nextThought.getCount() == 0) return null; // TODO: do this only if specific marker is in rule
+            if (argument.mindstate().equals(implication) || implication.getCount() == 0) return null; // TODO: do this only if specific marker is in rule
             // think
-            argument.think(nextThought);
+            argument.think(implication);
         }
         
         // we deduced thoughts from the inferences in the rules. Now apply the actions of rule to produce results
@@ -232,4 +244,5 @@ public class SusiRule {
         argument.mindstate().setActions(actions);
         return argument;
     }
+    
 }
