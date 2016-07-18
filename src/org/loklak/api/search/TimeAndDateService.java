@@ -54,7 +54,6 @@ public class TimeAndDateService extends AbstractAPIHandler implements APIHandler
 		return null;
 	}
 
-	@Override
 	public JSONObject serviceImpl(Query call, Authorization rights, JSONObjectWithDefault permissions)
 			throws APIException {
 		String url = call.get("url", "");
