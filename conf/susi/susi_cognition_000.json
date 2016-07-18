@@ -140,11 +140,27 @@
 		{
 			"keys"   :["hello"],
 			"score"  :1,
-			"phrases":[	{"type":"pattern", "expression":"*hello*"} ],
+			"phrases":[	{"type":"pattern", "expression":"*hello*"},
+					{"type":"pattern", "expression":"*hey*"},
+					{"type":"pattern", "expression":"*hi*"}
+					 ],
 			"process":[],
 			"actions":[	{"type":"answer", "select":"random", "phrases":[
 							"Hi, I'm Susi",
 							"Hello!"
+					  ]}]
+		},
+		{
+			"keys"   :["how"],
+			"score"  :1,
+			"phrases":[	{"type":"pattern", "expression":"*how are you*"},
+					{"type":"pattern", "expression":"*how have you been*"},
+					{"type":"pattern", "expression":"*Long time*"}
+					 ],
+			"process":[],
+			"actions":[	{"type":"answer", "select":"random", "phrases":[
+							"Hey, I'm good! Thank you.",
+							"Hello! Im doing well, Thank you"
 					  ]}]
 		},
 		{
@@ -224,12 +240,22 @@
 			"keys"   :["reddit"],
 			"score"  :100,
 			"example":"What are the reddit articles about loklak",
-			"phrases":[ {"type":"pattern", "expression":"* reddit * about *"}
-					],
+			"phrases":[ {"type":"pattern", "expression":"* reddit * about *"}],
 			"process":[ {"type":"console", "expression":"SELECT title FROM rss WHERE url='https://www.reddit.com/search.rss?q=$3$';"}],
 			"actions":[ {"type":"answer", "select":"random", "phrases":[
 							"Here is the list of articles about $3$"
 						]}, {"type":"table"}]
+		},{        
+			"keys"   :["reddit"],
+			"score"  :101,
+			"example":"What is the primary reddit article about loklak",
+			"phrases":[ {"type":"pattern", "expression":"* primary reddit * about *"}],
+			"process":[ {"type":"console", "expression":"SELECT title FROM rss WHERE url='https://www.reddit.com/search.rss?q=$3$';"},
+			            {"type":"flow", "expression":"first"}
+			            ],
+			"actions":[ {"type":"answer", "select":"random", "phrases":[
+							"The primary reddit article about $3$ is $title$"
+						]}]
 		},
 		{
 			"keys"   :["rss"],
@@ -272,6 +298,78 @@
 							"Go, buy your tickets as soon as possible !"
 						]}, {"type":"table"}]
 		},
-		
+		{
+			"keys"   :["eventbrite", "event"],
+			"score"  :1,
+			"example":"Susi, who is organizing the event billets-europeade-2016-concert-de-musique-vocale-25592599153 ?",
+			"phrases":[ {"type":"pattern", "expression":"* who * organizing * event *"}
+					],
+			"process":[ {"type":"console", "expression":"SELECT organizer_name, organizer_description, organizer_contact_info, organizer_link, organizer_website FROM eventbrite WHERE url='https://www.eventbrite.com/e/$4$';"}],
+			"actions":[ {"type":"answer", "select":"random", "phrases":[
+							"Here is the name of the organizer details.."
+						]}, {"type":"table"}]
+		},
+		{
+			"keys"   :["eventbrite", "event"],
+			"score"  :1,
+			"example":"Susi, Tell me more about the event billets-europeade-2016-concert-de-musique-vocale-25592599153 ?",
+			"phrases":[ {"type":"pattern", "expression":"* about * event *"}
+					],
+			"process":[ {"type":"console", "expression":"SELECT description, location_name, organizer_name, start_time, end_time FROM eventbrite WHERE url='https://www.eventbrite.com/e/$3$';"}],
+			"actions":[ {"type":"answer", "select":"random", "phrases":[
+							"Here it is, details about the event."
+						]}, {"type":"table"}]
+		},
+		{
+			"keys"   :["eventbrite", "event"],
+			"score"  :1,
+			"example":"Susi, Where can I get updates of the event billets-europeade-2016-concert-de-musique-vocale-25592599153 ?",
+			"phrases":[ {"type":"pattern", "expression":"* updates * event *"}
+					],
+			"process":[ {"type":"console", "expression":"SELECT social_links FROM eventbrite WHERE url='https://www.eventbrite.com/e/$3$';"}],
+			"actions":[ {"type":"answer", "select":"random", "phrases":[
+							"Go social, get updates here ..."
+						]}, {"type":"table"}]
+		},
+		{
+			"keys"   :["what","describe","explain","search"],
+			"score"  :99,
+			"phrases":[	{"type":"pattern", "expression":"What is *"},
+					  	{"type":"pattern", "expression":"what does * mean"},
+					  	{"type":"pattern", "expression":"describe *"},
+					  	{"type":"pattern", "expression":"please describe *"},
+					  	{"type":"pattern", "expression":"explain *"},
+					  	{"type":"pattern", "expression":"please explain *"},
+					  	{"type":"pattern", "expression":"search wikidata for *"}
+					  ],
+			"process":[	{"type":"console", "expression":"SELECT description FROM wikidata WHERE query='$1$';"}],
+			"actions":[	{"type":"answer", "select":"random", "phrases":[
+							"$1$ is $description$."
+						]}]
+		},
+		{
+			"keys"   :["what","describe","explain","search"],
+			"score"  :98,
+			"phrases":[	{"type":"pattern", "expression":"What is *"},
+					  	{"type":"pattern", "expression":"what does * mean"},
+					  	{"type":"pattern", "expression":"describe *"},
+					  	{"type":"pattern", "expression":"please describe *"},
+					  	{"type":"pattern", "expression":"explain *"},
+					  	{"type":"pattern", "expression":"please explain *"},
+					  	{"type":"pattern", "expression":"search urbandictionary for *"}
+					  ],
+			"process":[	{"type":"console", "expression":"SELECT definition,example FROM urbandictionary WHERE query='$1$';"}],
+			"actions":[	{"type":"answer", "select":"random", "phrases":[
+							"$1$ is $definition$"
+						]}]
+		},
+		{
+			"score"  :15,
+			"phrases":[	{"type":"regex", "expression":".+ (?:.+ )+(.+)"} ],
+			"process":[	{"type":"console", "expression":"SELECT text,retweet_count,favourites_count FROM messages WHERE query='you $1$ /pure' ORDER BY FAVOURITES_COUNT;"}],
+			"actions":[	{"type":"answer", "select":"random", "phrases":[
+							"$text$"
+						]}]
+		},
 	]
 }
