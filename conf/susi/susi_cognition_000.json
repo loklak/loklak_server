@@ -427,8 +427,7 @@
 		{
 			"keys"   :["know"],
 			"score"  :151,
-			"phrases":[	{"type":"pattern", "expression":"Would like to know more about you!"}
-						],
+			"phrases":[	{"type":"pattern", "expression":"Would like to know more about you!"}],
 			"actions":[	{"type":"answer", "select":"random", "phrases":[
 							"You can ask me what you want to know!"
 						]}]

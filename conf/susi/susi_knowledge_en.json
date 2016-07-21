@@ -24,6 +24,7 @@
 			"phrases":[	{"type":"regex", "expression":"what is (?:(?:a )*)(.*)"},
 					  	{"type":"regex", "expression":"describe (?:(?:a )*)(.*)"},
 					  	{"type":"regex", "expression":"please describe (?:(?:a )*)(.*)"},
+					  	{"type":"regex", "expression":"Do you know (?:(?:a )*)(.*)"},
 					  	{"type":"regex", "expression":"explain (?:(?:a )*)(.*)"},
 					  	{"type":"regex", "expression":"please explain (?:(?:a )*)(.*)"},
 					  	{"type":"regex", "expression":"search urbandictionary for (?:(?:a )*)(.*)"},
