@@ -427,8 +427,7 @@
 		{
 			"keys"   :["know"],
 			"score"  :151,
-			"phrases":[	{"type":"pattern", "expression":"Would like to know more about you!"}
-						],
+			"phrases":[	{"type":"pattern", "expression":"Would like to know more about you!"}],
 			"actions":[	{"type":"answer", "select":"random", "phrases":[
 							"You can ask me what you want to know!"
 						]}]
@@ -437,7 +436,7 @@
 			"keys"   :["Where"],
 			"score"  :151,
 			"phrases":[	{"type":"pattern", "expression":"Where did you come from?"},
-						{"type":"pattern", "expression":"Where do you live?"}
+					{"type":"pattern", "expression":"Where do you live?"}
 						],
 			"actions":[	{"type":"answer", "select":"random", "phrases":[
 							"What do you think? Obviously planet earth!"
