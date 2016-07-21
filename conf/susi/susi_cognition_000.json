@@ -409,18 +409,19 @@
 			"score"  :151,
 			"phrases":[	{"type":"pattern", "expression":"How was your day?"}],
 			"actions":[	{"type":"answer", "select":"random", "phrases":[
-							"I was great thank you!"
+							"It was great thank you!"
 						]}]
 		},
 		{
 			"keys"   :["help"],
 			"score"  :151,
-			"phrases":[	{"type":"pattern", "expression":"I need some help"},
+			"phrases":[	{"type":"pattern", "expression":"I need some help with *"},
+						{"type":"pattern", "expression":"I need some help"},
 						{"type":"pattern", "expression":"I'm in need of help *"},
 						{"type":"pattern", "expression":"I need some help with this problem"}
 						],
 			"actions":[	{"type":"answer", "select":"random", "phrases":[
-							"Would love to help! In what I can help you?"
+							"Would love to help! In what way can I help you?"
 						]}]
 		},
 		{
@@ -439,7 +440,17 @@
 						{"type":"pattern", "expression":"Where do you live?"}
 						],
 			"actions":[	{"type":"answer", "select":"random", "phrases":[
-							"What do you think? Obviously from planet earth!"
+							"What do you think? Obviously planet earth!"
+						]}]
+		},
+		{
+			"keys"   :["Where"],
+			"score"  :151,
+			"phrases":[	{"type":"pattern", "expression":"What are your interests?"},
+						{"type":"pattern", "expression":"What * you like?"}
+						],
+			"actions":[	{"type":"answer", "select":"random", "phrases":[
+							"I like to chat with people!"
 						]}]
 		},
 	]
