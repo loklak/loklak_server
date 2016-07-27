@@ -25,11 +25,14 @@ import java.util.Date;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import javax.servlet.http.HttpServletResponse;
+
 import org.elasticsearch.search.sort.SortOrder;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
+import org.loklak.api.cms.TwitterAnalysisService;
 import org.loklak.data.DAO;
 import org.loklak.geo.GeoMark;
 import org.loklak.http.ClientConnection;
@@ -40,17 +43,14 @@ import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
 import org.loklak.server.APIException;
 import org.loklak.server.APIHandler;
-import org.loklak.server.BaseUserRole;
 import org.loklak.server.AbstractAPIHandler;
 import org.loklak.server.Authorization;
+import org.loklak.server.BaseUserRole;
 import org.loklak.server.Query;
 import org.loklak.susi.SusiSkills;
 import org.loklak.susi.SusiThought;
 import org.loklak.susi.SusiTransfer;
-
 import org.loklak.tools.storage.JSONObjectWithDefault;
-
-import javax.servlet.http.HttpServletResponse;
 
 /* examples:
  * http://localhost:9000/api/console.json?q=SELECT%20text,%20screen_name,%20user.name%20AS%20user%20FROM%20messages%20WHERE%20query=%271%27;
@@ -71,195 +71,261 @@ import javax.servlet.http.HttpServletResponse;
  * http://localhost:9000/api/console.json?q=SELECT%20*%20FROM%20timeanddate;
  * http://localhost:9000/api/console.json?q=SELECT%20*%20FROM%20githubProfile%20WHERE%20profile=%27torvalds%27;
  * http://localhost:9000/api/console.json?q=SELECT%20*%20FROM%20locationwisetime%20WHERE%20query=%27london%27;
-* */
+*/
 
 public class ConsoleService extends AbstractAPIHandler implements APIHandler {
-   
-    private static final long serialVersionUID = 8578478303032749879L;
 
-    @Override
-    public BaseUserRole getMinimalBaseUserRole() { return BaseUserRole.ANONYMOUS; }
+	private static final long serialVersionUID = 8578478303032749879L;
 
-    @Override
-    public JSONObject getDefaultPermissions(BaseUserRole baseUserRole) {
-        return null;
-    }
+	@Override
+	public BaseUserRole getMinimalBaseUserRole() {
+		return BaseUserRole.ANONYMOUS;
+	}
 
-    public String getAPIPath() {
-        return "/api/console.json";
-    }
-    
-    public final static SusiSkills dbAccess = new SusiSkills();
-    static {
-        dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?\\(\\h??SELECT\\h+?(.*?)\\h??\\)\\h+?WHERE\\h+?(.*?)\\h?+IN\\h?+\\((.*?)\\)\\h??;"), (flow, matcher) -> {
-            String subquery = matcher.group(2).trim();
-            if (!subquery.endsWith(";")) subquery = subquery + ";";
-            String filter_name = matcher.group(3);
-            JSONArray a0 = dbAccess.inspire("SELECT " + subquery).getJSONArray("data");
-            JSONArray a1 = new JSONArray();
-            Set<String> filter_set = new SusiTransfer(matcher.group(4)).keys();
-            a0.forEach(o -> {
-                JSONObject j = (JSONObject) o;
-                if (j.has(filter_name) && filter_set.contains(j.getString(filter_name))) a1.put(j);
-            });
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            return new SusiThought()
-                    .setOffset(0).setHits(a0.length())
-                    .setData(transfer.conclude(a1));
-        });
-        dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?messages\\h+?WHERE\\h+?id\\h??=\\h??'(.*?)'\\h??;"), (flow, matcher) -> {
-            JSONObject message = DAO.messages.readJSON(matcher.group(2));
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            return message == null ? null : new SusiThought()
-                    .setOffset(0).setHits(1)
-                    .setData((new JSONArray()).put(transfer.extract(message)));
-        });
-        dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?messages\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h?+GROUP\\h?+BY\\h?+(.*?)\\h??;"), (flow, matcher) -> {
-            String group = matcher.group(3);
-            DAO.SearchLocalMessages messages = new DAO.SearchLocalMessages(matcher.group(2), Timeline.Order.CREATED_AT, 0, 0, 100, group);
-            JSONArray array = new JSONArray();
-            JSONObject aggregation = messages.getAggregations().getJSONObject(group);
-            
-            for (String key: aggregation.keySet()) array.put(new JSONObject(true).put(group, key).put("COUNT(*)", aggregation.get(key)));
-            SusiThought json = messages.timeline.toSusi(true);
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            return json.setData(transfer.conclude(array));
-        });
-        dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?messages\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h??;"), (flow, matcher) -> {
-            DAO.SearchLocalMessages messages = new DAO.SearchLocalMessages(matcher.group(2), Timeline.Order.CREATED_AT, 0, 100, 0);
-            SusiThought json = messages.timeline.toSusi(true);
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            return json.setData(transfer.conclude(json.getJSONArray("data")));
-        });
-        dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?messages\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h+?ORDER BY (.*?)\\h??;"), (flow, matcher) -> {
-            DAO.SearchLocalMessages messages = new DAO.SearchLocalMessages(matcher.group(2), Timeline.Order.valueOf(matcher.group(3)), 0, 100, 0);
-            SusiThought json = messages.timeline.toSusi(true);
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            return json.setData(transfer.conclude(json.getJSONArray("data")));
-        });
-        dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?queries\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h??;"), (flow, matcher) -> {
-            ResultList<QueryEntry> queries = DAO.SearchLocalQueries(matcher.group(2), 100, "retrieval_next", "date", SortOrder.ASC, null, new Date(), "retrieval_next");
-            SusiThought json = queries.toSusi();
-            json.setQuery(matcher.group(2));
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            return json.setData(transfer.conclude(json.getJSONArray("data")));
-        });
-        dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?users\\h+?WHERE\\h+?screen_name\\h??=\\h??'(.*?)'\\h??;"), (flow, matcher) -> {
-            UserEntry user_entry = DAO.searchLocalUserByScreenName(matcher.group(2));
-            SusiThought json = new SusiThought();
-            json.setQuery(matcher.group(2));
-            if (user_entry == null) {
-                json.setHits(0).setData(new JSONArray());
-            } else {
-                json.setHits(1).setData(new JSONArray().put(user_entry.toJSON()));
-            }
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            return json.setData(transfer.conclude(json.getJSONArray("data")));
-        });
-        dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?accounts\\h+?WHERE\\h+?screen_name\\h??=\\h??'(.*?)'\\h??;"), (flow, matcher) -> {
-            AccountEntry account_entry = DAO.searchLocalAccount(matcher.group(2));
-            SusiThought json = new SusiThought();
-            json.setQuery(matcher.group(2));
-            if (account_entry == null) {
-                json.setHits(0).setData(new JSONArray());
-            } else {
-                json.setHits(1).setData(new JSONArray().put(account_entry.toJSON()));
-            }
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            return json.setData(transfer.conclude(json.getJSONArray("data")));
-        });
-        dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?locations\\h+?WHERE\\h+?location\\h??=\\h??'(.*?)'\\h??;"), (flow, matcher) -> {
-            GeoMark loc = DAO.geoNames.analyse(matcher.group(2), null, 5, Long.toString(System.currentTimeMillis()));
-            SusiThought json = new SusiThought();
-            json.setQuery(matcher.group(2));
-            if (loc == null) {
-                json.setHits(0).setData(new JSONArray());
-            } else {
-                json.setHits(1).setData(new JSONArray().put(loc.toJSON(false)));
-            }
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            return json.setData(transfer.conclude(json.getJSONArray("data")));
-        });
-        dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?wikidata\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h??;"), (flow, matcher) -> {
-            JSONObject wikidata;
-            try {
-                ClientConnection cc = new ClientConnection("https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&language=en&search=" + URLEncoder.encode(matcher.group(2), "UTF-8"));
-                wikidata = new JSONObject(new JSONTokener(cc.inputStream));
-                cc.close();
-            } catch (IOException | JSONException e) {wikidata = new JSONObject();}
-            SusiThought json = new SusiThought();
-            json.setQuery(matcher.group(2));
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            json.setData(transfer.conclude(wikidata.getJSONArray("search")));
-            json.setHits(json.getCount());
-            return json;
-        });
-        dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?urbandictionary\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h??;"), (flow, matcher) -> {
-            JSONObject urbandictionary;
-            try {
-                ClientConnection cc = new ClientConnection("http://api.urbandictionary.com/v0/define?term=" + URLEncoder.encode(matcher.group(2), "UTF-8"));
-                urbandictionary = new JSONObject(new JSONTokener(cc.inputStream));
-                cc.close();
-            } catch (IOException | JSONException e) {urbandictionary = new JSONObject();}
-            SusiThought json = new SusiThought();
-            json.setQuery(matcher.group(2));
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            json.setData(transfer.conclude(urbandictionary.getJSONArray("list")));
-            json.setHits(json.getCount());
-            return json;
-        });
-        dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?meetup\\h+?WHERE\\h+?url\\h??=\\h??'(.*?)'\\h??;"), (flow, matcher) -> {
-            SusiThought json = MeetupsCrawlerService.crawlMeetups(matcher.group(2));
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            json.setData(transfer.conclude(json.getData()));
-            return json;
-        });
-        dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?rss\\h+?WHERE\\h+?url\\h??=\\h??'(.*?)'\\h??;"), (flow, matcher) -> {
-            SusiThought json = RSSReaderService.readRSS(matcher.group(2));
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            json.setData(transfer.conclude(json.getData()));
-            return json;
-        });
-        dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?eventbrite\\h+?WHERE\\h+?url\\h??=\\h??'(.*?)'\\h??;"), (flow, matcher) -> {
-            SusiThought json = EventBriteCrawlerService.crawlEventBrite(matcher.group(2));
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            json.setData(transfer.conclude(json.getData()));
-            return json;
-        });
-        dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?wordpress\\h+?WHERE\\h+?url\\h??=\\h??'(.*?)'\\h??;"), (flow, matcher) -> {
-            SusiThought json = WordpressCrawlerService.crawlWordpress(matcher.group(2));
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            json.setData(transfer.conclude(json.getData()));
-            return json;
-        });
-        dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?timeanddate;"), (flow, matcher) -> {
-            SusiThought json = TimeAndDateService.timeAndDate();
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            json.setData(transfer.conclude(json.getData()));
-            return json;
-        });
-        dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?githubProfile\\h+?WHERE\\h+?profile\\h??=\\h??'(.*?)'\\h??;"), (flow, matcher) -> {
-            SusiThought json = GithubProfileScraper.scrapeGithub(matcher.group(2));
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            json.setData(transfer.conclude(json.getData()));
-            return json;
-        });
-        dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?locationwisetime\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h??;"), (flow, matcher) -> {
-            SusiThought json = LocationWiseTimeService.locationWiseTime(matcher.group(2));
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            json.setData(transfer.conclude(json.getData()));
-            return json;
-        });
-    }
-    
-    @Override
-    public JSONObject serviceImpl(Query post, HttpServletResponse response, Authorization rights, final JSONObjectWithDefault permissions) throws APIException {
+	@Override
+	public JSONObject getDefaultPermissions(BaseUserRole baseUserRole) {
+		return null;
+	}
 
-        // parameters
-        String q = post.get("q", "");
-        //int timezoneOffset = post.get("timezoneOffset", 0);
-        
-        return dbAccess.inspire(q);
-    }
-    
+	public String getAPIPath() {
+		return "/api/console.json";
+	}
+
+	public final static SusiSkills dbAccess = new SusiSkills();
+	static {
+		dbAccess.put(
+				Pattern.compile(
+						"SELECT\\h+?(.*?)\\h+?FROM\\h+?\\(\\h??SELECT\\h+?(.*?)\\h??\\)\\h+?WHERE\\h+?(.*?)\\h?+IN\\h?+\\((.*?)\\)\\h??;"),
+				(flow, matcher) -> {
+					String subquery = matcher.group(2).trim();
+					if (!subquery.endsWith(";"))
+						subquery = subquery + ";";
+					String filter_name = matcher.group(3);
+					JSONArray a0 = dbAccess.inspire("SELECT " + subquery).getJSONArray("data");
+					JSONArray a1 = new JSONArray();
+					Set<String> filter_set = new SusiTransfer(matcher.group(4)).keys();
+					a0.forEach(o -> {
+						JSONObject j = (JSONObject) o;
+						if (j.has(filter_name) && filter_set.contains(j.getString(filter_name)))
+							a1.put(j);
+					});
+					SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+					return new SusiThought().setOffset(0).setHits(a0.length()).setData(transfer.conclude(a1));
+				});
+		dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?messages\\h+?WHERE\\h+?id\\h??=\\h??'(.*?)'\\h??;"),
+				(flow, matcher) -> {
+					JSONObject message = DAO.messages.readJSON(matcher.group(2));
+					SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+					return message == null ? null
+							: new SusiThought().setOffset(0).setHits(1)
+									.setData((new JSONArray()).put(transfer.extract(message)));
+				});
+		dbAccess.put(
+				Pattern.compile(
+						"SELECT\\h+?(.*?)\\h+?FROM\\h+?messages\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h?+GROUP\\h?+BY\\h?+(.*?)\\h??;"),
+				(flow, matcher) -> {
+					String group = matcher.group(3);
+					DAO.SearchLocalMessages messages = new DAO.SearchLocalMessages(matcher.group(2),
+							Timeline.Order.CREATED_AT, 0, 0, 100, group);
+					JSONArray array = new JSONArray();
+					JSONObject aggregation = messages.getAggregations().getJSONObject(group);
+
+					for (String key : aggregation.keySet())
+						array.put(new JSONObject(true).put(group, key).put("COUNT(*)", aggregation.get(key)));
+					SusiThought json = messages.timeline.toSusi(true);
+					SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+					return json.setData(transfer.conclude(array));
+				});
+		dbAccess.put(
+				Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?messages\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h??;"),
+				(flow, matcher) -> {
+					DAO.SearchLocalMessages messages = new DAO.SearchLocalMessages(matcher.group(2),
+							Timeline.Order.CREATED_AT, 0, 100, 0);
+					SusiThought json = messages.timeline.toSusi(true);
+					SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+					return json.setData(transfer.conclude(json.getJSONArray("data")));
+				});
+		dbAccess.put(
+				Pattern.compile(
+						"SELECT\\h+?(.*?)\\h+?FROM\\h+?messages\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h+?ORDER BY (.*?)\\h??;"),
+				(flow, matcher) -> {
+					DAO.SearchLocalMessages messages = new DAO.SearchLocalMessages(matcher.group(2),
+							Timeline.Order.valueOf(matcher.group(3)), 0, 100, 0);
+					SusiThought json = messages.timeline.toSusi(true);
+					SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+					return json.setData(transfer.conclude(json.getJSONArray("data")));
+				});
+		dbAccess.put(
+				Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?queries\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h??;"),
+				(flow, matcher) -> {
+					ResultList<QueryEntry> queries = DAO.SearchLocalQueries(matcher.group(2), 100, "retrieval_next",
+							"date", SortOrder.ASC, null, new Date(), "retrieval_next");
+					SusiThought json = queries.toSusi();
+					json.setQuery(matcher.group(2));
+					SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+					return json.setData(transfer.conclude(json.getJSONArray("data")));
+				});
+		dbAccess.put(
+				Pattern.compile(
+						"SELECT\\h+?(.*?)\\h+?FROM\\h+?users\\h+?WHERE\\h+?screen_name\\h??=\\h??'(.*?)'\\h??;"),
+				(flow, matcher) -> {
+					UserEntry user_entry = DAO.searchLocalUserByScreenName(matcher.group(2));
+					SusiThought json = new SusiThought();
+					json.setQuery(matcher.group(2));
+					if (user_entry == null) {
+						json.setHits(0).setData(new JSONArray());
+					} else {
+						json.setHits(1).setData(new JSONArray().put(user_entry.toJSON()));
+					}
+					SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+					return json.setData(transfer.conclude(json.getJSONArray("data")));
+				});
+		dbAccess.put(
+				Pattern.compile(
+						"SELECT\\h+?(.*?)\\h+?FROM\\h+?accounts\\h+?WHERE\\h+?screen_name\\h??=\\h??'(.*?)'\\h??;"),
+				(flow, matcher) -> {
+					AccountEntry account_entry = DAO.searchLocalAccount(matcher.group(2));
+					SusiThought json = new SusiThought();
+					json.setQuery(matcher.group(2));
+					if (account_entry == null) {
+						json.setHits(0).setData(new JSONArray());
+					} else {
+						json.setHits(1).setData(new JSONArray().put(account_entry.toJSON()));
+					}
+					SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+					return json.setData(transfer.conclude(json.getJSONArray("data")));
+				});
+		dbAccess.put(
+				Pattern.compile(
+						"SELECT\\h+?(.*?)\\h+?FROM\\h+?locations\\h+?WHERE\\h+?location\\h??=\\h??'(.*?)'\\h??;"),
+				(flow, matcher) -> {
+					GeoMark loc = DAO.geoNames.analyse(matcher.group(2), null, 5,
+							Long.toString(System.currentTimeMillis()));
+					SusiThought json = new SusiThought();
+					json.setQuery(matcher.group(2));
+					if (loc == null) {
+						json.setHits(0).setData(new JSONArray());
+					} else {
+						json.setHits(1).setData(new JSONArray().put(loc.toJSON(false)));
+					}
+					SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+					return json.setData(transfer.conclude(json.getJSONArray("data")));
+				});
+		dbAccess.put(
+				Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?wikidata\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h??;"),
+				(flow, matcher) -> {
+					JSONObject wikidata;
+					try {
+						ClientConnection cc = new ClientConnection(
+								"https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&language=en&search="
+										+ URLEncoder.encode(matcher.group(2), "UTF-8"));
+						wikidata = new JSONObject(new JSONTokener(cc.inputStream));
+						cc.close();
+					} catch (IOException | JSONException e) {
+						wikidata = new JSONObject();
+					}
+					SusiThought json = new SusiThought();
+					json.setQuery(matcher.group(2));
+					SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+					json.setData(transfer.conclude(wikidata.getJSONArray("search")));
+					json.setHits(json.getCount());
+					return json;
+				});
+		dbAccess.put(
+				Pattern.compile(
+						"SELECT\\h+?(.*?)\\h+?FROM\\h+?urbandictionary\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h??;"),
+				(flow, matcher) -> {
+					JSONObject urbandictionary;
+					try {
+						ClientConnection cc = new ClientConnection("http://api.urbandictionary.com/v0/define?term="
+								+ URLEncoder.encode(matcher.group(2), "UTF-8"));
+						urbandictionary = new JSONObject(new JSONTokener(cc.inputStream));
+						cc.close();
+					} catch (IOException | JSONException e) {
+						urbandictionary = new JSONObject();
+					}
+					SusiThought json = new SusiThought();
+					json.setQuery(matcher.group(2));
+					SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+					json.setData(transfer.conclude(urbandictionary.getJSONArray("list")));
+					json.setHits(json.getCount());
+					return json;
+				});
+		dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?meetup\\h+?WHERE\\h+?url\\h??=\\h??'(.*?)'\\h??;"),
+				(flow, matcher) -> {
+					SusiThought json = MeetupsCrawlerService.crawlMeetups(matcher.group(2));
+					SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+					json.setData(transfer.conclude(json.getData()));
+					return json;
+				});
+		dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?rss\\h+?WHERE\\h+?url\\h??=\\h??'(.*?)'\\h??;"),
+				(flow, matcher) -> {
+					SusiThought json = RSSReaderService.readRSS(matcher.group(2));
+					SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+					json.setData(transfer.conclude(json.getData()));
+					return json;
+				});
+		dbAccess.put(
+				Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?eventbrite\\h+?WHERE\\h+?url\\h??=\\h??'(.*?)'\\h??;"),
+				(flow, matcher) -> {
+					SusiThought json = EventBriteCrawlerService.crawlEventBrite(matcher.group(2));
+					SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+					json.setData(transfer.conclude(json.getData()));
+					return json;
+				});
+		dbAccess.put(
+				Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?wordpress\\h+?WHERE\\h+?url\\h??=\\h??'(.*?)'\\h??;"),
+				(flow, matcher) -> {
+					SusiThought json = WordpressCrawlerService.crawlWordpress(matcher.group(2));
+					SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+					json.setData(transfer.conclude(json.getData()));
+					return json;
+				});
+		dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?timeanddate;"), (flow, matcher) -> {
+			SusiThought json = TimeAndDateService.timeAndDate();
+			SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+			json.setData(transfer.conclude(json.getData()));
+			return json;
+		});
+		dbAccess.put(
+				Pattern.compile(
+						"SELECT\\h+?(.*?)\\h+?FROM\\h+?githubProfile\\h+?WHERE\\h+?profile\\h??=\\h??'(.*?)'\\h??;"),
+				(flow, matcher) -> {
+					SusiThought json = GithubProfileScraper.scrapeGithub(matcher.group(2));
+					SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+					json.setData(transfer.conclude(json.getData()));
+					return json;
+				});
+		dbAccess.put(
+				Pattern.compile(
+						"SELECT\\h+?(.*?)\\h+?FROM\\h+?locationwisetime\\h+?WHERE\\h+?query\\h??=\\h??'(.*?)'\\h??;"),
+				(flow, matcher) -> {
+					SusiThought json = LocationWiseTimeService.locationWiseTime(matcher.group(2));
+					SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+					json.setData(transfer.conclude(json.getData()));
+					return json;
+				});
+		dbAccess.put(
+				Pattern.compile(
+						"SELECT\\h+?(.*?)\\h+?FROM\\h+?twitanalysis\\h+?WHERE\\h+?screen_name\\h??=\\h??'(.*?)'\\h+?AND\\h+?count\\h??=\\h??'(.*?)'\\h??;"),
+				(flow, matcher) -> {
+					SusiThought json = TwitterAnalysisService.showAnalysis(matcher.group(2), matcher.group(3));
+					SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+					json.setData(transfer.conclude(json.getData()));
+					return json;
+				});
+
+	}
+
+	@Override
+	public JSONObject serviceImpl(Query post, HttpServletResponse response, Authorization rights,
+			final JSONObjectWithDefault permissions) throws APIException {
+
+		// parameters
+		String q = post.get("q", "");
+		// int timezoneOffset = post.get("timezoneOffset", 0);
+
+		return dbAccess.inspire(q);
+	}
+
 }
