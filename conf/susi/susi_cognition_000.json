@@ -712,6 +712,16 @@
 			"actions":[	{"type":"answer", "select":"random", "phrases":[
 							"I like to chat with people!"
 						]}]
-		}
+		},
+		{
+			"keys"   :["github"],
+			"score"  :3000,
+			"example": "Susi, View the Github profile of mariobehling",
+			"phrases":[ {"type":"pattern", "expression":"* github * of *"}],
+			"process":[ {"type": "console", "expression": "SELECT * FROM githubProfile WHERE profile='$3$';"}],
+			"actions":[ {"type": "answer", "select": "random", "phrases":[
+				"Here are the profile details on Github for $3$"
+			]}, {"type":"table"}]
+		},
 	]
 }
