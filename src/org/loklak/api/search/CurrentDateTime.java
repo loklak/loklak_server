@@ -1,6 +1,6 @@
 /**
- *  Time and Date Service
- *  Copyright 20.07.2016 by Jigyasa Grover, @jig08
+ *  Current Date and Time Service
+ *  Copyright 01.08.2016 by Jigyasa Grover, @jig08
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -15,6 +15,7 @@
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  */
+
 
 package org.loklak.api.search;
 
@@ -33,13 +34,13 @@ import org.loklak.server.Query;
 import org.loklak.susi.SusiThought;
 import org.loklak.tools.storage.JSONObjectWithDefault;
 
-public abstract class TimeAndDateService extends AbstractAPIHandler implements APIHandler {
+public class CurrentDateTime extends AbstractAPIHandler implements APIHandler{
 
-	private static final long serialVersionUID = 6808423132726076271L;
+	private static final long serialVersionUID = 7187735935382105290L;
 
 	@Override
 	public String getAPIPath() {
-		return "/api/timeanddate.json";
+		return "/api/currentdateandtime.json";
 	}
 
 	@Override
@@ -52,24 +53,48 @@ public abstract class TimeAndDateService extends AbstractAPIHandler implements A
 		return null;
 	}
 
-	public JSONObject serviceImpl(Query call, HttpServletResponse response, Authorization rights, JSONObjectWithDefault permissions)
-			throws APIException {
-		return timeAndDate();
+	@Override
+	public JSONObject serviceImpl(Query call, HttpServletResponse response, Authorization rights,
+			JSONObjectWithDefault permissions) throws APIException {
+		return currentDateAndTime();
 	}
 
-	public static SusiThought timeAndDate() {
-		
-		JSONObject timeAndDate = new JSONObject();
+	public static SusiThought currentDateAndTime() {
+		JSONObject currentDateAndTime = new JSONObject();
 		
 		Date time_and_date = new Date();
-		timeAndDate.put("time_and_date", time_and_date.toString());
+		
+		String day = time_and_date.toString().substring(0, 3);
+		currentDateAndTime.put("day", day);
+		
+		String month = time_and_date.toString().substring(4, 7);
+		currentDateAndTime.put("month", month);
+		
+		String date = time_and_date.toString().substring(8, 10);
+		currentDateAndTime.put("date", date);
+		
+		String hours = time_and_date.toString().substring(11, 13);
+		currentDateAndTime.put("hours", hours);
+		
+		String minutes = time_and_date.toString().substring(14, 16);
+		currentDateAndTime.put("minutes", minutes);
+		
+		String seconds = time_and_date.toString().substring(17, 19);
+		currentDateAndTime.put("seconds", seconds);
+		
+		String timezone = time_and_date.toString().substring(20, 23);
+		currentDateAndTime.put("timezone", timezone);
+		
+		String year = time_and_date.toString().substring(24, 28);
+		currentDateAndTime.put("year", year);
 		
 		
 		JSONArray jsonArray = new JSONArray();
-		jsonArray.put(timeAndDate);
+		jsonArray.put(currentDateAndTime);
 		
 		SusiThought result = new SusiThought();
 		result.setData(jsonArray);
 		return result;
 	}
+
 }
