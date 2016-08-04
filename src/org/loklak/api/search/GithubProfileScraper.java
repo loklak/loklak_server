@@ -32,6 +32,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.loklak.data.DAOWrapper;
 import org.loklak.server.APIException;
 import org.loklak.server.APIHandler;
 import org.loklak.server.AbstractAPIHandler;
@@ -67,8 +68,9 @@ public abstract class GithubProfileScraper extends AbstractAPIHandler implements
 		return scrapeGithub(profile);
 	}
 
+	@SuppressWarnings("static-access")
 	public static SusiThought scrapeGithub(String profile) {
-
+		
 		Document html = null;
 
 		JSONObject githubProfile = new JSONObject();
@@ -208,6 +210,12 @@ public abstract class GithubProfileScraper extends AbstractAPIHandler implements
 
 		SusiThought json = new SusiThought();
 		json.setData(jsonArray);
+		
+		DAOWrapper dw = new DAOWrapper();
+		dw.builder().addText(json.toString());
+		dw.builder().setUserid("github_profile_"+profile);
+		dw.builder().persist();
+		
 		return json;
 	}
 
