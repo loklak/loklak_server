@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 PIDFILE="data/loklak.pid"
 DFAULTCONFIG="conf/config.properties"
@@ -9,7 +9,7 @@ DFAULTXmx="-Xmx800m";
 CUSTOMXmx=""
 
 cd `dirname $0`/..
-mkdir -p data/settings
+mkdir -p data
 
 #to not allow process to overwrite the already running one.
 if [ -f $PIDFILE ]; then
@@ -20,37 +20,6 @@ if [ -f $PIDFILE ]; then
 	else
 		rm $PIDFILE
 	fi
-fi
-
-
-# installation
-INSTALLATIONCONFIG="data/settings/installation.txt"
-if [ ! -f $INSTALLATIONCONFIG ]; then
-    echo "Loklak detected that you did not yet run the installation wizard."
-    echo "It let's you setup an administrator account and a number of settings, but is not mandatory."
-    echo "You can manually start it by running bin/installation.sh"
-
-    while [ true ]; do
-        echo "Would you like to start the installation now? (y)es, (n)o, (r)emind me next time"
-        read -n 1 -s -t 10 input
-        if  [ $? = 0 ]; then
-            if [ "$input" = "y" ]; then
-                bin/installation.sh exitonclose
-                echo 'done' > $INSTALLATIONCONFIG
-                break
-            elif [ "$input" = "n" ]; then
-                echo "Installation wizard skipped. You can manually start it by running bin/installation.sh."
-                echo 'skipped' > $INSTALLATIONCONFIG
-                break
-            elif [ "$input" = "r" ]; then
-                break
-            fi
-        else
-            echo "Timeout, skipping installation wizard. You can manually start it by running bin/installation.sh."
-            echo 'skipped' > $INSTALLATIONCONFIG
-            break
-        fi
-    done
 fi
 
 if [ -f $DFAULTCONFIG ]; then
@@ -73,10 +42,10 @@ elif [ -n "$CUSTOMXmx" ]; then cmdline="$cmdline -Xmx$CUSTOMXmx";
 elif [ -n "$DFAULTXmx" ]; then cmdline="$cmdline -Xmx$DFAULTXmx";
 fi
 
-echo "starting loklak"
+echo "starting loklak installation"
 echo "startup" > $STARTUPFILE
 
-cmdline="$cmdline -server -classpath $CLASSPATH -Dlog4j.configurationFile=$LOGCONFIG org.loklak.LoklakServer >> data/loklak.log 2>&1 &";
+cmdline="$cmdline -server -classpath $CLASSPATH -Dlog4j.configurationFile=$LOGCONFIG org.loklak.LoklakInstallation >> data/loklak.log 2>&1 &";
 
 eval $cmdline
 PID=$!
@@ -93,8 +62,14 @@ done
 if [ -f $STARTUPFILE ] && [ $(ps -p $PID -o pid=) ]; then
 	CUSTOMPORT=$(grep -iw 'port.http' conf/config.properties | sed 's/^[^=]*=//' );
 	LOCALHOST=$(grep -iw 'shortlink.urlstub' conf/config.properties | sed 's/^[^=]*=//');
-	echo "loklak server started at port $CUSTOMPORT, open your browser at $LOCALHOST"
+	echo "loklak installation started at port $CUSTOMPORT, open your browser at $LOCALHOST"
 	rm -f $STARTUPFILE
+
+	if [ -n "$1" ] && [ "$1" = 'exitonclose' ];then
+	    echo "waiting for installation to finish"
+        wait "$PID"
+        echo "loklak installation finished"
+    fi
 	exit 0
 else
 	echo "loklak server failed to start. See data/loklag.log for details"
