@@ -391,7 +391,7 @@ public class EventBriteCrawlerService extends AbstractAPIHandler implements APIH
 		
 		DAOWrapper dw = new DAOWrapper();
 		dw.builder().addText(json.toString());
-		dw.builder().setUserid("eventbrite_"+url);
+		dw.builder().setUserid(url);
 		dw.builder().persist();
 		
 		return json;

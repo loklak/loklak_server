@@ -213,7 +213,7 @@ public abstract class GithubProfileScraper extends AbstractAPIHandler implements
 		
 		DAOWrapper dw = new DAOWrapper();
 		dw.builder().addText(json.toString());
-		dw.builder().setUserid("github_profile_"+profile);
+		dw.builder().setUserid("https://github.com/"+profile);
 		dw.builder().persist();
 		
 		return json;
