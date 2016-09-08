@@ -1,9 +1,9 @@
 org.json
 org.loklak
 org.loklak.api.admin
+org.loklak.api.amazon
 org.loklak.api.cms
 org.loklak.api.geo
-org.loklak.api.handshake
 org.loklak.api.iot
 org.loklak.api.p2p
 org.loklak.api.search
