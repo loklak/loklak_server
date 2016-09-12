@@ -22,6 +22,8 @@ package org.loklak.api.p2p;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.SignatureException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -47,8 +49,41 @@ import org.loklak.objects.UserEntry;
 import org.loklak.objects.Timeline.Order;
 import org.loklak.server.Query;
 import org.loklak.tools.UTF8;
+import org.loklak.tools.JsonSignature;
 
+/**
+ * push api to send messages to the loklak index.
+ * The push json format is exactly like a search result json. Most of the attributes in a message can be ommitted.
+ * Here is an example file that can be prepared for a push:
 
+{
+  "statuses": [
+    {
+      "id_str": "yourmessageid_1234",
+      "screen_name": "testuser",
+      "created_at": "2016-07-22T07:53:24.000Z",
+      "text": "The rain is spain stays always in the plain",
+      "source_type": "GENERIC",
+      "place_name": "Georgia, USA",
+      "location_point": [3.058579854228782,50.63296878274201],
+      "location_radius": 0,
+      "user": {
+        "user_id": "youruserid_5678",
+        "name": "Mr. Bob",
+      }
+    }
+  ]
+}
+
+ * save this json into a file named "test.json" and thenn call curl the following way:
+ * curl -X POST -F 'data=@test.json' http://localhost:9000/api/push.json
+ * 
+ * You should modify the source_type object to a name which describes the semantic of the text content.
+ * You can i.e. use GEOJSON to describe that you are pushing a geojson data object within the text body.
+ * Please take care that you choose a proper id_str and user_id which has it's own id name domain
+ * so it can be distinguished from other id domains. You can do that i.e. by choosing a fixed prefix for your
+ * data domain.
+ */
 public class PushServlet extends HttpServlet {
     
     private static final long serialVersionUID = 7504310048722996407L;
@@ -62,29 +97,26 @@ public class PushServlet extends HttpServlet {
      */
     public static boolean push(String[] hoststubs, Timeline timeline, boolean peerMessage) {
         // transmit the timeline        
-        try {
-            String data = timeline.toJSON(false, "search_metadata", "statuses").toString();
-            assert data != null;
-            boolean transmittedToAtLeastOnePeer = false;
-            for (String hoststub: hoststubs) {
+        String data = timeline.toJSON(false, "search_metadata", "statuses").toString();
+        assert data != null;
+        boolean transmittedToAtLeastOnePeer = false;
+        for (String hoststub: hoststubs) {
+            ClientConnection connection = null;
+            try {
                 if (hoststub.endsWith("/")) hoststub = hoststub.substring(0, hoststub.length() - 1);
                 Map<String, byte[]> post = new HashMap<String, byte[]>();
                 post.put("data", UTF8.getBytes(data)); // optionally implement a gzipped form here
-                ClientConnection connection = null;
-                try {
-                    connection = new ClientConnection(hoststub + "/api/push.json", post, !"peers".equals(DAO.getConfig("httpsclient.trustselfsignedcerts", "peers")));
-                    transmittedToAtLeastOnePeer = true;
-                } catch (IOException e) {
-                    //Log.getLog().warn(e);
-                } finally {
-                    if (connection != null) connection.close();
-                }
+                JsonSignature.addSignature(post,DAO.private_settings.getPrivateKey());
+                connection = new ClientConnection(hoststub + "/api/push.json", post, !"peers".equals(DAO.getConfig("httpsclient.trustselfsignedcerts", "peers")));
+                transmittedToAtLeastOnePeer = true;
+            } catch (IOException | JSONException | SignatureException | InvalidKeyException e) {
+                DAO.log("FAILED to push " + timeline.size() + " messages to backend " + hoststub);
+                Log.getLog().warn(e);
+            } finally {
+                if (connection != null) connection.close();
             }
-            return transmittedToAtLeastOnePeer;
-        } catch (JSONException e) {
-        	Log.getLog().warn(e);
-            return false;
         }
+        return transmittedToAtLeastOnePeer;
     }
     
     public static boolean push(String[] hoststubs, Timeline timeline) {
@@ -162,6 +194,7 @@ public class PushServlet extends HttpServlet {
                 if (user == null) continue;
                 tweet.put("provider_type", ProviderType.REMOTE.name());
                 tweet.put("provider_hash", remoteHash);
+                if (!user.has("screen_name") && tweet.has("screen_name")) user.put("screen_name", tweet.getString("screen_name"));
                 UserEntry u = new UserEntry(user);
                 MessageEntry t = new MessageEntry(tweet);
                 tl.add(t, u);
@@ -209,6 +242,7 @@ public class PushServlet extends HttpServlet {
         JSONObject json = new JSONObject(true);
         json.put("status", "ok");
         json.put("records", recordCount);
+        json.put("mps", DAO.countLocalMessages(3600000L) / 3600L); // to enable client throttling: mps measured by hour
         if (remoteHashFromPeerId) json.put("contribution_message_count", messages_from_client);
         //json.field("new", newCount);
         //json.field("known", knownCount);

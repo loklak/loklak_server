@@ -19,14 +19,16 @@
 
 package org.loklak;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.net.ServerSocket;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.KeyStore;
+import java.security.PrivateKey;
+import java.security.Security;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -36,6 +38,12 @@ import java.util.Set;
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.Servlet;
 
+import org.apache.logging.log4j.LogManager;
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.rewrite.handler.RewriteRegexRule;
 import org.eclipse.jetty.server.Handler;
@@ -68,20 +76,25 @@ import org.loklak.api.admin.AccessServlet;
 import org.loklak.api.admin.CampaignServlet;
 import org.loklak.api.admin.CrawlerServlet;
 import org.loklak.api.admin.SettingsServlet;
-import org.loklak.api.admin.StatusServlet;
+import org.loklak.api.admin.StatusService;
 import org.loklak.api.admin.ThreaddumpServlet;
+import org.loklak.api.amazon.AmazonProductService;
 import org.loklak.api.cms.*;
 import org.loklak.api.geo.GeocodeServlet;
-import org.loklak.api.handshake.ClientHandshakeService;
 import org.loklak.api.iot.FossasiaPushServlet;
 import org.loklak.api.iot.FreifunkNodePushServlet;
+import org.loklak.api.iot.FreifunkNodeFetchServlet;
 import org.loklak.api.iot.NMEAServlet;
+import org.loklak.api.iot.NOAAAlertServlet;
 import org.loklak.api.iot.GeoJsonPushServlet;
 import org.loklak.api.iot.ImportProfileServlet;
 import org.loklak.api.iot.NetmonPushServlet;
 import org.loklak.api.iot.NodelistPushServlet;
 import org.loklak.api.iot.OpenWifiMapPushServlet;
+import org.loklak.api.iot.StuffInSpaceServlet;
 import org.loklak.api.iot.ValidateServlet;
+import org.loklak.api.iot.YahiHazeServlet;
+import org.loklak.api.iot.EarthquakeServlet;
 import org.loklak.api.p2p.HelloService;
 import org.loklak.api.p2p.PeersServlet;
 import org.loklak.api.p2p.PushServlet;
@@ -89,17 +102,25 @@ import org.loklak.api.search.SearchServlet;
 import org.loklak.api.search.ShortlinkFromTweetServlet;
 import org.loklak.api.search.SuggestServlet;
 import org.loklak.api.search.SusiService;
+import org.loklak.api.search.TimeAndDateService;
 import org.loklak.api.search.ConsoleService;
 import org.loklak.api.search.EventBriteCrawlerService;
 import org.loklak.api.search.UserServlet;
 import org.loklak.api.search.WordpressCrawlerService;
 import org.loklak.api.search.GenericScraper;
+import org.loklak.api.search.GithubProfileScraper;
+import org.loklak.api.search.InstagramProfileScraper;
+import org.loklak.api.search.LocationWiseTimeService;
+import org.loklak.api.search.WeiboUserInfo;
+import org.loklak.api.search.WikiGeoData;
 import org.loklak.api.search.MeetupsCrawlerService;
+import org.loklak.api.search.QuoraProfileScraper;
 import org.loklak.api.search.RSSReaderService;
 import org.loklak.api.tools.CSVServlet;
 import org.loklak.api.tools.XMLServlet;
 import org.loklak.api.vis.MapServlet;
 import org.loklak.api.vis.MarkdownServlet;
+import org.loklak.api.vis.PieChartServlet;
 import org.loklak.data.DAO;
 import org.loklak.harvester.TwitterScraper;
 import org.loklak.http.RemoteAccess;
@@ -120,7 +141,8 @@ public class LoklakServer {
     public  static QueuedIndexing queuedIndexing = null;
     private static DumpImporter dumpImporter = null;
     private static HttpsMode httpsMode = HttpsMode.OFF;
-    
+    public static Class<? extends Servlet>[] services;
+
     public static Map<String, String> readConfig(Path data) throws IOException {
         File conf_dir = new File("conf");
         Properties prop = new Properties();
@@ -169,7 +191,7 @@ public class LoklakServer {
         if (startup.exists()){
 	        startup.deleteOnExit();
 	        FileWriter writer = new FileWriter(startup);
-			writer.write("startup".toString());
+			writer.write("startup");
 			writer.close();
         }
         
@@ -244,14 +266,14 @@ public class LoklakServer {
         Caretaker.upgradeTime = Caretaker.startupTime + DAO.getConfig("upgradeInterval", 86400000);
         
         // if this is not headless, we can open a browser automatically
-        Browser.openBrowser("http://localhost:" + httpPort + "/");
+        Browser.openBrowser("http://127.0.0.1:" + httpPort + "/");
         
         Log.getLog().info("finished startup!");
         
         // signal to startup script
         if (startup.exists()){
         	FileWriter writer = new FileWriter(startup);
-			writer.write("done".toString());
+			writer.write("done");
 			writer.close();
         }
         
@@ -270,6 +292,10 @@ public class LoklakServer {
                     TwitterScraper.executor.shutdown();
                     Harvester.executor.shutdown();
                     Log.getLog().info("main terminated, goodby.");
+
+                    Log.getLog().info("Shutting down log4j2");
+                    LogManager.shutdown();
+
                 } catch (Exception e) {
                 }
             }
@@ -311,94 +337,69 @@ public class LoklakServer {
         //https
         //uncommented lines for http2 (jetty 9.3 / java 8)        
         if(httpsMode.isGreaterOrEqualTo(HttpsMode.ON)){
+
+            Log.getLog().info("HTTPS activated");
         	
         	String keySource = DAO.getConfig("https.keysource", "keystore");
-        	String keystorePath = null;
-        	String keystorePass = null;
-        	String keystoreManagerPass = null;
+            KeyStore keyStore;
+        	String keystoreManagerPass;
         	
         	//check for key source. Can be a java keystore or in pem format (gets converted automatically)
         	if("keystore".equals(keySource)){
+                Log.getLog().info("Loading keystore from disk");
+
         		//use native keystore format
         		
-        		File keystore = new File(DAO.conf_dir, DAO.getConfig("keystore.name", "keystore.jks"));
-        		if(!keystore.exists() || !keystore.isFile() || !keystore.canRead()){
+        		File keystoreFile = new File(DAO.conf_dir, DAO.getConfig("keystore.name", "keystore.jks"));
+        		if(!keystoreFile.exists() || !keystoreFile.isFile() || !keystoreFile.canRead()){
         			throw new Exception("Could not find keystore");
         		}
-        		keystorePath = keystore.getAbsolutePath();
-        		keystorePass = DAO.getConfig("keystore.password", "");
+        		keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+                keyStore.load(new FileInputStream(keystoreFile.getAbsolutePath()), DAO.getConfig("keystore.password", "").toCharArray());
+
         		keystoreManagerPass = DAO.getConfig("keystore.password", "");
         	}
         	else if ("key-cert".equals(keySource)){
+                Log.getLog().info("Importing keystore from key/cert files");
         		//use more common pem format as used by openssl
-        		
+
+                //generate random password
+                char[] chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".toCharArray();
+                StringBuilder sb = new StringBuilder();
+                Random random = new Random();
+                for (int i = 0; i < 20; i++) {
+                    char c = chars[random.nextInt(chars.length)];
+                    sb.append(c);
+                }
+                String password = keystoreManagerPass = sb.toString();
+
         		//get key and cert
-        		File key = new File(DAO.getConfig("https.key", ""));
-        		if(!key.exists() || !key.isFile() || !key.canRead()){
+        		File keyFile = new File(DAO.getConfig("https.key", ""));
+        		if(!keyFile.exists() || !keyFile.isFile() || !keyFile.canRead()){
         			throw new Exception("Could not find key file");
         		}
-        		File cert = new File(DAO.getConfig("https.cert", ""));
-        		if(!cert.exists() || !cert.isFile() || !cert.canRead()){
+        		File certFile = new File(DAO.getConfig("https.cert", ""));
+        		if(!certFile.exists() || !certFile.isFile() || !certFile.canRead()){
         			throw new Exception("Could not find cert file");
         		}
-        		
-        		
-        		//generate random password
-        		char[] chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".toCharArray();
-        		StringBuilder sb = new StringBuilder();
-        		Random random = new Random();
-        		for (int i = 0; i < 20; i++) {
-        		    char c = chars[random.nextInt(chars.length)];
-        		    sb.append(c);
-        		}
-        		keystorePass = keystoreManagerPass = sb.toString();
-        		
-        		
-        		//temporary keystore files
-        		String pkcs12_temp = DAO.conf_dir.getAbsolutePath() + "/keystore_temp.pkcs12";
-        		keystorePath = DAO.conf_dir.getAbsolutePath() + "/keystore_temp.jks";
-        		File temp = new File(pkcs12_temp);
-        		if(temp.exists()) temp.delete();
-        		temp = new File(keystorePath);
-        		if(temp.exists()) temp.delete();
-        		
-        		//create temporary pkcs12 file from key and cert
-        		Runtime rt = Runtime.getRuntime();
-        		try{
-        			Process p = rt.exec("openssl pkcs12 -export -out " + pkcs12_temp
-        					+ " -in " + cert.getAbsolutePath()
-        					+ " -inkey " + key.getAbsolutePath()
-        					+ " -passout pass:" + keystorePass);
-        			p.waitFor();
-        		}
-        		catch(IOException e){
-        			throw new Exception("Key/Cert conversion failed");
-        		}
-        		
-        		//import pkcs12 file into keystore
-        		try{
-        			Process p = rt.exec("keytool -importkeystore -noprompt" 
-        					+ " -srckeystore " + pkcs12_temp
-        					+ " -srcstorepass " + keystorePass
-        					+ " -srcstoretype PKCS12"
-        					+ " -destkeystore " + keystorePath
-        					+ " -storepass " + keystorePass);
-        			p.waitFor();
-        		}
-        		catch(IOException e){
-        			throw new Exception("Import of temporary pkcs12 file failed");
-        		}
-        		finally{
-        			//remove intermediate keystore
-        			temp = new File(pkcs12_temp);
-        			if (temp.exists()) temp.delete();
-        		}
-        		
-        		//remove temporary java keystore on program exit
-        		File keystore = new File(keystorePath);
-        		if (keystore.exists()) keystore.deleteOnExit();
-        		
-        		
+
+                Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+
+                byte[] keyBytes = Files.readAllBytes(keyFile.toPath());
+                byte[] certBytes = Files.readAllBytes(certFile.toPath());
+
+                PEMParser parser = new PEMParser(new InputStreamReader(new ByteArrayInputStream(certBytes)));
+                X509Certificate cert = new JcaX509CertificateConverter().setProvider("BC").getCertificate((X509CertificateHolder) parser.readObject());
+
+                parser = new PEMParser(new InputStreamReader(new ByteArrayInputStream(keyBytes)));
+                PrivateKey key = new JcaPEMKeyConverter().setProvider("BC").getPrivateKey((PrivateKeyInfo) parser.readObject());
+
+                keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+                keyStore.load(null, null);
+
+                keyStore.setCertificateEntry(cert.getSubjectX500Principal().getName(), cert);
+                keyStore.setKeyEntry("defaultKey",key, password.toCharArray(), new Certificate[] {cert});
+
         		Log.getLog().info("Successfully imported keystore from key/cert files");
         	}
         	else{
@@ -417,9 +418,8 @@ public class LoklakServer {
 	        //alpn.setDefaultProtocol(http1.getProtocol());
 
 	        SslContextFactory sslContextFactory = new SslContextFactory();
-	        
-	        sslContextFactory.setKeyStorePath(keystorePath);
-	        sslContextFactory.setKeyStorePassword(keystorePass);
+
+            sslContextFactory.setKeyStore(keyStore);
 	        sslContextFactory.setKeyManagerPassword(keystoreManagerPass);
 	        //sslContextFactory.setCipherComparator(HTTP2Cipher.COMPARATOR);
 	        //sslContextFactory.setUseCipherSuitesOrder(true);
@@ -436,7 +436,8 @@ public class LoklakServer {
 	        LoklakServer.server.addConnector(sslConnector);
         }
     }
-    
+
+    @SuppressWarnings("unchecked")
     private static void setServerHandler(File dataFile){
     	
     	
@@ -499,30 +500,55 @@ public class LoklakServer {
         ServletContextHandler servletHandler = new ServletContextHandler();
 
         // add services
-        @SuppressWarnings("unchecked")
-        Class<? extends Servlet>[] services = new Class[]{
-                SusiService.class,
+        services = new Class[]{
+                // admin
+                StatusService.class,
+                
+                // cms
                 AppsService.class,
                 AuthorizationDemoService.class,
-                HelloService.class,
-                ConsoleService.class,
-                SignUpService.class,
                 LoginService.class,
                 PasswordRecoveryService.class,
-                TopMenuService.class,
-                ClientHandshakeService.class,
                 PasswordResetService.class,
-                ChangeUserRoleService.class,
+                PublicKeyRegistrationService.class,
+                SignUpService.class,
+                TopMenuService.class,
                 UserManagementService.class,
-                RSSReaderService.class,
+                TwitterAnalysisService.class,
+                AmazonProductService.class,
+                UserAccountPermissions.class,
+
+                // geo
+                
+                // iot
+                
+                // p2p
+                HelloService.class,
+                
+                // search
+                ConsoleService.class,
                 EventBriteCrawlerService.class,
                 MeetupsCrawlerService.class,
-                WordpressCrawlerService.class
+                RSSReaderService.class,
+                SusiService.class,
+                WordpressCrawlerService.class,
+                GithubProfileScraper.class,
+                InstagramProfileScraper.class,
+                LocationWiseTimeService.class,
+                TimeAndDateService.class,
+                WikiGeoData.class,
+                QuoraProfileScraper.class
+                
+                // tools
+                
+                // vis
+                
         };
         for (Class<? extends Servlet> service: services)
             try {
                 servletHandler.addServlet(service, ((APIHandler) (service.newInstance())).getAPIPath());
             } catch (InstantiationException | IllegalAccessException e) {
+                Log.getLog().warn(service.getName() + " instantiation error", e);
                 e.printStackTrace();
             }
         
@@ -535,7 +561,6 @@ public class LoklakServer {
         servletHandler.addServlet(PeersServlet.class, "/api/peers.json");
         servletHandler.addServlet(PeersServlet.class, "/api/peers.csv");
         servletHandler.addServlet(CrawlerServlet.class, "/api/crawler.json");
-        servletHandler.addServlet(StatusServlet.class, "/api/status.json");
         servletHandler.addServlet(SearchServlet.class, "/api/search.rss");
         servletHandler.addServlet(SearchServlet.class, "/api/search.json");
         servletHandler.addServlet(SearchServlet.class, "/api/search.txt");
@@ -555,6 +580,7 @@ public class LoklakServer {
         servletHandler.addServlet(ProxyServlet.class, "/api/proxy.jpg");
         servletHandler.addServlet(ValidateServlet.class, "/api/validate.json");
         servletHandler.addServlet(GenericScraper.class, "/api/genericscraper.json");
+        servletHandler.addServlet(WeiboUserInfo.class, "/api/weibo.json");
         ServletHolder pushServletHolder = new ServletHolder(PushServlet.class);
         pushServletHolder.getRegistration().setMultipartConfig(multipartConfig);
         servletHandler.addServlet(pushServletHolder, "/api/push.json");
@@ -565,13 +591,17 @@ public class LoklakServer {
         servletHandler.addServlet(OpenWifiMapPushServlet.class, "/api/push/openwifimap.json");
         servletHandler.addServlet(NodelistPushServlet.class, "/api/push/nodelist.json");
         servletHandler.addServlet(FreifunkNodePushServlet.class, "/api/push/freifunknode.json");
+        servletHandler.addServlet(FreifunkNodeFetchServlet.class, "/api/freifunkfetch.json");
         servletHandler.addServlet(NetmonPushServlet.class, "/api/push/netmon.xml");
         servletHandler.addServlet(NMEAServlet.class, "/api/nmea.txt");
+        servletHandler.addServlet(NOAAAlertServlet.class, "/api/noaa.json");
+        servletHandler.addServlet(StuffInSpaceServlet.class, "/api/stuffinspace.json");
+        servletHandler.addServlet(YahiHazeServlet.class, "/api/yahi.json");
+        servletHandler.addServlet(EarthquakeServlet.class, "/api/earthquake.json");
         ServletHolder assetServletHolder = new ServletHolder(AssetServlet.class);
         assetServletHolder.getRegistration().setMultipartConfig(multipartConfig);
         servletHandler.addServlet(assetServletHolder, "/api/asset");
         servletHandler.addServlet(Sitemap.class, "/api/sitemap.xml");
-        servletHandler.addServlet(TwitterAnalysis.class, "/api/twitanalysis.json");
         servletHandler.addServlet(ThreaddumpServlet.class, "/api/threaddump.txt");
         servletHandler.addServlet(MarkdownServlet.class, "/vis/markdown.gif");
         servletHandler.addServlet(MarkdownServlet.class, "/vis/markdown.gif.base64");
@@ -585,9 +615,10 @@ public class LoklakServer {
         servletHandler.addServlet(MapServlet.class, "/vis/map.png.base64");
         servletHandler.addServlet(MapServlet.class, "/vis/map.jpg");
         servletHandler.addServlet(MapServlet.class, "/vis/map.jpg.base64");
+        servletHandler.addServlet(PieChartServlet.class, "/vis/piechart.png");
         servletHandler.setMaxFormContentSize(10 * 1024 * 1024); // 10 MB
 
-        ErrorHandler errorHandler = new LoklakErrorHandler();
+        ErrorHandler errorHandler = new ErrorHandler();
         errorHandler.setShowStacks(true);
         servletHandler.setErrorHandler(errorHandler);
         
@@ -638,7 +669,7 @@ public class LoklakServer {
 	            throw new IOException("port " + httpPort + " is already occupied by another service, maybe another loklak is running on this port already. exit.");
 	        } finally {
 	            // close the socket again
-	            if (ss != null) {try {ss.close();} catch (IOException e) {}}
+	            if (ss != null) ss.close();
 	        }
         }
         
@@ -654,7 +685,7 @@ public class LoklakServer {
 	        	throw new IOException("port " + httpsPort + " is already occupied by another service, maybe another loklak is running on this port already. exit.");
 	        } finally {
 	            // close the socket again
-	            if (sss != null) {try {sss.close();} catch (IOException e) {}}
+	            if (sss != null) sss.close();
 	        }
         }
     }

@@ -150,6 +150,7 @@ public class DAO {
     public static UserRoles userRoles;
     public static JsonTray passwordreset;
     public static Map<String, Accounting> accounting_temporary = new HashMap<>();
+    public static JsonFile login_keys;
     
     // built-in artificial intelligence
     public static SusiMind susi;
@@ -260,6 +261,9 @@ public class DAO {
         Path accounting_path = settings_dir.resolve("accounting.json");
         accounting = new JsonTray(accounting_path.toFile(), 10000);
         OS.protectPath(accounting_path);
+        Path login_keys_path = settings_dir.resolve("login-keys.json");
+        login_keys = new JsonFile(login_keys_path.toFile());
+        OS.protectPath(login_keys_path);
 
 
         Log.getLog().info("Initializing user roles");
@@ -668,8 +672,10 @@ public class DAO {
             if (mw.t == null) continue;
             if (mw.dump) dump.add(mw); else noDump.add(mw);
         }
-        writeMessageBulkNoDump(noDump);
-        return writeMessageBulkDump(dump);
+        Set<String> createdIDs = new HashSet<>();
+        createdIDs.addAll(writeMessageBulkNoDump(noDump));
+        createdIDs.addAll(writeMessageBulkDump(dump)); // does also do an writeMessageBulkNoDump internally
+        return createdIDs;
     }
 
     /**
@@ -798,25 +804,38 @@ public class DAO {
         }
         return true;
     }
+
+    private static long countLocalHourMessages(final long millis) {
+        if (millis > 3600000L) return countLocalDayMessages(millis);
+        return elasticsearch_client.count(IndexName.messages_hour.name(), "timestamp", millis == 3600000L ? -1 : millis);
+    }
     
-    public static long countLocalMessages(String provider_hash) {
-        return elasticsearch_client.countLocal(IndexName.messages.name(), provider_hash);
+    private static long countLocalDayMessages(final long millis) {
+        if (millis > 86400000L) return countLocalWeekMessages(millis);
+        return elasticsearch_client.count(IndexName.messages_day.name(), "timestamp", millis == 3600000L ? -1 : millis);
+    }
+    
+    private static long countLocalWeekMessages(final long millis) {
+        if (millis > 604800000L) return countLocalMessages(millis);
+        return elasticsearch_client.count(IndexName.messages_week.name(), "timestamp", millis == 3600000L ? -1 : millis);
     }
 
-    public static long countLocalMessages(long millis) {
-        return elasticsearch_client.count(IndexName.messages.name(), "timestamp", millis);
+    public static long countLocalMessages(final long millis) {
+        if (millis == 0) return 0;
+        if (millis > 0) {
+            if (millis <= 3600000L) return countLocalHourMessages(millis);
+            if (millis <= 86400000L) return countLocalDayMessages(millis);
+            if (millis <= 604800000L) return countLocalWeekMessages(millis);
+        }
+        return elasticsearch_client.count(IndexName.messages.name(), "timestamp", millis == Long.MAX_VALUE ? -1 : millis);
     }
-    
-    public static long countLocalHourMessages(long millis) {
-        return elasticsearch_client.count(IndexName.messages_hour.name(), "timestamp", millis);
+
+    public static long countLocalMessages() {
+        return elasticsearch_client.count(IndexName.messages.name(), "timestamp", -1);
     }
-    
-    public static long countLocalDayMessages(long millis) {
-        return elasticsearch_client.count(IndexName.messages_day.name(), "timestamp", millis);
-    }
-    
-    public static long countLocalWeekMessages(long millis) {
-        return elasticsearch_client.count(IndexName.messages_week.name(), "timestamp", millis);
+
+    public static long countLocalMessages(String provider_hash) {
+        return elasticsearch_client.countLocal(IndexName.messages.name(), provider_hash);
     }
     
     public static long countLocalUsers() {
@@ -895,7 +914,7 @@ public class DAO {
                 } else if (q.contains("since:week")) {
                     this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_week).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
                 } else {
-                    this.query = elasticsearch_client.query((resultIndex = IndexName.messages_hour).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
+                    this.query = elasticsearch_client.query((resultIndex = IndexName.messages).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
                 }
             } else {
                 // use only a time frame that is sufficient for a result

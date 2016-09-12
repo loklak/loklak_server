@@ -23,6 +23,7 @@ package org.loklak.susi;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -43,6 +44,17 @@ public class SusiThought extends JSONObject {
         super(true);
         this.metadata_name = "metadata";
         this.data_name = "data";
+    }
+    
+    /**
+     * create a clone of a json object as a SusiThought object
+     * @param json the 'other' thought, probably an exported and re-imported thought
+     */
+    public SusiThought(JSONObject json) {
+        this();
+        if (json.has(this.metadata_name)) this.put(this.metadata_name, json.getJSONObject(this.metadata_name));
+        if (json.has(this.data_name)) this.setData(json.getJSONArray(this.data_name));
+        if (json.has("actions")) this.put("actions", json.getJSONArray("actions"));
     }
     
     /**
@@ -119,14 +131,29 @@ public class SusiThought extends JSONObject {
     }
 
     /**
+     * The process which created this thought may have a name or description string.
+     * To document what happened, the process namen can be given here
+     * @param query the process which formed this thought
+     * @return the thought
+     */
+    public SusiThought setProcess(String processName) {
+        getMetadata().put("process", processName);
+        return this;
+    }
+
+    /**
      * If this thought was the result of a retrieval using a specific expression, that expression is
      * called the query. The query can be attached to a thought
-     * @param query the expression that cause that this thought was formed
+     * @param query the expression which caused that this thought was formed
      * @return the thought
      */
     public SusiThought setQuery(String query) {
         getMetadata().put("query", query);
         return this;
+    }
+    
+    public String getQuery() {
+        return getMetadata().has("query") ? getMetadata().getString("query") : "";
     }
     
     /**
@@ -179,6 +206,23 @@ public class SusiThought extends JSONObject {
     }
     
     /**
+     * Merging of data is required during an mind-meld.
+     * To meld two thoughts, we combine their data arrays into one.
+     * The resulting table has the maximum length of the source tables
+     * @param table the information to be melted into our existing table.
+     * @return the thought
+     */
+    public SusiThought mergeData(JSONArray table1) {
+        JSONArray table0 = this.getData();
+        while (table0.length() < table1.length()) table0.put(new JSONObject());
+        for (int i = 0; i < table1.length(); i++) {
+            table0.getJSONObject(i).putAll(table1.getJSONObject(i));
+        }
+        setData(table0);
+        return this;
+    }
+    
+    /**
      * If during thinking we observe something that we want to memorize, we can memorize this here
      * @param featureName the object key
      * @param observation the object value
@@ -186,10 +230,14 @@ public class SusiThought extends JSONObject {
      */
     public SusiThought addObservation(String featureName, String observation) {
         JSONArray data = getData();
-        if (data.length() == 1) {
-            JSONObject thought = data.getJSONObject(0);
-            thought.put(featureName, observation);
+        for (int i = 0; i < data.length(); i++) {
+            JSONObject spark = data.getJSONObject(i);
+            if (!spark.has(featureName)) {
+                spark.put(featureName, observation);
+                return this;
+            }
         }
+        data.put(new JSONObject().put(featureName, observation));
         return this;
     }
     
@@ -217,4 +265,30 @@ public class SusiThought extends JSONObject {
         return actions;
     }
     
+    public static final Pattern variable_pattern = Pattern.compile("\\$.*?\\$");
+    
+    /**
+     * Unification applies a piece of memory within the current argument to a statement
+     * which creates an instantiated statement
+     * @param statement
+     * @return the instantiated statement with elements of the argument applied as much as possible
+     */
+    public String unify(String statement) {
+        JSONArray table = this.getData();
+        if (table != null && table.length() > 0) {
+            JSONObject row = table.getJSONObject(0);
+            for (String key: row.keySet()) {
+                int i = statement.indexOf("$" + key + "$");
+                if (i >= 0) {
+                    statement = statement.substring(0, i) + row.get(key).toString() + statement.substring(i + key.length() + 2);
+                }
+            }
+        }
+        return statement;
+    }
+    
+    public static void main(String[] args) {
+        SusiThought t = new SusiThought().addObservation("a", "letter-a");
+        System.out.println(t.unify("the letter $a$"));
+    }
 }

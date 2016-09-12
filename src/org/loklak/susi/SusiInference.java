@@ -19,7 +19,9 @@
 
 package org.loklak.susi;
 
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import org.json.JSONObject;
 import org.loklak.api.search.ConsoleService;
@@ -35,7 +37,12 @@ import org.loklak.api.search.ConsoleService;
  */
 public class SusiInference {
     
-    public static enum Type {console,flow;}
+    public static enum Type {
+        console, flow, memory;
+        public int getSubscore() {
+            return this.ordinal();
+        }
+    }
     
     private JSONObject json;
 
@@ -56,7 +63,7 @@ public class SusiInference {
      * @return the inference type
      */
     public Type getType() {
-        return this.json.has("type") ? Type.valueOf(this.json.getString("type")) : null;
+        return this.json.has("type") ? Type.valueOf(this.json.getString("type")) : Type.console;
     }
     
     /**
@@ -72,48 +79,105 @@ public class SusiInference {
     
     private final static SusiSkills flowSkill = new SusiSkills();
     static {
-        flowSkill.put(Pattern.compile("first"), (flow, matcher) -> {
+        flowSkill.put(Pattern.compile("FIRST"), (flow, matcher) -> {
+            // extract only the first row of a thought
             SusiThought nextThought = new SusiThought();
-            if (flow != null && flow.getCount() > 0) nextThought.getData().put(flow.getData().get(0));
+            SusiThought mindstate = flow.mindstate();
+            if (flow != null && mindstate.getCount() > 0) nextThought.getData().put(mindstate.getData().get(0));
             return nextThought;
         });
-        flowSkill.put(Pattern.compile("first\\h+?(.*?)\\h*?"), (flow, matcher) -> {
+        flowSkill.put(Pattern.compile("FIRST\\h+?(.*?)\\h*?"), (flow, matcher) -> {
             SusiThought nextThought = new SusiThought();
-            if (flow != null && flow.getCount() > 0) nextThought.getData().put(flow.getData().get(0));
+            SusiThought mindstate = flow.mindstate();
+            if (flow != null && mindstate.getCount() > 0) nextThought.getData().put(mindstate.getData().get(0));
             return nextThought;
         });
-        flowSkill.put(Pattern.compile("rest"), (flow, matcher) -> {
+        flowSkill.put(Pattern.compile("REST"), (flow, matcher) -> {
+            // remove the first row of a thought and return the remaining
             SusiThought nextThought = new SusiThought();
-            if (flow != null && flow.getCount() > 0) nextThought.getData().put(flow.getData().remove(0));
+            SusiThought mindstate = flow.mindstate();
+            if (flow != null && mindstate.getCount() > 0) nextThought.getData().put(mindstate.getData().remove(0));
             return nextThought;
         });
-        flowSkill.put(Pattern.compile("rest\\h+?(.*?)\\h*?"), (flow, matcher) -> {
+        flowSkill.put(Pattern.compile("REST\\h+?(.*?)\\h*?"), (flow, matcher) -> {
             SusiThought nextThought = new SusiThought();
-            if (flow != null && flow.getCount() > 0) nextThought.getData().put(flow.getData().remove(0));
+            SusiThought mindstate = flow.mindstate();
+            if (flow != null && mindstate.getCount() > 0) nextThought.getData().put(mindstate.getData().remove(0));
             return nextThought;
         });
+        flowSkill.put(Pattern.compile("SEE\\h+?(.*?)\\h+?FROM\\h+?'(.*?)'\\h+?MATCHING\\h+?'(.*?)'\\h+?REGEX\\h*?"), (flow, matcher) -> {
+            return see(flow, matcher.group(1), matcher.group(2), Pattern.compile(flow.unify(matcher.group(3))));
+        });
+        flowSkill.put(Pattern.compile("SEE\\h+?(.*?)\\h+?FROM\\h+?'(.*?)'\\h+?MATCHING\\h+?'(.*?)'\\h+?PATTERN\\h*?"), (flow, matcher) -> {
+            return see(flow, matcher.group(1), matcher.group(2), Pattern.compile(SusiPhrase.parsePattern(flow.unify(matcher.group(3)))));
+        });
+        flowSkill.put(Pattern.compile("EXPECT\\h+?'(.*?)'\\h+?MATCHING\\h+?'(.*?)'\\h+?REGEX\\h*?"), (flow, matcher) -> {
+            return see(flow, "*", matcher.group(1), Pattern.compile(flow.unify(matcher.group(2))));
+        });
+        flowSkill.put(Pattern.compile("EXPECT\\h+?'(.*?)'\\h+?MATCHING\\h+?'(.*?)'\\h+?PATTERN\\h*?"), (flow, matcher) -> {
+            return see(flow, "*", matcher.group(1), Pattern.compile(SusiPhrase.parsePattern(flow.unify(matcher.group(2)))));
+        });
+        flowSkill.put(Pattern.compile("REJECT\\h+?'(.*?)'\\h+?MATCHING\\h+?'(.*?)'\\h+?REGEX\\h*?"), (flow, matcher) -> {
+            SusiThought t = see(flow, "*", matcher.group(1), Pattern.compile(flow.unify(matcher.group(2))));
+            if (t.getCount() == 0) return new SusiThought().addObservation("regex-" + matcher.group(2), matcher.group(1));
+            return new SusiThought(); // empty thought -> fail
+        });
+        flowSkill.put(Pattern.compile("REJECT\\h+?'(.*?)'\\h+?MATCHING\\h+?'(.*?)'\\h+?PATTERN\\h*?"), (flow, matcher) -> {
+            SusiThought t = see(flow, "*", matcher.group(1), Pattern.compile(SusiPhrase.parsePattern(flow.unify(matcher.group(2)))));
+            if (t.getCount() == 0) return new SusiThought().addObservation("pattern-" + matcher.group(2), matcher.group(1));
+            return new SusiThought(); // empty thought -> fail
+        });
+        // more skills:
+        // - map/reduce to enable loops
+        // - sort asc/dec
+        // - stack + join
+        // - register (write temporary variable)
+        // - compute (write computation into new field)
+        // - cut (to stop backtracking)
+    }
+    
+    private static final SusiThought see(SusiArgument flow, String transferExpr, String expr, Pattern pattern) {
+        // there will be an empty thought as response if the pattern does not match
+        // having no match will cause a fail (triggered by empty thought), the rule is aborted
+        // example: see $1$ as idea from ""
+        SusiThought nextThought = new SusiThought();
+        try {
+            Matcher m = pattern.matcher(flow.unify(expr));
+            if (m.matches()) {
+                SusiTransfer transfer = new SusiTransfer(transferExpr);
+                JSONObject choice = new JSONObject();
+                int gc = m.groupCount();
+                choice.put("%0%", m.group(0));
+                for (int i = 0; i < gc; i++) choice.put("%" + (i+1) + "%", m.group(i));
+                JSONObject seeing = transfer.extract(choice);
+                for (String key: seeing.keySet()) nextThought.addObservation(key, seeing.getString(key));
+            }
+        } catch (PatternSyntaxException e) {
+            e.printStackTrace();
+        }
+        return nextThought; // an empty thought is a fail signal
     }
     
     
     /**
-     * Inference must be applicable to thought arguments. This method executes the inference process on an existing 
+     * The inference must be applicable to thought arguments. This method executes the inference process on an existing 
      * argument and produces another thought which may or may not be appended to the given argument to create a full
      * argument proof. Within this method also data from the argument is unified with the inference variables
-     * @param argument
+     * @param flow
      * @return a new thought as result of the inference
      */
-    public SusiThought applySkills(SusiArgument argument) {
+    public SusiThought applySkills(SusiArgument flow) {
         Type type = this.getType();
         if (type == SusiInference.Type.console) {
-            String expression = argument.unify(this.getExpression());
-            return ConsoleService.dbAccess.inspire(expression);
+            String expression = flow.unify(this.getExpression());
+            try {return ConsoleService.dbAccess.deduce(flow, expression);} catch (Exception e) {}
         }
         if (type == SusiInference.Type.flow) {
-            String expression = argument.unify(this.getExpression());
-            return flowSkill.deduce(argument.mindstate(), expression);
+            String expression = flow.unify(this.getExpression());
+            try {return flowSkill.deduce(flow, expression);} catch (Exception e) {}
         }
-        // maybe the argument is not applicable, then the latest mindstate is empty application
-        return argument.mindstate();
+        // maybe the argument is not applicable, then an empty thought is produced (which means a 'fail')
+        return new SusiThought();
 }
     
     public String toString() {

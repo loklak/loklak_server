@@ -33,6 +33,7 @@ import java.util.regex.Pattern;
 
 import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
+import org.loklak.api.search.ShortlinkFromTweetServlet;
 import org.loklak.data.Classifier;
 import org.loklak.data.DAO;
 import org.loklak.data.Classifier.Category;
@@ -75,7 +76,7 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
         this.created_at = new Date();
         this.on = null;
         this.to = null;
-        this.source_type = SourceType.TWITTER;
+        this.source_type = SourceType.GENERIC;
         this.provider_type = ProviderType.NOONE;
         this.provider_hash = "";
         this.screen_name = "";
@@ -116,16 +117,16 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
         Object to_obj = lazyGet(json, "to"); this.to = to_obj == null ? null : parseDate(to);
         String source_type_string = (String) lazyGet(json, "source_type");
         try {
-            this.source_type = source_type_string == null ? SourceType.TWITTER : new SourceType(source_type_string);
+            this.source_type = source_type_string == null ? SourceType.GENERIC : SourceType.byName(source_type_string);
         } catch (IllegalArgumentException e) {
-            this.source_type = SourceType.TWITTER;
+            this.source_type = SourceType.GENERIC;
         }
         String provider_type_string = (String) lazyGet(json, "provider_type");
-        if (provider_type_string == null) provider_type_string = ProviderType.GENERIC.name();
+        if (provider_type_string == null) provider_type_string = ProviderType.NOONE.name();
         try {
             this.provider_type = ProviderType.valueOf(provider_type_string);
         } catch (IllegalArgumentException e) {
-            this.provider_type = ProviderType.GENERIC;
+            this.provider_type = ProviderType.NOONE;
         }
         this.provider_hash = (String) lazyGet(json, "provider_hash");
         this.screen_name = (String) lazyGet(json, "screen_name");
@@ -368,12 +369,20 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
     
     public String getText(final int iflinkexceedslength, final String urlstub) {
         // check if we shall replace shortlinks
-        if (this.getLinks() != null && this.getLinks().length == 1 &&
-            this.getLinks()[0] != null && this.getLinks()[0].length() > iflinkexceedslength &&
-            DAO.existMessage(this.getIdStr())) {
-            return this.text.replace(this.getLinks()[0], urlstub + "/x?id=" + this.getIdStr());
+        String t = this.text;
+        String[] links = this.getLinks();
+        if (links != null) {
+            linkloop: for (int nth = 0; nth < links.length; nth++) {
+                String link = links[nth];
+                if (link.length() > iflinkexceedslength) {
+                    if (!DAO.existMessage(this.getIdStr())) break linkloop;
+                    t = t.replace(link, urlstub + "/x?id=" + this.getIdStr() +
+                            (nth == 0 ? "" : ShortlinkFromTweetServlet.SHORTLINK_COUNTER_SEPERATOR + Integer.toString(nth)));
+                }
+            }
         }
-        return this.text;
+        
+        return t;
     }
 
     public String[] getMentions() {
@@ -538,17 +547,12 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
         if (this.provider_hash != null && this.provider_hash.length() > 0) m.put("provider_hash", this.provider_hash);
         m.put("retweet_count", this.retweet_count);
         m.put("favourites_count", this.favourites_count); // there is a slight inconsistency here in the plural naming but thats how it is noted in the twitter api
-        m.put("images", this.images);
-        m.put("images_count", this.images.size());
-        m.put("audio", this.audio);
-        m.put("audio_count", this.audio.size());
-        m.put("videos", this.videos);
-        m.put("videos_count", this.videos.size());
         m.put("place_name", this.place_name);
         m.put("place_id", this.place_id);
         
         // add statistic/calculated data
         if (calculatedData) {
+            
             // location data
             if (this.place_context != null) m.put("place_context", this.place_context.name());
             if (this.place_country != null && this.place_country.length() == 2) {
@@ -571,6 +575,12 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
             m.put("hosts_count", this.hosts.length);
             m.put("links", this.links);
             m.put("links_count", this.links.length);
+            m.put("images", this.images);
+            m.put("images_count", this.images.size());
+            m.put("audio", this.audio);
+            m.put("audio_count", this.audio.size());
+            m.put("videos", this.videos);
+            m.put("videos_count", this.videos.size());
             m.put("mentions", this.mentions);
             m.put("mentions_count", this.mentions.length);
             m.put("hashtags", this.hashtags);

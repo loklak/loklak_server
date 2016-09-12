@@ -23,6 +23,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+import org.jfree.util.Log;
 import org.json.JSONObject;
 
 /**
@@ -33,13 +34,21 @@ import org.json.JSONObject;
  */
 public class SusiPhrase {
 
-    public static enum Type {regex, pattern;}
+    public static enum Type {
+        minor(0), regex(1), pattern(1), prior(3);
+        private final int subscore;
+        private Type(int s) {this.subscore = s;}
+        private int getSubscore() {return this.subscore;}
+    }
 
     private final static String CATCHALL_CAPTURE_GROUP_STRING = "(.*)"; // greedy capturing everything is the best choice: that covers words phrases as well
     private final static Pattern CATCHALL_CAPTURE_GROUP_PATTERN = Pattern.compile(Pattern.quote(CATCHALL_CAPTURE_GROUP_STRING));
     private final static Pattern dspace = Pattern.compile("  ");
 
     private final Pattern pattern;
+    private final Type type;
+    private final boolean hasCaptureGroups;
+    private final int meatsize;
     
     /**
      * Create a phrase using a json data structure containing the phrase description.
@@ -50,26 +59,48 @@ public class SusiPhrase {
      * @throws PatternSyntaxException
      */
     public SusiPhrase(JSONObject json) throws PatternSyntaxException {
-        if (!json.has("type")) throw new PatternSyntaxException("type missing", "", 0);
-        Type type = Type.pattern;
-        try {
-            type = Type.valueOf(json.getString("type"));
-        } catch (IllegalArgumentException e) {throw new PatternSyntaxException("type value is wrong", json.getString("type"), 0);}
         if (!json.has("expression")) throw new PatternSyntaxException("expression missing", "", 0);
         String expression = json.getString("expression");
+        Type t = Type.pattern;
+        if (json.has("type")) try {
+            t = Type.valueOf(json.getString("type"));
+        } catch (IllegalArgumentException e) {
+            Log.error("type value is wrong: " + json.getString("type"));
+            t = expression.indexOf(".*") >= 0 ? Type.regex : expression.indexOf('*') >= 0 ? Type.pattern : Type.minor;
+        }
+        
         expression = expression.toLowerCase().replaceAll("\\#", "  ");
         Matcher m;
         while ((m = dspace.matcher(expression)).find()) expression = m.replaceAll(" ");
-        if (type == Type.pattern) {
-            if (expression.length() == 0 || expression.equals("*")) expression = CATCHALL_CAPTURE_GROUP_STRING;
-            if ("?!:.".indexOf(expression.charAt(expression.length() - 1)) >= 0) expression = expression.substring(0, expression.length() - 1);
-            if (expression.startsWith("* ")) expression = CATCHALL_CAPTURE_GROUP_STRING + " ?" + expression.substring(2);
-            if (expression.startsWith("*")) expression = CATCHALL_CAPTURE_GROUP_STRING + " ?" + expression.substring(1);
-            if (expression.endsWith(" *")) expression = expression.substring(0, expression.length() - 2) + " ?" + CATCHALL_CAPTURE_GROUP_STRING;
-            if (expression.endsWith("*")) expression = expression.substring(0, expression.length() - 1) + " ?" + CATCHALL_CAPTURE_GROUP_STRING;
-            expression = expression.replaceAll(" \\* ", " " + CATCHALL_CAPTURE_GROUP_STRING + " ");
-        }
+        if ((t == Type.minor || t == Type.prior) && expression.indexOf(".*") >= 0) t = Type.regex;
+        if ((t == Type.minor || t == Type.prior) && expression.indexOf('*') >= 0) t = Type.pattern;
+        if (t == Type.pattern) expression = parsePattern(expression);
         this.pattern = Pattern.compile(expression);
+        this.type = expression.equals("(.*)") ? Type.minor : t;
+        this.hasCaptureGroups = expression.replaceAll("\\(\\?", "").indexOf('(') >= 0;
+        
+        // measure the meat size
+        this.meatsize = Math.min(99, extractMeat(expression).length());
+    }
+    
+    public static String parsePattern(String expression) {
+        if (expression.length() == 0 || expression.equals("*")) expression = CATCHALL_CAPTURE_GROUP_STRING;
+        if ("?!:.".indexOf(expression.charAt(expression.length() - 1)) >= 0) expression = expression.substring(0, expression.length() - 1);
+        if (expression.startsWith("* ")) expression = CATCHALL_CAPTURE_GROUP_STRING + " ?" + expression.substring(2);
+        if (expression.startsWith("*")) expression = CATCHALL_CAPTURE_GROUP_STRING + " ?" + expression.substring(1);
+        if (expression.endsWith(" *")) expression = expression.substring(0, expression.length() - 2) + " ?" + CATCHALL_CAPTURE_GROUP_STRING;
+        if (expression.endsWith("*")) expression = expression.substring(0, expression.length() - 1) + " ?" + CATCHALL_CAPTURE_GROUP_STRING;
+        expression = expression.replaceAll(" \\* | \\?\\* ", " " + CATCHALL_CAPTURE_GROUP_STRING + " ");
+        return expression;
+    }
+    
+    public static String extractMeat(String expression) {
+        StringBuffer sb = new StringBuffer();
+        for (int i = 0; i < expression.length(); i++) {
+            char c = expression.charAt(i);
+            if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') ||(c >= 'A' && c <= 'Z')) sb.append(c);
+        }
+        return sb.toString();
     }
     
     /**
@@ -80,6 +111,22 @@ public class SusiPhrase {
         return this.pattern;
     }
     
+    /**
+     * get the type. this will be used for score computation
+     * @return the type
+     */
+    public Type getType() {
+        return this.type;
+    }
+    
+    public int getSubscore() {
+        return ((this.type == Type.pattern || this.type == Type.regex) && !this.hasCaptureGroups) ? this.type.getSubscore() + 1 : this.type.getSubscore();
+    }
+    
+    public int getMeatsize() {
+        return this.meatsize;
+    }
+    
     public String toString() {
         return this.toJSON().toString();
     }
@@ -87,14 +134,14 @@ public class SusiPhrase {
     public JSONObject toJSON() {
         JSONObject json = new JSONObject(true);
         String p = this.pattern.pattern();
-        if (CATCHALL_CAPTURE_GROUP_PATTERN.matcher(p).find()) {
-            p = p.replaceAll(CATCHALL_CAPTURE_GROUP_PATTERN.pattern(), "*");
-        }
-        if (p.indexOf('.') >= 0 || p.indexOf('\\') > 0) {
-            json.put("type", Type.regex.name());
+        if (this.type == Type.pattern || this.type == Type.regex) {
+            if (CATCHALL_CAPTURE_GROUP_PATTERN.matcher(p).find()) {
+                p = p.replaceAll(CATCHALL_CAPTURE_GROUP_PATTERN.pattern(), "*");
+            }
+            json.put("type", this.type.name());
             json.put("expression", this.pattern.pattern());
         } else {
-            json.put("type", Type.pattern.name());
+            json.put("type", this.type.name());
             json.put("expression", p);
         }
         return json;

@@ -1,150 +1,100 @@
 $(document).ready(function()
 {
-  var emailerr = false, passerr = false, confirmerr = false;
-
 	// get password parameters
-	var regex;
 	$.ajax(	"/api/signup.json", {
-       data: { getParameters: true },
-       dataType: 'json',
-       success: function (response) {
-        regex = response.regex;
-        var regexTooltip = response.regexTooltip;
-        $('#pass').tooltip({'trigger':'focus', 'placement': 'left', 'title': regexTooltip});
-    },
-    error: function (xhr, ajaxOptions, thrownError) {
-       $('#status-box').text(thrownError);
-       $('#status-box').addClass("error");
-       $('#email').prop( "disabled", true );
-       $('#pass').prop( "disabled", true );
-       $('#confirmpass').prop( "disabled", true );
-       $('#signup').prop( "disabled", true );
-   },
-});
+		data: { getParameters: true },
+		dataType: "json",
+		success: function (response) {
+			var regex = response.regex;
+			var regexTooltip = response.regexTooltip;
 
-    $('#pass').keyup(function(){
-        $('#passtrength').text(strengthlvl($('#pass').val()));
-    });
+			$("#pass").attr("pattern", regex);
+			$("#passconfirm").attr("pattern", regex);
 
-    $('#pass').focus(function(){
-        var emailval = $('#email').val();
-        var regex = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-        if(emailval){
-            $('#email').removeClass();
-            $('#valid').removeClass();
-            if(regex.test(emailval)){
-                $('#valid').text("Email valid!");
-                $('#email').addClass("success");
-                $('#valid').addClass("success");
-                emailerr = false;
-            }
-            else{
-                $('#valid').text("Invalid email!");
-                $('#email').addClass("error");
-                $('#valid').addClass("error");
-                emailerr = true;
-            }
-        }
-        else{
-            $('#valid').text("Required field!");
-            $('#email').addClass("error");
-            $('#valid').addClass("error");
-            emailerr = true;
-        }
-    })
+			$("#pass").attr("title", regexTooltip);
+			$("#pass").tooltip({"trigger":"focus", "placement": "left", "title": regexTooltip});
 
-    $('#pass').keyup(function(){
-        $('#confirmpass').removeClass();
-        $('#matching').removeClass();
-        if($('#confirmpass').val() && $(this).val()!=$('#confirmpass').val()){
-            $('#confirmpass').removeClass();
-            $('#confirmpass').addClass("error");
-            $('#matching').text("");
-            confirmerr = true;
-        } else if ($('#confirmpass').val() && $(this).val()==$('#confirmpass').val() && $(this).val().length >=6) {
-            $('#confirmpass').addClass("success");
-            $('#matching').addClass("success");
-            $('#matching').text("Passwords match!");
-            confirmerr = false;
-        }
-    })
+			$("#status-box").text("");
+			$("#status-box").removeClass("error");
+			$("#email").removeClass("hidden");
+			$("#pass").removeClass("hidden");
+			$("#confirmpass").removeClass("hidden");
+			$("#signup").removeClass("hidden");
+		},
+		error: function (xhr, ajaxOptions, thrownError) {
+			$("#status-box").text(thrownError);
+			$("#status-box").addClass("error");
+			$("#email").addClass("hidden");
+			$("#pass").addClass("hidden");
+			$("#confirmpass").addClass("hidden");
+			$("#signup").addClass("hidden");
+		},
+	});
 
-    $('#confirmpass').focus(function(){
-        checkEmpty();
-    })
+	function resetFields(){
+		$("#status-box").text("");
+		$("#status-box").removeClass();
+		$("#email").val("");
+		$("#email").removeClass();
+		$("#pass").val("");
+		$("#pass").removeClass();
+		$("#confirmpass").val("");
+		$("#confirmpass").removeClass();
+		$("#valid").text("");
+		$("#valid").removeClass();
+		$("#matching").text("");
+		$("#matching").removeClass();
+		$("#passtrength").text("");
+		$("#passtrength").removeClass();
+	}
 
-    $('#confirmpass').keyup(function(){
-        var pass = $('#pass').val();
-        var confirmpass = $(this).val();
-        if(confirmpass){
-            $(this).removeClass();
-            $('#matching').removeClass();
-            if(confirmpass == pass && pass.length >= 6){
-                $(this).addClass("success");
-                $('#matching').addClass("success");
-                $('#matching').text("Passwords match!");
-                confirmerr = false;
-            } else {
-                $(this).addClass("error");
-                $('#matching').text("");
-                confirmerr = true;
-            }
-        } else {
-            $(this).removeClass();
-            $('#matching').text("");
-        }
-    });
+	function checkPasswordSameAsEmail(){
+		if($("#email").val() === $("#pass").val()){
+			$("#pass")[0].setCustomValidity("Password must not be equal to the email address");
+			return false;
+		} else {
+			$("#pass")[0].setCustomValidity("");
+			return true;
+		}
+	}
 
-    $('#signup').click(function(){
-        checkEmpty();
-        var total = passerr || confirmerr || emailerr;
-        if(!total){
-            var mail = encodeURIComponent($('#email').val());
-            var pwd = encodeURIComponent($('#pass').val());
+	function checkMatching(){
+		if(!$("#pass")[0].checkValidity() || $("#pass").val() !== $("#confirmpass").val()) {
+			$("#confirmpass")[0].setCustomValidity("Passwords don't Match");
+			return false;
+		} else {
+			$("#confirmpass")[0].setCustomValidity("");
+			return true;
+		}
+	}
 
-            $.ajax(	"/api/signup.json", {
-             data: { signup: mail, password: pwd },
-             dataType: 'json',
-             success: function (response) {
-                 resetFields();
-                 $('#status-box').text(response.message);
-             },
-             error: function (xhr, ajaxOptions, thrownError) {
-              $('#status-box').text(thrownError);
-              $('#status-box').addClass("error");
-          },
-      });
-        }
-    });
+	function checkConfirmPass(){
+		$("#confirmpass").removeClass();
+		$("#matching").text("");
 
-    function resetFields(){
-        $('#status-box').text("");
-        $('#status-box').removeClass();
-        $('#email').val("");
-        $('#email').removeClass();
-        $('#pass').val("");
-        $('#pass').removeClass();
-        $('#confirmpass').val("");
-        $('#confirmpass').removeClass();
-        $('#valid').text("");
-        $('#valid').removeClass();
-        $('#matching').text("");
-        $('#matching').removeClass();
-        $('#passtrength').text("");
-        $('#passtrength').removeClass();
-    }
+		if(!$("#confirmpass").val()){return;}
 
-    function strengthlvl(pass){
+		checkMatching();
+		if($("#confirmpass")[0].checkValidity()){
+			$("#confirmpass").addClass("success");
+			$("#matching").text("Passwords match!");
+		}
+	}
+
+	function setStrengthlvl(){
+
+        var pass = $("#pass").val();
 
         var strength = 0;
-        $('#passtrength').removeClass();
-        if(pass.length == 0){
-            return "";
+        $("#passtrength").removeClass();
+        if(pass.length === 0){
+            $("#passtrength").text("");
+            return false;
         }
-        if(!pass.match(regex)){
-           $('#passtrength').addClass("error");
-           passerr = true;
-           return "Insufficient password";
+        if(!$("#pass")[0].checkValidity()){
+           $("#passtrength").addClass("error");
+           $("#passtrength").text("Insufficient password");
+           return false;
        }
 
         if (pass.length >=7) { //sufficient length
@@ -164,55 +114,79 @@ $(document).ready(function()
             strength += 1;
         }
 
-        passerr = false;
-        $('#pass').removeClass();
-        $('#pass').addClass("success");
-        $('#passtrength').removeClass();
-        if (strength < 2 )
-        {
-            $('#passtrength').css('color', 'orange'); // color changes
-            return "Weak";
+        $("#passtrength").removeClass();
+        if (strength < 2 ){
+            $("#passtrength").css("color", "orange"); // color changes
+            $("#passtrength").text("Weak");
         }
-        else if (strength >= 2 && strength < 4)
-        {
-            $('#passtrength').css('color', 'LightGreen');
-            return "Good";
+        else if (strength >= 2 && strength < 4){
+            $("#passtrength").css("color", "LightGreen");
+            $("#passtrength").text("Good");
         }
-        else
-        {
-            $('#passtrength').css('color', 'GreenYellow');
-            return "Strong";
+        else{
+            $("#passtrength").css("color", "GreenYellow");
+            $("#passtrength").text("Strong");
         }
-
+        return true;
     }
 
-    function checkEmpty(){
-        var emailval = $('#email').val();
-        var passval = $('#pass').val();
-        var confirmval = $('#confirmpass').val();
-        if(!emailval && !($('#email').is(":focus"))){
-            $('#valid').text("Required field!");
-            $('#email').removeClass();
-            $('#valid').removeClass();
-            $('#email').addClass("error");
-            $('#valid').addClass("error");
-            emailerr = true;
+	$("#email").keyup(function(){
+		if($("#email")[0].checkValidity()){
+			$("#email").addClass("success");
+			$("#valid").text("Email valid!");
+			$("#valid").addClass("success");
+		}
+		else{
+			$("#email").removeClass();
+			$("#valid").text("");
+		}
+	});
+
+	$("#pass").focus(function(){
+		$("#valid").removeClass();
+		if($("#email")[0].checkValidity()){
+			$("#email").addClass("success");
+			$("#valid").text("Email valid!");
+			$("#valid").addClass("success");
+		}
+		else{
+			$("#email").addClass("error");
+			$("#valid").text("Invalid email!");
+			$("#valid").addClass("error");
+		}
+	})
+
+	$("#pass").keyup(function(){
+		checkPasswordSameAsEmail();
+
+		$("#pass").removeClass();
+		if(setStrengthlvl()){
+			$("#pass").addClass("success");
+		}
+
+		checkConfirmPass();
+	});
+
+	$("#confirmpass").keyup(function(){checkConfirmPass();});
+
+	var options = {
+        url:        "/api/signup.json",
+        type:       "get",
+        dataType:   "json",
+        success(response) {
+            resetFields();
+            $("#status-box").text(response.message);
+        },
+        error(xhr, ajaxOptions, thrownError) {
+            $("#status-box").text(thrownError);
+            $("#status-box").addClass("error");
         }
-        if(!passval && !($('#pass').is(":focus"))){
-            $('#passtrength').text("Required field!");
-            $('#pass').removeClass();
-            $('#passtrength').removeClass();
-            $('#pass').addClass("error");
-            $('#passtrength').addClass("error");
-            passerr = true;
-        }
-        if(!confirmval && !($('#confirmpass').is(":focus"))){
-            $('#matching').text("Required field!");
-            $('#confirmpass').removeClass();
-            $('#matching').removeClass();
-            $('#confirmpass').addClass("error");
-            $('#matching').addClass("error");
-            confirmerr = true;
-        }
-    }
+    };
+
+	$("#form").submit(function() {
+		checkPasswordSameAsEmail();
+		checkMatching();
+		$(this).ajaxSubmit(options);
+		return false;
+	});
 });

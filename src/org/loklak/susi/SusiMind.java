@@ -30,13 +30,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
+import org.loklak.api.search.ConsoleService;
 import org.loklak.data.DAO;
+import org.loklak.server.ClientIdentity;
+import org.loklak.susi.SusiReader.Token;
 
 public class SusiMind {
     
@@ -44,6 +48,7 @@ public class SusiMind {
     private final File initpath, watchpath; // a path where the memory looks for new additions of knowledge with memory files
     private final Map<File, Long> observations; // a mapping of mind memory files to the time when the file was read the last time
     private final SusiReader reader; // responsible to understand written communication
+    private final SusiLog logs; // conversation logs
     
     public SusiMind(File initpath, File watchpath) {
         // initialize class objects
@@ -54,6 +59,7 @@ public class SusiMind {
         this.ruletrigger = new ConcurrentHashMap<>();
         this.observations = new HashMap<>();
         this.reader = new SusiReader();
+        this.logs = new SusiLog(watchpath, 3);
     }
 
     public SusiMind observe() throws IOException {
@@ -70,7 +76,7 @@ public class SusiMind {
                     try {
                         learn(f);
                     } catch (Throwable e) {
-                        DAO.severe(e.getMessage());
+                        DAO.severe("BAD JSON FILE: " + f.getAbsolutePath() + ", " + e.getMessage());
                     }
                 }
             }
@@ -87,16 +93,32 @@ public class SusiMind {
 
         // teach the language parser
         this.reader.learn(json);
-        
-        // initialize temporary json object
+
+        // add console rules
+        JSONObject consoleServices = json.has("console") ? json.getJSONObject("console") : new JSONObject();
+        consoleServices.keySet().forEach(console -> {
+            JSONObject service = consoleServices.getJSONObject(console);
+            if (service.has("url") && service.has("data") && service.has("parser")) {
+                String url = service.getString("url");
+                String data = service.getString("data");
+                String parser = service.getString("parser");
+                if (parser.equals("json")) {
+                    ConsoleService.addGenericConsole(console, url, data);
+                }
+            }
+        });
+
+        // add conversation rules
         JSONArray rules = json.has("rules") ? json.getJSONArray("rules") : new JSONArray();
-        
-        // add rules
         rules.forEach(j -> {
             SusiRule rule = new SusiRule((JSONObject) j);
             rule.getKeys().forEach(key -> {
                     Map<Long, SusiRule> l = this.ruletrigger.get(key);
-                    if (l == null) {l = new HashMap<>(); this.ruletrigger.put(key, l);}
+                    if (l == null) {
+                        l = new HashMap<>();
+                        Token keyToken = this.reader.tokenizeTerm(key);
+                        this.ruletrigger.put(keyToken.categorized, l);
+                    }
                     l.put(rule.getID(), rule); 
                 });
             });
@@ -104,46 +126,68 @@ public class SusiMind {
         return this;
     }
     
-    public List<SusiIdea> associate(String query, int maxcount) {
+    /**
+     * This is the core principle of creativity: being able to match a given input
+     * with problem-solving knowledge.
+     * This method finds ideas (with a query instantiated rules) for a given query.
+     * The rules are selected using a scoring system and pattern matching with the query.
+     * Not only the most recent user query is considered for rule selection but also
+     * previously requested queries and their answers to be able to set new rule selections
+     * in the context of the previous conversation.
+     * @param query the user input
+     * @param previous_argument the latest conversation with the same user
+     * @param maxcount the maximum number of ideas to return
+     * @return an ordered list of ideas, first idea should be considered first.
+     */
+    public List<SusiIdea> creativity(String query, SusiArgument previous_argument, int maxcount) {
         // tokenize query to have hint for idea collection
         final List<SusiIdea> ideas = new ArrayList<>();
-        this.reader.tokenize(query).forEach(token -> {
-            Map<Long, SusiRule> r = this.ruletrigger.get(token.categorized);
-            if (r != null) {
-                r.values().forEach(rule -> ideas.add(new SusiIdea(rule).setIntent(token)));
-            }
+        this.reader.tokenizeSentence(query).forEach(token -> {
+            Map<Long, SusiRule> rule_for_category = this.ruletrigger.get(token.categorized);
+            Map<Long, SusiRule> rule_for_original = token.original.equals(token.categorized) ? null : this.ruletrigger.get(token.original);
+            Map<Long, SusiRule> r = new HashMap<>();
+            if (rule_for_category != null) r.putAll(rule_for_category);
+            if (rule_for_original != null) r.putAll(rule_for_original);
+            r.values().forEach(rule -> ideas.add(new SusiIdea(rule).setIntent(token)));
         });
-
+        
+        //for (SusiIdea idea: ideas) System.out.println("idea.phrase-1:" + idea.getRule().getPhrases().toString());
+        
         // add catchall rules always (those are the 'bad ideas')
         Collection<SusiRule> ca = this.ruletrigger.get(SusiRule.CATCHALL_KEY).values();
         if (ca != null) ca.forEach(rule -> ideas.add(new SusiIdea(rule)));
         
         // create list of all ideas that might apply
-        TreeMap<Integer, List<SusiIdea>> scored = new TreeMap<>();
+        TreeMap<Long, List<SusiIdea>> scored = new TreeMap<>();
+        AtomicLong count = new AtomicLong(0);
         ideas.forEach(idea -> {
-            //System.out.println("idea.phrase-1:" + idea.getRule().getPhrases().toString());
             int score = idea.getRule().getScore();
-            List<SusiIdea> r = scored.get(-score);
-            if (r == null) {r = new ArrayList<>(); scored.put(-score, r);}
+            long orderkey = Long.MAX_VALUE - ((long) score) * 1000L + count.incrementAndGet();
+            List<SusiIdea> r = scored.get(orderkey);
+            if (r == null) {r = new ArrayList<>(); scored.put(orderkey, r);}
             r.add(idea);
         });
 
         // make a sorted list of all ideas
         ideas.clear(); scored.values().forEach(r -> ideas.addAll(r));
         
+        //for (SusiIdea idea: ideas) System.out.println("idea.phrase-2: score=" + idea.getRule().getScore() + " : " + idea.getRule().getPhrases().toString());
+        
         // test ideas and collect those which match up to maxcount
         List<SusiIdea> plausibleIdeas = new ArrayList<>(Math.min(10, maxcount));
         for (SusiIdea idea: ideas) {
-            //System.out.println("idea.phrase-2:" + idea.getRule().getPhrases().toString());
             SusiRule rule = idea.getRule();
             if (rule.getActions().size() == 0) continue;
             if (rule.getActions().get(0).getPhrases().size() == 0) continue;
             if (rule.getActions().get(0).getPhrases().get(0).length() == 0) continue;
-            Matcher m = rule.matcher(query);
-            if (m == null) continue;
+            Collection<Matcher> m = rule.matcher(query);
+            if (m.isEmpty()) continue;
             plausibleIdeas.add(idea);
             if (plausibleIdeas.size() >= maxcount) break;
         }
+        
+        //for (SusiIdea idea: plausibleIdeas) System.out.println("idea.phrase-3:" + idea.getRule().getPhrases().toString() + " -- " + idea.getRule().getActions().toString());
+        
         return plausibleIdeas;
     }
     
@@ -151,16 +195,21 @@ public class SusiMind {
     /**
      * react on a user input: this causes the selection of deduction rules and the evaluation of the process steps
      * in every rule up to the moment where enough rules have been applied as consideration. The reaction may also
-     * cause the evaluation of operational steps which may cause learning effects wihtin the SusiMind.
+     * cause the evaluation of operational steps which may cause learning effects within the SusiMind.
      * @param query
      * @param maxcount
      * @return
      */
-    public List<SusiArgument> react(final String query, int maxcount) {
+    public List<SusiArgument> react(final String query, int maxcount, String client) {
+        List<SusiInteraction> previous_interactions = this.logs.getInteractions(client); // first entry is latest interaction
+        SusiArgument latest_argument = new SusiArgument();
+        for (int i = previous_interactions.size() - 1; i >= 0; i--) {
+            latest_argument.think(previous_interactions.get(i).recallDispute());
+        }
         List<SusiArgument> answers = new ArrayList<>();
-        List<SusiIdea> ideas = associate(query, 100);
+        List<SusiIdea> ideas = creativity(query, latest_argument, 100);
         for (SusiIdea idea: ideas) {
-            SusiArgument argument = idea.getRule().consideration(query, idea.getIntent());
+            SusiArgument argument = idea.getRule().consideration(query, latest_argument, idea.getIntent());
             if (argument != null) answers.add(argument);
             if (answers.size() >= maxcount) break;
         }
@@ -168,9 +217,19 @@ public class SusiMind {
     }
     
     public String react(String query) {
-        List<SusiArgument> datalist = react(query, 1);
+        List<SusiArgument> datalist = react(query, 1, "host_localhost");
         SusiArgument bestargument = datalist.get(0);
-        return bestargument.mindstate().getActions().get(0).apply(bestargument).getStringAttr("expression");
+        return bestargument.getActions().get(0).apply(bestargument).getStringAttr("expression");
+    }
+    
+    public SusiInteraction interaction(final String query, int maxcount, ClientIdentity identity) {
+        // get a response from susis mind
+        String client = identity.getType() + "_" + identity.getName();
+        SusiInteraction si = new SusiInteraction(query, maxcount, client, this);
+        // write a log about the response using the users identity
+        this.logs.addInteraction(client, si);
+        // return the computed response
+        return si;
     }
     
     public static void main(String[] args) {
@@ -179,7 +238,6 @@ public class SusiMind {
             File watch = new File(new File("data"), "susi");
             SusiMind mem = new SusiMind(init, watch);
             mem.learn(new File("conf/susi/susi_cognition_000.json"));
-            //System.out.println(mem.answer("who will win euro2016?", 3));
             System.out.println(mem.react("I feel funny"));
             System.out.println(mem.react("Help me!"));
         } catch (FileNotFoundException e) {
