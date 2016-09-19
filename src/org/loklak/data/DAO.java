@@ -75,7 +75,6 @@ import org.loklak.objects.SourceType;
 import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
 import org.loklak.server.*;
-import org.loklak.susi.SusiMind;
 import org.loklak.tools.DateParser;
 import org.loklak.tools.OS;
 import org.loklak.tools.storage.*;
@@ -152,9 +151,6 @@ public class DAO {
     public static Map<String, Accounting> accounting_temporary = new HashMap<>();
     public static JsonFile login_keys;
     
-    // built-in artificial intelligence
-    public static SusiMind susi;
-    
     public static enum IndexName {
     	messages_hour("messages.json"), messages_day("messages.json"), messages_week("messages.json"), messages, queries, users, accounts, import_profiles;
         private String schemaFileName;
@@ -182,14 +178,6 @@ public class DAO {
         conf_dir = new File("conf");
         bin_dir = new File("bin");
         html_dir = new File("html");
-        
-        // wake up susi
-        File susiinitpath = new File(conf_dir, "susi");
-        File sudiwatchpath = new File(new File("data"), "susi");
-        susi = new SusiMind(susiinitpath, sudiwatchpath);
-        String susi_boilerplate_name = "susi_cognition_boilerplate.json";
-        File susi_boilerplate_file = new File(sudiwatchpath, susi_boilerplate_name);
-        if (!susi_boilerplate_file.exists()) Files.copy(new File(conf_dir, "susi/" + susi_boilerplate_name + ".example"), susi_boilerplate_file);
         
         // initialize public and private keys
 		public_settings = new Settings(new File("data/settings/public.settings.json"));

@@ -20,8 +20,6 @@
 
 package org.loklak.susi;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -239,30 +237,6 @@ public class SusiThought extends JSONObject {
         }
         data.put(new JSONObject().put(featureName, observation));
         return this;
-    }
-    
-    /**
-     * Every information may have a set of (re-)actions assigned.
-     * Those (re-)actions are methods to do something with the thought.
-     * @param actions (re-)actions on this thought
-     * @return the thought
-     */
-    public SusiThought setActions(List<SusiAction> actions) {
-        JSONArray a = new JSONArray();
-        actions.forEach(action -> a.put(action.toJSON()));
-        this.put("actions", a);
-        return this;
-    }
-    
-    /**
-     * To be able to apply (re-)actions to this thought, the actions on the information can be retrieved.
-     * @return the (re-)actions which are applicable to this thought.
-     */
-    public List<SusiAction> getActions() {
-        List<SusiAction> actions = new ArrayList<>();
-        if (!this.has("actions")) return actions;
-        this.getJSONArray("actions").forEach(action -> actions.add(new SusiAction((JSONObject) action)));
-        return actions;
     }
     
     public static final Pattern variable_pattern = Pattern.compile("\\$.*?\\$");
