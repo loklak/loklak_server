@@ -101,7 +101,6 @@ import org.loklak.api.p2p.PushServlet;
 import org.loklak.api.search.SearchServlet;
 import org.loklak.api.search.ShortlinkFromTweetServlet;
 import org.loklak.api.search.SuggestServlet;
-import org.loklak.api.search.SusiService;
 import org.loklak.api.search.TimeAndDateService;
 import org.loklak.api.search.ConsoleService;
 import org.loklak.api.search.EventBriteCrawlerService;
@@ -530,7 +529,6 @@ public class LoklakServer {
                 EventBriteCrawlerService.class,
                 MeetupsCrawlerService.class,
                 RSSReaderService.class,
-                SusiService.class,
                 WordpressCrawlerService.class,
                 GithubProfileScraper.class,
                 InstagramProfileScraper.class,
