@@ -21,7 +21,7 @@ package org.loklak.susi;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,7 +29,7 @@ import java.util.regex.Pattern;
  * A skill is the ability to inspire, to create thoughts from perception. The data structure of
  * a skill set is a mapping from perception patterns to lambda expressions which induce thoughts.
  */
-public class SusiSkills extends LinkedHashMap<Pattern, BiFunction<SusiArgument, Matcher, SusiThought>> implements Map<Pattern, BiFunction<SusiArgument, Matcher, SusiThought>> {
+public class SusiSkills extends LinkedHashMap<Pattern, Function<Matcher, SusiThought>> implements Map<Pattern, Function<Matcher, SusiThought>> {
 
     private static final long serialVersionUID = 4531596762427825563L;
 
@@ -51,14 +51,14 @@ public class SusiSkills extends LinkedHashMap<Pattern, BiFunction<SusiArgument, 
      * @param q the perception
      * @return a thought from the application of the skill set
      */
-    public SusiThought deduce(SusiArgument flow, String q) {
+    public SusiThought deduce(String q) {
         if (q == null) return new SusiThought();
         q = q.trim();
-        for (Map.Entry<Pattern, BiFunction<SusiArgument, Matcher, SusiThought>> pe: this.entrySet()) {
+        for (Map.Entry<Pattern, Function<Matcher, SusiThought>> pe: this.entrySet()) {
             Pattern p = pe.getKey();
             Matcher m = p.matcher(q);
             if (m.find()) try {
-                SusiThought json = pe.getValue().apply(flow, m);
+                SusiThought json = pe.getValue().apply(m);
                 if (json != null) {
                     json.setProcess(p.pattern());
                     return json;
@@ -74,14 +74,5 @@ public class SusiSkills extends LinkedHashMap<Pattern, BiFunction<SusiArgument, 
         // no success: produce an empty thought
         return new SusiThought();
     }
-    
-    /**
-     * Inspiration is the application of a skill on a minimum perception. In this method the mappings
-     * from the skill set is applied only to the perception q.
-     * @param q the perception
-     * @return a thought from the application of the skill set
-     */
-    public SusiThought inspire(String q) {
-        return deduce(null, q);
-    }
+   
 }
