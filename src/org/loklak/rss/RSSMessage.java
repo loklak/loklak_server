@@ -148,7 +148,9 @@ public class RSSMessage {
         this.map = new HashMap<String, String>();
         if (title.length() > 0) this.map.put(Token.title.name(), title);
         if (description.length() > 0) this.map.put(Token.description.name(), description);
+        else this.map.put(Token.description.name(), title); // Using title as the default description
         if (link.length() > 0) this.map.put(Token.link.name(), link);
+        else this.map.put(Token.link.name(), "http://loklak.org/"); // Using loklak.org as the default link
         this.map.put(Token.pubDate.name(), FORMAT_RFC1123.format(new Date()));
         this.map.put(Token.guid.name(), artificialGuidPrefix + Integer.toHexString((title + description + link).hashCode()));
     }
@@ -157,6 +159,7 @@ public class RSSMessage {
         this.map = new HashMap<String, String>();
         if (title.length() > 0) this.map.put(Token.title.name(), title);
         if (description.length() > 0) this.map.put(Token.description.name(), description);
+        else this.map.put(Token.description.name(), title); // Using title as the default description
         this.map.put(Token.link.name(), link.toExternalForm());
         this.map.put(Token.pubDate.name(), FORMAT_RFC1123.format(new Date()));
         if (guid.length() > 0) this.map.put(Token.guid.name(), guid);
