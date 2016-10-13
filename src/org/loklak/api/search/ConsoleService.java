@@ -1,5 +1,5 @@
 /**
- *  TableService
+ *  ConsoleService
  *  Copyright 13.06.2015 by Michael Peter Christen, @0rb1t3r
  *
  *  This library is free software; you can redistribute it and/or
@@ -19,21 +19,16 @@
 
 package org.loklak.api.search;
 
-import java.io.IOException;
-import java.net.URLEncoder;
 import java.util.Date;
 import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.elasticsearch.search.sort.SortOrder;
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
-import org.json.JSONTokener;
 import org.loklak.api.cms.TwitterAnalysisService;
 import org.loklak.data.DAO;
 import org.loklak.geo.GeoMark;
-import org.loklak.http.ClientConnection;
 import org.loklak.objects.AccountEntry;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.ResultList;
@@ -95,23 +90,6 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
     }
     
     public final static SusiSkills dbAccess = new SusiSkills();
-    
-    public static void addGenericConsole(String serviceName, String serviceURL, String responseArrayObjectName) {
-        dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?" + serviceName + " +?WHERE +?query ??= ??'(.*?)' ??;"), matcher -> {
-            JSONObject serviceResponse;
-            try {
-                ClientConnection cc = new ClientConnection(serviceURL + URLEncoder.encode(matcher.group(2), "UTF-8"));
-                serviceResponse = new JSONObject(new JSONTokener(cc.inputStream));
-                cc.close();
-            } catch (IOException | JSONException e) {serviceResponse = new JSONObject();}
-            SusiThought json = new SusiThought();
-            json.setQuery(matcher.group(2));
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            json.setData(transfer.conclude(serviceResponse.getJSONArray(responseArrayObjectName)));
-            json.setHits(json.getCount());
-            return json;
-        });
-    }
     
     static {
         dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?\\( ??SELECT +?(.*?) ??\\) +?WHERE +?(.*?) ?+IN ?+\\((.*?)\\) ??;"), matcher -> {
