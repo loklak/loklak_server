@@ -15,6 +15,9 @@
     "text":{
       "type":"string", "include_in_all":"false", "index":"analyzed"
     },
+    "text_length":{
+      "type":"integer", "include_in_all":"false", "index":"not_analyzed"
+    },
     "retweet_from":{
       "type":"string", "include_in_all":"false", "index":"not_analyzed"
     },

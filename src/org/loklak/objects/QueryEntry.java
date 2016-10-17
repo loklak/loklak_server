@@ -256,7 +256,8 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
         emotion("classifier_emotion"),
         profanity("classifier_profanity"),
         language("classifier_language"),
-        pure("");
+        pure(""),
+        len25("text_length"), len50("text_length"), len75("text_length"), len100("text_length");
         protected String field_name;
         protected Pattern pattern;
         private Constraint(String field_name) {
@@ -394,6 +395,12 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
                     message.getLinks().length != 0 ||
                     message.getHashtags().length != 0
                )) continue;
+            
+            if (tokens.constraints_positive.contains("len25") && message.getTextLength() > 25) continue;
+            if (tokens.constraints_positive.contains("len50") && message.getTextLength() > 50) continue;
+            if (tokens.constraints_positive.contains("len75") && message.getTextLength() > 75) continue;
+            if (tokens.constraints_positive.contains("len100") && message.getTextLength() > 100) continue;
+            
             if (tokens.constraints_positive.contains("image") && message.getImages().size() == 0) continue;
             if (tokens.constraints_negative.contains("image") && message.getImages().size() != 0) continue;
             if (tokens.constraints_positive.contains("place") && message.getPlaceName().length() == 0) continue;
@@ -635,7 +642,23 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
                 nops.add(QueryBuilders.constantScoreQuery(QueryBuilders.existsQuery(Constraint.link.field_name)));
                 nops.add(QueryBuilders.constantScoreQuery(QueryBuilders.existsQuery(Constraint.mention.field_name)));
                 nops.add(QueryBuilders.constantScoreQuery(QueryBuilders.existsQuery(Constraint.hashtag.field_name)));
-            }
+            };
+            if (constraints_positive.remove("len25")) {
+                nops.add(QueryBuilders.constantScoreQuery(QueryBuilders
+                        .rangeQuery(Constraint.len25.field_name).from(26).to(1000).includeLower(true).includeUpper(false)));
+            };
+            if (constraints_positive.remove("len50")) {
+                nops.add(QueryBuilders.constantScoreQuery(QueryBuilders
+                        .rangeQuery(Constraint.len50.field_name).from(51).to(1000).includeLower(true).includeUpper(false)));
+            };
+            if (constraints_positive.remove("len75")) {
+                nops.add(QueryBuilders.constantScoreQuery(QueryBuilders
+                        .rangeQuery(Constraint.len75.field_name).from(76).to(1000).includeLower(true).includeUpper(false)));
+            };
+            if (constraints_positive.remove("len100")) {
+                nops.add(QueryBuilders.constantScoreQuery(QueryBuilders
+                        .rangeQuery(Constraint.len100.field_name).from(101).to(1000).includeLower(true).includeUpper(false)));
+            };
             if (modifier.containsKey("from")) {
                 for (String screen_name: modifier.get("from")) {
                     if (screen_name.indexOf(',') < 0) {

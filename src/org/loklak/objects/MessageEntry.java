@@ -384,6 +384,10 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
         
         return t;
     }
+    
+    public int getTextLength() {
+        return this.text.length();
+    }
 
     public String[] getMentions() {
         return this.mentions;
@@ -552,6 +556,9 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
         
         // add statistic/calculated data
         if (calculatedData) {
+            
+            // text length
+            m.put("text_length", this.text.length());
             
             // location data
             if (this.place_context != null) m.put("place_context", this.place_context.name());

@@ -47,7 +47,6 @@ import org.eclipse.jetty.util.ConcurrentHashSet;
 
 import com.github.fge.jackson.JsonLoader;
 import com.google.common.base.Charsets;
-import com.google.common.io.Files;
 
 import org.eclipse.jetty.util.log.Log;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
