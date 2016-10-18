@@ -1,5 +1,5 @@
 /**
- *  QueuedIndexing
+ *  IncomingMessageBuffer
  *  Copyright 04.01.2016 by Michael Peter Christen, @0rb1t3r
  *
  *  This library is free software; you can redistribute it and/or
@@ -54,6 +54,13 @@ public class IncomingMessageBuffer extends Thread {
     public IncomingMessageBuffer() {
     }
     
+    public MessageEntry readMessage(String id) {
+        if (id == null || id.length() == 0) return null;
+        for (DAO.MessageWrapper mw: messageQueue) {
+            if (id.equals(mw.t.getIdStr())) return mw.t;
+        }
+        return null;
+    }
     
     /**
      * ask the thread to shut down
