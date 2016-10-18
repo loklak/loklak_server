@@ -1068,6 +1068,8 @@ public class DAO {
                 start = System.currentTimeMillis();
                 tl = TwitterScraper.search(q, order, true, true, 400);
                 if (post != null) post.recordEvent("local_scraper_after_unsuccessful_remote", System.currentTimeMillis() - start);
+            } else {
+                tl.writeToIndex();
             }
         } else {
             if (post != null && remote.size() > 0) post.recordEvent("omitted_scraper_latency_" + remote.get(0), peerLatency.get(remote.get(0)));
