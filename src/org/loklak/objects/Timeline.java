@@ -32,8 +32,8 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.loklak.QueuedIndexing;
 import org.loklak.data.DAO;
+import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.data.DAO.IndexName;
 import org.loklak.susi.SusiThought;
 
@@ -283,7 +283,7 @@ public class Timeline implements Iterable<MessageEntry> {
     }    
     
     public void writeToIndex() {
-        QueuedIndexing.addScheduler(this, true);
+        IncomingMessageBuffer.addScheduler(this, true);
     }
     
     public void setHits(int hits) {
