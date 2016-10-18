@@ -140,6 +140,7 @@ public class DAO {
     private static Map<String, String> config = new HashMap<>();
     public  static GeoNames geoNames = null;
     public static Peers peers = new Peers();
+    public static OutgoingMessageBuffer outgoingMessages = new OutgoingMessageBuffer();
     
     // AAA Schema for server usage
     public static JsonTray authentication;
