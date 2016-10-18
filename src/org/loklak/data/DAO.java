@@ -888,13 +888,12 @@ public class DAO {
          * @param aggregationLimit - the maximum count of facet entities, not search results
          * @param aggregationFields - names of the aggregation fields. If no aggregation is wanted, pass no (zero) field(s)
          */
-        public SearchLocalMessages(final String q, Timeline.Order order_field, int timezoneOffset, int resultCount, int aggregationLimit, String... aggregationFields) {
+        public SearchLocalMessages(final String q, final Timeline.Order order_field, final int timezoneOffset, final int resultCount, final int aggregationLimit, final String... aggregationFields) {
             this.timeline = new Timeline(order_field);
             QueryEntry.ElasticsearchQuery sq = new QueryEntry.ElasticsearchQuery(q, timezoneOffset);
             long interval = sq.until.getTime() - sq.since.getTime();
             IndexName resultIndex;
-            boolean wholetime = aggregationFields.length > 0;
-            if (wholetime) {
+            if (aggregationFields.length > 0 && q.contains("since:")) {
                 if (q.contains("since:hour")) {
                     this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_hour).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
                 } else if (q.contains("since:day")) {
