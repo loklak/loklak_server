@@ -523,7 +523,7 @@ public class ElasticsearchClient {
      * @param typeName
      *            the type of the index
      */
-    public void writeSource(String indexName, XContentBuilder json, String id, String typeName, long version, VersionType versionType) {
+    public IndexResponse writeSource(String indexName, XContentBuilder json, String id, String typeName, long version, VersionType versionType) {
         // put this to the index
         IndexResponse r = elasticsearchClient.prepareIndex(indexName, typeName, id).setSource(json)
             .setVersion(version).setVersionType(versionType).execute()
@@ -531,6 +531,7 @@ public class ElasticsearchClient {
         // documentation about the versioning is available at
         // https://www.elastic.co/blog/elasticsearch-versioning-support
         // TODO: error handling
+        return r;
     }
 
     /**

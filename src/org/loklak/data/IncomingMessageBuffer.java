@@ -1,5 +1,5 @@
 /**
- *  QueuedIndexing
+ *  IncomingMessageBuffer
  *  Copyright 04.01.2016 by Michael Peter Christen, @0rb1t3r
  *
  *  This library is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.loklak;
+package org.loklak.data;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,15 +26,14 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.jetty.util.log.Log;
-import org.loklak.data.DAO;
 import org.loklak.objects.MessageEntry;
 import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
 
-public class QueuedIndexing extends Thread {
+public class IncomingMessageBuffer extends Thread {
     
     private final static int MESSAGE_QUEUE_MAXSIZE = 100000;
-    private final static int bufferLimit = MESSAGE_QUEUE_MAXSIZE * 3 / 4;
+    //private final static int bufferLimit = MESSAGE_QUEUE_MAXSIZE * 3 / 4;
     private static BlockingQueue<DAO.MessageWrapper> messageQueue = new ArrayBlockingQueue<DAO.MessageWrapper>(MESSAGE_QUEUE_MAXSIZE);
     private static AtomicInteger queueClients = new AtomicInteger(0);
 
@@ -52,9 +51,16 @@ public class QueuedIndexing extends Thread {
         return queueClients.get();
     }
     
-    public QueuedIndexing() {
+    public IncomingMessageBuffer() {
     }
     
+    public MessageEntry readMessage(String id) {
+        if (id == null || id.length() == 0) return null;
+        for (DAO.MessageWrapper mw: messageQueue) {
+            if (id.equals(mw.t.getIdStr())) return mw.t;
+        }
+        return null;
+    }
     
     /**
      * ask the thread to shut down

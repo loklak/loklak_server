@@ -26,8 +26,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.jetty.util.log.Log;
@@ -38,10 +36,8 @@ import org.loklak.api.search.SuggestServlet;
 import org.loklak.data.DAO;
 import org.loklak.data.DAO.IndexName;
 import org.loklak.harvester.TwitterAPI;
-import org.loklak.objects.MessageEntry;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.Timeline;
-import org.loklak.objects.UserEntry;
 import org.loklak.tools.DateParser;
 import org.loklak.tools.OS;
 
@@ -63,7 +59,6 @@ public class Caretaker extends Thread {
     private final static long helloPeriod = 600000; // one ping each 10 minutes
     private       static long helloTime   = 0; // latest hello ping time
 
-    private static BlockingQueue<Timeline> pushToBackendTimeline = new LinkedBlockingQueue<Timeline>();
     private static final int TIMELINE_PUSH_MINSIZE = 200;
     private static final int TIMELINE_PUSH_MAXSIZE = 1000;
     
@@ -112,7 +107,7 @@ public class Caretaker extends Thread {
             //DAO.log("connection pool: " + ClientConnection.cm.getTotalStats().toString());
             
             // peer-to-peer operation
-            Timeline tl = takeTimelineMin(Timeline.Order.CREATED_AT, TIMELINE_PUSH_MINSIZE, TIMELINE_PUSH_MAXSIZE);
+            Timeline tl = DAO.outgoingMessages.takeTimelineMin(Timeline.Order.CREATED_AT, TIMELINE_PUSH_MINSIZE, TIMELINE_PUSH_MAXSIZE);
             if (tl != null && tl.size() > 0 && remote.length > 0) {
                 // transmit the timeline
                 long start = System.currentTimeMillis();
@@ -150,7 +145,7 @@ public class Caretaker extends Thread {
             if (DAO.getConfig("retrieval.forbackend.enabled", false) &&
                 DAO.getConfig("backend.push.enabled", false) &&
                 (DAO.getConfig("backend", "").length() > 0) &&
-                timelineSize() < TIMELINE_PUSH_MAXSIZE) {
+                DAO.outgoingMessages.timelineSize() < TIMELINE_PUSH_MAXSIZE) {
                 int retrieval_forbackend_concurrency = (int) DAO.getConfig("retrieval.forbackend.concurrency", 1);
                 int retrieval_forbackend_loops = (int) DAO.getConfig("retrieval.forbackend.loops", 10);
                 int retrieval_forbackend_sleep_base = (int) DAO.getConfig("retrieval.forbackend.sleep.base", 300);
@@ -246,60 +241,4 @@ public class Caretaker extends Thread {
         }
     }
     
-    public static void transmitTimelineToBackend(Timeline tl) {
-        if (DAO.getConfig("backend", new String[0], ",").length > 0) {
-            boolean clone = false;
-            for (MessageEntry message: tl) {
-                if (!message.getSourceType().propagate()) {clone = true; break;}
-            }
-            if (clone) {
-                Timeline tlc = new Timeline(tl.getOrder(), tl.getScraperInfo());
-                for (MessageEntry message: tl) {
-                    if (message.getSourceType().propagate()) tlc.add(message, tl.getUser(message));
-                }
-                if (tlc.size() > 0) pushToBackendTimeline.add(tlc);
-            } else {
-                pushToBackendTimeline.add(tl);
-            }
-        }
-    }
-    
-    public static void transmitMessage(final MessageEntry tweet, final UserEntry user) {
-        if (!tweet.getSourceType().propagate()) return;
-        if (DAO.getConfig("backend", new String[0], ",").length <= 0) return;
-        if (!DAO.getConfig("backend.push.enabled", false)) return;
-        Timeline tl = pushToBackendTimeline.poll();
-        if (tl == null) tl = new Timeline(Timeline.Order.CREATED_AT);
-        tl.add(tweet, user);
-        pushToBackendTimeline.add(tl);
-    }
-
-    /**
-     * if the given list of timelines contain at least the wanted minimum size of messages, they are flushed from the queue
-     * and combined into a new timeline
-     * @param order
-     * @param minsize
-     * @return
-     */
-    public static Timeline takeTimelineMin(final Timeline.Order order, final int minsize, final int maxsize) {
-        if (timelineSize() < minsize) return new Timeline(order);
-        Timeline tl = new Timeline(order);
-        try {
-            while (pushToBackendTimeline.size() > 0) {
-                Timeline tl0 = pushToBackendTimeline.take();
-                if (tl0 == null) return tl;
-                tl.putAll(tl0);
-                if (tl.size() >= maxsize) break;
-            }
-            return tl;
-        } catch (InterruptedException e) {
-            return tl;
-        }
-    }
-    
-    public static int timelineSize() {
-        int c = 0;
-        for (Timeline tl: pushToBackendTimeline) c += tl.size();
-        return c;
-    }
 }

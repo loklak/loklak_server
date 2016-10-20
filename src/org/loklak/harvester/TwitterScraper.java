@@ -44,9 +44,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.eclipse.jetty.util.log.Log;
-import org.loklak.Caretaker;
-import org.loklak.QueuedIndexing;
 import org.loklak.data.DAO;
+import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.http.ClientConnection;
 import org.loklak.objects.MessageEntry;
 import org.loklak.objects.ProviderType;
@@ -462,9 +461,9 @@ public class TwitterScraper {
                 //DAO.log("TwitterTweet [" + this.id_str + "] unshorten after " + (System.currentTimeMillis() - start) + "ms");
                 this.enrich();
                 //DAO.log("TwitterTweet [" + this.id_str + "] enrich    after " + (System.currentTimeMillis() - start) + "ms");
-                if (this.writeToIndex) QueuedIndexing.addScheduler(this, this.user, true);
+                if (this.writeToIndex) IncomingMessageBuffer.addScheduler(this, this.user, true);
                 //DAO.log("TwitterTweet [" + this.id_str + "] write     after " + (System.currentTimeMillis() - start) + "ms");
-                if (this.writeToBackend) Caretaker.transmitMessage(this, this.user);
+                if (this.writeToBackend) DAO.outgoingMessages.transmitMessage(this, this.user);
                 //DAO.log("TwitterTweet [" + this.id_str + "] transmit  after " + (System.currentTimeMillis() - start) + "ms");
             } catch (Throwable e) {
             	Log.getLog().warn(e);

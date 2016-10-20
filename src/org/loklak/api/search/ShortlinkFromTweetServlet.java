@@ -26,6 +26,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.loklak.LoklakServer;
 import org.loklak.data.DAO;
 import org.loklak.http.RemoteAccess;
 import org.loklak.objects.MessageEntry;
@@ -58,7 +59,15 @@ public class ShortlinkFromTweetServlet extends HttpServlet {
         }
         
         MessageEntry message = DAO.readMessage(id);
-        if (message == null) {response.sendError(503, "bad request (message with id=" + id + " unknown)"); return;}
+        if (message == null) {
+            // try to get that from the incoming message buffer
+            message = LoklakServer.queuedIndexing.readMessage(id);
+        }
+        if (message == null) {
+            // fail
+            response.sendError(503, "bad request (message with id=" + id + " unknown)");
+            return;
+        }
         
         // read link in message
         String[] links = message.getLinks();

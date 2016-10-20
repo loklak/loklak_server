@@ -375,7 +375,7 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
             linkloop: for (int nth = 0; nth < links.length; nth++) {
                 String link = links[nth];
                 if (link.length() > iflinkexceedslength) {
-                    if (!DAO.existMessage(this.getIdStr())) break linkloop;
+                    //if (!DAO.existMessage(this.getIdStr())) break linkloop;
                     t = t.replace(link, urlstub + "/x?id=" + this.getIdStr() +
                             (nth == 0 ? "" : ShortlinkFromTweetServlet.SHORTLINK_COUNTER_SEPERATOR + Integer.toString(nth)));
                 }

@@ -140,6 +140,7 @@ public class DAO {
     private static Map<String, String> config = new HashMap<>();
     public  static GeoNames geoNames = null;
     public static Peers peers = new Peers();
+    public static OutgoingMessageBuffer outgoingMessages = new OutgoingMessageBuffer();
     
     // AAA Schema for server usage
     public static JsonTray authentication;
@@ -887,13 +888,12 @@ public class DAO {
          * @param aggregationLimit - the maximum count of facet entities, not search results
          * @param aggregationFields - names of the aggregation fields. If no aggregation is wanted, pass no (zero) field(s)
          */
-        public SearchLocalMessages(final String q, Timeline.Order order_field, int timezoneOffset, int resultCount, int aggregationLimit, String... aggregationFields) {
+        public SearchLocalMessages(final String q, final Timeline.Order order_field, final int timezoneOffset, final int resultCount, final int aggregationLimit, final String... aggregationFields) {
             this.timeline = new Timeline(order_field);
             QueryEntry.ElasticsearchQuery sq = new QueryEntry.ElasticsearchQuery(q, timezoneOffset);
             long interval = sq.until.getTime() - sq.since.getTime();
             IndexName resultIndex;
-            boolean wholetime = aggregationFields.length > 0;
-            if (wholetime) {
+            if (aggregationFields.length > 0 && q.contains("since:")) {
                 if (q.contains("since:hour")) {
                     this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_hour).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, "created_at", aggregationLimit, aggregationFields);
                 } else if (q.contains("since:day")) {
@@ -1067,6 +1067,8 @@ public class DAO {
                 start = System.currentTimeMillis();
                 tl = TwitterScraper.search(q, order, true, true, 400);
                 if (post != null) post.recordEvent("local_scraper_after_unsuccessful_remote", System.currentTimeMillis() - start);
+            } else {
+                tl.writeToIndex();
             }
         } else {
             if (post != null && remote.size() > 0) post.recordEvent("omitted_scraper_latency_" + remote.get(0), peerLatency.get(remote.get(0)));

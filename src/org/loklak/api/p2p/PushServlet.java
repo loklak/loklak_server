@@ -36,8 +36,8 @@ import org.eclipse.jetty.util.log.Log;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.loklak.QueuedIndexing;
 import org.loklak.data.DAO;
+import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.data.IndexEntry;
 import org.loklak.http.ClientConnection;
 import org.loklak.http.RemoteAccess;
@@ -201,7 +201,7 @@ public class PushServlet extends HttpServlet {
                 //boolean newtweet = DAO.writeMessage(t, u, true, true, true);
                 //if (newtweet) newCount++; else knownCount++;
             }
-            QueuedIndexing.addScheduler(tl, true);
+            IncomingMessageBuffer.addScheduler(tl, true);
             //try {DAO.users.bulkCacheFlush();} catch (IOException e) {}
             //try {DAO.messages.bulkCacheFlush();} catch (IOException e) {}
 

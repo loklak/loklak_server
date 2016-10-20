@@ -121,6 +121,7 @@ import org.loklak.api.vis.MapServlet;
 import org.loklak.api.vis.MarkdownServlet;
 import org.loklak.api.vis.PieChartServlet;
 import org.loklak.data.DAO;
+import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.harvester.TwitterScraper;
 import org.loklak.http.RemoteAccess;
 import org.loklak.server.APIHandler;
@@ -137,7 +138,7 @@ public class LoklakServer {
     
     private static Server server = null;
     private static Caretaker caretaker = null;
-    public  static QueuedIndexing queuedIndexing = null;
+    public  static IncomingMessageBuffer queuedIndexing = null;
     private static DumpImporter dumpImporter = null;
     private static HttpsMode httpsMode = HttpsMode.OFF;
     public static Class<? extends Servlet>[] services;
@@ -255,7 +256,7 @@ public class LoklakServer {
         LoklakServer.server.start();
         LoklakServer.caretaker = new Caretaker();
         LoklakServer.caretaker.start();
-        LoklakServer.queuedIndexing = new QueuedIndexing();
+        LoklakServer.queuedIndexing = new IncomingMessageBuffer();
         LoklakServer.queuedIndexing.start();
         LoklakServer.dumpImporter = new DumpImporter(Integer.MAX_VALUE);
         LoklakServer.dumpImporter.start();
