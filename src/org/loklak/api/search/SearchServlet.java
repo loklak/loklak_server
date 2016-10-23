@@ -211,8 +211,10 @@ public class SearchServlet extends HttpServlet {
             if (scraperThread != null) try {scraperThread.join(Math.max(10000, timeout - System.currentTimeMillis() + start));} catch (InterruptedException e) {}
             
             // in case that the scraper thread had been started and was successful, we do not wait for the other threads to terminate
-            if (scraperThread == null || tl.getHits() == 0) {
+            if (scraperThread == null || tl.getHits() == 0 || query.indexOf(':') >= 0 || query.indexOf('/') >= 0 || fields.length > 0) {
                 if (localThread != null)  try {localThread.join(Math.max(100, timeout - System.currentTimeMillis() + start));} catch (InterruptedException e) {}
+            }
+            if (scraperThread == null || tl.getHits() == 0) {
                 if (backendThread != null) try {backendThread.join(Math.max(100, timeout - System.currentTimeMillis() + start));} catch (InterruptedException e) {}
             }
         } else if ("twitter".equals(source) && tokens.raw.length() > 0) {
