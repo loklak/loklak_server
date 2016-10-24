@@ -57,7 +57,7 @@ public class Query {
         // start tracking: get calling thread and start tracking for that
         this.track = DAO.access.startTracking(request.getServletPath(), clientHost);
         this.track.setTimeSinceLastAccess(this.track.getDate().getTime() - RemoteAccess.latestVisit(request.getServletPath(), clientHost));
-        this.track.setDoSBlackout(LoklakServer.blacklistedHosts.contains(clientHost) || (/*!this.track.isLocalhostAccess() && */(this.track.getTimeSinceLastAccess() < DAO.getConfig("DoS.blackout", 100))));
+        this.track.setDoSBlackout(LoklakServer.blacklistedHosts.contains(clientHost) || (!this.track.isLocalhostAccess() && (this.track.getTimeSinceLastAccess() < DAO.getConfig("DoS.blackout", 100))));
         this.track.setDoSServicereduction(!this.track.isLocalhostAccess() && (this.track.getTimeSinceLastAccess() < DAO.getConfig("DoS.servicereduction", 1000)));
     }
     public void finalize() {
