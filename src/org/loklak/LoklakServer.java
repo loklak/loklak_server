@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.Servlet;
@@ -199,12 +200,18 @@ public class LoklakServer {
         // load the config file(s);
         Map<String, String> config = readConfig(data);
         
-        // set localhost pattern
+        // set localhost server names (for special rights)
         String server_localhost = config.get("server.localhost");
         if (server_localhost != null && server_localhost.length() > 0) {
             for (String h: server_localhost.split(",")) RemoteAccess.addLocalhost(h);
         }
         
+        // set localhost referrer pattern (for special rights)
+        String referrer_localhost = config.get("referrer.localhost");
+        if (referrer_localhost != null && referrer_localhost.length() > 0) {
+            for (String p: referrer_localhost.split(",")) RemoteAccess.addReferrer(Pattern.compile(p));
+        }
+
         // check for https modus
         switch(config.get("https.mode")){
         	case "on": httpsMode = HttpsMode.ON; break;
