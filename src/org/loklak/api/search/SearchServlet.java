@@ -56,10 +56,10 @@ public class SearchServlet extends HttpServlet {
 
     private static final long serialVersionUID = 563533152152063908L;
 
-    private final static int SEARCH_LOW_COUNT = 10;
-    private final static int SEARCH_DEFAULT_COUNT = 100;
-    private final static int SEARCH_MAX_PUBLIC_COUNT = 1000;
-    private final static int SEARCH_MAX_LOCALHOST_COUNT = 10000;
+    private final static String SEARCH_LOW_COUNT_NAME = "search.count.low";
+    private final static String SEARCH_DEFAULT_COUNT_NAME = "search.count.default";
+    private final static String SEARCH_MAX_PUBLIC_COUNT_NAME = "search.count.max.public";
+    private final static String SEARCH_MAX_LOCALHOST_COUNT_NAME = "search.count.max.localhost";
 
     private final static int SEARCH_CACHE_THREASHOLD_TIME = 3000;
     
@@ -133,7 +133,13 @@ public class SearchServlet extends HttpServlet {
         if (query == null || query.length() == 0) query = post.get("query", "");
         query = CharacterCoding.html2unicode(query).replaceAll("\\+", " ");
         final long timeout = (long) post.get("timeout", DAO.getConfig("search.timeout", 2000));
-        final int count = post.isDoS_servicereduction() ? SEARCH_LOW_COUNT : Math.min(post.get("count", post.get("maximumRecords", SEARCH_DEFAULT_COUNT)), post.isLocalhostAccess() ? SEARCH_MAX_LOCALHOST_COUNT : SEARCH_MAX_PUBLIC_COUNT);
+        final int count = (int) (post.isDoS_servicereduction() ?
+                DAO.getConfig(SEARCH_LOW_COUNT_NAME, 10) :
+                Math.min(
+                        post.get("count", post.get("maximumRecords", DAO.getConfig(SEARCH_DEFAULT_COUNT_NAME, 20))),
+                        post.isLocalhostAccess() ?
+                                DAO.getConfig(SEARCH_MAX_LOCALHOST_COUNT_NAME, 1000) :
+                                DAO.getConfig(SEARCH_MAX_PUBLIC_COUNT_NAME, 100)));
         String source = post.isDoS_servicereduction() ? "cache" : post.get("source", "all"); // possible values: cache, backend, twitter, all
         int agregation_limit = post.get("limit", 10);
         String[] fields = post.get("fields", new String[0], ",");
@@ -173,7 +179,7 @@ public class SearchServlet extends HttpServlet {
             // start a local search
             Thread localThread = queryf == null || queryf.length() == 0 ? null : new Thread() {
                 public void run() {
-                    DAO.SearchLocalMessages localSearchResult = new DAO.SearchLocalMessages(queryf, order, timezoneOffsetf, last_cache_search_time.get() > SEARCH_CACHE_THREASHOLD_TIME ? SEARCH_LOW_COUNT : count, 0);
+                    DAO.SearchLocalMessages localSearchResult = new DAO.SearchLocalMessages(queryf, order, timezoneOffsetf, last_cache_search_time.get() > SEARCH_CACHE_THREASHOLD_TIME ? (int) DAO.getConfig(SEARCH_LOW_COUNT_NAME, 10) : count, 0);
                     long time = System.currentTimeMillis() - start;
                     last_cache_search_time.set(time);
                     post.recordEvent("cache_time", time);
@@ -230,7 +236,7 @@ public class SearchServlet extends HttpServlet {
         
         } else if ("cache".equals(source)) {
             final long start = System.currentTimeMillis();
-            DAO.SearchLocalMessages localSearchResult = new DAO.SearchLocalMessages(query, order, timezoneOffset, last_cache_search_time.get() > SEARCH_CACHE_THREASHOLD_TIME ? SEARCH_LOW_COUNT : count, agregation_limit, fields);
+            DAO.SearchLocalMessages localSearchResult = new DAO.SearchLocalMessages(query, order, timezoneOffset, last_cache_search_time.get() > SEARCH_CACHE_THREASHOLD_TIME ? (int) DAO.getConfig(SEARCH_LOW_COUNT_NAME, 10) : count, agregation_limit, fields);
             cache_hits.set(localSearchResult.timeline.getHits());
             tl.putAll(localSearchResult.timeline);
             tl.setResultIndex(localSearchResult.timeline.getResultIndex());
