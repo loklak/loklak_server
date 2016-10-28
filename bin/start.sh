@@ -13,13 +13,13 @@ mkdir -p data/settings
 
 #to not allow process to overwrite the already running one.
 if [ -f $PIDFILE ]; then
-	PID=$(cat $PIDFILE 2>/dev/null)
-	if [ $(ps -p $PID -o pid=) ]; then
-		echo "Server is already running, please stop it and then start"
-		exit 1
-	else
-		rm $PIDFILE
-	fi
+    PID=$(cat $PIDFILE 2>/dev/null)
+    if [ $(ps -p $PID -o pid=) ]; then
+        echo "Server is already running, please stop it and then start"
+        exit 1
+    else
+        rm $PIDFILE
+    fi
 fi
 
 
@@ -68,7 +68,20 @@ fi
 
 CLASSPATH=""
 for N in lib/*.jar; do CLASSPATH="$CLASSPATH$N:"; done
-CLASSPATH=".:./classes/:$CLASSPATH"
+
+if [ -d "./classes" ]; then
+    CLASSPATH=".:./classes/:$CLASSPATH"
+elif [ -d "./build/classes/main" ]; then
+    CLASSPATH=".:./build/classes/main:$CLASSPATH"
+else
+    echo "It seems you haven't compile Loklak"
+    echo "You can use either Gradle or Ant to build Loklak"
+    echo "If you want to build with Ant,"
+    echo "$ ant"
+    echo "If you want to build with Gradle,"
+    echo "$ ./gradle_init.sh && gradle build"
+    exit 1
+fi
 
 cmdline="java";
 
@@ -87,22 +100,22 @@ PID=$!
 echo $PID > $PIDFILE
 
 while [ -f $STARTUPFILE ] && [ $(ps -p $PID -o pid=) ]; do
-	if [ $(cat $STARTUPFILE) = 'done' ]; then
-		break
-	else
-		sleep 1
-	fi
+    if [ $(cat $STARTUPFILE) = 'done' ]; then
+        break
+    else
+        sleep 1
+    fi
 done
 
 if [ -f $STARTUPFILE ] && [ $(ps -p $PID -o pid=) ]; then
-	CUSTOMPORT=$(grep -iw 'port.http' conf/config.properties | sed 's/^[^=]*=//' );
-	LOCALHOST=$(grep -iw 'shortlink.urlstub' conf/config.properties | sed 's/^[^=]*=//');
-	echo "loklak server started at port $CUSTOMPORT, open your browser at $LOCALHOST"
-	rm -f $STARTUPFILE
-	exit 0
+    CUSTOMPORT=$(grep -iw 'port.http' conf/config.properties | sed 's/^[^=]*=//' );
+    LOCALHOST=$(grep -iw 'shortlink.urlstub' conf/config.properties | sed 's/^[^=]*=//');
+    echo "loklak server started at port $CUSTOMPORT, open your browser at $LOCALHOST"
+    rm -f $STARTUPFILE
+    exit 0
 else
-	echo "loklak server failed to start. See data/loklag.log for details. Here are the last logs:"
+    echo "loklak server failed to start. See data/loklag.log for details. Here are the last logs:"
     tail data/loklak.log
-	rm -f $STARTUPFILE
-	exit 1
+    rm -f $STARTUPFILE
+    exit 1
 fi
