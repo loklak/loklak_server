@@ -31,6 +31,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 import javax.servlet.ServletException;
@@ -135,8 +136,9 @@ public class RemoteAccess {
     public String getPeername() {
         return this.peername;
     }
-    
+
     private static Set<String> localhostNames = new HashSet<>();
+    private static Set<Pattern> localhostReferrer = new HashSet<>();
     static {
         localhostNames.add("0:0:0:0:0:0:0:1");
         localhostNames.add("fe80:0:0:0:0:0:0:1%1");
@@ -149,13 +151,21 @@ public class RemoteAccess {
         try {for (InetAddress a: InetAddress.getAllByName("localhost")) {localhostNames.add(a.getHostAddress()); localhostNames.add(a.getHostName()); localhostNames.add(a.getCanonicalHostName());}} catch (UnknownHostException e) {}
         //System.out.println(localhostNames);
     }
-    
+
     public static void addLocalhost(String h) {
         localhostNames.add(h);
     }
     
-    public static boolean isLocalhost(String host) {
-        return localhostNames.contains(host);
+    public static void addReferrer(Pattern p) {
+        localhostReferrer.add(p);
+    }
+    
+    public static boolean isLocalhost(String host, String referrer) {
+        if (localhostNames.contains(host)) return true;
+        for (Pattern p: localhostReferrer) {
+            if (p.matcher(referrer).find()) return true;
+        }
+        return false;
     }
 
     public static Map<String, String> getQueryMap(String query) {

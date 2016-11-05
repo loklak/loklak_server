@@ -55,7 +55,7 @@ public class Query {
         if (XRealIP != null && XRealIP.length() > 0) clientHost = XRealIP; // get IP through nginx config "proxy_set_header X-Real-IP $remote_addr;"
         
         // start tracking: get calling thread and start tracking for that
-        this.track = DAO.access.startTracking(request.getServletPath(), clientHost);
+        this.track = DAO.access.startTracking(request.getServletPath(), clientHost, request.getHeader("Referer"));
         this.track.setTimeSinceLastAccess(this.track.getDate().getTime() - RemoteAccess.latestVisit(request.getServletPath(), clientHost));
         this.track.setDoSBlackout(LoklakServer.blacklistedHosts.contains(clientHost) || (!this.track.isLocalhostAccess() && (this.track.getTimeSinceLastAccess() < DAO.getConfig("DoS.blackout", 100))));
         this.track.setDoSServicereduction(!this.track.isLocalhostAccess() && (this.track.getTimeSinceLastAccess() < DAO.getConfig("DoS.servicereduction", 1000)));

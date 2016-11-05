@@ -139,7 +139,7 @@ public class AccessTracker extends Thread {
         private boolean isLocalhost;
         private boolean DoS_blackout, DoS_servicereduction;
         
-        public Track(String servlet, String clientHost) {
+        public Track(String servlet, String clientHost, String referrer) {
             this.clientHost = clientHost;
             long time = System.currentTimeMillis();
             Date lastDate = null;
@@ -149,7 +149,7 @@ public class AccessTracker extends Thread {
             this.accessTime = new Date(time);
             this.put(START_DATE_KEY, DateParser.iso8601MillisFormat.format(accessTime));
             this.put(CLIENT_KEY, clientHost);
-            this.isLocalhost = RemoteAccess.isLocalhost(clientHost);
+            this.isLocalhost = RemoteAccess.isLocalhost(clientHost, referrer);
             this.put(LOCALHOST_FLAG, this.isLocalhost);
             AccessTracker.this.pendingQueue.put(accessTime, this);
         }
@@ -217,8 +217,8 @@ public class AccessTracker extends Thread {
         }
     }
 
-    public Track startTracking(String servlet, String clientHost) {
-        return new Track(servlet, clientHost);
+    public Track startTracking(String servlet, String clientHost, String referrer) {
+        return new Track(servlet, clientHost, referrer);
     }
     
     
