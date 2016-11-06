@@ -1,0 +1,28 @@
+[flake8]
+ignore =
+  # Module imported but unused
+  F401,
+  # Line too long
+  E501,
+  # Indentation contains tabs
+  W191,
+  ZZZZ # allow comma on last entry
+select =
+  # Missing whitespace around modulo
+  E228,
+  # Blank line at end of file
+  W391,
+  # Block comment should start with '# '
+  E265,
+  # Whitespace before '('
+  E211,
+  # Trailing whitespace
+  W291,
+  # Multiple spaces after operator
+  E222,
+  # Multiple imports on one line
+  E401,
+  # Indentation contains mixed spaces and tabs
+  E101,
+  ZZZZ # allow comma on last entry
+filename = *.py
