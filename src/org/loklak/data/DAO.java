@@ -72,6 +72,7 @@ import org.loklak.objects.QueryEntry;
 import org.loklak.objects.ResultList;
 import org.loklak.objects.SourceType;
 import org.loklak.objects.Timeline;
+import org.loklak.objects.TimelineCache;
 import org.loklak.objects.UserEntry;
 import org.loklak.server.*;
 import org.loklak.tools.DateParser;
@@ -150,6 +151,7 @@ public class DAO {
     public static JsonTray passwordreset;
     public static Map<String, Accounting> accounting_temporary = new HashMap<>();
     public static JsonFile login_keys;
+    public static TimelineCache timelineCache;
     
     public static enum IndexName {
     	messages_hour("messages.json"), messages_day("messages.json"), messages_week("messages.json"), messages, queries, users, accounts, import_profiles;
@@ -348,6 +350,8 @@ public class DAO {
         access = new AccessTracker(log_dump_dir.toFile(), ACCESS_DUMP_FILE_PREFIX, 60000, 3000);
         access.start(); // start monitor
 
+        timelineCache = new TimelineCache(60000);
+        
         import_profile_dump_dir = dataPath.resolve("import-profiles");
         import_profile_dump = new JsonRepository(import_profile_dump_dir.toFile(), IMPORT_PROFILE_FILE_PREFIX, null, JsonRepository.COMPRESSED_MODE, false, Runtime.getRuntime().availableProcessors());
 
