@@ -55,7 +55,7 @@ A self-upgrading process is available which must be triggered by a shell command
 
 ### Where can I download ready-built releases of loklak?
 
-Nowhere, you must clone the git repository of loklak and built it yourself. That's easy, just do
+Nowhere, you must clone the git repository of loklak and build it yourself. That's easy, just do
 - `git clone https://github.com/loklak/loklak_server.git`
 - `cd loklak`
 - then see above ("How do I run loklak")
