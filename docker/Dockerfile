@@ -10,8 +10,15 @@ RUN apt-get upgrade -y
 RUN apt-get install -y git ant openjdk-8-jdk
 
 # clone the github repo
-RUN git clone https://github.com/loklak/loklak_server.git
+RUN git clone --depth 1 https://github.com/loklak/loklak_server.git
 WORKDIR loklak_server
+
+RUN locale-gen en_US.UTF-8
+RUN update-locale LANG=en_US.UTF-8 LC_MESSAGES=POSIX
+ENV LANG en_US.UTF-8
+ENV LC_MESSAGES POSIX
+RUN locale
+
 
 # compile
 RUN ant
@@ -25,7 +32,7 @@ RUN sed -i.bak 's/^\(port.https=\).*/\1443/'              conf/config.properties
 RUN sed -i.bak 's/^\(upgradeInterval=\).*/\186400000000/' conf/config.properties
 
 # hack until loklak support no-daemon
-RUN echo "while true; do sleep 10;done" >> bin/start.sh
+COPY docker-cmd.sh docker-cmd.sh
 
 # start loklak
-CMD ["bin/start.sh"]
+CMD ["./docker-cmd.sh"]
