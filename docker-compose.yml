@@ -1,5 +1,4 @@
-web:
-  name: "loklak"
+loklak:
   build: docker
   ports:
   - "80:80"
