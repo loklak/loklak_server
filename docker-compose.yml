@@ -2,4 +2,4 @@ web:
   name: "loklak"
   build: docker
   ports:
-  - ":80"
+  - "80:80"
