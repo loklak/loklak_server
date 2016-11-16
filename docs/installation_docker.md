@@ -1,5 +1,28 @@
 # Installation of loklak with Docker
 
+Docker is a way to move applications including the operating system to servers.
+
+## Get a loklak Docker image
+
+Each of the following sections depend on a docker image with a loklak server inside.
+This section shows you how to get such an image.
+Some possibilities may be used in the sections but you can mey be able to exchenge them.
+
+- pull a docker image from [dockerhub](https://hub.docker.com/r/mariobehling/loklak/):
+
+        docker pull mariobehling/loklak
+
+- clone the repository and build the image from source
+
+        git clone https://github.com/loklak/loklak_server.git
+        cd loklak_server
+        docker build -t mariobehling/loklak docker
+
+- build the repository from the git URL
+
+        docker build https://github.com/loklak/loklak_server.git#development:docker
+
+
 ## Installing loklak on Bluemix with Docker
 
 1. Install docker on your system
