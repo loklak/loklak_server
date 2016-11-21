@@ -36,7 +36,6 @@ import org.eclipse.jetty.util.log.Log;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
-import org.loklak.harvester.TwitterScraper;
 import org.loklak.http.ClientConnection;
 import org.loklak.http.RemoteAccess;
 import org.loklak.objects.MessageEntry;
@@ -311,7 +310,6 @@ public class SearchServlet extends HttpServlet {
             try {
                 for (MessageEntry t: tl.getNextTweets(startRecord - 1, maximumRecords)) {
                     UserEntry u = tl.getUser(t);
-                    if (DAO.getConfig("flag.fixunshorten", false)) t.setText(TwitterScraper.unshorten(t.getText(shortlink_iflinkexceedslength, shortlink_urlstub)));
                     statuses.put(t.toJSON(u, true, shortlink_iflinkexceedslength, shortlink_urlstub));
                 }
             } catch (ConcurrentModificationException e) {
@@ -348,7 +346,7 @@ public class SearchServlet extends HttpServlet {
                     m.setLink(t.getStatusIdUrl().toExternalForm());
                     m.setAuthor(u.getName() + " @" + u.getScreenName());
                     m.setTitle(u.getName() + " @" + u.getScreenName());
-                    m.setDescription(t.getText(shortlink_iflinkexceedslength, shortlink_urlstub));
+                    m.setDescription(t.getText(shortlink_iflinkexceedslength, shortlink_urlstub).text);
                     m.setPubDate(t.getCreatedAt());
                     m.setGuid(t.getIdStr());
                     feed.addMessage(m);
@@ -368,7 +366,7 @@ public class SearchServlet extends HttpServlet {
             try {
                 for (MessageEntry t: tl) {
                     UserEntry u = tl.getUser(t);
-                    buffer.append(t.getCreatedAt()).append(" ").append(u.getScreenName()).append(": ").append(t.getText(shortlink_iflinkexceedslength, shortlink_urlstub)).append('\n');
+                    buffer.append(t.getCreatedAt()).append(" ").append(u.getScreenName()).append(": ").append(t.getText(shortlink_iflinkexceedslength, shortlink_urlstub).text).append('\n');
                 }
             } catch (ConcurrentModificationException e) {
                 // late incoming messages from concurrent peer retrieval may cause this

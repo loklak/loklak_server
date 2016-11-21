@@ -565,7 +565,7 @@ public class TwitterScraper {
                 if (tweet instanceof TwitterTweet) {
                     ((TwitterTweet) tweet).waitReady(10000);
                 }
-                System.out.println(tweet.getCreatedAt().toString() + " from @" + tweet.getScreenName() + " - " + tweet.getText(Integer.MAX_VALUE, ""));
+                System.out.println(tweet.getCreatedAt().toString() + " from @" + tweet.getScreenName() + " - " + tweet.getText());
             }
         }
         System.out.println("count: " + all);

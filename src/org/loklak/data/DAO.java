@@ -650,7 +650,7 @@ public class DAO {
              }
             
             // teach the classifier
-            Classifier.learnPhrase(mw.t.getText(Integer.MAX_VALUE, ""));
+            Classifier.learnPhrase(mw.t.getText());
         } catch (IOException e) {
         	Log.getLog().warn(e);
         }
@@ -690,7 +690,7 @@ public class DAO {
              }
                 
             // teach the classifier
-            Classifier.learnPhrase(mw.t.getText(Integer.MAX_VALUE, ""));
+            Classifier.learnPhrase(mw.t.getText());
         }
         ElasticsearchClient.BulkWriteResult result = null;
         try {
@@ -751,7 +751,7 @@ public class DAO {
              }
                 
             // teach the classifier
-            Classifier.learnPhrase(mw.t.getText(Integer.MAX_VALUE, ""));
+            Classifier.learnPhrase(mw.t.getText());
         } catch (IOException e) {
         	Log.getLog().warn(e);
         }

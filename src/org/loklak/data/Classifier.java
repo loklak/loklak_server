@@ -168,7 +168,7 @@ public class Classifier {
             for (Context c: Context.values()) {
                 //Set<String> voc = c.vocabulary();
                 for (MessageEntry m: tl) {
-                    c.learnPhrase(m.getText(Integer.MAX_VALUE, ""));
+                    c.learnPhrase(m.getText());
                     count++;
                     if (count % 100 == 0) DAO.log("Classifier: performed " + count + " learn steps");
                 }

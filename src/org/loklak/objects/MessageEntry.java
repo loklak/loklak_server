@@ -24,6 +24,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -367,22 +368,42 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
         return this.hosts;
     }
     
-    public String getText(final int iflinkexceedslength, final String urlstub) {
+    public String getText() {
+        return this.text;
+    }
+    
+    public TextLinkMap getText(final int iflinkexceedslength, final String urlstub) {
         // check if we shall replace shortlinks
-        String t = this.text;
+        TextLinkMap tlm = new TextLinkMap();
+        tlm.text = this.text;
         String[] links = this.getLinks();
         if (links != null) {
-            linkloop: for (int nth = 0; nth < links.length; nth++) {
+            for (int nth = 0; nth < links.length; nth++) {
                 String link = links[nth];
                 if (link.length() > iflinkexceedslength) {
                     //if (!DAO.existMessage(this.getIdStr())) break linkloop;
-                    t = t.replace(link, urlstub + "/x?id=" + this.getIdStr() +
-                            (nth == 0 ? "" : ShortlinkFromTweetServlet.SHORTLINK_COUNTER_SEPERATOR + Integer.toString(nth)));
+                    String shortlink = urlstub + "/x?id=" + this.getIdStr() +
+                            (nth == 0 ? "" : ShortlinkFromTweetServlet.SHORTLINK_COUNTER_SEPERATOR + Integer.toString(nth));
+                    if (shortlink.length() < link.length()) {
+                        tlm.text = tlm.text.replace(link, shortlink);
+                        if (!shortlink.equals(link)) tlm.short2long.put(shortlink, link);
+                    }
                 }
             }
         }
-        
-        return t;
+        return tlm;
+    }
+    
+    public static class TextLinkMap {
+        public String text;
+        public JSONObject short2long;
+        public TextLinkMap() {
+            text = "";
+            this.short2long = new JSONObject(true);
+        }
+        public String toString() {
+            return this.text;
+        }
     }
     
     public int getTextLength() {
@@ -541,7 +562,8 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
         if (this.to != null) m.put("to", utcFormatter.print(this.to.getTime()));
         m.put("screen_name", this.screen_name);
         if (this.retweet_from != null && this.retweet_from.length() > 0) m.put("retweet_from", this.retweet_from);
-        m.put("text", this.getText(iflinkexceedslength, urlstub)); // the tweet; the cleanup is a helper function which cleans mistakes from the past in scraping
+        TextLinkMap tlm = this.getText(iflinkexceedslength, urlstub);
+        m.put("text", tlm); // the tweet; the cleanup is a helper function which cleans mistakes from the past in scraping
         if (this.status_id_url != null) m.put("link", this.status_id_url.toExternalForm());
         m.put("id_str", this.id_str);
         if (this.canonical_id != null) m.put("canonical_id", this.canonical_id);
@@ -582,6 +604,7 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
             m.put("hosts_count", this.hosts.length);
             m.put("links", this.links);
             m.put("links_count", this.links.length);
+            m.put("unshorten", tlm.short2long);
             m.put("images", this.images);
             m.put("images_count", this.images.size());
             m.put("audio", this.audio);
