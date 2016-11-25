@@ -386,7 +386,11 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
                             (nth == 0 ? "" : ShortlinkFromTweetServlet.SHORTLINK_COUNTER_SEPERATOR + Integer.toString(nth));
                     if (shortlink.length() < link.length()) {
                         tlm.text = tlm.text.replace(link, shortlink);
-                        if (!shortlink.equals(link)) tlm.short2long.put(shortlink, link);
+                        if (!shortlink.equals(link)) {
+                            int stublen = shortlink.length() + 3;
+                            if (link.length() >= stublen) link = link.substring(0, shortlink.length()) + "...";
+                            tlm.short2long.put(shortlink, link);
+                        }
                     }
                 }
             }
