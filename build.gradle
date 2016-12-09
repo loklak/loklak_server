@@ -3,16 +3,18 @@ apply plugin: 'java'
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
+sourceSets.main.java.srcDirs = ['src']
+
 jar {
-    manifest {
-        attributes 'Main-Class': 'org.loklak.LoklakServer'
-    }
+  manifest {
+    attributes 'Main-Class': 'org.loklak.LoklakServer'
+  }
 }
 
 repositories {
-    flatDir {
-        dirs 'lib'
-    }
+  flatDir {
+    dirs 'lib'
+  }
 }
 
 dependencies {
