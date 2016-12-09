@@ -129,23 +129,19 @@ Hey, this is the tool for that! Just put http://loklak.org/api/search.rss?q=%23l
   ```
   brew install gradle
   ```
-- To compile, first, create dir necessary for Gradle
-
-  ```
-  ./gradle_init.sh
-  ```
 
   Compile the source to classes and a jar file
 
   ```
-  gradle assemble
+  gradle build
   ```
 
   Compiled file can be found in build dir
-  Last, clean up so that we can still build the project using Ant
+  
+  To remove compiled classes and jar file
 
   ```
-  ./gradle_clean.sh
+  gradle clean
   ```
 
 

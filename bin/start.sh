@@ -79,7 +79,7 @@ else
     echo "If you want to build with Ant,"
     echo "$ ant"
     echo "If you want to build with Gradle,"
-    echo "$ ./gradle_init.sh && gradle build"
+    echo "$ gradle build"
     exit 1
 fi
 
