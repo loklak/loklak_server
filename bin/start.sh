@@ -8,8 +8,25 @@ cd $(dirname $0)/..
 # Execute preload script
 source bin/.preload.sh
 
+while getopts ":Id" opt; do
+    case $opt in
+        I)
+            SKIP_INSTALL_CHECK=1
+            ;;
+        d)
+            SKIP_WAITING=1
+            ;;
+        \?)
+            echo "Usage: $0 [options...]"
+            echo -e " -I\tIgnore installation config"
+            echo -e " -d\tSkip waiting for Loklak"
+            exit 1
+            ;;
+    esac
+done
+
 # installation
-if [ ! -f $INSTALLATIONCONFIG ]; then
+if [ ! -f $INSTALLATIONCONFIG ] && [[ $SKIP_INSTALL_CHECK -eq 0 ]]; then
     echo "Loklak detected that you did not yet run the installation wizard."
     echo "It let's you setup an administrator account and a number of settings, but is not mandatory."
     echo "You can manually start it by running bin/installation.sh"
@@ -50,13 +67,15 @@ eval $cmdline
 PID=$!
 echo $PID > $PIDFILE
 
-while [ -f $STARTUPFILE ] && [ $(ps -p $PID -o pid=) ]; do
-    if [ $(cat $STARTUPFILE) = 'done' ]; then
-        break
-    else
-        sleep 1
-    fi
-done
+if [[ $SKIP_WAITING -eq 0 ]]; then
+    while [ -f $STARTUPFILE ] && [ $(ps -p $PID -o pid=) ]; do
+        if [ $(cat $STARTUPFILE) = 'done' ]; then
+            break
+        else
+            sleep 1
+        fi
+    done
+fi
 
 if [ -f $STARTUPFILE ] && [ $(ps -p $PID -o pid=) ]; then
     CUSTOMPORT=$(grep -iw 'port.http' conf/config.properties | sed 's/^[^=]*=//' );
