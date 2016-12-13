@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 
-PIDFILE="data/loklak.pid"
-DFAULTCONFIG="conf/config.properties"
-CUSTOMCONFIG="data/settings/customized_config.properties"
-LOGCONFIG="conf/logs/log-to-file.properties"
-STARTUPFILE="data/startup.tmp"
-DFAULTXmx="-Xmx800m";
-CUSTOMXmx=""
+# If you're looking for the variables, please go to bin/.preload.sh
 
+# Make sure we're on project root
 cd $(dirname $0)/..
+
+# Execute preload script
+source bin/.preload.sh
+
 mkdir -p data/settings
 
 #to not allow process to overwrite the already running one.
@@ -24,7 +23,6 @@ fi
 
 
 # installation
-INSTALLATIONCONFIG="data/settings/installation.txt"
 if [ ! -f $INSTALLATIONCONFIG ]; then
     echo "Loklak detected that you did not yet run the installation wizard."
     echo "It let's you setup an administrator account and a number of settings, but is not mandatory."
