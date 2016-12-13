@@ -8,20 +8,6 @@ cd $(dirname $0)/..
 # Execute preload script
 source bin/.preload.sh
 
-mkdir -p data/settings
-
-#to not allow process to overwrite the already running one.
-if [ -f $PIDFILE ]; then
-    PID=$(cat $PIDFILE 2>/dev/null)
-    if [ $(ps -p $PID -o pid=) ]; then
-        echo "Server is already running, please stop it and then start"
-        exit 1
-    else
-        rm $PIDFILE
-    fi
-fi
-
-
 # installation
 if [ ! -f $INSTALLATIONCONFIG ]; then
     echo "Loklak detected that you did not yet run the installation wizard."
