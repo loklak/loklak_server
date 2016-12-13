@@ -21,3 +21,12 @@ if [ -f $PIDFILE ]; then
         rm $PIDFILE
     fi
 fi
+
+if [ -f $DFAULTCONFIG ]; then
+    j="$(grep Xmx $DFAULTCONFIG | sed 's/^[^=]*=//')";
+    if [ -n $j ]; then DFAULTXmx="$j"; fi;
+fi
+if [ -f $CUSTOMCONFIG ]; then
+    j="$(grep Xmx $CUSTOMCONFIG | sed 's/^[^=]*=//')";
+    if [ -n $j ]; then CUSTOMXmx="$j"; fi;
+fi

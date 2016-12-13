@@ -8,15 +8,6 @@ cd $(dirname $0)/..
 # Execute preload script
 source bin/.preload.sh
 
-if [ -f $DFAULTCONFIG ]; then
-    j="$(grep Xmx $DFAULTCONFIG | sed 's/^[^=]*=//')";
-    if [ -n $j ]; then DFAULTXmx="$j"; fi;
-fi
-if [ -f $CUSTOMCONFIG ]; then
-    j="$(grep Xmx $CUSTOMCONFIG | sed 's/^[^=]*=//')";
-    if [ -n $j ]; then CUSTOMXmx="$j"; fi;
-fi
-
 CLASSPATH=""
 for N in lib/*.jar; do CLASSPATH="$CLASSPATH$N:"; done
 
