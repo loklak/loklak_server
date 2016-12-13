@@ -41,30 +41,6 @@ if [ ! -f $INSTALLATIONCONFIG ]; then
 OPTIONAL
 fi
 
-CLASSPATH=""
-for N in lib/*.jar; do CLASSPATH="$CLASSPATH$N:"; done
-
-if [ -d "./classes" ]; then
-    CLASSPATH=".:./classes/:$CLASSPATH"
-elif [ -d "./build/classes/main" ]; then
-    CLASSPATH=".:./build/classes/main:$CLASSPATH"
-else
-    echo "It seems you haven't compile Loklak"
-    echo "You can use either Gradle or Ant to build Loklak"
-    echo "If you want to build with Ant,"
-    echo "$ ant"
-    echo "If you want to build with Gradle,"
-    echo "$ gradle build"
-    exit 1
-fi
-
-cmdline="java";
-
-if [ -n "$ENVXmx" ] ; then cmdline="$cmdline -Xmx$ENVXmx";
-elif [ -n "$CUSTOMXmx" ]; then cmdline="$cmdline -Xmx$CUSTOMXmx";
-elif [ -n "$DFAULTXmx" ]; then cmdline="$cmdline -Xmx$DFAULTXmx";
-fi
-
 echo "starting loklak"
 echo "startup" > $STARTUPFILE
 
