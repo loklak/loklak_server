@@ -52,7 +52,6 @@ public class Sitemap extends HttpServlet {
 		// String siteurl = request.getRequestURL().toString();
 		// String baseurl = siteurl.substring(0, siteurl.length() -
 		// request.getRequestURI().length()) + request.getContextPath() + "/";
-		String baseurl = "http://loklak.org/";
 		JSONObject TopMenuJsonObject = new TopMenuService().serviceImpl(post, null, null, null);
 		JSONArray sitesarr = TopMenuJsonObject.getJSONArray("items");
 		response.setCharacterEncoding("UTF-8");
@@ -61,7 +60,7 @@ public class Sitemap extends HttpServlet {
 		for (int i = 0; i < sitesarr.length(); i++) {
 			JSONObject sitesobj = sitesarr.getJSONObject(i);
 			Iterator<String> sites = sitesobj.keys();
-			sos.print("<url>\n<loc>" + baseurl + sitesobj.getString(sites.next().toString()) + "/</loc>\n"
+			sos.print("<url>\n<loc>" + sitesobj.getString(sites.next().toString()) + "/</loc>\n"
 					+ "<changefreq>weekly</changefreq>\n</url>\n");
 		}
 		sos.print("</urlset>");
