@@ -3,25 +3,25 @@ MAINTAINER Ansgar Schmidt <ansgar.schmidt@gmx.net>
 ENV DEBIAN_FRONTEND noninteractive
 
 # update
-RUN apt-get update
-RUN apt-get upgrade -y
+RUN apt-get update && apt-get upgrade -y && apt-get install -y git ant openjdk-8-jdk
+
 
 # add packages
-RUN apt-get install -y git ant openjdk-8-jdk
+
 
 # clone the github repo
 RUN git clone --depth 1 https://github.com/loklak/loklak_server.git
 WORKDIR loklak_server
 
-RUN locale-gen en_US.UTF-8
-RUN update-locale LANG=en_US.UTF-8 LC_MESSAGES=POSIX
+RUN locale-gen en_US.UTF-8 && update-locale LANG=en_US.UTF-8 LC_MESSAGES=POSIX
+
 ENV LANG en_US.UTF-8
 ENV LC_MESSAGES POSIX
-RUN locale
+RUN locale && ant
 
 
 # compile
-RUN ant
+
 
 # Expose the web interface ports
 EXPOSE 80 443
