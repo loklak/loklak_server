@@ -184,7 +184,7 @@ public class TwitterScraper {
             if (input.length() == 0) continue;
             
             // debug
-            //if (debuglog) System.out.println(line + ": " + input);            
+            if (debuglog) System.out.println(line + ": " + input);            
             //if (input.indexOf("ProfileTweet-actionCount") > 0) System.out.println(input);
 
             // parse
@@ -193,16 +193,16 @@ public class TwitterScraper {
                 props.put("userid", new prop(input, p, "data-user-id"));
                 continue;
             }
-            if ((p = input.indexOf("class=\"avatar")) > 0) {
+            if ((p = input.indexOf("class=\"avatar js-action-profile-avatar")) > 0) {
                 props.put("useravatarurl", new prop(input, p, "src"));
                 continue;
             }
-            if ((p = input.indexOf("class=\"fullname")) > 0) {
+            if ((p = input.indexOf("class=\"fullname js-action-profile-name")) > 0) {
                 props.put("userfullname", new prop(input, p, null));
                 continue;
             }
-            if ((p = input.indexOf("class=\"username")) > 0) {
-                props.put("usernickname", new prop(input, p, null));
+            if ((p = input.indexOf("class=\"username js-action-profile-name")) > 0) {
+                props.put("usernickname", new prop(input.replace("<s>@</s>", "").replace("<b>", "").replace("</b>", ""), p, null));
                 continue;
             }
             if ((p = input.indexOf("class=\"tweet-timestamp")) > 0) {
@@ -301,7 +301,7 @@ public class TwitterScraper {
                         imgs, vids, place_name, place_id,
                         user, writeToIndex,  writeToBackend
                         );
-                if (!DAO.messages.existsCache(tweet.getIdStr())) {
+                if (DAO.messages == null || !DAO.messages.existsCache(tweet.getIdStr())) {
                     // checking against the exist cache is incomplete. A false negative would just cause that a tweet is
                     // indexed again.
                     if (tweet.willBeTimeConsuming()) {
@@ -333,6 +333,10 @@ public class TwitterScraper {
     
     private static class prop {
         public String key, value = null;
+        public prop(String value) {
+            this.key = null;
+            this.value = value;
+        }
         public prop(String line, int start, String key) {
             this.key = key;
             if (key == null) {
@@ -349,7 +353,13 @@ public class TwitterScraper {
                         }
                         q++;
                     }
-                    value = line.substring(p + 1, q - 1);
+                    assert p >= -1;
+                    assert q > 0;
+                    try {
+                        value = line.substring(p + 1, q - 1);
+                    } catch (StringIndexOutOfBoundsException e) {
+                        Log.getLog().debug(e);
+                    }
                 }
             } else {
                 int p  = line.indexOf(key + "=\"", start);

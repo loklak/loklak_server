@@ -72,7 +72,7 @@ import org.loklak.data.DAO;
  */
 public class ClientConnection {
     
-    public static String USER_AGENT = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.4; en-US; rv:1.9.2.2) Gecko/20100316 Firefox/3.6.2";
+    public static String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.98 Safari/537.36";
     
     public  static final String CHARSET = "UTF-8";
     private static final byte LF = 10;
