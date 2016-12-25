@@ -77,7 +77,7 @@
           Collect, search, download and visualize messages from various sources: tweets, youtube descriptions and from more social media sources.
         </span>&nbsp;<br>
         <span ng-controller="status" >
-          This is the Search Server for the <a style="font-weight: bold;" href="http://loklak.net" target="_self">Loklak Webclient</a> {{(index.messages.size > 0) ? " hosting " + (index.messages.size | number : fractionSize) + " messages for " + (index.users.size | number : fractionSize) + " users."  : ""}}&nbsp;<br>
+          This is the Search Server for the <a style="font-weight: bold;" href="http://loklak.org" target="_self">Loklak Webclient</a> {{(index.messages.size > 0) ? " hosting " + (index.messages.size | number : fractionSize) + " messages for " + (index.users.size | number : fractionSize) + " users."  : ""}}&nbsp;<br>
           {{(index.messages.size > 0 && index.mps > 0) ? "Collection Speed: " + index.mps + " message" + (index.mps > 1 ? "s" : "") + " per second; " + ((index.mps * 86400) | number : fractionSize) + " messages per day."  : ""}}
         </span>&nbsp;<br><br>
           
