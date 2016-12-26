@@ -28,7 +28,7 @@
         <delete dir="classes"/>
         <mkdir dir="classes"/>
         <echo message="${ant.project.name}: ${ant.file}"/>
-        <javac debug="true" destdir="classes" includeantruntime="false" source="${source}" target="${target}">
+        <javac debug="true" destdir="classes" includeantruntime="false" source="${source}" target="${target}" encoding="UTF-8">
             <src path="src"/>
             <classpath refid="loklak.classpath"/>
         </javac>
