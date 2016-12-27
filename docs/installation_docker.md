@@ -134,6 +134,10 @@ cf ic login   (No credentials are necessary of you logged in to bluemix before
 	sudo apt-get update
 	sudo apt-get install docker-engine
 	```
+   Or, to install docker on newer versions of ubuntu (other distros are not tested) we can just do:
+	```
+	sudo apt-get install docker.io
+	``` 
 
 14. Once docker is installed, we start our loklak-server by entering:
 	```
