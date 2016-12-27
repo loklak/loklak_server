@@ -164,6 +164,21 @@ public class LoklakServer {
         for (Map.Entry<Object, Object> entry: customized_config_props.entrySet()) config.put((String) entry.getKey(), (String) entry.getValue());
         return config;
     }
+
+    public static void saveConfig() throws IOException {
+        Path data = FileSystems.getDefault().getPath("data");
+        Path settings_dir = data.resolve("settings");
+        settings_dir.toFile().mkdirs();
+        OS.protectPath(settings_dir);
+        File customized_config = new File(settings_dir.toFile(), "customized_config.properties");
+        Properties prop = new Properties();
+        for (String key : DAO.getConfigKeys()) {
+            prop.put(key, DAO.getConfig(key, ""));
+        }
+        BufferedWriter w = new BufferedWriter(new FileWriter(customized_config));
+        prop.store(w, "This file can be used to customize the configuration file conf/config.properties");
+        w.close();
+    }
     
     public static int getServerThreads() {
         return server.getThreadPool().getThreads() - server.getThreadPool().getIdleThreads();
@@ -299,6 +314,9 @@ public class LoklakServer {
                     TwitterScraper.executor.shutdown();
                     Harvester.executor.shutdown();
                     Log.getLog().info("main terminated, goodby.");
+
+                    LoklakServer.saveConfig();
+                    Log.getLog().info("saved customized_config.properties");
 
                     Log.getLog().info("Shutting down log4j2");
                     LogManager.shutdown();

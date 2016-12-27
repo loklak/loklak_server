@@ -21,6 +21,8 @@ package org.loklak.api.admin;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -41,30 +43,85 @@ public class SettingsServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        doGet(request, response);
+        Query post = RemoteAccess.evaluate(request);
+
+        if (!validateRequest(response, post))
+            return;
+
+        JSONObject json = new JSONObject(true);
+
+        // Validate if the option is available
+        if (!DAO.getConfigKeys().containsAll(post.getKeys())) {
+            response.sendError(503, "Invalid configuration key");
+            return;
+        }
+
+        Map<String, String> appliedSettings = new HashMap<>();
+
+        // Apply settings
+        for (String key : post.getKeys()) {
+            String value = request.getParameter(key);
+
+            try {
+                long valueLong = Long.parseLong(value);
+                DAO.setConfig(key, valueLong);
+                appliedSettings.put(key, value);
+                continue;
+            } catch (NumberFormatException ex) {} // Do nothing
+
+            try {
+                double valueDouble = Double.parseDouble(value);
+                DAO.setConfig(key, valueDouble);
+                appliedSettings.put(key, value);
+                continue;
+            } catch (NumberFormatException ex) {} // Do nothing
+
+            DAO.setConfig(key, value);
+        }
+
+        json.put("settings", appliedSettings);
+
+        json.put("message", "New settings are successfully applied");
+
+        sendJSONData(response, post, json);
     }
     
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         Query post = RemoteAccess.evaluate(request);
-        if (post.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;}
-        if (!post.isLocalhostAccess()) {response.sendError(503, "access only allowed from localhost, your request comes from " + post.getClientHost()); return;}
-        
-        post.setResponse(response, "application/javascript");
-        
-        // generate json: NO jsonp here on purpose!
+
+        if (!validateRequest(response, post))
+            return;
+
         JSONObject json = new JSONObject(true);
+
         for (String key: DAO.getConfigKeys()) {
-            if (key.startsWith("client.")) json.put(key.substring(7), DAO.getConfig(key, ""));
+            json.put(key, DAO.getConfig(key, ""));
         }
 
-        // write json
-        response.setCharacterEncoding("UTF-8");
-        PrintWriter sos = response.getWriter();
-        sos.print(json.toString(2));
-        sos.println();
-
-        post.finalize();
+        sendJSONData(response, post, json);
     }
-    
+
+    private boolean validateRequest(HttpServletResponse response, Query post) throws IOException {
+        if (post.isDoS_blackout()) {
+            response.sendError(503, "your request frequency is too high");
+            return false;
+        }
+
+        if (!post.isLocalhostAccess()) {
+            response.sendError(503, "access only allowed from localhost, your request comes from " +
+                    post.getClientHost());
+            return false;
+        }
+
+        return true;
+    }
+
+    private void sendJSONData(HttpServletResponse response, Query post, JSONObject json) throws IOException {
+        post.setResponse(response, "application/javascript");
+        response.setCharacterEncoding("UTF-8");
+
+        PrintWriter sos = response.getWriter();
+        sos.println(json.toString(2));
+    }
 }

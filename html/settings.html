@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <!--#include file="../ssi/common_head_front.include" -->
+        <meta name="author" content="Michael Peter Christen, @0rb1t3r">
+        <link rel="canonical" href="http://dev.loklak.org" />
+        <title>Loklak Server Configuration</title>
+
+        <!--#include file="../ssi/common_head_back.include" -->
+        <!--#include file="../data/ssi/custom_head.include" -->
+    </head>
+    <body>
+        <!--#include file="../data/ssi/custom_body_front.include" -->
+        <!--#include file="../ssi/common_body_front.include" -->
+
+        <nav class="navbar navbar-inverse navbar-fixed-top">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <a class="navbar-brand" href="/"><code>loklak</code> configuration</a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container" style="margin-top: 1%; margin-bottom: 1%">
+            <div class="row">
+                <div class="col-md-12" id="alert-box">
+                    <p class="alert alert-danger">
+                        <b>Caution, Dragons Ahead!</b>
+                        Please be careful, Invalid configurations can <b>break</b>
+                        Loklak.
+                    </p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <form id="settings-form">
+                    </form>
+                    <a class="btn btn-danger btn-lg btn-block"
+                       id="apply-btn">Apply Changes</a>
+                </div>
+            </div>
+        </div>
+
+        <!--#include file="../ssi/common_body_back.include" -->
+        <!--#include file="../data/ssi/custom_body_back.include" -->
+        <script src="/js/settings.js"></script>
+    </body>
+</html>
