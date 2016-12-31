@@ -542,6 +542,7 @@ public class DAO {
 
         // close the index
         elasticsearch_client.close();
+
         Log.getLog().info("closed DAO");
     }
     
@@ -577,6 +578,18 @@ public class DAO {
         } catch (NumberFormatException e) {
             return default_val;
         }
+    }
+
+    public static void setConfig(String key, String value) {
+        config.put(key, value);
+    }
+
+    public static void setConfig(String key, long value) {
+        setConfig(key, Long.toString(value));
+    }
+
+    public static void setConfig(String key, double value) {
+        setConfig(key, Double.toString(value));
     }
 
     public static JsonNode getSchema(String key) throws IOException {
