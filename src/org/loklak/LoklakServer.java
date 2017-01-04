@@ -542,6 +542,7 @@ public class LoklakServer {
                 TwitterAnalysisService.class,
                 AmazonProductService.class,
                 UserAccountPermissions.class,
+                SettingsManagementService.class,
 
                 // geo
                 
