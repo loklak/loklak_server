@@ -1,5 +1,11 @@
-var reason = "Most likely this is due to the fact you're not accessing on the" +
-    " server itself, Please access this configuration page on the server.";
+var loginPage = "/apps/loginpage";
+
+var anonMessage = "Anonymous users are not allowed to modify, " +
+    "Please <a href=\"" + loginPage + "\">login</a>";
+
+function capitalizeFirstLetter(text) {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+}
 
 function generateAlert(type, message) {
     var alert = document.createElement("div");
@@ -101,7 +107,7 @@ function getSettingsData() {
         method: "get"
     }).then((res) => {
         if (!res.ok) {
-            addAlert("danger", "<b>FAILURE</b>: Failed to receive settings.<br>" + reason);
+            addAlert("danger", "<b>FAILURE</b>: " + res.statusText + "</b>");
             return null;
         }
 
@@ -110,15 +116,20 @@ function getSettingsData() {
 }
 
 function updateSettings() {
-    fetch("/api/settings.json", {
+    fetch("/api/settings-management.json", {
         method: "post",
+        credentials: "same-origin",
         headers: {
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
         },
         body: generatePOSTDataFromInputs()
     }).then((res) => {
+        if (res.status === 401 && res.statusText.indexOf("ANONYMOUS") !== -1) {
+            addAlert("warning", anonMessage);
+        }
+
         if (!res.ok) {
-            addAlert("danger", "<b>FAILURE</b>: Failed to update settings.<br>" + reason);
+            addAlert("danger", "<b>FAILURE</b>: " + res.statusText);
             return null;
         }
 
@@ -132,6 +143,79 @@ function updateSettings() {
     }).then(getSettingsData());
 }
 
+function showAdminOnly() {
+    var adminStuff = document.getElementsByClassName("admin-only");
+
+    adminStuff = Array.prototype.slice.call(adminStuff);
+
+    adminStuff.forEach((elm) => {
+        elm.removeAttribute("hidden");
+    });
+}
+
+function checkPermissions() {
+    fetch("/api/account-permissions.json", {
+        credentials: "same-origin"
+    }).then((res) => {
+        if (!res.ok) {
+            addAlert("danger", "<b>FAILURE</b>: An error has occured while " +
+                     "checking login status. <br>" + res.statusText);
+            return null;
+        }
+
+        return res.json();
+    }).then((json) => {
+        if (json == null) {
+            return;
+        }
+
+        if (json.userRole === "admin") {
+            addAlert("success", "You are permitted to modify the settings");
+            addAlert("danger", "<b>Caution, Dragons Ahead!</b><br>" +
+                     "Modifications of Loklak's Settings may result in " +
+                     "<b>instability</b>, <b>crashes</b>, and " +
+                     "<b>corruption</b>.<br>" +
+                     "Please be <b>careful</b> and use your powers " +
+                     "<b>wisely</b>!");
+            showAdminOnly();
+        } else {
+            addAlert("warning", capitalizeFirstLetter(json.userRole) +
+                     "s are not permitted to modify server settings.");
+        }
+    });
+}
+
+function checkLoginStatus() {
+    fetch("/api/login.json", {
+        method: "post",
+        credentials: "same-origin",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+        },
+        body: "checkLogin=true"
+    }).then((res) => {
+        if (!res.ok) {
+            addAlert("danger", "<b>FAILURE</b>: An error has occured while " +
+                     "checking login status.<br>" + res.statusText);
+            return null;
+        }
+
+        return res.json();
+    }).then((json) => {
+        if (json == null) {
+            return;
+        }
+
+        if (json.loggedIn) {
+            addAlert("info", json.message);
+            checkPermissions();
+        } else {
+            addAlert("warning", anonMessage);
+        }
+    });
+}
+
 document.getElementById("apply-btn").addEventListener("click", updateSettings);
 
 getSettingsData();
+checkLoginStatus();

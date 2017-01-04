@@ -21,8 +21,6 @@ package org.loklak.api.admin;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.HashMap;
-import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -43,47 +41,7 @@ public class SettingsServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Query post = RemoteAccess.evaluate(request);
-
-        if (!validateRequest(response, post))
-            return;
-
-        JSONObject json = new JSONObject(true);
-
-        // Validate if the option is available
-        if (!DAO.getConfigKeys().containsAll(post.getKeys())) {
-            response.sendError(503, "Invalid configuration key");
-            return;
-        }
-
-        Map<String, String> appliedSettings = new HashMap<>();
-
-        // Apply settings
-        for (String key : post.getKeys()) {
-            String value = request.getParameter(key);
-
-            try {
-                long valueLong = Long.parseLong(value);
-                DAO.setConfig(key, valueLong);
-                appliedSettings.put(key, value);
-                continue;
-            } catch (NumberFormatException ex) {} // Do nothing
-
-            try {
-                double valueDouble = Double.parseDouble(value);
-                DAO.setConfig(key, valueDouble);
-                appliedSettings.put(key, value);
-                continue;
-            } catch (NumberFormatException ex) {} // Do nothing
-
-            DAO.setConfig(key, value);
-        }
-
-        json.put("settings", appliedSettings);
-
-        json.put("message", "New settings are successfully applied");
-
-        sendJSONData(response, post, json);
+        doGet(request, response);
     }
     
     @Override
@@ -105,12 +63,6 @@ public class SettingsServlet extends HttpServlet {
     private boolean validateRequest(HttpServletResponse response, Query post) throws IOException {
         if (post.isDoS_blackout()) {
             response.sendError(503, "your request frequency is too high");
-            return false;
-        }
-
-        if (!post.isLocalhostAccess()) {
-            response.sendError(503, "access only allowed from localhost, your request comes from " +
-                    post.getClientHost());
             return false;
         }
 
