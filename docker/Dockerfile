@@ -15,6 +15,7 @@ ADD lib /loklak_server/lib/
 ADD html /loklak_server/html/
 ADD installation /loklak_server/installation/
 ADD docker /loklak_server/docker/
+ADD ssi /loklak_server/ssi/
 ADD build.xml /loklak_server/
 
 # install OpenJDK 8 JDK, Ant, and Bash
