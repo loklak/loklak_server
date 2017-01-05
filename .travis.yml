@@ -5,6 +5,8 @@ jdk:
 env:
   global:
   - secure: DbveaxDMtEP+/Er6ktKCP+P42uDU8xXWRBlVGaqVNU3muaRmmZtj8ngAARxfzY0f9amlJlCavqkEIAumQl9BYKPWIra28ylsLNbzAoCIi8alf9WLgddKwVWsTcZo9+UYocuY6UivJVkofycfFJ1blw/83dWMG0/TiW6s/SrwoDw=
+addons:
+  ssh_known_hosts: 104.155.231.103
 install:
 - pip install --user flake8
 script:
@@ -24,13 +26,24 @@ after_success:
 - bash <(curl -s https://codecov.io/bash)
 - mvn clean cobertura:cobertura coveralls:report
 - codecov
+before_deploy:
+# Please re-encrypt and change the variable used here
+- openssl aes-256-cbc -K $encrypted_630b2151c459_key -iv $encrypted_630b2151c459_iv -in .utility/loklak_deployment.rsa.enc -out .utility/loklak_deployment.rsa -d
+- eval "$(ssh-agent -s)"
+- chmod 600 .utility/loklak_deployment.rsa
+- ssh-add .utility/loklak_deployment.rsa
 deploy:
-  provider: heroku
-  email: robert.mader@posteo.de
-  strategy: git
-  buildpack: https://github.com/loklak/heroku_buildpack_ant_loklak
-  api_key:
-    secure: D2o+G28w42F9rDbdeSZQ91TRrm5aLUDyH02Rlh0d+Qov3Qc19WVc5bHuJdc8kYYaeMeG0UcXwpLfvnoAC5Hs03m1sYXMmrq0Z20JUxNx9yRm0p+SD1Y/mAoXkuTX25t9EVxD4YkL03PrSU3K1zIS4xWnzPv7kGl+xQSM68tPL/Q=
-  app: loklak-server-dev
-  on:
-    branch: development
+  - provider: heroku
+    email: robert.mader@posteo.de
+    strategy: git
+    buildpack: https://github.com/loklak/heroku_buildpack_ant_loklak
+    api_key:
+      secure: D2o+G28w42F9rDbdeSZQ91TRrm5aLUDyH02Rlh0d+Qov3Qc19WVc5bHuJdc8kYYaeMeG0UcXwpLfvnoAC5Hs03m1sYXMmrq0Z20JUxNx9yRm0p+SD1Y/mAoXkuTX25t9EVxD4YkL03PrSU3K1zIS4xWnzPv7kGl+xQSM68tPL/Q=
+      app: loklak-server-dev
+      on:
+        branch: development
+  - provider: script
+    skip_cleanup: true
+    script: ssh loklak@104.155.231.103 /opt/loklak/automatic-deploy.sh
+    on:
+      branch: master
