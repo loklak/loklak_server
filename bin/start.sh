@@ -68,7 +68,7 @@ PID=$!
 echo $PID > $PIDFILE
 
 if [[ $SKIP_WAITING -eq 0 ]]; then
-    while [ -f $STARTUPFILE ] && [ $(ps -p $PID -o pid=) ]; do
+    while [ -f $STARTUPFILE ] && kill -0 $PID > /dev/null 2>&1; do
         if [ $(cat $STARTUPFILE) = 'done' ]; then
             break
         else
@@ -77,7 +77,7 @@ if [[ $SKIP_WAITING -eq 0 ]]; then
     done
 fi
 
-if [ -f $STARTUPFILE ] && [ $(ps -p $PID -o pid=) ]; then
+if [ -f $STARTUPFILE ] && kill -0 $PID > /dev/null 2>&1; then
     CUSTOMPORT=$(grep -iw 'port.http' conf/config.properties | sed 's/^[^=]*=//' );
     LOCALHOST=$(grep -iw 'shortlink.urlstub' conf/config.properties | sed 's/^[^=]*=//');
     echo "loklak server started at port $CUSTOMPORT, open your browser at $LOCALHOST"

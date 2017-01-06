@@ -1,9 +1,13 @@
 language: java
+services: docker
 jdk:
 - oraclejdk8
 env:
   global:
   - secure: DbveaxDMtEP+/Er6ktKCP+P42uDU8xXWRBlVGaqVNU3muaRmmZtj8ngAARxfzY0f9amlJlCavqkEIAumQl9BYKPWIra28ylsLNbzAoCIi8alf9WLgddKwVWsTcZo9+UYocuY6UivJVkofycfFJ1blw/83dWMG0/TiW6s/SrwoDw=
+  - secure: w5VfIJI0RC27fUcVC/tB63Z1IOIkFCz3khmrrBSMwDjmKFWEplnkm1Yhs379yqohsSHE18SqY4MgLzOu9KJShoP1cur9ozhta+osSjXOZpiES/fQyRLRrCDSQR0ZLX0MBubJIGysFJrlPmMuue9AhcNzOLR6wwYrmZr9mIWMQcc=
+addons:
+  ssh_known_hosts: 104.155.231.103
 install:
 - pip install --user flake8
 script:
@@ -11,8 +15,10 @@ script:
 - gradle clean
 - ant
 - bin/start.sh
-# Run flake8
 - flake8 bin
+- docker build -t loklak_server -f docker/Dockerfile .
+- docker images
+- docker run loklak_server bash /loklak_server/bin/start.sh -I
 before_script:
 - pip install --user codecov
 after_success:
@@ -20,13 +26,23 @@ after_success:
 - bash <(curl -s https://codecov.io/bash)
 - mvn clean cobertura:cobertura coveralls:report
 - codecov
+before_deploy:
+- openssl aes-256-cbc -K $encrypted_e0d8735ecce8_key -iv $encrypted_e0d8735ecce8_iv -in loklakserver.1.enc -out loklakserver.1 -d
+- eval "$(ssh-agent -s)"
+- chmod 600 .utility/loklakserver.1
+- ssh-add .utility/loklakserver.1
 deploy:
-  provider: heroku
+- provider: heroku
   email: robert.mader@posteo.de
   strategy: git
   buildpack: https://github.com/loklak/heroku_buildpack_ant_loklak
   api_key:
     secure: D2o+G28w42F9rDbdeSZQ91TRrm5aLUDyH02Rlh0d+Qov3Qc19WVc5bHuJdc8kYYaeMeG0UcXwpLfvnoAC5Hs03m1sYXMmrq0Z20JUxNx9yRm0p+SD1Y/mAoXkuTX25t9EVxD4YkL03PrSU3K1zIS4xWnzPv7kGl+xQSM68tPL/Q=
-  app: loklak-server-dev
+    app: loklak-server-dev
+    on:
+      branch: development
+- provider: script
+  skip_cleanup: true
+  script: ssh loklak@104.155.231.103 /opt/loklak/automatic-deploy.sh
   on:
-    branch: development
+    branch: master

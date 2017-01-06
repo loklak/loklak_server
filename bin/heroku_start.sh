@@ -3,4 +3,6 @@
 # Make sure we're on project root
 cd $(dirname $0)/..
 
-exec ./bin/start.sh -Id
+eval ./bin/start.sh -Id
+
+tail -f data/loklak.log

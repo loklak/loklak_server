@@ -16,11 +16,7 @@ Some possibilities may be used in the sections but you can mey be able to exchen
 
         git clone https://github.com/loklak/loklak_server.git
         cd loklak_server
-        docker build -t mariobehling/loklak docker
-
-- build the repository from the git URL
-
-        docker build https://github.com/loklak/loklak_server.git#development:docker
+        docker build -t mariobehling/loklak -f docker/Dockerfile .
 
 
 ## Installing loklak on Bluemix with Docker
@@ -134,6 +130,10 @@ cf ic login   (No credentials are necessary of you logged in to bluemix before
 	sudo apt-get update
 	sudo apt-get install docker-engine
 	```
+   Or, to install docker on newer versions of ubuntu (other distros are not tested) we can just do:
+	```
+	sudo apt-get install docker.io
+	``` 
 
 14. Once docker is installed, we start our loklak-server by entering:
 	```

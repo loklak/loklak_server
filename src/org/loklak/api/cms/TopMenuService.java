@@ -38,15 +38,13 @@ public class TopMenuService extends AbstractAPIHandler implements APIHandler {
 		int limited_count = (int) DAO.getConfig("download.limited.count", (long) Integer.MAX_VALUE);
 
 		JSONObject json = new JSONObject(true);
-		JSONArray topmenu = new JSONArray().put(new JSONObject().put("Home", "http://loklak.org/index.html"))
-				.put(new JSONObject().put("About", "http://loklak.org/about.html"))
+		JSONArray topmenu = new JSONArray().put(new JSONObject().put("Home", "index.html"))
+				.put(new JSONObject().put("About", "about.html"))
 				.put(new JSONObject().put("Blog", "http://blog.loklak.net"))
-				.put(new JSONObject().put("Architecture", "http://loklak.org/architecture.html"))
-				.put(new JSONObject().put("Download", "http://loklak.org/download.html"))
-				.put(new JSONObject().put("Tutorials", "http://loklak.org/tutorials.html"))
-				.put(new JSONObject().put("API", "http://loklak.org/api.html"));
+				.put(new JSONObject().put("Download", "download.html"))
+				.put(new JSONObject().put("API", "api.html"));
 		if (limited_count > 0)
-			topmenu.put(new JSONObject().put("Dumps", "http://loklak.org/dump.html"));
+			topmenu.put(new JSONObject().put("Dumps", "dump.html"));
 		topmenu.put(new JSONObject().put("Apps", "http://apps.loklak.org"));
 		json.put("items", topmenu);
 

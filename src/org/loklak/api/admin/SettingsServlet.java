@@ -47,24 +47,33 @@ public class SettingsServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         Query post = RemoteAccess.evaluate(request);
-        if (post.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;}
-        if (!post.isLocalhostAccess()) {response.sendError(503, "access only allowed from localhost, your request comes from " + post.getClientHost()); return;}
-        
-        post.setResponse(response, "application/javascript");
-        
-        // generate json: NO jsonp here on purpose!
+
+        if (!validateRequest(response, post))
+            return;
+
         JSONObject json = new JSONObject(true);
+
         for (String key: DAO.getConfigKeys()) {
-            if (key.startsWith("client.")) json.put(key.substring(7), DAO.getConfig(key, ""));
+            json.put(key, DAO.getConfig(key, ""));
         }
 
-        // write json
-        response.setCharacterEncoding("UTF-8");
-        PrintWriter sos = response.getWriter();
-        sos.print(json.toString(2));
-        sos.println();
-
-        post.finalize();
+        sendJSONData(response, post, json);
     }
-    
+
+    private boolean validateRequest(HttpServletResponse response, Query post) throws IOException {
+        if (post.isDoS_blackout()) {
+            response.sendError(503, "your request frequency is too high");
+            return false;
+        }
+
+        return true;
+    }
+
+    private void sendJSONData(HttpServletResponse response, Query post, JSONObject json) throws IOException {
+        post.setResponse(response, "application/javascript");
+        response.setCharacterEncoding("UTF-8");
+
+        PrintWriter sos = response.getWriter();
+        sos.println(json.toString(2));
+    }
 }
