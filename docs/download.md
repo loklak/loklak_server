@@ -1,4 +1,4 @@
-#Download and Installation
+# Download and Installation
 
 `loklak` is free software, licensed with LGPL. To install `loklak`, you need JDK 1.8, git and ant. If you don't know what this is, then `loklak` is currently not something for you.
 
@@ -6,7 +6,7 @@ At this time, `loklak` is not provided in compiled form, you must build it yours
 
 ***
 
-###Download, Build, Run
+### Download, Build, Run
 
 The source code is hosted at https://github.com/loklak/loklak_server, you can download it and run `loklak` with:
 ```
@@ -27,7 +27,7 @@ A self-upgrading process is available which must be triggered by a shell command
     
 ***
 
-###Import A Message Dump
+### Import A Message Dump
 
 To import a message dump (which you get from the [dump directory](http://loklak.org/dump/) of every loklak peer), just move it to the `data/dump/import/` directory:
 ```
@@ -42,7 +42,7 @@ Imported dumps are not deleted, but moved to the `imported` directory. Because e
 
 ***
 
-###Re-Build The Search Index
+### Re-Build The Search Index
 
 In case of application bugs, data structure changes or if you change your set-up for larger indexing shards, you can re-create the search index completely using the index dumps. To delete and re-create the index, do:
 ```
@@ -54,7 +54,7 @@ In case of application bugs, data structure changes or if you change your set-up
 ```    
 ***
 
-###Use Kibana As Search Front-End
+### Use Kibana As Search Front-End
 
 Kibana is a tool to "explore and visualize your data". It is not actually a search front-end but you can use it as such. Because Kibana is made for elasticsearch, it will instantly fit on `loklak` without any modification or configuration. Here is what you need to do:
 
@@ -82,7 +82,7 @@ The remote search to twitter with the twitter scraper is not done using the elas
 
 ***
 
-###Use Nginx As Reverse Proxy
+### Use Nginx As Reverse Proxy
 
 If you run `loklak` behind a nginx reverse proxy, it is important to forward the client IP address through the proxy. If you don't do that, `loklak` thinks that all requests come from localhost and are therefore all authorized to do anything with maximum access rights. To configure Nginx to forward the client IP address, add the following line to the server section of your config file:
 
@@ -103,15 +103,15 @@ The full server section may then look similar to:
 ```
 ***
 
-###Change Config Parameters
+### Change Config Parameters
 
 The configuration initialization of `loklak` is in `conf/config.properties` but that file may be overwritten if you update the application. To make changes to the configuration persistent, there is another file located at `data/settings``/customized_config.properties` which overwrites the settings during startup time.
 
-####Change Elasticsearch Configuration Properties
+#### Change Elasticsearch Configuration Properties
 
 These properties are included in the `loklak` properties file and prefixed with the string `elasticsearch`. You can add more elasticsearch properties here, all keys with the prefix "elasticsearch." are send to elasticsearch.
 
-####Change the Back-End Server
+#### Change the Back-End Server
 
 In the properties, there is a line `backend=http://loklak.org`. You can change this to your own server. This name is a prefix for the api path, so adding a port to the host name is possible.
 
