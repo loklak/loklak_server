@@ -29,8 +29,8 @@ after_success:
 before_deploy:
 - openssl aes-256-cbc -K $encrypted_e0d8735ecce8_key -iv $encrypted_e0d8735ecce8_iv -in loklakserver.1.enc -out loklakserver.1 -d
 - eval "$(ssh-agent -s)"
-- chmod 600 .utility/loklak_deployment.rsa
-- ssh-add .utility/loklak_deployment.rsa
+- chmod 600 .utility/loklakserver.1
+- ssh-add .utility/loklakserver.1
 deploy:
 - provider: heroku
   email: robert.mader@posteo.de
