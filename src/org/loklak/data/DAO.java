@@ -817,7 +817,7 @@ public class DAO {
         return elasticsearch_client.count(
                 created_at ? IndexName.messages_hour.name() : IndexName.messages_day.name(),
                 created_at ? AbstractObjectEntry.CREATED_AT_FIELDNAME : AbstractObjectEntry.TIMESTAMP_FIELDNAME,
-                millis == 3600000L ? -1 : millis);
+                millis);
     }
     
     private static long countLocalDayMessages(final long millis, boolean created_at) {
@@ -826,7 +826,7 @@ public class DAO {
         return elasticsearch_client.count(
                 created_at ? IndexName.messages_day.name() : IndexName.messages_week.name(),
                 created_at ? AbstractObjectEntry.CREATED_AT_FIELDNAME : AbstractObjectEntry.TIMESTAMP_FIELDNAME,
-                millis == 3600000L ? -1 : millis);
+                millis);
     }
     
     private static long countLocalWeekMessages(final long millis, boolean created_at) {
@@ -835,7 +835,7 @@ public class DAO {
         return elasticsearch_client.count(
                 created_at ? IndexName.messages_week.name() : IndexName.messages.name(),
                 created_at ? AbstractObjectEntry.CREATED_AT_FIELDNAME : AbstractObjectEntry.TIMESTAMP_FIELDNAME,
-                millis == 3600000L ? -1 : millis);
+                millis);
     }
 
     public static long countLocalMessages(final long millis, boolean created_at) {
