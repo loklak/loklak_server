@@ -65,7 +65,7 @@ public class CrawlerServlet extends HttpServlet {
         if (!localhost) json.put("_hint", "you are connecting from a non-localhost client " + post.getClientHost() + " , depth is limited to 1");
         JSONObject index_sizes = new JSONObject(true);
         json.put("index_sizes", index_sizes);
-        index_sizes.put("messages", DAO.countLocalMessages(-1));
+        index_sizes.put("messages", DAO.countLocalMessages(-1, true));
         index_sizes.put("users", DAO.countLocalUsers());
         json.put("crawler_status", Crawler.toJSON());
 

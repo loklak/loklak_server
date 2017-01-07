@@ -24,7 +24,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -46,11 +45,12 @@ import org.loklak.tools.bayes.Classification;
 
 public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
 
-    
-
     public static final String RICH_TEXT_SEPARATOR = "\n***\n";
     
-    protected Date timestamp, created_at, on, to; // created_at will allways be set, on means 'valid from' and 'to' means 'valid_until' and may not be set
+    protected Date timestamp;  // a time stamp that is given in loklak upon the arrival of the tweet which is the current local time
+    protected Date created_at; // the time given in the tweet which is the time when the user created it. This is also use to do the index partition into minute, hour, week
+    protected Date on;         // on means 'valid from'
+    protected Date to;         // 'to' means 'valid_until' and may not be set
     protected SourceType source_type; // where did the message come from
     protected ProviderType provider_type;  // who created the message
     protected String provider_hash, screen_name, retweet_from, id_str, canonical_id, parent, text;
@@ -113,7 +113,7 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
 
     public MessageEntry(JSONObject json) {
         Object timestamp_obj = lazyGet(json, AbstractObjectEntry.TIMESTAMP_FIELDNAME); this.timestamp = parseDate(timestamp_obj);
-        Object created_at_obj = lazyGet(json, "created_at"); this.created_at = parseDate(created_at_obj);
+        Object created_at_obj = lazyGet(json, AbstractObjectEntry.CREATED_AT_FIELDNAME); this.created_at = parseDate(created_at_obj);
         Object on_obj = lazyGet(json, "on"); this.on = on_obj == null ? null : parseDate(on);
         Object to_obj = lazyGet(json, "to"); this.to = to_obj == null ? null : parseDate(to);
         String source_type_string = (String) lazyGet(json, "source_type");
@@ -561,7 +561,7 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
 
         // tweet data
         m.put(AbstractObjectEntry.TIMESTAMP_FIELDNAME, utcFormatter.print(getTimestamp().getTime()));
-        m.put("created_at", utcFormatter.print(getCreatedAt().getTime()));
+        m.put(AbstractObjectEntry.CREATED_AT_FIELDNAME, utcFormatter.print(getCreatedAt().getTime()));
         if (this.on != null) m.put("on", utcFormatter.print(this.on.getTime()));
         if (this.to != null) m.put("to", utcFormatter.print(this.to.getTime()));
         m.put("screen_name", this.screen_name);

@@ -715,7 +715,7 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
             if (modifier.containsKey("since")) try {
                 Calendar since = DateParser.parse(modifier.get("since").iterator().next(), timezoneOffset);
                 this.since = since.getTime();
-                RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery("created_at").from(this.since);
+                RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(AbstractObjectEntry.CREATED_AT_FIELDNAME).from(this.since);
                 if (modifier.containsKey("until")) {
                     Calendar until = DateParser.parse(modifier.get("until").iterator().next(), timezoneOffset);
                     if (until.get(Calendar.HOUR) == 0 && until.get(Calendar.MINUTE) == 0) {
@@ -737,7 +737,7 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
                     until.add(Calendar.DATE, 1);
                 }
                 this.until = until.getTime();
-                RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery("created_at").to(this.until);
+                RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(AbstractObjectEntry.CREATED_AT_FIELDNAME).to(this.until);
                 ops.add(rangeQuery);
             } catch (ParseException e) {}
 
