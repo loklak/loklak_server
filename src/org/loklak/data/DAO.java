@@ -815,7 +815,7 @@ public class DAO {
         if (millis > 3600000L) return countLocalDayMessages(millis, created_at);
         if (created_at && millis == 3600000L) return elasticsearch_client.count(IndexName.messages_hour.name());
         return elasticsearch_client.count(
-                created_at ? IndexName.messages_hour.name() : IndexName.messages_day.name(),
+                created_at ? IndexName.messages_hour.name() : IndexName.messages_week.name(),
                 created_at ? AbstractObjectEntry.CREATED_AT_FIELDNAME : AbstractObjectEntry.TIMESTAMP_FIELDNAME,
                 millis);
     }
@@ -824,7 +824,7 @@ public class DAO {
         if (millis > 86400000L) return countLocalWeekMessages(millis, created_at);
         if (created_at && millis == 86400000L) return elasticsearch_client.count(IndexName.messages_hour.name());
         return elasticsearch_client.count(
-                created_at ? IndexName.messages_day.name() : IndexName.messages_week.name(),
+                created_at ? IndexName.messages_day.name() : IndexName.messages.name(),
                 created_at ? AbstractObjectEntry.CREATED_AT_FIELDNAME : AbstractObjectEntry.TIMESTAMP_FIELDNAME,
                 millis);
     }
@@ -850,13 +850,7 @@ public class DAO {
                 created_at ? AbstractObjectEntry.CREATED_AT_FIELDNAME : AbstractObjectEntry.TIMESTAMP_FIELDNAME,
                 millis == Long.MAX_VALUE ? -1 : millis);
     }
-/*
- * 
-        long countLocalMinMessages  = DAO.countLocalMessages(60000L);
-        long countLocalHourMessages = DAO.countLocalMessages(3600000L);
-        long countLocalDayMessages  = DAO.countLocalMessages(86400000L);
-        long countLocalWeekMessages = DAO.countLocalMessages(604800000L);
- */
+    
     public static long countLocalMessages() {
         return elasticsearch_client.count(IndexName.messages.name(), AbstractObjectEntry.TIMESTAMP_FIELDNAME, -1);
     }
