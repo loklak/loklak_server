@@ -38,7 +38,10 @@ To import a message dump (which you get from the [dump directory](http://loklak.
              ⌊imported                               // processed dump files from the import folder are moved here
              ⌊own                                    // dump files which this application creates, accessible at /dump/
 ```
-Imported dumps are not deleted, but moved to the `imported` directory. Because extracted hashtags, links and user names are not part of the dump, this is done during the import process and written to the elasticsearch index. While imports are running, you can use the [/api/status.json](http://loklak.org/api.html#status) servlet to moniotor the import progress.
+Imported dumps are not deleted, but moved to the `imported` directory. Because extracted hashtags, links and user names
+are not part of the dump, this is done during the import process and written to the elasticsearch index. While imports
+are running, you can use the
+[/api/status.json](https://github.com/loklak/loklak_server/blob/development/docs/api.md) servlet to moniotor the import progress.
 
 ***
 
@@ -78,7 +81,10 @@ A page with the name "messages" appears and shows all index fields of the `lokla
    * You can also select a time period using a click-drag over the histogram to narrow the search result.
    * You can click on the field names on the left border to show a field facet. Click on the '+'-sign at the facet item to activate the facet.
 
-The remote search to twitter with the twitter scraper is not done using the elasticsearch 'river' method to prevent that a user-frontend like Kibana constantly triggers a remote search. Therefore this search method with kibana will not help to enrich your search index with remote search results. This also means that you won't see any results in Kibana until you searched with the [/api/search.json](http://loklak.org/api.html#search) api.
+The remote search to twitter with the twitter scraper is not done using the elasticsearch 'river' method to prevent that
+a user-frontend like Kibana constantly triggers a remote search. Therefore this search method with kibana will not help
+to enrich your search index with remote search results. This also means that you won't see any results in Kibana until
+you searched with the [/api/search.json](https://github.com/loklak/loklak_server/blob/development/docs/api.md) api.
 
 ***
 
