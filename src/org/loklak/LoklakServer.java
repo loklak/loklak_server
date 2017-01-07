@@ -124,6 +124,8 @@ import org.loklak.api.vis.PieChartServlet;
 import org.loklak.data.DAO;
 import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.harvester.TwitterScraper;
+import org.loklak.harvester.strategy.ClassicHarvester;
+import org.loklak.harvester.strategy.Harvester;
 import org.loklak.http.RemoteAccess;
 import org.loklak.server.APIHandler;
 import org.loklak.server.FileHandler;
@@ -135,7 +137,6 @@ import org.loklak.tools.OS;
 public class LoklakServer {
 	
     public final static Set<String> blacklistedHosts = new ConcurrentHashSet<>();
-
     
     private static Server server = null;
     private static Caretaker caretaker = null;
@@ -143,6 +144,7 @@ public class LoklakServer {
     private static DumpImporter dumpImporter = null;
     private static HttpsMode httpsMode = HttpsMode.OFF;
     public static Class<? extends Servlet>[] services;
+    public static Harvester harvester = null;
 
     public static Map<String, String> readConfig(Path data) throws IOException {
         File conf_dir = new File("conf");
@@ -274,6 +276,9 @@ public class LoklakServer {
 			System.exit(-1);
 		}
         setServerHandler(dataFile);
+
+        // init the harvester
+        initializeHarvester();
         
         LoklakServer.server.start();
         LoklakServer.caretaker = new Caretaker();
@@ -312,7 +317,7 @@ public class LoklakServer {
                     LoklakServer.server.stop();
                     DAO.close();
                     TwitterScraper.executor.shutdown();
-                    Harvester.executor.shutdown();
+                    LoklakServer.harvester.stop();
                     Log.getLog().info("main terminated, goodby.");
 
                     LoklakServer.saveConfig();
@@ -334,7 +339,18 @@ public class LoklakServer {
         // After this, the jvm processes all shutdown hooks and terminates then.
         // The main termination line is therefore inside the shutdown hook.
     }
-    
+
+    // initialize harvester
+    private static void initializeHarvester() {
+        String type = DAO.getConfig("harvester.type", "classic");
+        switch (type) {
+            default:
+            case "classic":
+                harvester = new ClassicHarvester();
+                break;
+        }
+    }
+
     //initiate http server
     private static void setupHttpServer(int httpPort, int httpsPort) throws Exception{
     	QueuedThreadPool pool = new QueuedThreadPool();

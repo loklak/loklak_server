@@ -156,7 +156,7 @@ public class Caretaker extends Thread {
                     for (int j = 0; j < retrieval_forbackend_concurrency; j++) {
                         rts[j] = new Thread() {
                             public void run() {
-                                int count = Harvester.harvest();
+                                int count = LoklakServer.harvester.harvest();
                                 acccount.addAndGet(count);
                             }
                         };
