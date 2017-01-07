@@ -157,6 +157,11 @@ public class PushServlet extends HttpServlet {
             return;
         }
 
+        if (!IncomingMessageBuffer.addSchedulerAvailable()) {
+            response.sendError(503, "out of server capacity");
+            return;
+        }
+
         Map<String, byte[]> m = RemoteAccess.getPostMap(request);
         byte[] data = m.get("data");
         String callback = UTF8.String(m.get("callback"));

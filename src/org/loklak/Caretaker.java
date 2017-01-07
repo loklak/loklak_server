@@ -35,6 +35,7 @@ import org.loklak.api.p2p.PushServlet;
 import org.loklak.api.search.SuggestServlet;
 import org.loklak.data.DAO;
 import org.loklak.data.DAO.IndexName;
+import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.harvester.TwitterAPI;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.Timeline;
@@ -73,13 +74,14 @@ public class Caretaker extends Thread {
     
     @Override
     public void run() {
+        Thread.currentThread().setName("CARETAKER");
         // send a message to other peers that I am alive
         String[] remote = DAO.getConfig("backend", new String[0], ",");
         
         boolean busy = false;
         // work loop
         beat: while (this.shallRun) try {
-            // check upgrate time
+            // check upgrade time
             if (System.currentTimeMillis() > upgradeTime) {
                 // increase the upgrade time to prevent that the peer runs amok (re-tries the attempt all the time) when upgrade fails for any reason
                 upgradeTime = upgradeTime + upgradeWait;
@@ -178,7 +180,7 @@ public class Caretaker extends Thread {
             }
             
             // run searches
-            if (DAO.getConfig("retrieval.queries.enabled", false)) {
+            if (DAO.getConfig("retrieval.queries.enabled", false) && IncomingMessageBuffer.addSchedulerAvailable()) {
                 // execute some queries again: look out in the suggest database for queries with outdated due-time in field retrieval_next
                 List<QueryEntry> queryList = DAO.SearchLocalQueries("", 10, "retrieval_next", "date", SortOrder.ASC, null, new Date(), "retrieval_next");
                 for (QueryEntry qe: queryList) {

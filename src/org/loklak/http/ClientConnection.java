@@ -213,6 +213,9 @@ public class ClientConnection {
         } catch (SSLHandshakeException e){
         	this.request.releaseConnection();
         	throw new IOException("client connection handshake error for domain " + this.request.getURI().getHost() + ": " + e.getMessage());
+        } catch (Throwable e) {
+            this.request.releaseConnection();
+            throw new IOException("server fail: " + e.getMessage());
         }
         HttpEntity httpEntity = this.httpResponse.getEntity();
         if (httpEntity != null) {
