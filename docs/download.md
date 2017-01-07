@@ -41,7 +41,7 @@ To import a message dump (which you get from the [dump directory](http://loklak.
 Imported dumps are not deleted, but moved to the `imported` directory. Because extracted hashtags, links and user names
 are not part of the dump, this is done during the import process and written to the elasticsearch index. While imports
 are running, you can use the
-[/api/status.json](https://github.com/loklak/loklak_server/blob/development/docs/api.md) servlet to moniotor the import progress.
+[/api/status.json](https://github.com/loklak/loklak_server/blob/development/docs/api.md) servlet to monitor the import progress.
 
 ***
 
