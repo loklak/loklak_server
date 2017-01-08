@@ -126,6 +126,7 @@ import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.harvester.TwitterScraper;
 import org.loklak.harvester.strategy.ClassicHarvester;
 import org.loklak.harvester.strategy.Harvester;
+import org.loklak.harvester.strategy.KaizenHarvester;
 import org.loklak.http.RemoteAccess;
 import org.loklak.server.APIHandler;
 import org.loklak.server.FileHandler;
@@ -347,6 +348,9 @@ public class LoklakServer {
             default:
             case "classic":
                 harvester = new ClassicHarvester();
+                break;
+            case "kaizen":
+                harvester = new KaizenHarvester();
                 break;
         }
     }
