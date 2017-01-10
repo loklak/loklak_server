@@ -33,4 +33,4 @@ cd $PWD
 export JAVA_HOME="$PWD/.jdk8"
 export PATH="$JAVA_HOME/bin:$PATH"
 
-exec ./bin/start.sh -Id
+exec ./bin/start.sh -Idn
