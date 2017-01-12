@@ -22,7 +22,7 @@ script:
 before_script:
 - pip install --user codecov
 after_success:
-- sh .utility/push-javadoc-to-gh-pages.sh
+- sh .utility/push-docs-to-gh-pages.sh
 - bash <(curl -s https://codecov.io/bash)
 - mvn clean cobertura:cobertura coveralls:report
 - codecov
