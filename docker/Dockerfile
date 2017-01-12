@@ -14,7 +14,6 @@ ADD src /loklak_server/src/
 ADD lib /loklak_server/lib/
 ADD html /loklak_server/html/
 ADD installation /loklak_server/installation/
-ADD docker /loklak_server/docker/
 ADD ssi /loklak_server/ssi/
 ADD build.xml /loklak_server/
 
@@ -34,4 +33,4 @@ RUN apk update && apk add openjdk8 apache-ant git bash && \
 WORKDIR /loklak_server
 
 # start loklak
-CMD ["./docker/docker-cmd.sh"]
+CMD ["/loklak_server/bin/start.sh", "-Idn"]

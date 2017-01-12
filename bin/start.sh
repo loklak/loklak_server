@@ -8,7 +8,7 @@ cd $(dirname $0)/..
 # Execute preload script
 source bin/.preload.sh
 
-while getopts ":Id" opt; do
+while getopts ":Idn" opt; do
     case $opt in
         I)
             SKIP_INSTALL_CHECK=1
@@ -16,10 +16,14 @@ while getopts ":Id" opt; do
         d)
             SKIP_WAITING=1
             ;;
+        n)
+            DO_NOT_DAEMONIZE=1
+            ;;
         \?)
             echo "Usage: $0 [options...]"
             echo -e " -I\tIgnore installation config"
             echo -e " -d\tSkip waiting for Loklak"
+            echo -e " -n\tDo not Daemonize"
             exit 1
             ;;
     esac
@@ -58,10 +62,23 @@ if [ ! -f $INSTALLATIONCONFIG ] && [[ $SKIP_INSTALL_CHECK -eq 0 ]]; then
 OPTIONAL
 fi
 
+# If DO_NOT_DAEMONIZE is declared, use the log4j config that outputs
+# to stdout/stderr
+if [[ $DO_NOT_DAEMONIZE -eq 1 ]]; then
+    LOGCONFIG="conf/logs/log4j2.properties"
+fi
+
 echo "starting loklak"
 echo "startup" > $STARTUPFILE
 
-cmdline="$cmdline -server -classpath $CLASSPATH -Dlog4j.configurationFile=$LOGCONFIG org.loklak.LoklakServer >> data/loklak.log 2>&1 &";
+cmdline="$cmdline -server -classpath $CLASSPATH -Dlog4j.configurationFile=$LOGCONFIG org.loklak.LoklakServer";
+
+# If DO_NOT_DAEMONIZE, pass it to the java command, end of this script.
+if [[ $DO_NOT_DAEMONIZE -eq 1 ]]; then
+    exec $cmdline
+fi
+
+cmdline="$cmdline >> data/loklak.log 2>&1 &"
 
 eval $cmdline
 PID=$!
