@@ -10,6 +10,19 @@ if [ "$TRAVIS_REPO_SLUG" = "loklak/loklak_server" ] && [ "$TRAVIS_JDK_VERSION" =
 
   cp -R html/javadoc $HOME/javadoc-latest
 
+  echo -e "Installing requirements...\n"
+
+  pip3 install -r docs/requirements.txt
+
+  echo -e "Generating static HTML pages for documentation...\n"
+
+  cd docs
+  make html
+
+  echo -e "Publishing documentation...\n"
+
+  cp -Rf _build $HOME/docs
+  
   cd $HOME
   git config --global user.email "travis@travis-ci.org"
   git config --global user.name "travis-ci"
@@ -17,7 +30,8 @@ if [ "$TRAVIS_REPO_SLUG" = "loklak/loklak_server" ] && [ "$TRAVIS_JDK_VERSION" =
 
   cd gh-pages
   git rm -rf ./*
-  cp -Rf $HOME/javadoc-latest/* ./
+  cp -Rf $HOME/docs/* .
+  cp -Rf $HOME/javadoc-latest ./javadoc
   git add -f .
   git commit -m "Latest javadoc on successful travis build $TRAVIS_BUILD_NUMBER auto-pushed to gh-pages"
   git push -fq origin gh-pages > /dev/null 2>&1
