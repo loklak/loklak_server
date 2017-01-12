@@ -19,7 +19,7 @@ If you already have a local copy of `loklak_server` repository
 You can use Eclipse to download the loklak_server from the `git url` in Step 4, Instead of choosing `Local Repository`
 choose `Remote URL` and use the git link `https://github.com/loklak/loklak_server.git` and follow the rest of the instructions
 
-# Using the Ant File
+## Using the Ant File
 1. Choose `File > New > Project`
 2. Choose `Java > Java Project from existing ant file`
 3. Navigate to the local copy of the repository and use the build file to open up `loklak_server`
