@@ -38,11 +38,11 @@ deploy:
       branch: master
   - provider: script
     skip_cleanup: true
-    script: sh .utility/push-docs-to-gh-pages.sh
+    script: .utility/push-docs-to-gh-pages.sh
     on:
       branch: development
   - provider: script
     skip_cleanup: true
-    script: sh .utility/push-docs-to-gh-pages.sh
+    script: .utility/push-docs-to-gh-pages.sh
     on:
       branch: master
