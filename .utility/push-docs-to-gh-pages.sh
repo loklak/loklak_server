@@ -1,5 +1,9 @@
 #!/bin/bash
 
+echo -e "Copying CNAME ...\n"
+
+cp .utility/CNAME $HOME
+
 echo -e "Creating javadoc...\n"
 
 ant javadoc
@@ -30,6 +34,7 @@ cd gh-pages
 git rm -rf ./*
 cp -Rf $HOME/docs/* .
 cp -Rf $HOME/javadoc-latest ./javadoc
+cp -f $HOME/CNAME .
 git add -f .
 git commit -m "Latest javadoc on successful travis build $TRAVIS_BUILD_NUMBER auto-pushed to gh-pages"
 git push -fq origin gh-pages > /dev/null 2>&1
