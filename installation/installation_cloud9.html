@@ -1,0 +1,156 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Steps to setup loklak on cloud9 &#8212; Loklak Server development documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     'development',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="top" title="Loklak Server development documentation" href="../index.html" />
+    <link rel="next" title="How to run the Loklak server on Heroku using Toolbelt" href="installation_heroku.html" />
+    <link rel="prev" title="Installation of loklak with Docker" href="installation_docker.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="steps-to-setup-loklak-on-cloud9">
+<span id="steps-to-setup-loklak-on-cloud9"></span><h1>Steps to setup loklak on cloud9<a class="headerlink" href="#steps-to-setup-loklak-on-cloud9" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li>Create a cloud9 account</li>
+<li>Create a workspace with the relevant name (Do not fill the url with the clone url of loklak server)</li>
+<li>Wait for the workspace to build and take you to the relevant page</li>
+<li>Use the terminal in the page and type the following command to setup the loklak server and run on cloud9</li>
+</ul>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>wget -O - https://raw.githubusercontent.com/loklak/loklak_server/master/cloud9-setup.sh <span class="p">|</span> bash
+</pre></div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static//images/cow.svg" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script><h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Home</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Welcome</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Installation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="download.html">Download and Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Video Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation_generic.html">Installation on Linux/macOS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation_windows.html">Installation on Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation_docker.html">Installation with Docker</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation on Cloud9</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation_heroku.html">Installation on Heroku</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../development/api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../development/eclipseSetup.html">Setup Eclipse</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Miscellaneous</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../misc/architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../misc/parsers.html">Parsers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../misc/Services.html">Services</a></li>
+</ul>
+<p class="caption"><span class="caption-text">SUSI</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../susi/AskSUSI.html">AskSUSI</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="installation_docker.html" title="previous chapter">Installation of loklak with Docker</a></li>
+      <li>Next: <a href="installation_heroku.html" title="next chapter">How to run the Loklak server on Heroku using Toolbelt</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/installation/installation_cloud9.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Loklak.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="../_sources/installation/installation_cloud9.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

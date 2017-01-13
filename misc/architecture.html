@@ -1,0 +1,296 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>The loklak Architecture &#8212; Loklak Server development documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     'development',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="top" title="Loklak Server development documentation" href="../index.html" />
+    <link rel="next" title="Parsers &amp; Console Services" href="parsers.html" />
+    <link rel="prev" title="How to setup Loklak Server on Eclipse" href="../development/eclipseSetup.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="the-loklak-architecture">
+<span id="the-loklak-architecture"></span><h1>The <code class="docutils literal"><span class="pre">loklak</span></code> Architecture<a class="headerlink" href="#the-loklak-architecture" title="Permalink to this headline">¶</a></h1>
+<p>loklak is a java application which runs a jetty web server for the html interface and an Elasticsearch search server. The application contains a self-documentation which consists of the web pages you are looking at right now. There is also a <a class="reference external" href="javadoc.html">javadoc</a>.</p>
+<ul class="simple">
+<li><a class="reference external" href="#the-file-system-structure">File System Structure</a></li>
+<li><a class="reference external" href="#application-sockets-and-ports">Application Sockets and Ports</a></li>
+<li><a class="reference external" href="#search-process-and-communication-to-the-back-end">Search Process and Communication to the Back-End</a></li>
+<li><a class="reference external" href="#large-scale-search-topology">Large-Scale Search</a></li>
+<li><a class="reference external" href="#loklak-network-topology">Loklak Network Topology</a></li>
+<li><a class="reference external" href="#what-is-the-data-format-of-message-dumps">Data Format Of Message Dumps</a></li>
+<li><a class="reference external" href="#user-accounts-and-access-restrictions">User Accounts and Access Restrictions</a></li>
+</ul>
+<div class="section" id="the-file-system-structure">
+<span id="the-file-system-structure"></span><h2>The File System Structure<a class="headerlink" href="#the-file-system-structure" title="Permalink to this headline">¶</a></h2>
+<p>The file structure follows a default java application folder naming:</p>
+<div class="highlight-ruby"><div class="highlight"><pre><span></span><span class="o">+--</span> <span class="n">loklak</span>
+   <span class="o">+--</span> <span class="n">bin</span>
+       <span class="o">+--</span> <span class="n">start</span><span class="o">.</span><span class="n">sh</span>
+       <span class="o">+--</span> <span class="n">stop</span><span class="o">.</span><span class="n">sh</span>
+   <span class="o">+--</span> <span class="n">build</span><span class="o">.</span><span class="n">xml</span> 
+   <span class="o">+--</span> <span class="n">classes</span> 
+   <span class="o">+--</span> <span class="n">classes</span> 
+   <span class="o">+--</span> <span class="n">conf</span>
+        <span class="o">+--</span> <span class="n">config</span><span class="o">.</span><span class="n">properties</span>
+   <span class="o">+--</span> <span class="n">data</span>
+       <span class="o">+--</span> <span class="n">dump</span>
+           <span class="o">+--</span> <span class="n">import</span>
+           <span class="o">+--</span> <span class="n">imported</span>
+           <span class="o">+--</span> <span class="n">own</span>
+       <span class="o">+--</span> <span class="n">index</span> 
+       <span class="o">+--</span> <span class="n">settings</span>
+           <span class="o">+--</span> <span class="n">customized_config</span><span class="o">.</span><span class="n">properties</span>
+   <span class="o">+--</span> <span class="n">html</span>
+   <span class="o">+--</span> <span class="n">lib</span>
+   <span class="o">+--</span> <span class="no">LICENSE</span><span class="o">.</span><span class="n">txt</span>
+   <span class="o">+--</span> <span class="n">messages</span><span class="o">.</span><span class="n">log</span>
+   <span class="o">+--</span> <span class="no">README</span><span class="o">.</span><span class="n">txt</span> 
+   <span class="o">+--</span> <span class="n">src</span>
+</pre></div>
+</div>
+<p>| Directory | Description |
+| &#8212; | &#8212; |
+| bin | directory: start and stop scripts |
+| start.sh | file: run this script to start loklak |
+| stop.sh | file: run this script to stop loklak |
+| build.xml | file: ant build file |
+| classes | directory: java binary class files |
+| conf |   directory: initial configuration data
+| config.properties |   file     : the initial configuration properties (dont change that)
+| data |   directory: all data produced by the application
+| dump  |   directory: place for message dump file folders
+| import  |   directory: to import a dump, throw the dump in here, it will got to...
+| imported |   directory: processed dump files from the import folder are moved here
+| own |   directory: dump files which this application creates, accessible at /dump/
+| index |   directory: the Elasticsearch shard folder
+| settings |   directory: application settings storage
+| customized_config.properties |   file     : app settings, overwrites conf/config.properties.
+| html |   directory: the loklak web pages including this page you are looking at
+| lib  |   directory: linked libraries for loklak
+| LICENSE.txt |   file     : the LGPL license
+| messages.log |   file     : application output is streamed in here
+| README.txt |   file     : you should read this if you are using loklak the first time
+| src |   directory: java sources</p>
+</div>
+<div class="section" id="application-sockets-and-ports">
+<span id="application-sockets-and-ports"></span><h2>Application Sockets and Ports<a class="headerlink" href="#application-sockets-and-ports" title="Permalink to this headline">¶</a></h2>
+<p>There is only one public port available, port 9000. <code class="docutils literal"><span class="pre">loklak</span></code> opens two more ports for Elasticsearch, port 9200 (Elasticsearch HTML api) and 9300 (Elasticsearch Transport API) but they are configured to be unavailable for clients from non-localhost sockets. You can change the port numbers and access rules in conf/config.properties. If you want to run several <code class="docutils literal"><span class="pre">loklak</span></code> instances on the same host, you must change three port number (i.e. by increasing all by one).</p>
+</div>
+<div class="section" id="search-process-and-communication-to-the-back-end">
+<span id="search-process-and-communication-to-the-back-end"></span><h2>Search Process and Communication to the Back-End<a class="headerlink" href="#search-process-and-communication-to-the-back-end" title="Permalink to this headline">¶</a></h2>
+<p>Search results are combined from the internal Elasticsearch index and external sources such as Twitter. To retrieve the Twitter search results, a web page scraper is used to circumvent the forced OAuth identification of the search users. The search process has three phases:</p>
+<div class="section" id="dispatching-the-search-request">
+<span id="dispatching-the-search-request"></span><h3>Dispatching the Search Request<a class="headerlink" href="#dispatching-the-search-request" title="Permalink to this headline">¶</a></h3>
+<p>This happens when the search.json api is called: the api servlet concurrently queries a Twitter scraper and the internal Elasticsearch index:
+<img alt="software architecture phase 1" src="../_images/architecture_phase1.png" />
+As a part of this process, the Twitter scraper also  de-shortens( all links embedded in all Tweets from the search result.</p>
+</div>
+<div class="section" id="merging-the-search-results">
+<span id="merging-the-search-results"></span><h3>Merging the Search Results<a class="headerlink" href="#merging-the-search-results" title="Permalink to this headline">¶</a></h3>
+<p>The search result is merged into one message list. Merging is easily done because all messages have an identifier and the messages are simply ordered by their date:
+<img alt="software architecture phase 2" src="../_images/architecture_phase2.png" />
+As part of the merge process, all new, previously unknown messages can be identified. These are pushed on a storage list for future processing.</p>
+</div>
+<div class="section" id="distribution-of-messages">
+<span id="distribution-of-messages"></span><h3>Distribution of Messages<a class="headerlink" href="#distribution-of-messages" title="Permalink to this headline">¶</a></h3>
+<p>An independent caretaker-process runs every three seconds and looks how many new messages had been placed on the storage queue; if the number exceedes a given limit (i.e. 100) then all messages are stored to the own file system and pushed over the back-end API to the back-end peer.
+<img alt="software architecture phase 3" src="../_images/architecture_phase3.png" />
+Files pushed on the latest message file stack can be downloaded immediately. The same happens at the back-end peer: new messages appear immediately there as well.</p>
+</div>
+</div>
+<div class="section" id="large-scale-search-topology">
+<span id="large-scale-search-topology"></span><h2>Large-Scale Search Topology<a class="headerlink" href="#large-scale-search-topology" title="Permalink to this headline">¶</a></h2>
+<p>To scale the build-in search to an unlimited index size within a single loklak node, loklak uses the scaling methods as provided by elasticsearch. While loklak comes by default with a deeply embedded elasticsearch node, it is also possible to replace this node with an elasticsearch transport client. This client then may connect to an external elasticsearch node, which can also be a node of a large elasticsearch cluster.
+<img alt="large-scale software architecture" src="../_images/architecture_large_scaling.png" />
+If the loklak search index is hosted outside of loklak, it is also possible to connect several loklak server to the same elasticsearch cluster. To provide high-availability, it is possible to use several loklak servers for one front-end at the same time using a load-balancer.</p>
+</div>
+<div class="section" id="loklak-network-topology">
+<span id="loklak-network-topology"></span><h2>Loklak Network Topology<a class="headerlink" href="#loklak-network-topology" title="Permalink to this headline">¶</a></h2>
+<p>The topology of the <code class="docutils literal"><span class="pre">loklak</span></code> depends only on you: using the back-end configuration, you can chain peers and data from scraped content flows along the network chain until it reaches a back-end, which has no other back-end.
+<img alt="software achtitecture topology" src="../_images/architecture_topology.png" /></p>
+<div class="section" id="organic-growth">
+<span id="organic-growth"></span><h3>Organic Growth<a class="headerlink" href="#organic-growth" title="Permalink to this headline">¶</a></h3>
+<p>If you install loklak, you may keep the assigned back-end peer (see config.properties: backend property), or assign another one. If you tell people about <code class="docutils literal"><span class="pre">loklak</span></code>, tell them to assign your peer as backend. Your peer will get all Tweets from those new peers, and it will dispatch them also to your back-end.</p>
+</div>
+<div class="section" id="delegate-scraping">
+<span id="delegate-scraping"></span><h3>Delegate Scraping<a class="headerlink" href="#delegate-scraping" title="Permalink to this headline">¶</a></h3>
+<p>If your peer cannot access Twitter.com or you dont want to load Tweets yourself, you can assign a front-peer to do that for your (see config.properties: frontpeers). You can also assign several peers (which will be used round-robin) and even peers which have no back-end themself (maybe your own swarm of scrapers).</p>
+</div>
+</div>
+<div class="section" id="what-is-the-data-format-of-message-dumps">
+<span id="what-is-the-data-format-of-message-dumps"></span><h2>What is The Data Format Of Message Dumps<a class="headerlink" href="#what-is-the-data-format-of-message-dumps" title="Permalink to this headline">¶</a></h2>
+<p>The message dumps mentioned above are lists of JSON terms. loklak creates a new dump file for every month, but only if loklak is (re-)started. The dump file gets appended with a JSON term whenever a new message appears and is indexed. That means that the dump file itself is not JSON because there is missing a list bracket at the start and the end and commas in between. Every line in the file is an individual JSON term which makes it possible to grep over the file. Whenever a new file is opened, the old one is gzipped automatically.</p>
+<p>A dump file looks like (these are four lines):</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>{&quot;created_at&quot;:&quot;2015-03-06T19:47:05.000Z&quot;,&quot;screen_name&quot;:&quot;KohlerSolutions&quot;,&quot;text&quot;:&quot;There will be a very interesting #Mozilla track at #FOSSASIA in Singapore: http://fossasia.org/track/FOSSASIA-Mozilla.pdf&quot;,&quot;link&quot;:&quot;https://twitter.com/KohlerSolutions/status/573932833573568512&quot;,&quot;id_str&quot;:&quot;573932833573568512&quot;,&quot;source_type&quot;:&quot;TWITTER&quot;,&quot;provider_type&quot;:&quot;SCRAPED&quot;,&quot;retweet_count&quot;:3,&quot;favourites_count&quot;:2,&quot;user&quot;:{&quot;name&quot;:&quot;Michael Kohler&quot;,&quot;screen_name&quot;:&quot;KohlerSolutions&quot;,&quot;profile_image_url_https&quot;:&quot;https://pbs.twimg.com/profile_images/554282692489924608/wPVGA62a_bigger.jpeg&quot;,&quot;appearance_first&quot;:&quot;2015-03-07T11:00:45.798Z&quot;,&quot;appearance_latest&quot;:&quot;2015-03-07T11:00:45.798Z&quot;}}
+{&quot;created_at&quot;:&quot;2015-03-07T05:51:10.000Z&quot;,&quot;screen_name&quot;:&quot;bytebot&quot;,&quot;text&quot;:&quot;Will you be @fossasia ? I9m excited to give a keynote about @mariadb there! http://fossasia.org/&quot;,&quot;link&quot;:&quot;https://twitter.com/bytebot/status/574084855664783361&quot;,&quot;id_str&quot;:&quot;574084855664783361&quot;,&quot;source_type&quot;:&quot;TWITTER&quot;,&quot;provider_type&quot;:&quot;SCRAPED&quot;,&quot;retweet_count&quot;:1,&quot;favourites_count&quot;:1,&quot;user&quot;:{&quot;name&quot;:&quot;Colin Charles&quot;,&quot;screen_name&quot;:&quot;bytebot&quot;,&quot;profile_image_url_https&quot;:&quot;https://pbs.twimg.com/profile_images/490878058648178688/TtpjnwOx_bigger.jpeg&quot;,&quot;appearance_first&quot;:&quot;2015-03-07T11:02:07.754Z&quot;,&quot;appearance_latest&quot;:&quot;2015-03-07T11:02:07.754Z&quot;}}
+{&quot;created_at&quot;:&quot;2015-03-07T05:49:11.000Z&quot;,&quot;screen_name&quot;:&quot;utianayuba&quot;,&quot;text&quot;:&quot;di @fossasia akan bicara @tuanpembual dari @GLiBogor, @syaimif dari @BlankOnLinux, @emily_chen dari @gnome_asia.&quot;,&quot;link&quot;:&quot;https://twitter.com/utianayuba/status/574084356295159808&quot;,&quot;id_str&quot;:&quot;574084356295159808&quot;,&quot;source_type&quot;:&quot;TWITTER&quot;,&quot;provider_type&quot;:&quot;SCRAPED&quot;,&quot;retweet_count&quot;:3,&quot;favourites_count&quot;:1,&quot;user&quot;:{&quot;name&quot;:&quot;Utian Ayuba&quot;,&quot;screen_name&quot;:&quot;utianayuba&quot;,&quot;profile_image_url_https&quot;:&quot;https://pbs.twimg.com/profile_images/538635188478029825/RtgStA6W_bigger.jpeg&quot;,&quot;appearance_first&quot;:&quot;2015-03-07T11:02:07.758Z&quot;,&quot;appearance_latest&quot;:&quot;2015-03-07T11:02:07.758Z&quot;}}
+{&quot;created_at&quot;:&quot;2015-03-07T03:31:47.000Z&quot;,&quot;screen_name&quot;:&quot;comprock&quot;,&quot;text&quot;:&quot;I9ve been presenting and working with http://fossasia.org/&quot;,&quot;link&quot;:&quot;https://twitter.com/comprock/status/574049779975655424&quot;,&quot;id_str&quot;:&quot;574049779975655424&quot;,&quot;source_type&quot;:&quot;TWITTER&quot;,&quot;provider_type&quot;:&quot;SCRAPED&quot;,&quot;retweet_count&quot;:1,&quot;favourites_count&quot;:0,&quot;user&quot;:{&quot;name&quot;:&quot;Michael Cannon&quot;,&quot;screen_name&quot;:&quot;comprock&quot;,&quot;profile_image_url_https&quot;:&quot;https://pbs.twimg.com/profile_images/574054683079090176/3-XSsyEh_bigger.jpeg&quot;,&quot;appearance_first&quot;:&quot;2015-03-07T11:02:07.842Z&quot;,&quot;appearance_latest&quot;:&quot;2015-03-07T11:02:07.842Z&quot;}}```
+
+These dump files can easily filtered with standard shell script tools - like grep - to produce new input dump files to be imported in new/different loklak instances.
+
+
+## User Accounts and Access Restrictions
+
+There are no user accounts in `loklak` and you cannot configure some. There is an exception with the embedded Elasticsearch instance, please refer to the documentation of that library.
+
+Access restrictions are done by distinguishing accesses frow localhost and from other hosts. While requests to servlets from localhost clients do not have any restrictions, external client accesses may have restrictions. Restricted are i.e. a large depth number for the crawl start and excessive requests to the html interface.
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static//images/cow.svg" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">The <code class="docutils literal"><span class="pre">loklak</span></code> Architecture</a><ul>
+<li><a class="reference internal" href="#the-file-system-structure">The File System Structure</a></li>
+<li><a class="reference internal" href="#application-sockets-and-ports">Application Sockets and Ports</a></li>
+<li><a class="reference internal" href="#search-process-and-communication-to-the-back-end">Search Process and Communication to the Back-End</a><ul>
+<li><a class="reference internal" href="#dispatching-the-search-request">Dispatching the Search Request</a></li>
+<li><a class="reference internal" href="#merging-the-search-results">Merging the Search Results</a></li>
+<li><a class="reference internal" href="#distribution-of-messages">Distribution of Messages</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#large-scale-search-topology">Large-Scale Search Topology</a></li>
+<li><a class="reference internal" href="#loklak-network-topology">Loklak Network Topology</a><ul>
+<li><a class="reference internal" href="#organic-growth">Organic Growth</a></li>
+<li><a class="reference internal" href="#delegate-scraping">Delegate Scraping</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#what-is-the-data-format-of-message-dumps">What is The Data Format Of Message Dumps</a></li>
+</ul>
+</li>
+</ul>
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Home</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Welcome</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Installation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation/download.html">Download and Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation/tutorials.html">Video Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation/installation_generic.html">Installation on Linux/macOS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation/installation_windows.html">Installation on Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation/installation_docker.html">Installation with Docker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation/installation_cloud9.html">Installation on Cloud9</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation/installation_heroku.html">Installation on Heroku</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../development/api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../development/eclipseSetup.html">Setup Eclipse</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Miscellaneous</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parsers.html">Parsers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Services.html">Services</a></li>
+</ul>
+<p class="caption"><span class="caption-text">SUSI</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../susi/AskSUSI.html">AskSUSI</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../development/eclipseSetup.html" title="previous chapter">How to setup Loklak Server on Eclipse</a></li>
+      <li>Next: <a href="parsers.html" title="next chapter">Parsers &amp; Console Services</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/misc/architecture.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Loklak.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="../_sources/misc/architecture.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

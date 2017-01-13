@@ -1,0 +1,285 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Installing loklak server on Windows &#8212; Loklak Server development documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     'development',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="top" title="Loklak Server development documentation" href="../index.html" />
+    <link rel="next" title="Installation of loklak with Docker" href="installation_docker.html" />
+    <link rel="prev" title="Installation on Linux or Mac OS" href="installation_generic.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="installing-loklak-server-on-windows">
+<span id="installing-loklak-server-on-windows"></span><h1>Installing loklak server on Windows<a class="headerlink" href="#installing-loklak-server-on-windows" title="Permalink to this headline">¶</a></h1>
+<p>Copy a fresh run install of a Loklak build from Linux box and copy some Java files.
+You need to edit c:\loklak_server\bin\start.bat as well until the source is updated.</p>
+<p><strong>Full install</strong> skip Temporary source only download section and start at <strong>Remove all Java.</strong></p>
+<p>Temporary source only. (183-193 Mb download)
+7z <a class="reference external" href="http://loklak.mnsnet.ca/loklak_server.7z">Here</a>
+Rar <a class="reference external" href="http://loklak.mnsnet.ca/loklak_server.rar">Here</a>
+Self extracting <a class="reference external" href="http://loklak.mnsnet.ca/loklak_server.exe">Here</a></p>
+<p><strong>Remove all Java</strong> from PC using Add Remove Programs.
+Download 32 Bit java from <a class="reference external" href="http://download.cnet.com/Java-Development-Kit-32-bit/3000-2218_4-12091.html">here</a></p>
+<p>Install Cnet.com download of java. I had to Ignore the OS out of date messages.
+I Modified, As per solution for the java error. <a class="reference external" href="http://stackoverflow.com/questions/18123144/missing-server-jvm-java-jre7-bin-server-jvm-dll">here</a></p>
+<ol class="simple">
+<li>After that go to <code class="docutils literal"><span class="pre">C:\Program</span> <span class="pre">Files\Java\jre1.8.0_66\bin</span></code></li>
+<li>Here create an folder called &#8220;Server&#8221; (without &#8221; &#8221;)</li>
+<li>Now go into the <code class="docutils literal"><span class="pre">C:\Program</span> <span class="pre">Files\Java\jre1.8.0_66\bin\client</span></code> folder</li>
+<li>COPY all data of this folder into the new <code class="docutils literal"><span class="pre">C:\Program</span> <span class="pre">Files\Java\jre1.8.0_66\bin\Server</span></code></li>
+</ol>
+<p>Just to be sure I repeated steps 1-4 with.</p>
+<ol class="simple">
+<li>After that go to <code class="docutils literal"><span class="pre">C:\Program</span> <span class="pre">Files\Java\jdk1.8.0_66\bin</span></code></li>
+<li>Here create an folder called &#8220;Server&#8221; (without &#8221; &#8221;)</li>
+<li>Now go into the <code class="docutils literal"><span class="pre">C:\Program</span> <span class="pre">Files\Java\jre1.8.0_66\bin\client</span></code> folder which is in the buffer anyway.</li>
+<li>COPY all data of this folder into the new <code class="docutils literal"><span class="pre">C:\Program</span> <span class="pre">Files\Java\jdk1.8.0_66\bin\Server</span></code></li>
+</ol>
+<p>Cool it works but there is a java.exe window with the logfile in it, the START /b takes care of that.</p>
+<p>Also I reduced the memory settings in the loklak_server\bin\start.bat file as well.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>START /b java -Xmx1G -Xms1G -server -XX:+AggressiveOpts -XX:NewSize=512M -cp &quot;classes;lib/*&quot; org.loklak.LoklakServer &gt;&gt; data/loklak.log 2&gt;&amp;1 &amp; echo $! &gt; data/loklak.pid
+echo &quot;loklak server started at port 9000, open your browser at http://localhost:9000&quot;
+</pre></div>
+</div>
+<p>To bring Loklak to a graceful stop click the command prompt window once a wait, it will disappear.</p>
+<div class="section" id="installing-a-loklak-server-on-windows-32-bit">
+<span id="installing-a-loklak-server-on-windows-32-bit"></span><h2><strong>Installing a Loklak Server on Windows 32 bit.</strong><a class="headerlink" href="#installing-a-loklak-server-on-windows-32-bit" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="setting-up-git-on-windows">
+<span id="setting-up-git-on-windows"></span><h2>Setting up git on windows<a class="headerlink" href="#setting-up-git-on-windows" title="Permalink to this headline">¶</a></h2>
+<p>To use the git similar to how we use it on a linux terminal, Go to this <a class="reference external" href="https://git-scm.com/downloads">website</a> and download the <code class="docutils literal"><span class="pre">git</span></code> for windows.
+Install it step by step as follows:</p>
+<ol class="simple">
+<li>Run the GIT installation executable.</li>
+<li>After clicking Next on the welcome screen you will be asked to agree to the GNU General Public License.</li>
+<li>Choose desired path <code class="docutils literal"><span class="pre">C:\Program</span> <span class="pre">Files\Git</span></code>
+3.A Windows 7 install use recommended path. (Not sure yet but it works.)</li>
+<li>On the Select Components page choose <code class="docutils literal"><span class="pre">Context</span> <span class="pre">Menu</span> <span class="pre">Entries</span></code> and leave the defaults for the others. Make sure that the <code class="docutils literal"><span class="pre">Git</span> <span class="pre">gui</span> <span class="pre">here</span></code> and <code class="docutils literal"><span class="pre">Git</span> <span class="pre">bash</span> <span class="pre">here</span></code> are selected under <code class="docutils literal"><span class="pre">Context</span> <span class="pre">Menu</span> <span class="pre">Entries</span></code></li>
+<li>For PATH environment you select <code class="docutils literal"><span class="pre">Use</span> <span class="pre">Git</span> <span class="pre">from</span> <span class="pre">the</span> <span class="pre">windows</span> <span class="pre">command</span> <span class="pre">prompt</span></code> option, this is needed for the automatic update on your loklak server to run later on if you decide to keep it.</li>
+<li>For line ending conversion Select <code class="docutils literal"><span class="pre">Checkout</span> <span class="pre">As-Is</span> <span class="pre">commit</span> <span class="pre">Unix-style</span> <span class="pre">Line</span> <span class="pre">endings</span></code> option</li>
+<li>Click next and the automatic setup will complete the GIT installation with the selected options.</li>
+</ol>
+<p>You can test out Git out in a command window if you wish and you did not download one and expand 1 of the zip files.
+You need a command window <code class="docutils literal"><span class="pre">Start</span> <span class="pre">Run</span></code> then type <code class="docutils literal"><span class="pre">cmd</span></code> and ok a black window will open in that type <code class="docutils literal"><span class="pre">cd\</span></code> then enter this should take you to <code class="docutils literal"><span class="pre">c:\</span></code> then type <code class="docutils literal"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/loklak/loklak_server.git</span></code> wait for it to finsh. You <code class="docutils literal"><span class="pre">can</span> <span class="pre">not</span></code> build/compile the Loklak server yet without <code class="docutils literal"><span class="pre">Apache</span> <span class="pre">Ant</span></code> see below.</p>
+</div>
+<div class="section" id="installing-apache-ant-for-windows">
+<span id="installing-apache-ant-for-windows"></span><h2>Installing Apache Ant for Windows.<a class="headerlink" href="#installing-apache-ant-for-windows" title="Permalink to this headline">¶</a></h2>
+<p>I modified this blog. <a class="reference external" href="https://www.nczonline.net/blog/2012/04/12/how-to-install-apache-ant-on-windows/">blog</a></p>
+<p>Download Apache Ant from
+<a class="reference external" href="http://apache.uberglobalmirror.com//ant/binaries/apache-ant-1.9.6-bin.zip">here</a>
+If mirror is down see
+<a class="reference external" href="https://ant.apache.org/bindownload.cgi">Mirror Down</a> for the <code class="docutils literal"><span class="pre">zip</span></code> file.</p>
+<ol class="simple">
+<li>Extract <code class="docutils literal"><span class="pre">apache-ant-1.9.6-bin.zip</span></code> to its default folder depending on your download location then <strong>copy</strong> the contents to a new folder created from Local Disk C: named ant eg <code class="docutils literal"><span class="pre">c:\ant</span></code>.</li>
+</ol>
+<p>Windows XP:
+To set environment variables on Windows XP.
+Right click on My Computer and select Properties.
+Then go to the Advanced tab and click the Environment Variables button at the bottom.</p>
+<p>Click System Variables.
+Click New then enter values as per below.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>Variable Name `JAVA_HOME`
+Variable Value `C:\Progra~1\Java\jdk18~1.0_6\jre`
+</pre></div>
+</div>
+<p>To fix Ant compile also set this.
+Click New.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Variable</span> <span class="n">Name</span> <span class="n">JAVA_TOOL_OPTIONS</span>
+<span class="n">Variable</span> <span class="n">Value</span> <span class="s1">&#39;-Dfile.encoding=UTF-8&#39;</span>
+</pre></div>
+</div>
+<p>Windows 7: Repeat Windows XP To set environment variables and copy tools.jar.</p>
+<p>Copy the file <code class="docutils literal"><span class="pre">tools.jar</span></code> in <code class="docutils literal"><span class="pre">C:\Program</span> <span class="pre">Files\Java\jdk1.8.0_66\lib\</span></code>
+to <code class="docutils literal"><span class="pre">C:\Program</span> <span class="pre">Files\Java\jre1.8.0_66\lib</span></code></p>
+<p>(I will look into that later and see why the path problem is.)</p>
+<p>Edit Variable <code class="docutils literal"><span class="pre">Path</span></code> and add <code class="docutils literal"><span class="pre">;c:\ant\bin;C:\Progra~1\Java\jdk18~1.0_6\jre\bin</span></code> to the end of the line.
+Click OK 3 times and Ant is now installed you are ready to <strong>build a loklak server.</strong></p>
+</div>
+<div class="section" id="final-steps">
+<span id="final-steps"></span><h2>Final steps.<a class="headerlink" href="#final-steps" title="Permalink to this headline">¶</a></h2>
+<p>You need open a command window <code class="docutils literal"><span class="pre">Start</span> <span class="pre">Run</span></code> then type <code class="docutils literal"><span class="pre">cmd</span></code> and ok a black window will open in that type <code class="docutils literal"><span class="pre">cd\</span></code> then enter this should take you to <code class="docutils literal"><span class="pre">c:\</span></code> then type <code class="docutils literal"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/loklak/loklak_server.git</span></code> wait for it to finsh then type <code class="docutils literal"><span class="pre">cd</span> <span class="pre">loklak_server</span></code> then type <code class="docutils literal"><span class="pre">ant</span></code> when ant has finished type <code class="docutils literal"><span class="pre">cd</span> <span class="pre">bin</span></code>.
+You must modify <code class="docutils literal"><span class="pre">start.bat</span></code> in the loklak_server/bin folder by typing <code class="docutils literal"><span class="pre">edit</span> <span class="pre">start.bat</span></code></p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>cd ..
+md data
+START /b javaw -Xmx1G -Xms1G -server -XX:+AggressiveOpts -XX:NewSize=512M -cp &quot;classes;lib/*&quot; org.loklak.LoklakServer &gt;&gt; data/loklak.log 2&gt;&amp;1 &amp; echo $! &gt; data/loklak.pid
+echo &quot;loklak server started at port 9000, open your browser at http://localhost:9000&quot;
+</pre></div>
+</div>
+<p>Save changes and exit.</p>
+<p>Type <code class="docutils literal"><span class="pre">start.bat</span></code> enter then wait for your browser to open you own Loklak Server with the address of <code class="docutils literal"><span class="pre">http://localhost:9000</span></code> also bookmark this for when you close your internet browser and reopen it again.</p>
+</div>
+<div class="section" id="installed-finshed-and-running">
+<span id="installed-finshed-and-running"></span><h2>Installed Finshed and running.<a class="headerlink" href="#installed-finshed-and-running" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="workarounds">
+<span id="workarounds"></span><h2>Workarounds<a class="headerlink" href="#workarounds" title="Permalink to this headline">¶</a></h2>
+<p>If you have you loklak server from 1 of the zip files and want to contiune using it after completing the <code class="docutils literal"><span class="pre">Git</span></code> and <code class="docutils literal"><span class="pre">Ant</span></code> install simply run upgrade.sh from a command window to update to the latest loklak server version. You must then run start.bat to restart your loklak server.</p>
+<p>In the folder <code class="docutils literal"><span class="pre">c:\loklak_server\bin</span></code> there is a <code class="docutils literal"><span class="pre">start</span> <span class="pre">a</span> <span class="pre">BAT</span> <span class="pre">file</span></code> create a shortcut to desktop and double click <code class="docutils literal"><span class="pre">once</span></code> after PC starts.</p>
+<p>At the moment there are no shutdown controls for a loklak server.
+By using <code class="docutils literal"><span class="pre">javaw</span></code> in <code class="docutils literal"><span class="pre">start.bat</span></code> in place of <code class="docutils literal"><span class="pre">java</span></code> there is no command window open anymore.
+You must use task manager end task on javaw.exe to stop your <code class="docutils literal"><span class="pre">loklak</span> <span class="pre">server</span></code>, reboot or shutdown.</p>
+<p>When using Loklak if you hit enter on a search a <code class="docutils literal"><span class="pre">JSON</span></code> page will open to get the URL.
+If you want a RSS Feed you must click the <code class="docutils literal"><span class="pre">Green</span> <span class="pre">Button</span></code> and you will be able to copy the URL into your RSS Reader.</p>
+</div>
+<div class="section" id="end-of-workarounds">
+<span id="end-of-workarounds"></span><h2>End of Workarounds<a class="headerlink" href="#end-of-workarounds" title="Permalink to this headline">¶</a></h2>
+<p>Must be Moved later on after testing.
+For Windows 7: (Think this is for 64 bit will try later on.)
+To set environment variables on Windows 7.
+Right click on My Computer and select Properties.
+Then go to the Advanced tab and click the Environment Variables button at the bottom.</p>
+<p>Click System Variables.
+Click New.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Variable</span> <span class="n">Name</span> <span class="n">JAVA_HOME</span>
+<span class="n">Variable</span> <span class="n">Value</span> <span class="n">C</span><span class="p">:</span>\<span class="n">Progra</span><span class="o">~</span><span class="mi">2</span>\<span class="n">Java</span>\<span class="n">jdk18</span><span class="o">~</span><span class="mf">1.0</span><span class="n">_6</span>\<span class="n">jre</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static//images/cow.svg" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Installing loklak server on Windows</a><ul>
+<li><a class="reference internal" href="#installing-a-loklak-server-on-windows-32-bit"><strong>Installing a Loklak Server on Windows 32 bit.</strong></a></li>
+<li><a class="reference internal" href="#setting-up-git-on-windows">Setting up git on windows</a></li>
+<li><a class="reference internal" href="#installing-apache-ant-for-windows">Installing Apache Ant for Windows.</a></li>
+<li><a class="reference internal" href="#final-steps">Final steps.</a></li>
+<li><a class="reference internal" href="#installed-finshed-and-running">Installed Finshed and running.</a></li>
+<li><a class="reference internal" href="#workarounds">Workarounds</a></li>
+<li><a class="reference internal" href="#end-of-workarounds">End of Workarounds</a></li>
+</ul>
+</li>
+</ul>
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Home</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Welcome</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Installation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="download.html">Download and Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Video Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation_generic.html">Installation on Linux/macOS</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation on Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation_docker.html">Installation with Docker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation_cloud9.html">Installation on Cloud9</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation_heroku.html">Installation on Heroku</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../development/api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../development/eclipseSetup.html">Setup Eclipse</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Miscellaneous</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../misc/architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../misc/parsers.html">Parsers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../misc/Services.html">Services</a></li>
+</ul>
+<p class="caption"><span class="caption-text">SUSI</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../susi/AskSUSI.html">AskSUSI</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="installation_generic.html" title="previous chapter">Installation on Linux or Mac OS</a></li>
+      <li>Next: <a href="installation_docker.html" title="next chapter">Installation of loklak with Docker</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/installation/installation_windows.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Loklak.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="../_sources/installation/installation_windows.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
