@@ -1,11 +1,13 @@
 # loklak
-[![Build Status](https://travis-ci.org/loklak/loklak_server.svg?branch=master)](https://travis-ci.org/loklak/loklak_server)
 [![Join the chat at https://gitter.im/loklak/loklak](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/loklak/loklak)
 [![Docker Pulls](https://img.shields.io/docker/pulls/mariobehling/loklak.svg?maxAge=2592000?style=flat-square)](https://hub.docker.com/r/mariobehling/loklak/)
 [![Percentage of issues still open](http://isitmaintained.com/badge/open/loklak/loklak_server.svg)](http://isitmaintained.com/project/loklak/loklak_server "Percentage of issues still open")
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/loklak/loklak_server.svg)](http://isitmaintained.com/project/loklak/loklak_server "Average time to resolve an issue")
 [![Twitter](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Wow Check Loklak on @gitHub @loklak_app @lklknt: https://github.com/loklak/loklak_server &url=%5Bobject%20Object%5D)
 [![Twitter Follow](https://img.shields.io/twitter/follow/lklknt.svg?style=social&label=Follow&maxAge=2592000?style=flat-square)](https://twitter.com/lklknt)
+
+[![Build Status](https://travis-ci.org/loklak/loklak_server.svg?branch=development)](https://travis-ci.org/loklak/loklak_server)
+[![Build Status](https://travis-ci.org/loklak/loklak_server.svg?branch=master)](https://travis-ci.org/loklak/loklak_server)
 
 loklak is a server application which is able to collect messages from various sources, including twitter. The server contains a search index and a peer-to-peer index sharing interface. All messages are stored in an elasticsearch index. An automatic deployment from the development branch at GitHub is available for tests here https://loklak-server-dev.herokuapp.com
 
