@@ -10,21 +10,21 @@ cp -R html/javadoc $HOME/javadoc-latest
 
 echo -e "Installing requirements...\n"
 
-pip3 install -r docs/requirements.txt
+cd docs
+pip3 install -r requirements.txt
 
 echo -e "Generating static HTML pages for documentation...\n"
 
-cd docs
 make html
 
 echo -e "Publishing documentation...\n"
 
-cp -Rf _build $HOME/docs
+cp -Rf _build/html $HOME/docs
 
 cd $HOME
 git config --global user.email "travis@travis-ci.org"
 git config --global user.name "travis-ci"
-git clone --quiet --branch=gh-pages https://${GH_TOKEN}@github.com/loklak/loklak_server gh-pages > /dev/null
+git clone --quiet --branch=gh-pages git@github.com:loklak/loklak_server.git gh-pages
 
 cd gh-pages
 git rm -rf ./*
