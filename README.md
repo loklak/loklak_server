@@ -102,21 +102,21 @@ The basis configuration file is in ```conf/config.properties```. To customize th
 
 ## Where can I find documentation?
 
-The application has built-in documentation web pages, you will see them when you opened the application web pages or you can simply open `html/index.html` or just use http://loklak.org as reference. 
+The is available at http://dev.loklak.org. 
 
 ### Where can I find showcases and tutorials?
 
 Articles and tutorials are also on our blog at http://blog.loklak.net.
 
-### Where do I find the javadocs?
+### Where do I find the java documentation?
 
-At http://loklak.github.io/loklak_server/ or by building them via 'ant javadoc'
+At http://dev.loklak.org/javadoc or by building them via 'ant javadoc'.
 
 ### Where can I get the latest news about loklak?
 
-Hey, this is the tool for that! Just put http://loklak.org/api/search.rss?q=%23loklak into your rss reader. Oh wait.. you will get a lot of information about tasty Cambodian food with that as well. Alternatively you may also read the authors timeline using http://loklak.org/api/search.rss?q=0rb1t3r or just follow @0rb1t3r (that's a zero after the at sign)
+Hey, this is the tool for that! Just put http://api.loklak.org/api/search.rss?q=%23loklak into your rss reader. Oh wait.. you will get a lot of information about tasty Cambodian food with that as well. Alternatively you may also read the authors timeline using http://api.loklak.org/api/search.rss?q=0rb1t3r or just follow @0rb1t3r (that's a zero after the at sign)
 
-## How to compile using Gradle?
+## How to compile loklak using Gradle?
 - To install Gradle on Ubuntu:
 
   ```
