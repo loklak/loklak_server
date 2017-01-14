@@ -18,7 +18,7 @@ Most servlets can be called with a `callback=<function-name>` property to call a
 
 ## Configuration Dependencies
 
-Some servlets read and provide configuration data from `data/settings/customized_config.properties`. To enable such services please edit that file and add your custom values. Example: these values are needed by [loklak_webclient](https://github.com/fossasia/loklak_webclient). 
+Some servlets read and provide configuration data from `data/settings/customized_config.properties`. To enable such services please edit that file and add your custom values.
 
 ```
 client.apiUrl                  : http://localhost:9000/api/
