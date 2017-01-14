@@ -37,12 +37,6 @@ Welcome to the Loklak Server documentation!
    Parsers <misc/parsers>
    Services <misc/Services>
 
-.. toctree::
-   :caption: SUSI
-   :hidden:
-   :maxdepth: 1
-
-   AskSUSI <susi/AskSUSI>
 
 This is a server application which is able to collect messages from various
 sources, including Twitter. This server contains a search index and a
