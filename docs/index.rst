@@ -1,4 +1,4 @@
-Welcome to the Loklak Server documentation!
+Welcome to the loklak Server documentation!
 ===========================================
 
 .. toctree::
@@ -13,12 +13,13 @@ Welcome to the Loklak Server documentation!
    :maxdepth: 1
 
    Download and Installation <installation/download>
-   Video Tutorials <installation/tutorials>
-   Installation on Linux/macOS <installation/installation_generic>
+   Installation on Linux <installation/installation_linux>
+   Installation on macOS <installation/installation_mac>
    Installation on Windows <installation/installation_windows>
    Installation with Docker <installation/installation_docker>
    Installation on Cloud9 <installation/installation_cloud9>
    Installation on Heroku <installation/installation_heroku>
+   Video Tutorials <installation/tutorials>
    
 .. toctree::
    :caption: Development
@@ -35,14 +36,13 @@ Welcome to the Loklak Server documentation!
 
    Architecture <misc/architecture>
    Parsers <misc/parsers>
-   Services <misc/Services>
 
 
 This is a server application which is able to collect messages from various
 sources, including Twitter. This server contains a search index and a
 peer-to-peer index sharing interface.
 
-Why should I use Loklak?
+Why should I use loklak?
 ------------------------
 
 If you like to be anonymous when searching things, want to archive Tweets or
@@ -119,7 +119,7 @@ their purposes.
 
 .. note::
    
-  Loklak can even de-shorten recursively, multi-shortened links.
+  loklak can even de-shorten recursively, multi-shortened links.
 
 Anonymous Harvesting and Search
 -------------------------------
@@ -147,7 +147,7 @@ Anonymity is provided with different methods:
 Distributed, Peer-to-Peer
 -------------------------
 
-Loklak instances can be connected to each other. If you download loklak and run
+loklak instances can be connected to each other. If you download loklak and run
 it unchanged, it connects to loklak.org by default as a back-end peer. You can
 change this if you want to. This is how connected peers work:
 
