@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>How to run the Loklak server on Heroku using Toolbelt &#8212; Loklak Server development documentation</title>
+    <title>Installation on Linux &#8212; Loklak Server development documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -26,8 +26,6 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="top" title="Loklak Server development documentation" href="../index.html" />
-    <link rel="next" title="APIs" href="../development/api.html" />
-    <link rel="prev" title="Steps to setup loklak on cloud9" href="installation_cloud9.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -43,22 +41,46 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="how-to-run-the-loklak-server-on-heroku-using-toolbelt">
-<span id="how-to-run-the-loklak-server-on-heroku-using-toolbelt"></span><h1>How to run the Loklak server on Heroku using Toolbelt<a class="headerlink" href="#how-to-run-the-loklak-server-on-heroku-using-toolbelt" title="Permalink to this headline">¶</a></h1>
-<ol class="simple">
-<li>Create a Heroku account https://www.heroku.com/</li>
-<li>Download the Heroku toolbelt https://toolbelt.heroku.com/</li>
-<li>Login with heroku: <code class="docutils literal"><span class="pre">heroku</span> <span class="pre">login</span></code></li>
-<li>Clone the Loklak server (if not already) : <code class="docutils literal"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/loklak/loklak_server.git</span></code></li>
-<li>Move into the cloned repository: <code class="docutils literal"><span class="pre">cd</span> <span class="pre">loklak_server</span></code></li>
-<li>Create a heroku app: <code class="docutils literal"><span class="pre">heroku</span> <span class="pre">create</span></code></li>
-<li>Set the buildpack: <code class="docutils literal"><span class="pre">heroku</span> <span class="pre">buildpacks:set</span> <span class="pre">https://github.com/loklak/heroku_buildpack_ant_loklak.git</span></code></li>
-<li>Push your app to heroku: <code class="docutils literal"><span class="pre">git</span> <span class="pre">push</span> <span class="pre">heroku</span> <span class="pre">master</span></code>
-In case if it doesn&#8217;t get pushed, use <code class="docutils literal"><span class="pre">git</span> <span class="pre">push</span> <span class="pre">heroku</span> <span class="pre">HEAD:master</span></code></li>
-<li>Confirm the loklak server is running: <code class="docutils literal"><span class="pre">heroku</span> <span class="pre">logs</span> <span class="pre">--tail</span></code></li>
-<li>Sometimes the server may take a while to start. The logs would show <code class="docutils literal"><span class="pre">State</span> <span class="pre">changed</span> <span class="pre">from</span> <span class="pre">starting</span> <span class="pre">to</span> <span class="pre">up</span></code> when the server is ready.</li>
-<li>Open the URL of your server in your browser: <code class="docutils literal"><span class="pre">heroku</span> <span class="pre">open</span></code>.</li>
-</ol>
+  <div class="section" id="installation-on-linux">
+<span id="installation-on-linux"></span><h1>Installation on Linux<a class="headerlink" href="#installation-on-linux" title="Permalink to this headline">¶</a></h1>
+<p>Its very easy!</p>
+<div class="section" id="requirements">
+<span id="requirements"></span><h2>Requirements<a class="headerlink" href="#requirements" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>install git, jdk 7 and ant</li>
+</ul>
+</div>
+<div class="section" id="download">
+<span id="download"></span><h2>Download<a class="headerlink" href="#download" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/loklak/loklak_server.git</span></code></li>
+<li><code class="docutils literal"><span class="pre">cd</span> <span class="pre">loklak_server</span></code></li>
+</ul>
+</div>
+<div class="section" id="build">
+<span id="build"></span><h2>Build<a class="headerlink" href="#build" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">ant</span></code> (just this, type &#8220;ant&#8221; - without quotes - and hit enter)</li>
+</ul>
+</div>
+<div class="section" id="run">
+<span id="run"></span><h2>Run<a class="headerlink" href="#run" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">bin/start.sh</span></code></li>
+</ul>
+</div>
+<div class="section" id="operate">
+<span id="operate"></span><h2>Operate<a class="headerlink" href="#operate" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>open <code class="docutils literal"><span class="pre">http://localhost:9000</span></code> in your browser</li>
+</ul>
+</div>
+<div class="section" id="shut-down">
+<span id="shut-down"></span><h2>Shut down<a class="headerlink" href="#shut-down" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">bin/stop.sh</span></code></li>
+</ul>
+</div>
 </div>
 
 
@@ -91,19 +113,32 @@ In case if it doesn&#8217;t get pushed, use <code class="docutils literal"><span
       <input type="hidden" name="area" value="default" />
     </form>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script><h3>Navigation</h3>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Installation on Linux</a><ul>
+<li><a class="reference internal" href="#requirements">Requirements</a></li>
+<li><a class="reference internal" href="#download">Download</a></li>
+<li><a class="reference internal" href="#build">Build</a></li>
+<li><a class="reference internal" href="#run">Run</a></li>
+<li><a class="reference internal" href="#operate">Operate</a></li>
+<li><a class="reference internal" href="#shut-down">Shut down</a></li>
+</ul>
+</li>
+</ul>
+<h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Home</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../index.html">Welcome</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Installation</span></p>
-<ul class="current">
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="download.html">Download and Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorials.html">Video Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation_windows.html">Installation on Windows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation_docker.html">Installation with Docker</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation_cloud9.html">Installation on Cloud9</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation on Heroku</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation_heroku.html">Installation on Heroku</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Development</span></p>
 <ul>
@@ -120,15 +155,13 @@ In case if it doesn&#8217;t get pushed, use <code class="docutils literal"><span
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="installation_cloud9.html" title="previous chapter">Steps to setup loklak on cloud9</a></li>
-      <li>Next: <a href="../development/api.html" title="next chapter">APIs</a></li>
   </ul></li>
 </ul>
 </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="../_sources/installation/installation_heroku.txt"
+      <li><a href="../_sources/installation/installation_linux.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
@@ -144,7 +177,7 @@ In case if it doesn&#8217;t get pushed, use <code class="docutils literal"><span
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
       
       |
-      <a href="../_sources/installation/installation_heroku.txt"
+      <a href="../_sources/installation/installation_linux.txt"
           rel="nofollow">Page source</a>
     </div>
 
