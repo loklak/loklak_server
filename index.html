@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Welcome to the loklak Server documentation! &#8212; Loklak Server development documentation</title>
+    <title>loklak &#8212; Loklak Server development documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -42,25 +42,26 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="welcome-to-the-loklak-server-documentation">
-<h1>Welcome to the loklak Server documentation!<a class="headerlink" href="#welcome-to-the-loklak-server-documentation" title="Permalink to this headline">¶</a></h1>
-<div class="toctree-wrapper compound">
-</div>
-<div class="toctree-wrapper compound">
-</div>
-<div class="toctree-wrapper compound">
-</div>
-<div class="toctree-wrapper compound">
-</div>
-<p>loklak is a server application which is able to collect messages from various
-sources, including twitter. The server contains a search index and a peer-to-peer
-index sharing interface. All messages are stored in an elasticsearch index. An
-automatic deployment from the development branch at GitHub is available for
-tests here <a class="reference external" href="https://loklak-server-dev.herokuapp.com">https://loklak-server-dev.herokuapp.com</a></p>
-<p>&#8216;Lok Lak&#8217; is also a very tasty Cambodian stir-fry meat dish (usually beef) with
-a LOT of fresh black pepper. If you ever have the chance to eat Beef Lok Lak,
-please try it. I hope not to scare vegetarians with this name, currently I am
-one as well.</p>
+  <div class="section" id="loklak">
+<h1>loklak<a class="headerlink" href="#loklak" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference external" href="https://gitter.im/loklak/loklak"><img alt="Join the chat at https://gitter.im/loklak/loklak" src="https://badges.gitter.im/Join%20Chat.svg" /></a>
+<a class="reference external" href="https://hub.docker.com/r/mariobehling/loklak/"><img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/mariobehling/loklak.svg?maxAge=2592000?style=flat-square" /></a>
+<a class="reference external" href="http://isitmaintained.com/project/loklak/loklak_server"><img alt="Percentage of issues still open" src="http://isitmaintained.com/badge/open/loklak/loklak_server.svg" /></a>
+<a class="reference external" href="http://isitmaintained.com/project/loklak/loklak_server"><img alt="Average time to resolve an issue" src="http://isitmaintained.com/badge/resolution/loklak/loklak_server.svg" /></a>
+<a class="reference external" href="https://twitter.com/intent/tweet?text=Wow%20Check%20Loklak%20on%20&#64;gitHub%20&#64;loklak_app%20&#64;lklknt:%20https://github.com/loklak/loklak_server%20&amp;url=%5Bobject%20Object%5D"><img alt="Twitter" src="https://img.shields.io/twitter/url/http/shields.io.svg?style=social" /></a>
+<a class="reference external" href="https://twitter.com/lklknt"><img alt="Twitter Follow" src="https://img.shields.io/twitter/follow/lklknt.svg?style=social&amp;label=Follow&amp;maxAge=2592000?style=flat-square" /></a></p>
+<p><a class="reference external" href="https://travis-ci.org/loklak/loklak_server"><img alt="Build Status" src="https://travis-ci.org/loklak/loklak_server.svg?branch=development" /></a>
+<a class="reference external" href="https://travis-ci.org/loklak/loklak_server"><img alt="Build Status" src="https://travis-ci.org/loklak/loklak_server.svg?branch=development" /></a></p>
+<p>loklak is a server application which is able to collect messages from
+various sources, including twitter. The server contains a search index
+and a peer-to-peer index sharing interface. All messages are stored in
+an elasticsearch index. An automatic deployment from the development
+branch at GitHub is available for tests here
+<a class="reference external" href="https://loklak-server-dev.herokuapp.com">https://loklak-server-dev.herokuapp.com</a></p>
+<p>&#8216;Lok Lak&#8217; is also a very tasty Cambodian stir-fry meat dish (usually
+beef) with a LOT of fresh black pepper. If you ever have the chance to
+eat Beef Lok Lak, please try it. I hope not to scare vegetarians with
+this name, currently I am one as well.</p>
 <div class="section" id="communication">
 <h2>Communication<a class="headerlink" href="#communication" title="Permalink to this headline">¶</a></h2>
 <p>Please join our mailing list to discuss questions regarding the project:
@@ -69,20 +70,184 @@ one as well.</p>
 </div>
 <div class="section" id="why-should-i-use-loklak">
 <h2>Why should I use loklak?<a class="headerlink" href="#why-should-i-use-loklak" title="Permalink to this headline">¶</a></h2>
-<p>If you like to be anonymous when searching things, want to archive tweets or
-messages about specific topics and if you are looking for a tool to create
-statistics about tweet topics, then you may consider loklak. With loklak you can:</p>
-<blockquote>
-<div><ul class="simple">
+<p>If you like to be anonymous when searching things, want to archive
+tweets or messages about specific topics and if you are looking for a
+tool to create statistics about tweet topics, then you may consider
+loklak. With loklak you can:</p>
+<ul class="simple">
 <li>collect and store a very, very large amount of tweets</li>
 <li>create your own search engine for tweets</li>
 <li>omit authentication enforcement for API requests on twitter</li>
 <li>share tweets and tweet archives with other loklak users</li>
 <li>search anonymously on your own search portal</li>
 <li>create your own tweet search portal or statistical evaluations</li>
-<li>use Kibana to analyze large amounts of tweets for statistical data.</li>
+<li>use <a class="reference external" href="https://github.com/elastic/kibana">Kibana</a> to analyze large
+amounts of tweets for statistical data.</li>
 </ul>
-</div></blockquote>
+</div>
+<div class="section" id="how-do-i-install-loklak-download-build-run">
+<h2>How do I install loklak: Download, Build, Run<a class="headerlink" href="#how-do-i-install-loklak-download-build-run" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://heroku.com/deploy"><img alt="Deploy" src="https://www.herokucdn.com/deploy/button.svg" /></a>
+<a class="reference external" href="https://my.scalingo.com/deploy?source=https://github.com/loklak/loklak_server"><img alt="Deploy on Scalingo" src="https://cdn.scalingo.com/deploy/button.svg" /></a>
+<a class="reference external" href="https://bluemix.net/deploy?repository=https://github.com/loklak/loklak_server"><img alt="Deploy to Bluemix" src="https://bluemix.net/deploy/button.png" /></a>
+<a class="reference external" href="https://cloud.docker.com/stack/deploy/"><img alt="Deploy to Docker Cloud" src="https://files.cloud.docker.com/images/deploy-to-dockercloud.svg" /></a></p>
+<p>At this time, loklak is not provided in compiled form, you easily build
+it yourself. It&#8217;s not difficult and done in one minute! The source code
+is hosted at <a class="reference external" href="https://github.com/loklak/loklak_server">https://github.com/loklak/loklak_server</a>, you can download
+it and run loklak with:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">loklak</span><span class="o">/</span><span class="n">loklak_server</span><span class="o">.</span><span class="n">git</span>
+<span class="o">&gt;</span> <span class="n">cd</span> <span class="n">loklak_server</span>
+<span class="o">&gt;</span> <span class="n">ant</span>
+<span class="o">&gt;</span> <span class="nb">bin</span><span class="o">/</span><span class="n">start</span><span class="o">.</span><span class="n">sh</span>
+</pre></div>
+</div>
+<p>After all server processes are running, loklak tries to open a browser
+page itself. If that does not happen, just open <a class="reference external" href="http://localhost:9000">http://localhost:9000</a>;
+if you made the installation on a headless or remote server, then
+replace &#8216;localhost&#8217; with your server name.</p>
+<p>To stop loklak, run: (this will block until the server has actually
+terminated)</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="nb">bin</span><span class="o">/</span><span class="n">stop</span><span class="o">.</span><span class="n">sh</span>
+</pre></div>
+</div>
+<p>A self-upgrading process is available which must be triggered by a shell
+command. Just run:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="nb">bin</span><span class="o">/</span><span class="n">upgrade</span><span class="o">.</span><span class="n">sh</span>
+</pre></div>
+</div>
+<div class="section" id="where-can-i-download-ready-built-releases-of-loklak">
+<h3>Where can I download ready-built releases of loklak?<a class="headerlink" href="#where-can-i-download-ready-built-releases-of-loklak" title="Permalink to this headline">¶</a></h3>
+<p>Nowhere, you must clone the git repository of loklak and build it
+yourself. That&#8217;s easy, just do</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/loklak/loklak_server.git</span></code></li>
+<li><code class="docutils literal"><span class="pre">cd</span> <span class="pre">loklak</span></code></li>
+<li>then see above (&#8220;How do I run loklak&#8221;)</li>
+</ul>
+</div>
+<div class="section" id="how-do-i-install-loklak-with-docker">
+<h3>How do I install loklak with Docker?<a class="headerlink" href="#how-do-i-install-loklak-with-docker" title="Permalink to this headline">¶</a></h3>
+<p>To install loklak with Docker please refer to the <a class="reference external" href="/docs/installation_docker.md">loklak Docker
+installation readme</a>.</p>
+</div>
+<div class="section" id="how-do-i-deploy-loklak-with-heroku">
+<h3>How do I deploy loklak with Heroku?<a class="headerlink" href="#how-do-i-deploy-loklak-with-heroku" title="Permalink to this headline">¶</a></h3>
+<p>You can easily deploy to Heroku by clicking the Deploy to Heroku button
+above. To install loklak using Heroku Toolbelt, please refer to the
+<a class="reference external" href="/docs/installation_heroku.md">loklak Heroku installation readme</a>.</p>
+</div>
+<div class="section" id="how-do-i-deploy-loklak-with-cloud9">
+<h3>How do I deploy loklak with cloud9?<a class="headerlink" href="#how-do-i-deploy-loklak-with-cloud9" title="Permalink to this headline">¶</a></h3>
+<p>To install loklak with cloud9 please refer to the <a class="reference external" href="/docs/installation_cloud9.md">loklak cloud9
+installation readme</a>.</p>
+</div>
+<div class="section" id="how-do-i-setup-loklak-on-eclipse">
+<h3>How do I setup loklak on Eclipse?<a class="headerlink" href="#how-do-i-setup-loklak-on-eclipse" title="Permalink to this headline">¶</a></h3>
+<p>To install loklak on Eclipes, please refer to the <a class="reference external" href="/docs/eclipseSetup.md">loklak Eclipse
+readme</a>.</p>
+</div>
+<div class="section" id="how-do-i-run-loklak">
+<h3>How do I run loklak?<a class="headerlink" href="#how-do-i-run-loklak" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>build loklak (you need to do this only once, see above)</li>
+<li>run <code class="docutils literal"><span class="pre">bin/start.sh</span></code></li>
+<li>open <code class="docutils literal"><span class="pre">http://localhost:9000</span></code> in your browser</li>
+<li>to shut down loklak, run <code class="docutils literal"><span class="pre">bin/stop.sh</span></code></li>
+</ul>
+</div>
+</div>
+<div class="section" id="how-do-i-analyze-data-acquired-by-loklak">
+<h2>How do I analyze data acquired by loklak<a class="headerlink" href="#how-do-i-analyze-data-acquired-by-loklak" title="Permalink to this headline">¶</a></h2>
+<div class="line-block">
+<div class="line">loklak stores data into an elasticsearch index. There is a front-end</div>
+<div class="line">for the index available in elasticsearch-head. To install this, do:</div>
+</div>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">sudo</span> <span class="pre">npm</span> <span class="pre">install</span> <span class="pre">-g</span> <span class="pre">grunt-cli</span></code></li>
+<li><code class="docutils literal"><span class="pre">cd</span></code> into the parent directly of loklak_server</li>
+<li><code class="docutils literal"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">git://github.com/mobz/elasticsearch-head.git</span></code></li>
+<li><code class="docutils literal"><span class="pre">cd</span> <span class="pre">elasticsearch-head</span></code></li>
+<li><code class="docutils literal"><span class="pre">npm</span> <span class="pre">install</span></code></li>
+</ul>
+<p>Run elasticsearch-head with:</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">grunt</span> <span class="pre">server</span></code>
+..which opens the administration page at <code class="docutils literal"><span class="pre">http://localhost:9100</span></code></li>
+</ul>
+</div>
+<div class="section" id="how-do-i-configure-loklak">
+<h2>How do I configure loklak?<a class="headerlink" href="#how-do-i-configure-loklak" title="Permalink to this headline">¶</a></h2>
+<p>The basis configuration file is in <code class="docutils literal"><span class="pre">conf/config.properties</span></code>. To
+customize these settings place a file <code class="docutils literal"><span class="pre">customized_config.properties</span></code>
+to the path <code class="docutils literal"><span class="pre">data/settings/</span></code></p>
+</div>
+<div class="section" id="where-can-i-find-documentation">
+<h2>Where can I find documentation?<a class="headerlink" href="#where-can-i-find-documentation" title="Permalink to this headline">¶</a></h2>
+<p>The is available at <a class="reference external" href="http://dev.loklak.org">http://dev.loklak.org</a>.</p>
+<div class="section" id="where-can-i-find-showcases-and-tutorials">
+<h3>Where can I find showcases and tutorials?<a class="headerlink" href="#where-can-i-find-showcases-and-tutorials" title="Permalink to this headline">¶</a></h3>
+<p>Articles and tutorials are also on our blog at <a class="reference external" href="http://blog.loklak.net">http://blog.loklak.net</a>.</p>
+</div>
+<div class="section" id="where-do-i-find-the-java-documentation">
+<h3>Where do I find the java documentation?<a class="headerlink" href="#where-do-i-find-the-java-documentation" title="Permalink to this headline">¶</a></h3>
+<p>At <a class="reference external" href="http://dev.loklak.org/javadoc">http://dev.loklak.org/javadoc</a> or by building them via &#8216;ant javadoc&#8217;.</p>
+</div>
+<div class="section" id="where-can-i-get-the-latest-news-about-loklak">
+<h3>Where can I get the latest news about loklak?<a class="headerlink" href="#where-can-i-get-the-latest-news-about-loklak" title="Permalink to this headline">¶</a></h3>
+<p>Hey, this is the tool for that! Just put
+<a class="reference external" href="http://api.loklak.org/api/search.rss?q=%23loklak">http://api.loklak.org/api/search.rss?q=%23loklak</a> into your rss reader.
+Oh wait.. you will get a lot of information about tasty Cambodian food
+with that as well. Alternatively you may also read the authors timeline
+using <a class="reference external" href="http://api.loklak.org/api/search.rss?q=0rb1t3r">http://api.loklak.org/api/search.rss?q=0rb1t3r</a> or just follow
+&#64;0rb1t3r (that&#8217;s a zero after the at sign)</p>
+</div>
+</div>
+<div class="section" id="how-to-compile-loklak-using-gradle">
+<h2>How to compile loklak using Gradle?<a class="headerlink" href="#how-to-compile-loklak-using-gradle" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>To install Gradle on Ubuntu:</li>
+</ul>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ sudo add-apt-repository ppa:cwchien/gradle
+$ sudo apt-get update
+$ sudo apt-get install gradle
+</pre></div>
+</div>
+<ul class="simple">
+<li>To install Gradle on Mac OS X with homebrew</li>
+</ul>
+<p><code class="docutils literal"><span class="pre">brew</span> <span class="pre">install</span> <span class="pre">gradle</span></code></p>
+<p>Compile the source to classes and a jar file</p>
+<p><code class="docutils literal"><span class="pre">gradle</span> <span class="pre">build</span></code></p>
+<p>Compiled file can be found in build dir</p>
+<p>To remove compiled classes and jar file</p>
+<p><code class="docutils literal"><span class="pre">gradle</span> <span class="pre">clean</span></code></p>
+</div>
+<div class="section" id="what-is-the-software-license">
+<h2>What is the software license?<a class="headerlink" href="#what-is-the-software-license" title="Permalink to this headline">¶</a></h2>
+<p>LGPL 2.1</p>
+</div>
+<div class="section" id="where-can-i-report-bugs-and-make-feature-requests">
+<h2>Where can I report bugs and make feature requests?<a class="headerlink" href="#where-can-i-report-bugs-and-make-feature-requests" title="Permalink to this headline">¶</a></h2>
+<p>This project is considered a community work. The development crew
+consist of YOU too. I am very thankful for pull request. So if you
+discovered that something can be enhanced, please do it yourself and
+make a pull request. If you find a bug, please try to fix it. If you
+report a bug to me I will possibly consider it but at the very end of a
+giant, always growing heap of work. The best chance for you to get
+things done is to try it yourself. Our <a class="reference external" href="https://github.com/loklak/loklak_server/issues">issue tracker is
+here</a>.</p>
+<div class="line-block">
+<div class="line">Have fun!</div>
+<div class="line">&#64;0rb1t3r</div>
+</div>
+<div class="toctree-wrapper compound">
+</div>
+<div class="toctree-wrapper compound">
+</div>
+<div class="toctree-wrapper compound">
+</div>
+<div class="toctree-wrapper compound">
+</div>
 </div>
 </div>
 
@@ -119,9 +284,31 @@ statistics about tweet topics, then you may consider loklak. With loklak you can
 <script type="text/javascript">$('#searchbox').show(0);</script>
   <h3><a href="#">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">Welcome to the loklak Server documentation!</a><ul>
+<li><a class="reference internal" href="#">loklak</a><ul>
 <li><a class="reference internal" href="#communication">Communication</a></li>
 <li><a class="reference internal" href="#why-should-i-use-loklak">Why should I use loklak?</a></li>
+<li><a class="reference internal" href="#how-do-i-install-loklak-download-build-run">How do I install loklak: Download, Build, Run</a><ul>
+<li><a class="reference internal" href="#where-can-i-download-ready-built-releases-of-loklak">Where can I download ready-built releases of loklak?</a></li>
+<li><a class="reference internal" href="#how-do-i-install-loklak-with-docker">How do I install loklak with Docker?</a></li>
+<li><a class="reference internal" href="#how-do-i-deploy-loklak-with-heroku">How do I deploy loklak with Heroku?</a></li>
+<li><a class="reference internal" href="#how-do-i-deploy-loklak-with-cloud9">How do I deploy loklak with cloud9?</a></li>
+<li><a class="reference internal" href="#how-do-i-setup-loklak-on-eclipse">How do I setup loklak on Eclipse?</a></li>
+<li><a class="reference internal" href="#how-do-i-run-loklak">How do I run loklak?</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#how-do-i-analyze-data-acquired-by-loklak">How do I analyze data acquired by loklak</a></li>
+<li><a class="reference internal" href="#how-do-i-configure-loklak">How do I configure loklak?</a></li>
+<li><a class="reference internal" href="#where-can-i-find-documentation">Where can I find documentation?</a><ul>
+<li><a class="reference internal" href="#where-can-i-find-showcases-and-tutorials">Where can I find showcases and tutorials?</a></li>
+<li><a class="reference internal" href="#where-do-i-find-the-java-documentation">Where do I find the java documentation?</a></li>
+<li><a class="reference internal" href="#where-can-i-get-the-latest-news-about-loklak">Where can I get the latest news about loklak?</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#how-to-compile-loklak-using-gradle">How to compile loklak using Gradle?</a></li>
+<li><a class="reference internal" href="#what-is-the-software-license">What is the software license?</a></li>
+<li><a class="reference internal" href="#where-can-i-report-bugs-and-make-feature-requests">Where can I report bugs and make feature requests?</a><ul>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
