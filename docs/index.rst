@@ -28,6 +28,7 @@ Welcome to the loklak Server documentation!
 
    API <development/api>
    Setup Eclipse <development/eclipseSetup>
+   Javadoc <https://dev.loklak.org/javadoc>
 
 .. toctree::
    :caption: Miscellaneous
