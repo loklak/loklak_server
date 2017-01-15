@@ -149,7 +149,7 @@ The status servlet shows the size of the internal Elasticsearch search index for
     "request_header": {
       "Upgrade-Insecure-Requests": "1",
       "Accept-Language": "en-US,en;q=0.8",
-      "Host": "loklak.org",
+      "Host": "api.loklak.org",
       "Accept-Encoding": "gzip, deflate, sdch",
       "X-Forwarded-Proto": "http",
       "X-Forwarded-For": "172.30.107.104, 14.139.85.203",
@@ -330,7 +330,7 @@ url : [http://localhost:9000/api/search.json?q=spacex%20since:2015-04-01%20until
 
 Loklak can also suggest what's trending and can give you the list of trending hashtags using the same search aggregations method. To find out the most trending hashtags on loklak since a particular date. Other filters like until can also be applied, here is a sample request
 
-url  : [http://loklak.org/api/search.json?q=since:2016-06-01&source=cache&count=0&fields=hashtags](http://localhost:9000/api/search.json?q=spacex%20since:2015-04-01%20until:2015-04-06&source=cache&count=0&fields=mentions,hashtags&limit=6)
+url  : [http://api.loklak.org/api/search.json?q=since:2016-06-01&source=cache&count=0&fields=hashtags](http://localhost:9000/api/search.json?q=spacex%20since:2015-04-01%20until:2015-04-06&source=cache&count=0&fields=mentions,hashtags&limit=6)
 
 
 ```
@@ -419,7 +419,7 @@ url : [http://localhost:9000/api/search.json?q=spacex%20since:2015-04-05_23:10%2
 It is also possible to specify the order in descending order for the following filter options favourites_count, retweet_count and the default being created_at. Here are the examples of the different queries which make this happen.
 
 
-- retweet count:   : [http://loklak.org/api/search.json?timezoneOffset=-120&q=fossasia&order=retweet_count&source=cache](http://loklak.org/api/search.json?timezoneOffset=-120&q=fossasia&order=retweet_count&source=cache)
+- retweet count:   : [http://api.loklak.org/api/search.json?timezoneOffset=-120&q=fossasia&order=retweet_count&source=cache](http://loklak.org/api/search.json?timezoneOffset=-120&q=fossasia&order=retweet_count&source=cache)
 
 - favorites count:   : [http://localhost:9000/api/search.json?timezoneOffset=-120&q=fossasia&order=favourites_count&source=cache](http://localhost:9000/api/search.json?timezoneOffset=-120&q=fossasia&order=favourites_count&source=cache)
 
@@ -793,12 +793,12 @@ This API is open and can be accessed without any restrictions!
 This servlet provides geocoding of place names to location coordinates and also reverse geocoding of location coordinates to place names. Additionally to the added geocoding servlet: you can geocode place names into locations with this. To render markers, use the 'mark' location (they have an applied fuzziness). location coordinates are given as [lon,lat] Example usage:
 
 
-- [http://loklak.org/api/geocode.json?data={%22places%22:[%22Frankfurt%20am%20Main%22,%22New%20York%22,%22Singapore%22]}](http://loklak.org/api/geocode.json?data={%22places%22:[%22Frankfurt%20am%20Main%22,%22New%20York%22,%22Singapore%22]})
+- [http://api.loklak.org/api/geocode.json?data={%22places%22:[%22Frankfurt%20am%20Main%22,%22New%20York%22,%22Singapore%22]}](http://api.loklak.org/api/geocode.json?data={%22places%22:[%22Frankfurt%20am%20Main%22,%22New%20York%22,%22Singapore%22]})
 
 - Other languages:
-[http://loklak.org/api/geocode.json?data={%22places%22:[%22%E5%9C%A3%E8%83%A1%E5%88%A9%E5%A8%85%20%E5%BE%B7%E6%B4%9B%E9%87%8C%E4%BA%9A%22]}](http://loklak.org/api/geocode.json?data={%22places%22:[%22%E5%9C%A3%E8%83%A1%E5%88%A9%E5%A8%85%20%E5%BE%B7%E6%B4%9B%E9%87%8C%E4%BA%9A%22]})
+[http://api.loklak.org/api/geocode.json?data={%22places%22:[%22%E5%9C%A3%E8%83%A1%E5%88%A9%E5%A8%85%20%E5%BE%B7%E6%B4%9B%E9%87%8C%E4%BA%9A%22]}](http://api.loklak.org/api/geocode.json?data={%22places%22:[%22%E5%9C%A3%E8%83%A1%E5%88%A9%E5%A8%85%20%E5%BE%B7%E6%B4%9B%E9%87%8C%E4%BA%9A%22]})
 
-- Multiple Cities:[http://loklak.org/api/geocode.json?minified=true&data={%22places%22:[%22Singapore%22,%20%22New%20York%22,%20%22Los%20Angeles%22]}](http://loklak.org/api/geocode.json?minified=true&data={%22places%22:[%22Singapore%22,%20%22New%20York%22,%20%22Los%20Angeles%22]})
+- Multiple Cities:[http://api.loklak.org/api/geocode.json?minified=true&data={%22places%22:[%22Singapore%22,%20%22New%20York%22,%20%22Los%20Angeles%22]}](http://api.loklak.org/api/geocode.json?minified=true&data={%22places%22:[%22Singapore%22,%20%22New%20York%22,%20%22Los%20Angeles%22]})
 
 
 upgrade to geocode location detection: now recognizes also all alternative (different languages) place names. The geocode servlet shows all those alternative names in a string array. The minified version shortens this array to only one entry. The API also has reverse geocoding and fuzziness for marker computation.
@@ -1162,7 +1162,7 @@ This API is open and can be accessed without any restrictions!
 
 This servlet provides the retrieval of user followers and the accounts which the user is following. Just submit the screen_name as GET http attribute. Example:
 
-[http://loklak.org/api/user.json?screen_name=loklak_app](http://loklak.org/api/user.json?screen_name=loklak_app)
+[http://api.loklak.org/api/user.json?screen_name=loklak_app](http://api.loklak.org/api/user.json?screen_name=loklak_app)
 
 ```
 {
@@ -1247,7 +1247,7 @@ This servlet provides the retrieval of user followers and the accounts which the
 
 It is also possible to get the followers of an account all at once. To trigger this, just add the attribute followers=<maxcount> to the request. The same applies to the account which the user is following, just add following=<maxcount>. This will produce a list of <maxcount> user entries in a 'topology' object. Example:
 
-[http://loklak.org/api/user.json?screen_name=loklak_app&followers=10000&following=10000](http://loklak.org/api/user.json?screen_name=loklak_app&followers=10000&following=10000)
+[http://api.loklak.org/api/user.json?screen_name=loklak_app&followers=10000&following=10000](http://api.loklak.org/api/user.json?screen_name=loklak_app&followers=10000&following=10000)
 
 ```
 {
@@ -1300,7 +1300,7 @@ the json of /api/apps.json now contains two more objects:
 
 Furthermore, the servlet can now be called with an 'category' property, like:
 
-[http://loklak.org/api/apps.json?category=Demo](http://loklak.org/api/apps.json?category=Demo)
+[http://api.loklak.org/api/apps.json?category=Demo](http://api.loklak.org/api/apps.json?category=Demo)
 
 This will reduce the app list to the sub-list which contains only apps from that category.
 
@@ -1551,7 +1551,7 @@ The servlet can produce also gif and jpg images, just change the extension of th
 
 Here is an example :
 
-[http://loklak.org/vis/markdown.png?text=hello%20world%0Dhello%20universe&color_text=000000&color_background=ffffff&padding=3](http://loklak.org/vis/markdown.png?text=hello%20world%0Dhello%20universe&color_text=000000&color_background=ffffff&padding=3)
+[http://api.loklak.org/vis/markdown.png?text=hello%20world%0Dhello%20universe&color_text=000000&color_background=ffffff&padding=3](http://api.loklak.org/vis/markdown.png?text=hello%20world%0Dhello%20universe&color_text=000000&color_background=ffffff&padding=3)
 
 ## /vis/piechart.png
 
@@ -1571,7 +1571,7 @@ Here is the request for the given data:
 }
 ```
   
-[http://loklak.org/vis/piechart.png?data={%22ford%22:%2217.272992%22,%22toyota%22:%2227.272992%22,%22renault%22:%2247.272992%22}&width=1000&height=1000](http://loklak.org/vis/piechart.png?data={%22ford%22:%2217.272992%22,%22toyota%22:%2227.272992%22,%22renault%22:%2247.272992%22}&width=1000&height=1000)
+[http://api.loklak.org/vis/piechart.png?data={%22ford%22:%2217.272992%22,%22toyota%22:%2227.272992%22,%22renault%22:%2247.272992%22}&width=1000&height=1000](http://api.loklak.org/vis/piechart.png?data={%22ford%22:%2217.272992%22,%22toyota%22:%2227.272992%22,%22renault%22:%2247.272992%22}&width=1000&height=1000)
 
 
 
