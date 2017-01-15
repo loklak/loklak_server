@@ -190,7 +190,7 @@
     <span class="s2">&quot;request_header&quot;</span><span class="p">:</span> <span class="p">{</span>
       <span class="s2">&quot;Upgrade-Insecure-Requests&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
       <span class="s2">&quot;Accept-Language&quot;</span><span class="p">:</span> <span class="s2">&quot;en-US,en;q=0.8&quot;</span><span class="p">,</span>
-      <span class="s2">&quot;Host&quot;</span><span class="p">:</span> <span class="s2">&quot;loklak.org&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;Host&quot;</span><span class="p">:</span> <span class="s2">&quot;api.loklak.org&quot;</span><span class="p">,</span>
       <span class="s2">&quot;Accept-Encoding&quot;</span><span class="p">:</span> <span class="s2">&quot;gzip, deflate, sdch&quot;</span><span class="p">,</span>
       <span class="s2">&quot;X-Forwarded-Proto&quot;</span><span class="p">:</span> <span class="s2">&quot;http&quot;</span><span class="p">,</span>
       <span class="s2">&quot;X-Forwarded-For&quot;</span><span class="p">:</span> <span class="s2">&quot;172.30.107.104, 14.139.85.203&quot;</span><span class="p">,</span>
@@ -362,7 +362,7 @@ hashtags  : all hashtags appearing in the message, without the leading &#39;#&#3
 </pre></div>
 </div>
 <p>Loklak can also suggest what&#8217;s trending and can give you the list of trending hashtags using the same search aggregations method. To find out the most trending hashtags on loklak since a particular date. Other filters like until can also be applied, here is a sample request</p>
-<p>url  : <a class="reference external" href="http://localhost:9000/api/search.json?q=spacex%20since:2015-04-01%20until:2015-04-06&amp;source=cache&amp;count=0&amp;fields=mentions,hashtags&amp;limit=6">http://loklak.org/api/search.json?q=since:2016-06-01&amp;source=cache&amp;count=0&amp;fields=hashtags</a></p>
+<p>url  : <a class="reference external" href="http://localhost:9000/api/search.json?q=spacex%20since:2015-04-01%20until:2015-04-06&amp;source=cache&amp;count=0&amp;fields=mentions,hashtags&amp;limit=6">http://api.loklak.org/api/search.json?q=since:2016-06-01&amp;source=cache&amp;count=0&amp;fields=hashtags</a></p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;readme_0&quot;</span><span class="p">:</span> <span class="s2">&quot;THIS JSON IS THE RESULT OF YOUR SEARCH QUERY - THERE IS NO WEB PAGE WHICH SHOWS THE RESULT!&quot;</span><span class="p">,</span>
   <span class="s2">&quot;readme_1&quot;</span><span class="p">:</span> <span class="s2">&quot;loklak.org is the framework for a message search system, not the portal, read: http://loklak.org/about.html#notasearchportal&quot;</span><span class="p">,</span>
@@ -443,7 +443,7 @@ hashtags  : all hashtags appearing in the message, without the leading &#39;#&#3
 </div>
 <p>It is also possible to specify the order in descending order for the following filter options favourites_count, retweet_count and the default being created_at. Here are the examples of the different queries which make this happen.</p>
 <ul class="simple">
-<li>retweet count:   : <a class="reference external" href="http://loklak.org/api/search.json?timezoneOffset=-120&amp;q=fossasia&amp;order=retweet_count&amp;source=cache">http://loklak.org/api/search.json?timezoneOffset=-120&amp;q=fossasia&amp;order=retweet_count&amp;source=cache</a></li>
+<li>retweet count:   : <a class="reference external" href="http://loklak.org/api/search.json?timezoneOffset=-120&amp;q=fossasia&amp;order=retweet_count&amp;source=cache">http://api.loklak.org/api/search.json?timezoneOffset=-120&amp;q=fossasia&amp;order=retweet_count&amp;source=cache</a></li>
 <li>favorites count:   : <a class="reference external" href="http://localhost:9000/api/search.json?timezoneOffset=-120&amp;q=fossasia&amp;order=favourites_count&amp;source=cache">http://localhost:9000/api/search.json?timezoneOffset=-120&amp;q=fossasia&amp;order=favourites_count&amp;source=cache</a></li>
 </ul>
 <div class="highlight-default"><div class="highlight"><pre><span></span>  <span class="p">{</span>
@@ -791,10 +791,10 @@ hashtags  : all hashtags appearing in the message, without the leading &#39;#&#3
 </div>
 <p>This servlet provides geocoding of place names to location coordinates and also reverse geocoding of location coordinates to place names. Additionally to the added geocoding servlet: you can geocode place names into locations with this. To render markers, use the &#8216;mark&#8217; location (they have an applied fuzziness). location coordinates are given as [lon,lat] Example usage:</p>
 <ul class="simple">
-<li><a class="reference external" href="http://loklak.org/api/geocode.json?data={%22places%22:[%22Frankfurt%20am%20Main%22,%22New%20York%22,%22Singapore%22]}">http://loklak.org/api/geocode.json?data={%22places%22:[%22Frankfurt%20am%20Main%22,%22New%20York%22,%22Singapore%22]}</a></li>
+<li><a class="reference external" href="http://api.loklak.org/api/geocode.json?data={%22places%22:[%22Frankfurt%20am%20Main%22,%22New%20York%22,%22Singapore%22]}">http://api.loklak.org/api/geocode.json?data={%22places%22:[%22Frankfurt%20am%20Main%22,%22New%20York%22,%22Singapore%22]}</a></li>
 <li>Other languages:
-<a class="reference external" href="http://loklak.org/api/geocode.json?data={%22places%22:[%22%E5%9C%A3%E8%83%A1%E5%88%A9%E5%A8%85%20%E5%BE%B7%E6%B4%9B%E9%87%8C%E4%BA%9A%22]}">http://loklak.org/api/geocode.json?data={%22places%22:[%22%E5%9C%A3%E8%83%A1%E5%88%A9%E5%A8%85%20%E5%BE%B7%E6%B4%9B%E9%87%8C%E4%BA%9A%22]}</a></li>
-<li>Multiple Cities:<a class="reference external" href="http://loklak.org/api/geocode.json?minified=true&amp;data={%22places%22:[%22Singapore%22,%20%22New%20York%22,%20%22Los%20Angeles%22]}">http://loklak.org/api/geocode.json?minified=true&amp;data={%22places%22:[%22Singapore%22,%20%22New%20York%22,%20%22Los%20Angeles%22]}</a></li>
+<a class="reference external" href="http://api.loklak.org/api/geocode.json?data={%22places%22:[%22%E5%9C%A3%E8%83%A1%E5%88%A9%E5%A8%85%20%E5%BE%B7%E6%B4%9B%E9%87%8C%E4%BA%9A%22]}">http://api.loklak.org/api/geocode.json?data={%22places%22:[%22%E5%9C%A3%E8%83%A1%E5%88%A9%E5%A8%85%20%E5%BE%B7%E6%B4%9B%E9%87%8C%E4%BA%9A%22]}</a></li>
+<li>Multiple Cities:<a class="reference external" href="http://api.loklak.org/api/geocode.json?minified=true&amp;data={%22places%22:[%22Singapore%22,%20%22New%20York%22,%20%22Los%20Angeles%22]}">http://api.loklak.org/api/geocode.json?minified=true&amp;data={%22places%22:[%22Singapore%22,%20%22New%20York%22,%20%22Los%20Angeles%22]}</a></li>
 </ul>
 <p>upgrade to geocode location detection: now recognizes also all alternative (different languages) place names. The geocode servlet shows all those alternative names in a string array. The minified version shortens this array to only one entry. The API also has reverse geocoding and fuzziness for marker computation.</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">callback</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;</span>                   <span class="o">//</span> <span class="n">jsonp</span> <span class="n">callback</span> <span class="n">function</span> <span class="n">name</span>
@@ -1087,7 +1087,7 @@ public              = &lt;string&gt;  // set to `true` to make the data searchab
 </pre></div>
 </div>
 <p>This servlet provides the retrieval of user followers and the accounts which the user is following. Just submit the screen_name as GET http attribute. Example:</p>
-<p><a class="reference external" href="http://loklak.org/api/user.json?screen_name=loklak_app">http://loklak.org/api/user.json?screen_name=loklak_app</a></p>
+<p><a class="reference external" href="http://api.loklak.org/api/user.json?screen_name=loklak_app">http://api.loklak.org/api/user.json?screen_name=loklak_app</a></p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;search_metadata&quot;</span> <span class="p">:</span> <span class="p">{</span>
     <span class="s2">&quot;client&quot;</span> <span class="p">:</span> <span class="s2">&quot;122.175.88.165&quot;</span>
@@ -1169,7 +1169,7 @@ public              = &lt;string&gt;  // set to `true` to make the data searchab
 </pre></div>
 </div>
 <p>It is also possible to get the followers of an account all at once. To trigger this, just add the attribute followers=<maxcount> to the request. The same applies to the account which the user is following, just add following=<maxcount>. This will produce a list of <maxcount> user entries in a &#8216;topology&#8217; object. Example:</p>
-<p><a class="reference external" href="http://loklak.org/api/user.json?screen_name=loklak_app&amp;followers=10000&amp;following=10000">http://loklak.org/api/user.json?screen_name=loklak_app&amp;followers=10000&amp;following=10000</a></p>
+<p><a class="reference external" href="http://api.loklak.org/api/user.json?screen_name=loklak_app&amp;followers=10000&amp;following=10000">http://api.loklak.org/api/user.json?screen_name=loklak_app&amp;followers=10000&amp;following=10000</a></p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;search_metadata&quot;</span> <span class="p">:</span> <span class="p">{</span>
     <span class="p">(</span><span class="n">client</span><span class="p">)</span> 
@@ -1217,7 +1217,7 @@ public              = &lt;string&gt;  // set to `true` to make the data searchab
 <li>&#8220;category&#8221; with an object which holds a list of the application names for each category.</li>
 </ul>
 <p>Furthermore, the servlet can now be called with an &#8216;category&#8217; property, like:</p>
-<p><a class="reference external" href="http://loklak.org/api/apps.json?category=Demo">http://loklak.org/api/apps.json?category=Demo</a></p>
+<p><a class="reference external" href="http://api.loklak.org/api/apps.json?category=Demo">http://api.loklak.org/api/apps.json?category=Demo</a></p>
 <p>This will reduce the app list to the sub-list which contains only apps from that category.</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span>  <span class="p">{</span>
     <span class="s2">&quot;@context&quot;</span><span class="p">:</span> <span class="s2">&quot;http://schema.org&quot;</span><span class="p">,</span>
@@ -1438,7 +1438,7 @@ public              = &lt;string&gt;  // set to `true` to make the data searchab
 </div>
 <p>The servlet can produce also gif and jpg images, just change the extension of the servlet path.</p>
 <p>Here is an example :</p>
-<p><a class="reference external" href="http://loklak.org/vis/markdown.png?text=hello%20world%0Dhello%20universe&amp;color_text=000000&amp;color_background=ffffff&amp;padding=3">http://loklak.org/vis/markdown.png?text=hello%20world%0Dhello%20universe&amp;color_text=000000&amp;color_background=ffffff&amp;padding=3</a></p>
+<p><a class="reference external" href="http://api.loklak.org/vis/markdown.png?text=hello%20world%0Dhello%20universe&amp;color_text=000000&amp;color_background=ffffff&amp;padding=3">http://api.loklak.org/vis/markdown.png?text=hello%20world%0Dhello%20universe&amp;color_text=000000&amp;color_background=ffffff&amp;padding=3</a></p>
 </div>
 <div class="section" id="vis-piechart-png">
 <span id="vis-piechart-png"></span><h2>/vis/piechart.png<a class="headerlink" href="#vis-piechart-png" title="Permalink to this headline">¶</a></h2>
@@ -1454,7 +1454,7 @@ public              = &lt;string&gt;  // set to `true` to make the data searchab
 <span class="p">}</span>
 </pre></div>
 </div>
-<p><a class="reference external" href="http://loklak.org/vis/piechart.png?data={%22ford%22:%2217.272992%22,%22toyota%22:%2227.272992%22,%22renault%22:%2247.272992%22}&amp;width=1000&amp;height=1000">http://loklak.org/vis/piechart.png?data={%22ford%22:%2217.272992%22,%22toyota%22:%2227.272992%22,%22renault%22:%2247.272992%22}&amp;width=1000&amp;height=1000</a></p>
+<p><a class="reference external" href="http://api.loklak.org/vis/piechart.png?data={%22ford%22:%2217.272992%22,%22toyota%22:%2227.272992%22,%22renault%22:%2247.272992%22}&amp;width=1000&amp;height=1000">http://api.loklak.org/vis/piechart.png?data={%22ford%22:%2217.272992%22,%22toyota%22:%2227.272992%22,%22renault%22:%2247.272992%22}&amp;width=1000&amp;height=1000</a></p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">data</span>    <span class="o">=</span> <span class="o">&lt;</span><span class="n">text</span><span class="o">&gt;</span>  <span class="o">//</span> <span class="n">Value</span> <span class="n">of</span> <span class="n">JSON</span> <span class="n">Key</span><span class="p">:</span><span class="n">Value</span> <span class="n">pairs</span> <span class="n">to</span> <span class="n">visualize</span>
 <span class="n">width</span>   <span class="o">=</span> <span class="o">&lt;</span><span class="n">text</span><span class="o">&gt;</span>  <span class="o">//</span> <span class="n">Width</span> <span class="n">of</span> <span class="n">the</span> <span class="n">image</span> <span class="n">needed</span>
 <span class="n">Height</span>  <span class="o">=</span> <span class="o">&lt;</span><span class="n">text</span><span class="o">&gt;</span>  <span class="o">//</span> <span class="n">Height</span> <span class="n">of</span> <span class="n">the</span> <span class="n">image</span> <span class="n">needed</span>
@@ -1924,6 +1924,7 @@ public              = &lt;string&gt;  // set to `true` to make the data searchab
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="eclipseSetup.html">Setup Eclipse</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://dev.loklak.org/javadoc">Javadoc</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Miscellaneous</span></p>
 <ul>
@@ -1940,13 +1941,6 @@ public              = &lt;string&gt;  // set to `true` to make the data searchab
   </ul></li>
 </ul>
 </div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/development/api.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
         </div>
       </div>
       <div class="clearer"></div>

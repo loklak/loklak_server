@@ -52,131 +52,37 @@
 </div>
 <div class="toctree-wrapper compound">
 </div>
-<p>This is a server application which is able to collect messages from various
-sources, including Twitter. This server contains a search index and a
-peer-to-peer index sharing interface.</p>
+<p>loklak is a server application which is able to collect messages from various
+sources, including twitter. The server contains a search index and a peer-to-peer
+index sharing interface. All messages are stored in an elasticsearch index. An
+automatic deployment from the development branch at GitHub is available for
+tests here <a class="reference external" href="https://loklak-server-dev.herokuapp.com">https://loklak-server-dev.herokuapp.com</a></p>
+<p>&#8216;Lok Lak&#8217; is also a very tasty Cambodian stir-fry meat dish (usually beef) with
+a LOT of fresh black pepper. If you ever have the chance to eat Beef Lok Lak,
+please try it. I hope not to scare vegetarians with this name, currently I am
+one as well.</p>
+<div class="section" id="communication">
+<h2>Communication<a class="headerlink" href="#communication" title="Permalink to this headline">¶</a></h2>
+<p>Please join our mailing list to discuss questions regarding the project:
+<a class="reference external" href="https://groups.google.com/forum/#!forum/loklak">https://groups.google.com/forum/#!forum/loklak</a></p>
+<p>Our chat channel is on gitter here: <a class="reference external" href="https://gitter.im/loklak/loklak">https://gitter.im/loklak/loklak</a></p>
+</div>
 <div class="section" id="why-should-i-use-loklak">
 <h2>Why should I use loklak?<a class="headerlink" href="#why-should-i-use-loklak" title="Permalink to this headline">¶</a></h2>
-<p>If you like to be anonymous when searching things, want to archive Tweets or
+<p>If you like to be anonymous when searching things, want to archive tweets or
 messages about specific topics and if you are looking for a tool to create
-statistics about Tweet topics, then you may consider Loklak. With Loklak you
-can:</p>
+statistics about tweet topics, then you may consider loklak. With loklak you can:</p>
 <blockquote>
 <div><ul class="simple">
-<li>collect and store a very, very large amount of Tweets and similar messages</li>
-<li>create your own search engine for Tweets</li>
-<li>omit authentication enforcement for API requests on the Twitter platform</li>
-<li>share Tweets and Tweet archives with other Loklak users</li>
+<li>collect and store a very, very large amount of tweets</li>
+<li>create your own search engine for tweets</li>
+<li>omit authentication enforcement for API requests on twitter</li>
+<li>share tweets and tweet archives with other loklak users</li>
 <li>search anonymously on your own search portal</li>
-<li>create your own Tweet search portal or statistical evaluations</li>
-<li>analyze large amounts of Tweets as a source for statistical data.</li>
+<li>create your own tweet search portal or statistical evaluations</li>
+<li>use Kibana to analyze large amounts of tweets for statistical data.</li>
 </ul>
 </div></blockquote>
-</div>
-<div class="section" id="we-capture-messages-with-distributed-scrapers">
-<h2>We Capture Messages With Distributed Scrapers<a class="headerlink" href="#we-capture-messages-with-distributed-scrapers" title="Permalink to this headline">¶</a></h2>
-<p>If you want to create an alternative Twitter search portal, the only way would
-be to use the official Twitter API to retrieve Tweets. But that interface needs
-an OAuth account and it makes your search portal completely dependent on
-Twitter&#8217;s goodwill. The alternative is, to scrape the Tweets from the Twitter
-HTML search result pages, but Twitter may still lock you out on your IP address.
-To circumvent this, you need many clients accessing Twitter to scrape search
-results. This makes it necessary to create a distributed peer-to-peer network of
-Twitter scrapers which can all organize, store and index Tweets. This solution
-was created with Loklak.</p>
-<p>Best of all: we made this very generic to integrate different microblogging
-services, so this may be the incubator for an independent short message or
-Twitter-like platform.</p>
-</div>
-<div class="section" id="not-a-search-portal">
-<h2>Not a Search Portal<a class="headerlink" href="#not-a-search-portal" title="Permalink to this headline">¶</a></h2>
-<p>Search portals consist of many components, the most prominent parts are content
-harvesters to acquire searchable content, a search index which provides fast and
-efficient access to the data and a search front-end containing the user webpages
-and result display servlets:</p>
-<img alt="_images/concept_searchengine.png" src="_images/concept_searchengine.png" />
-<p>Most search portals differ in the way how they display search results but have
-the almost same back-end to create the search index. We want to support the
-creation of message/Twitter search portals but the necessary and most generic
-part needs to be coded only once, even if we want several or even many different
-search front-ends:</p>
-<img alt="_images/concept_messagesearch.png" src="_images/concept_messagesearch.png" />
-<p>So it&#8217;s on you to create a message search portal, but the very hard part for
-this was already done by us. However, the front-end may also instantly be
-there (i.e. you can just use <a class="reference internal" href="installation/download.html"><span class="doc">Kibana</span></a>).</p>
-</div>
-<div class="section" id="collect-messages">
-<h2>Collect Messages<a class="headerlink" href="#collect-messages" title="Permalink to this headline">¶</a></h2>
-<p>Collected messages are processed to two storage targets: an elasticsearch search
-index and a backup- and transfer dump.</p>
-<img alt="_images/concept_messagesearchdetail.png" src="_images/concept_messagesearchdetail.png" />
-</div>
-<div class="section" id="short-links-are-de-shortened">
-<h2>Short-Links are De-Shortened<a class="headerlink" href="#short-links-are-de-shortened" title="Permalink to this headline">¶</a></h2>
-<p>To use as most possible characters in every Tweet message up to 140 characters,
-links are shortened in all Tweets. First users used independent shortener
-services but now Twitter shortens even already pre-shortened links again. We
-remove the shortening of almost all links in the Tweet and reveal the original
-URL the user has attached to their Tweets. This is very important when archiving
-Tweets because shorteners may not be available in the future and also gives you
-another privacy advancement because the shortener services cannot track you for
-their purposes.</p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">loklak can even de-shorten recursively, multi-shortened links.</p>
-</div>
-</div>
-<div class="section" id="anonymous-harvesting-and-search">
-<h2>Anonymous Harvesting and Search<a class="headerlink" href="#anonymous-harvesting-and-search" title="Permalink to this headline">¶</a></h2>
-<p>Anonymity is provided with different methods:</p>
-<blockquote>
-<div><ul>
-<li><p class="first">The loklak server does not record client IP-adresses when a search is done,
-therefore loklak.org, running loklak does also not record or log IP addresses
-from searchers.</p>
-</li>
-<li><p class="first">You can run loklak yourself which gives you complete control over logged
-things (where no IP addresses are, but whatever).</p>
-</li>
-<li><p class="first">Using a scraper, it is possible to break out of Twitter&#8217;s &#8216;OAuth-Prison&#8217;, as
-you don&#8217;t need an account to harvest Tweets.</p>
-<img alt="_images/component_contentharvester.png" src="_images/component_contentharvester.png" />
-</li>
-<li><p class="first">If you don&#8217;t want to search on loklak.org and also don&#8217;t want to scrape data
-from Twitter, you can still search in your own index and feed this index with
-import files from other loklak peers. (Look out for the &#8216;Dumps&#8217; menu item in
-the top right corner.)</p>
-<img alt="_images/component_searchindex.png" src="_images/component_searchindex.png" />
-</li>
-<li><p class="first">The built-in short-link de-shortener protects you from tracking by short-link
-services, including Twitter and bit.ly.</p>
-</li>
-</ul>
-</div></blockquote>
-</div>
-<div class="section" id="distributed-peer-to-peer">
-<h2>Distributed, Peer-to-Peer<a class="headerlink" href="#distributed-peer-to-peer" title="Permalink to this headline">¶</a></h2>
-<p>loklak instances can be connected to each other. If you download loklak and run
-it unchanged, it connects to loklak.org by default as a back-end peer. You can
-change this if you want to. This is how connected peers work:</p>
-<ul>
-<li><p class="first">Whenever a peer aquires new Tweets, it reports these to the back-end for
-storage. This means that fresh Tweets are stored at four locations: your own
-Elasticsearch index, your own message dump file and in the remote
-back-end-peer in the Elasticsearch index and dump file. This causes
-that all messages that you find are available for download for other
-users at the back-end which is by default loklak.org.</p>
-<img alt="_images/component_jsonlistp2p.png" src="_images/component_jsonlistp2p.png" />
-</li>
-<li><p class="first">Whenever a peer starts up, it calls the back-end to announce it&#8217;s existence.
-This fills a peer-table in the back-end which everyone can use to retrieve the
-list of active peers. Therefore everyone can identify peers which may provide
-message-lists for download.</p>
-</li>
-<li><p class="first">Any topology can be achieved when the user changes the host name of the
-back-end. You can create your own message-sharing network easily.</p>
-</li>
-</ul>
 </div>
 </div>
 
@@ -214,13 +120,8 @@ back-end. You can create your own message-sharing network easily.</p>
   <h3><a href="#">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Welcome to the loklak Server documentation!</a><ul>
+<li><a class="reference internal" href="#communication">Communication</a></li>
 <li><a class="reference internal" href="#why-should-i-use-loklak">Why should I use loklak?</a></li>
-<li><a class="reference internal" href="#we-capture-messages-with-distributed-scrapers">We Capture Messages With Distributed Scrapers</a></li>
-<li><a class="reference internal" href="#not-a-search-portal">Not a Search Portal</a></li>
-<li><a class="reference internal" href="#collect-messages">Collect Messages</a></li>
-<li><a class="reference internal" href="#short-links-are-de-shortened">Short-Links are De-Shortened</a></li>
-<li><a class="reference internal" href="#anonymous-harvesting-and-search">Anonymous Harvesting and Search</a></li>
-<li><a class="reference internal" href="#distributed-peer-to-peer">Distributed, Peer-to-Peer</a></li>
 </ul>
 </li>
 </ul>
@@ -244,6 +145,7 @@ back-end. You can create your own message-sharing network easily.</p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="development/api.html">API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="development/eclipseSetup.html">Setup Eclipse</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://dev.loklak.org/javadoc">Javadoc</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Miscellaneous</span></p>
 <ul>
@@ -259,13 +161,6 @@ back-end. You can create your own message-sharing network easily.</p>
   </ul></li>
 </ul>
 </div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="_sources/index.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
         </div>
       </div>
       <div class="clearer"></div>
