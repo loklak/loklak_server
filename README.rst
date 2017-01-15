@@ -101,26 +101,26 @@ How do I install loklak with Docker?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To install loklak with Docker please refer to the `loklak Docker
-installation readme </docs/installation_docker.md>`__.
+installation readme <https://dev.loklak.org/installation/installation_docker.html>`__.
 
 How do I deploy loklak with Heroku?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can easily deploy to Heroku by clicking the Deploy to Heroku button
 above. To install loklak using Heroku Toolbelt, please refer to the
-`loklak Heroku installation readme </docs/installation_heroku.md>`__.
+`loklak Heroku installation readme <https://dev.loklak.org/installation/installation_heroku.html>`__.
 
 How do I deploy loklak with cloud9?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To install loklak with cloud9 please refer to the `loklak cloud9
-installation readme </docs/installation_cloud9.md>`__.
+installation readme <https://dev.loklak.org/installation/installation_cloud9.html>`__.
 
 How do I setup loklak on Eclipse?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To install loklak on Eclipes, please refer to the `loklak Eclipse
-readme </docs/eclipseSetup.md>`__.
+readme <https://dev.loklak.org/development/eclipseSetup.html>`__.
 
 How do I run loklak?
 ~~~~~~~~~~~~~~~~~~~~
