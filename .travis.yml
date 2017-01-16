@@ -33,7 +33,7 @@ before_deploy:
 deploy:
   - provider: script
     skip_cleanup: true
-    script: ssh loklak@104.155.231.103 /opt/loklak/automatic-deploy.sh
+    script: ssh loklak@104.155.231.103 'bash -s' < .utility/deploy-loklak.sh
     on:
       branch: master
   - provider: script
