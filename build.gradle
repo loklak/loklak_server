@@ -1,14 +1,30 @@
+buildscript {
+  repositories {
+    jcenter()
+  }
+
+  dependencies {
+    classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.4'
+  }
+}
+
 apply plugin: 'java'
+apply plugin: 'com.github.johnrengelman.shadow'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 sourceSets.main.java.srcDirs = ['src']
+sourceSets.main.resources.srcDirs = ['res']
 
 jar {
   manifest {
     attributes 'Main-Class': 'org.loklak.LoklakServer'
   }
+}
+
+shadowJar {
+  mergeServiceFiles()
 }
 
 repositories {
