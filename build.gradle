@@ -109,3 +109,15 @@ dependencies {
   compile name: 'twitter4j-stream-4.0.2'
   compile name: 'xerces-2.9.1'
 }
+
+task setup(type: JavaExec, dependsOn: classes) {
+  main = 'org.loklak.LoklakInstallation'
+  classpath sourceSets.main.runtimeClasspath
+  classpath configurations.runtime
+}
+
+task start(type: JavaExec, dependsOn: classes) {
+  main = 'org.loklak.LoklakServer'
+  classpath sourceSets.main.runtimeClasspath
+  classpath configurations.runtime
+}
