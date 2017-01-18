@@ -11,6 +11,7 @@ SERVICE_DIRECTORY="/opt/loklak"
 GIT_REPO_DIRECTORY="$SERVICE_DIRECTORY/git-repo"
 DATA_DIRECTORY="$SERVICE_DIRECTORY/data"
 DOCKER_CONTAINER_NAME="loklak_container"
+ELASTIC_DOCKER_CONTAINER_NAME="elasticsearch"
 USER_TO_USE="loklak"
 
 UID_TO_USE="$(id -u $USER_TO_USE)"
@@ -90,7 +91,7 @@ mkdir -p "$DATA_DIRECTORY"
 
 puts "Starting Loklak Docker container ..."
 
-docker run -d -v "$DATA_DIRECTORY":"/loklak_server/data" --name "$DOCKER_CONTAINER_NAME" -p 80:80 -p 443:443 loklak
+docker run -d -v "$DATA_DIRECTORY":"/loklak_server/data" --name "$DOCKER_CONTAINER_NAME" -p 80:80 -p 443:443 --link "$ELASTIC_DOCKER_CONTAINER_NAME" --restart always loklak
 
 if [[ ! $? -eq 0 ]] ; then
     fail "Failed starting Loklak Docker container. Exiting ..."
