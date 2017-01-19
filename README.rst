@@ -73,7 +73,7 @@ harvesters to acquire searchable content, a search index which provides fast and
 efficient access to the data and a search front-end containing the user webpages
 and result display servlets:
 
-.. image:: https://my.mixtape.moe/vronne.png
+.. image:: docs/_assets/concept_searchengine.png
 
 Most search portals differ in the way how they display search results but have
 the almost same back-end to create the search index. We want to support the
@@ -81,7 +81,7 @@ creation of message/Twitter search portals but the necessary and most generic
 part needs to be coded only once, even if we want several or even many different
 search front-ends:
 
-.. image:: https://my.mixtape.moe/tarden.png
+.. image:: docs/_assets/concept_messagesearch.png
 
 So it's on you to create a message search portal, but the very hard part for
 this was already done by us. However, the front-end may also instantly be
@@ -93,7 +93,7 @@ Collect Messages
 Collected messages are processed to two storage targets: an elasticsearch search
 index and a backup- and transfer dump.
 
-.. image:: https://my.mixtape.moe/qmectl.png
+.. image:: docs/_assets/concept_messagesearchdetail.png
 
 Short-Links are De-Shortened
 ----------------------------
@@ -124,13 +124,13 @@ Anonymity is provided with different methods:
  * Using a scraper, it is possible to break out of Twitter's 'OAuth-Prison', as
    you don't need an account to harvest Tweets.
    
-   .. image:: https://my.mixtape.moe/ksuphg.png
+   .. image:: docs/_assets/component_contentharvester.png
  * If you don't want to search on loklak.org and also don't want to scrape data
    from Twitter, you can still search in your own index and feed this index with
    import files from other loklak peers. (Look out for the 'Dumps' menu item in
    the top right corner.)
    
-   .. image:: https://my.mixtape.moe/ebxqzp.png
+   .. image:: docs/_assets/component_searchindex.png
  * The built-in short-link de-shortener protects you from tracking by short-link
    services, including Twitter and bit.ly.
 
@@ -148,7 +148,7 @@ change this if you want to. This is how connected peers work:
   that all messages that you find are available for download for other
   users at the back-end which is by default loklak.org.
   
-  .. image:: https://my.mixtape.moe/hjzkiz.png
+  .. image:: docs/_assets/component_jsonlistp2p.png
 * Whenever a peer starts up, it calls the back-end to announce it's existence.
   This fills a peer-table in the back-end which everyone can use to retrieve the
   list of active peers. Therefore everyone can identify peers which may provide
