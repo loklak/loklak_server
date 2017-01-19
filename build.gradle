@@ -25,6 +25,22 @@ jar {
 
 shadowJar {
   mergeServiceFiles()
+
+  from ('conf') {
+    into 'conf'
+  }
+
+  from ('html') {
+    into 'html'
+  }
+
+  from ('installation') {
+    into 'installation'
+  }
+
+  from ('ssi') {
+    into 'ssi'
+  }
 }
 
 repositories {
