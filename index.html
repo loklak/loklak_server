@@ -106,13 +106,13 @@ Twitter-like platform.</p>
 harvesters to acquire searchable content, a search index which provides fast and
 efficient access to the data and a search front-end containing the user webpages
 and result display servlets:</p>
-<img alt="https://my.mixtape.moe/vronne.png" src="https://my.mixtape.moe/vronne.png" />
+<img alt="_images/concept_searchengine.png" src="_images/concept_searchengine.png" />
 <p>Most search portals differ in the way how they display search results but have
 the almost same back-end to create the search index. We want to support the
 creation of message/Twitter search portals but the necessary and most generic
 part needs to be coded only once, even if we want several or even many different
 search front-ends:</p>
-<img alt="https://my.mixtape.moe/tarden.png" src="https://my.mixtape.moe/tarden.png" />
+<img alt="_images/concept_messagesearch.png" src="_images/concept_messagesearch.png" />
 <p>So it&#8217;s on you to create a message search portal, but the very hard part for
 this was already done by us. However, the front-end may also instantly be
 there (i.e. you can just use <a class="reference internal" href="installation/download.html"><span class="doc">Kibana</span></a>).</p>
@@ -121,7 +121,7 @@ there (i.e. you can just use <a class="reference internal" href="installation/do
 <h2>Collect Messages<a class="headerlink" href="#collect-messages" title="Permalink to this headline">¶</a></h2>
 <p>Collected messages are processed to two storage targets: an elasticsearch search
 index and a backup- and transfer dump.</p>
-<img alt="https://my.mixtape.moe/qmectl.png" src="https://my.mixtape.moe/qmectl.png" />
+<img alt="_images/concept_messagesearchdetail.png" src="_images/concept_messagesearchdetail.png" />
 </div>
 <div class="section" id="short-links-are-de-shortened">
 <h2>Short-Links are De-Shortened<a class="headerlink" href="#short-links-are-de-shortened" title="Permalink to this headline">¶</a></h2>
@@ -152,13 +152,13 @@ things (where no IP addresses are, but whatever).</p>
 </li>
 <li><p class="first">Using a scraper, it is possible to break out of Twitter&#8217;s &#8216;OAuth-Prison&#8217;, as
 you don&#8217;t need an account to harvest Tweets.</p>
-<img alt="https://my.mixtape.moe/ksuphg.png" src="https://my.mixtape.moe/ksuphg.png" />
+<img alt="_images/component_contentharvester.png" src="_images/component_contentharvester.png" />
 </li>
 <li><p class="first">If you don&#8217;t want to search on loklak.org and also don&#8217;t want to scrape data
 from Twitter, you can still search in your own index and feed this index with
 import files from other loklak peers. (Look out for the &#8216;Dumps&#8217; menu item in
 the top right corner.)</p>
-<img alt="https://my.mixtape.moe/ebxqzp.png" src="https://my.mixtape.moe/ebxqzp.png" />
+<img alt="_images/component_searchindex.png" src="_images/component_searchindex.png" />
 </li>
 <li><p class="first">The built-in short-link de-shortener protects you from tracking by short-link
 services, including Twitter and bit.ly.</p>
@@ -178,7 +178,7 @@ Elasticsearch index, your own message dump file and in the remote
 back-end-peer in the Elasticsearch index and dump file. This causes
 that all messages that you find are available for download for other
 users at the back-end which is by default loklak.org.</p>
-<img alt="https://my.mixtape.moe/hjzkiz.png" src="https://my.mixtape.moe/hjzkiz.png" />
+<img alt="_images/component_jsonlistp2p.png" src="_images/component_jsonlistp2p.png" />
 </li>
 <li><p class="first">Whenever a peer starts up, it calls the back-end to announce it&#8217;s existence.
 This fills a peer-table in the back-end which everyone can use to retrieve the
