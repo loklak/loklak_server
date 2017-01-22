@@ -43,6 +43,8 @@ shadowJar {
   }
 }
 
+assemble.dependsOn shadowJar
+
 repositories {
   flatDir {
     dirs 'lib'
