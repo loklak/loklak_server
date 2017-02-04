@@ -122,6 +122,7 @@ public class DAO {
     private static File external_data, assets, dictionaries;
     public static Settings public_settings, private_settings;
     private static Path message_dump_dir, account_dump_dir, import_profile_dump_dir;
+    public static Path push_cache_dir;
     public static JsonRepository message_dump;
     private static JsonRepository account_dump;
     private static JsonRepository import_profile_dump;
@@ -309,6 +310,9 @@ public class DAO {
         external_data = new File(datadir, "external");
         dictionaries = new File(external_data, "dictionaries");
         dictionaries.mkdirs();
+        
+        push_cache_dir = dataPath.resolve("pushcache");
+        push_cache_dir.toFile().mkdirs();
 
         // create message dump dir
         String message_dump_readme =
