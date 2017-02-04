@@ -1,5 +1,5 @@
 /**
- *  Harvester
+ *  ClassicHarvester
  *  Copyright 13.11.2015 by Michael Peter Christen, @0rb1t3r
  *
  *  This library is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.loklak;
+package org.loklak.harvester.strategy;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,10 +30,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.eclipse.jetty.util.log.Log;
-import org.loklak.api.p2p.PushServlet;
 import org.loklak.api.search.SearchServlet;
 import org.loklak.api.search.SuggestServlet;
 import org.loklak.data.DAO;
+import org.loklak.harvester.PushThread;
 import org.loklak.harvester.TwitterScraper;
 import org.loklak.objects.MessageEntry;
 import org.loklak.objects.QueryEntry;
@@ -42,28 +42,29 @@ import org.loklak.objects.Timeline;
 import org.loklak.objects.Timeline.Order;
 import org.loklak.tools.DateParser;
 
-public class Harvester {
+public class ClassicHarvester implements Harvester {
 
-    private final static int FETCH_RANDOM = 3;
-    private final static int HITS_LIMIT_4_QUERIES = 20;
-    private final static int MAX_PENDING = 200; // this could be much larger but we don't want to cache too many of these
-    private final static int MAX_HARVESTED = 10000; // just to prevent a memory leak with possible OOM after a long time we flush that cache after a while
-    private final static Random random = new Random(System.currentTimeMillis());
-    public final static ExecutorService executor = Executors.newFixedThreadPool(1);
+    private final int FETCH_RANDOM = 3;
+    private final int HITS_LIMIT_4_QUERIES = 20;
+    private final int MAX_PENDING = 200; // this could be much larger but we don't want to cache too many of these
+    private final int MAX_HARVESTED = 10000; // just to prevent a memory leak with possible OOM after a long time we flush that cache after a while
+    private final Random random = new Random(System.currentTimeMillis());
+    public final ExecutorService executor = Executors.newFixedThreadPool(1);
     
-    private static LinkedHashSet<String> pendingQueries = new LinkedHashSet<>();
-    private static ArrayList<String> pendingContext = new ArrayList<>();
-    private static Set<String> harvestedContext = new HashSet<>();
+    private LinkedHashSet<String> pendingQueries = new LinkedHashSet<>();
+    private ArrayList<String> pendingContext = new ArrayList<>();
+    private Set<String> harvestedContext = new HashSet<>();
     
-    private static int hitsOnBackend = 1000;
+    private int hitsOnBackend = 1000;
 
-    public static void checkContext(Timeline tl, boolean front) {
+    public void checkContext(Timeline tl, boolean front) {
         for (MessageEntry tweet: tl) {
             for (String user: tweet.getMentions()) checkContext("from:" + user, front);
             for (String hashtag: tweet.getHashtags()) checkContext(hashtag, front);
         }
     }
-    public static void checkContext(String s, boolean front) {
+
+    public void checkContext(String s, boolean front) {
         if (!front && pendingContext.size() > MAX_PENDING) return; // queue is full
         if (!harvestedContext.contains(s) && !pendingContext.contains(s)) {
             if (front) pendingContext.add(0, s); else pendingContext.add(s);
@@ -72,7 +73,7 @@ public class Harvester {
         if (harvestedContext.size() > MAX_HARVESTED) harvestedContext.clear();
     }
     
-    public static int harvest() {
+    public int harvest() {
         String backend = DAO.getConfig("backend","http://loklak.org");
         
         if (random.nextInt(100) != 0 && hitsOnBackend < HITS_LIMIT_4_QUERIES && pendingQueries.size() == 0 && pendingContext.size() > 0) {
@@ -132,6 +133,8 @@ public class Harvester {
                 if (tl == null) tl = new Timeline(Order.CREATED_AT);
                 tl.setQuery(q);
                 PushThread pushThread = new PushThread(backend, tl);
+                DAO.log( "starting push to backend; pendingQueries = " + pendingQueries.size() + ", pendingContext = " +
+                        pendingContext.size() + ", harvestedContext = " + harvestedContext.size());
                 executor.execute(pushThread);
                 return -1;
             }
@@ -142,6 +145,8 @@ public class Harvester {
             // if we loaded a pending query, push results to backpeer right now
             tl.setQuery(q);
             PushThread pushThread = new PushThread(backend, tl);
+            DAO.log( "starting push to backend; pendingQueries = " + pendingQueries.size() + ", pendingContext = " +
+                    pendingContext.size() + ", harvestedContext = " + harvestedContext.size());
             executor.execute(pushThread);
             return tl.size();
         } catch (NoSuchElementException e) {
@@ -149,36 +154,8 @@ public class Harvester {
             return -1;
         }
     }
-    
-    private static class PushThread implements Runnable {
-        private String peer;
-        private Timeline tl;
-        public PushThread(String peer, Timeline tl) {
-            this.peer = peer;
-            this.tl = tl;
-        }
-        @Override
-        public void run() {
-            boolean success = false;
-            for (int i = 0; i < 5; i++) {
-                try {
-                    long start = System.currentTimeMillis();
-                    success = PushServlet.push(new String[]{peer}, tl);
-                    if (success) {
-                        DAO.log("retrieval of " + tl.size() + " new messages for q = " + tl.getQuery() + ", pushed to backend synchronously in " + (System.currentTimeMillis() - start) + " ms; pendingQueries = " + pendingQueries.size() + ", pendingContext = " + pendingContext.size() + ", harvestedContext = " + harvestedContext.size());
-                        return;
-                    }
-                } catch (Throwable e) {
-                    DAO.log("failed synchronous push to backend, attempt " + i);
-                    try {Thread.sleep((i + 1) * 3000);} catch (InterruptedException e1) {}
-                }
-            }
-            String q = tl.getQuery();
-            tl.setQuery(null);
-            DAO.outgoingMessages.transmitTimelineToBackend(tl);
-            DAO.log("retrieval of " + tl.size() + " new messages for q = " + q + ", scheduled push");
-        }
-        
+
+    public void stop() {
+        executor.shutdown();
     }
-    
 }

@@ -22,7 +22,6 @@ script:
 before_script:
 - pip install --user codecov
 after_success:
-- sh .utility/push-javadoc-to-gh-pages.sh
 - bash <(curl -s https://codecov.io/bash)
 - mvn clean cobertura:cobertura coveralls:report
 - codecov
@@ -32,8 +31,18 @@ before_deploy:
 - chmod 600 .utility/loklakserver.1
 - ssh-add .utility/loklakserver.1
 deploy:
-  provider: script
-  skip_cleanup: true
-  script: ssh loklak@104.155.231.103 /opt/loklak/automatic-deploy.sh
-  on:
-    branch: master
+  - provider: script
+    skip_cleanup: true
+    script: ssh loklak@104.155.231.103 'bash -s' < .utility/deploy-loklak.sh
+    on:
+      branch: master
+  - provider: script
+    skip_cleanup: true
+    script: .utility/push-docs-to-gh-pages.sh
+    on:
+      branch: development
+  - provider: script
+    skip_cleanup: true
+    script: .utility/push-docs-to-gh-pages.sh
+    on:
+      branch: master

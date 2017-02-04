@@ -585,6 +585,15 @@ public class DAO {
         }
     }
 
+    public static int getConfig(String key, int default_val) {
+        String value = config.get(key);
+        try {
+            return value == null ? default_val : Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return default_val;
+        }
+    }
+
     public static void setConfig(String key, String value) {
         config.put(key, value);
     }

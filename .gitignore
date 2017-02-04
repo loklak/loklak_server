@@ -17,3 +17,5 @@ dist/loklak.jar
 /build/
 /.gradle/
 /.DS_Store
+
+/docs/_build

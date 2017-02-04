@@ -2,7 +2,7 @@
 
 This API can be used to create your own social media search engine using the public and open message API. Every servlet can be called with a POST request, all but push.json can be called with a PUT request. 
 
-##Client Authentication
+## Client Authentication
 
 You can access the API `without any authentication`. This service can be use without subscription, however, there is a user management to grant users administration rights. Excessive usage of APIs is restricted with DoS protection. Some servlets can only be called from localhost or administration rights to protect user data submitted to the server. There are three classes for access rights: 
  
@@ -12,13 +12,13 @@ You can access the API `without any authentication`. This service can be use wit
 | Limited | localhost clients or administration users are granted more data than public clients |
 | Restricted | only localhost clients or administration users are granted access |
 
-##Cross-Origin Resource Sharing
+## Cross-Origin Resource Sharing
 
 Most servlets can be called with a `callback=<function-name>` property to call a jsonp result format. This is sufficient to allow a cross-origin access to the API. Servlets which do not provide `json`S content (i.e. all `/vis/`servlets) implement CORS headers to enable embedding of their content (applies mostly to images). 
 
-##Configuration Dependencies
+## Configuration Dependencies
 
-Some servlets read and provide configuration data from `data/settings/customized_config.properties`. To enable such services please edit that file and add your custom values. Example: these values are needed by [loklak_webclient](https://github.com/fossasia/loklak_webclient). 
+Some servlets read and provide configuration data from `data/settings/customized_config.properties`. To enable such services please edit that file and add your custom values.
 
 ```
 client.apiUrl                  : http://localhost:9000/api/
@@ -32,7 +32,7 @@ client.twitterConsumerSecret    : <KEY HERE>
 twitterAccessToken              : <KEY HERE>
 twitterAccessTokenSecret        : <KEY HERE>
 ```
-##/api/status.json
+## /api/status.json
 
 `This API is open and can be accessed without any restrictions!`
 
@@ -149,7 +149,7 @@ The status servlet shows the size of the internal Elasticsearch search index for
     "request_header": {
       "Upgrade-Insecure-Requests": "1",
       "Accept-Language": "en-US,en;q=0.8",
-      "Host": "loklak.org",
+      "Host": "api.loklak.org",
       "Accept-Encoding": "gzip, deflate, sdch",
       "X-Forwarded-Proto": "http",
       "X-Forwarded-For": "172.30.107.104, 14.139.85.203",
@@ -163,7 +163,7 @@ The status servlet shows the size of the internal Elasticsearch search index for
   }
 }
 ```
-##/api/search.json
+## /api/search.json
 
 `This API is open and can be accessed without any restrictions!`
 
@@ -280,7 +280,7 @@ provider_type   : The type of the content provider, possible values are SCRAPED 
 ```
 These extracted fields are especially useful for search aggregations, see below.
 
-##Search Result Aggregations
+## Search Result Aggregations
 
 A search result may also have field aggregations (aka 'facets') if they are requested in the search request. To get aggregations, the attribute 'source' MUST be set to 'cache' and the fields to be aggregated must be listed in the attribute 'fields'. Aggregations are only useful if the search query contains also since- and until-modifiers to define a time frame. A typical aggregation search request sets the count of search results to zero. Example:
 
@@ -330,7 +330,7 @@ url : [http://localhost:9000/api/search.json?q=spacex%20since:2015-04-01%20until
 
 Loklak can also suggest what's trending and can give you the list of trending hashtags using the same search aggregations method. To find out the most trending hashtags on loklak since a particular date. Other filters like until can also be applied, here is a sample request
 
-url  : [http://loklak.org/api/search.json?q=since:2016-06-01&source=cache&count=0&fields=hashtags](http://localhost:9000/api/search.json?q=spacex%20since:2015-04-01%20until:2015-04-06&source=cache&count=0&fields=mentions,hashtags&limit=6)
+url  : [http://api.loklak.org/api/search.json?q=since:2016-06-01&source=cache&count=0&fields=hashtags](http://localhost:9000/api/search.json?q=spacex%20since:2015-04-01%20until:2015-04-06&source=cache&count=0&fields=mentions,hashtags&limit=6)
 
 
 ```
@@ -419,7 +419,7 @@ url : [http://localhost:9000/api/search.json?q=spacex%20since:2015-04-05_23:10%2
 It is also possible to specify the order in descending order for the following filter options favourites_count, retweet_count and the default being created_at. Here are the examples of the different queries which make this happen.
 
 
-- retweet count:   : [http://loklak.org/api/search.json?timezoneOffset=-120&q=fossasia&order=retweet_count&source=cache](http://loklak.org/api/search.json?timezoneOffset=-120&q=fossasia&order=retweet_count&source=cache)
+- retweet count:   : [http://api.loklak.org/api/search.json?timezoneOffset=-120&q=fossasia&order=retweet_count&source=cache](http://loklak.org/api/search.json?timezoneOffset=-120&q=fossasia&order=retweet_count&source=cache)
 
 - favorites count:   : [http://localhost:9000/api/search.json?timezoneOffset=-120&q=fossasia&order=favourites_count&source=cache](http://localhost:9000/api/search.json?timezoneOffset=-120&q=fossasia&order=favourites_count&source=cache)
 
@@ -628,7 +628,7 @@ It is also possible to specify the order in descending order for the following f
 Please note that the times given here as since- und until modifiers as well as the histogram dates are shifted by -120 minutes as given in the timezoneOffset attribute. This makes it possible to pass that attribute from a browser which knows the actual time zone of the web front-end user and modify search attributes and result times according to the localized time of the user.
 
 
-##/api/suggest.json
+## /api/suggest.json
 ```
 This API has access limitations: localhost clients are granted more data than public clients.
 ```
@@ -726,7 +726,7 @@ The result shows a list of queries in the given order. Additionally to the queri
   } ]
 }
 ```
-##/api/crawler.json
+## /api/crawler.json
 
 ```
 This API has access limitations: localhost clients are granted more data than public clients.
@@ -759,7 +759,7 @@ The crawler returns immediately with an object describing the index size (exactl
 }
 ```
 
-##/api/hello.json
+## /api/hello.json
 
 ```
 This API is open and can be accessed without any restrictions!
@@ -784,7 +784,7 @@ loklak does not collect IP addresses on API interfaces where user data is collec
 IPs, collected by this method is retrievable with the peers.json API. If a loklak user does not want that the IP addresses move along a p2p network, then simply the field backend in the configuration must be empty.
 
 
-##/api/geocode.json
+## /api/geocode.json
 
 ```
 This API is open and can be accessed without any restrictions!
@@ -793,12 +793,12 @@ This API is open and can be accessed without any restrictions!
 This servlet provides geocoding of place names to location coordinates and also reverse geocoding of location coordinates to place names. Additionally to the added geocoding servlet: you can geocode place names into locations with this. To render markers, use the 'mark' location (they have an applied fuzziness). location coordinates are given as [lon,lat] Example usage:
 
 
-- [http://loklak.org/api/geocode.json?data={%22places%22:[%22Frankfurt%20am%20Main%22,%22New%20York%22,%22Singapore%22]}](http://loklak.org/api/geocode.json?data={%22places%22:[%22Frankfurt%20am%20Main%22,%22New%20York%22,%22Singapore%22]})
+- [http://api.loklak.org/api/geocode.json?data={%22places%22:[%22Frankfurt%20am%20Main%22,%22New%20York%22,%22Singapore%22]}](http://api.loklak.org/api/geocode.json?data={%22places%22:[%22Frankfurt%20am%20Main%22,%22New%20York%22,%22Singapore%22]})
 
 - Other languages:
-[http://loklak.org/api/geocode.json?data={%22places%22:[%22%E5%9C%A3%E8%83%A1%E5%88%A9%E5%A8%85%20%E5%BE%B7%E6%B4%9B%E9%87%8C%E4%BA%9A%22]}](http://loklak.org/api/geocode.json?data={%22places%22:[%22%E5%9C%A3%E8%83%A1%E5%88%A9%E5%A8%85%20%E5%BE%B7%E6%B4%9B%E9%87%8C%E4%BA%9A%22]})
+[http://api.loklak.org/api/geocode.json?data={%22places%22:[%22%E5%9C%A3%E8%83%A1%E5%88%A9%E5%A8%85%20%E5%BE%B7%E6%B4%9B%E9%87%8C%E4%BA%9A%22]}](http://api.loklak.org/api/geocode.json?data={%22places%22:[%22%E5%9C%A3%E8%83%A1%E5%88%A9%E5%A8%85%20%E5%BE%B7%E6%B4%9B%E9%87%8C%E4%BA%9A%22]})
 
-- Multiple Cities:[http://loklak.org/api/geocode.json?minified=true&data={%22places%22:[%22Singapore%22,%20%22New%20York%22,%20%22Los%20Angeles%22]}](http://loklak.org/api/geocode.json?minified=true&data={%22places%22:[%22Singapore%22,%20%22New%20York%22,%20%22Los%20Angeles%22]})
+- Multiple Cities:[http://api.loklak.org/api/geocode.json?minified=true&data={%22places%22:[%22Singapore%22,%20%22New%20York%22,%20%22Los%20Angeles%22]}](http://api.loklak.org/api/geocode.json?minified=true&data={%22places%22:[%22Singapore%22,%20%22New%20York%22,%20%22Los%20Angeles%22]})
 
 
 upgrade to geocode location detection: now recognizes also all alternative (different languages) place names. The geocode servlet shows all those alternative names in a string array. The minified version shortens this array to only one entry. The API also has reverse geocoding and fuzziness for marker computation.
@@ -827,7 +827,7 @@ Result-Description
 }
 ```
 
-##/api/peers.json
+## /api/peers.json
 
 ```
 This API is open and can be accessed without any restrictions!
@@ -874,7 +874,7 @@ This servlet combined the result of the hello calls from all peers and provides 
 }
 ```
 
-##/api/proxy.json
+## /api/proxy.json
 
 ```
 This API has access restrictions: only localhost clients are granted.
@@ -900,7 +900,7 @@ Retrieval of the image
 
 [http://localhost:9000/api/proxy.png?screen_name=loklak_app&url=https://pbs.twimg.com/profile_images/577512240640733184/fizL4YIn_bigger.png](http://localhost:9000/api/proxy.png?screen_name=loklak_app&url=https://pbs.twimg.com/profile_images/577512240640733184/fizL4YIn_bigger.png)
 
-##/api/push.json
+## /api/push.json
 
 ```
 This API has access limitations: localhost clients are granted more data than public clients.
@@ -929,7 +929,7 @@ The servlet returns with
 When messages arrive the back-end peer, the value "source_type" of every message is replaced with "REMOTE"
 
 
-##/api/push/geojson.json
+## /api/push/geojson.json
 
 ```
 This API is open and can be accessed without any restrictions!
@@ -1002,7 +1002,7 @@ Another example, with 3 field mapping rules:
 
 [http://localhost:9000/api/push/geojson.json?url=mysite.com/mygeojson.json&source_type=IMPORT&map_type=message_name:screen_name,username:user.name,user_shortname:user.screen_name](http://localhost:9000/api/push/geojson.json?url=mysite.com/mygeojson.json&source_type=IMPORT&map_type=message_name:screen_name,username:user.name,user_shortname:user.screen_name)
 
-##/api/push/*.*
+## /api/push/*.*
 
 ```
 This API is open and can be accessed without any restrictions!
@@ -1033,7 +1033,7 @@ lifetime            = <number>  // expiration date (in epoch time) of the data s
 public              = <string>  // set to `true` to make the data searchable by other users
 ```
 
-##/api/import.json
+## /api/import.json
 
 ```
 This API is open and can be accessed without any restrictions!
@@ -1065,7 +1065,7 @@ source_url*     = <string> // url of the source
 screen_name*    = <string>  // importer screen_name. Along with source_url this attribute is required to identify the import profile.
 ```
 
-##/api/validate.json
+## /api/validate.json
 
 ```
 This API is open and can be accessed without any restrictions!
@@ -1078,7 +1078,7 @@ url*          = <string> // public url of the data
 source_type*  = <string> // indicate the data format to validate against. Some valid values are : FOSSASIA_API, FREIFUNK_NODE, OPENWIFIMAP, etc..
 ```
 
-##/api/settings.json
+## /api/settings.json
 
 ```
 This API has access restrictions: only localhost clients are granted.
@@ -1108,7 +1108,7 @@ Here is an example :
 
 [http://localhost:9000/api/settings.json](http://localhost:9000/api/settings.json)
 
-##/api/account.json
+## /api/account.json
 
 ```
 This API has access restrictions: only localhost clients are granted.
@@ -1154,7 +1154,7 @@ To add or update a record with apps settings, simply omit the OAuth details and 
 [http://localhost:9000/api/account.json?action=update&data={"screen_name":"test","apps":{"wall":{"type":"horizontal"}}}](http://localhost:9000/api/account.json?action=update&data={"screen_name":"test","apps":{"wall":{"type":"horizontal"}}})
 
 
-##/api/user.json
+## /api/user.json
 
 ```
 This API is open and can be accessed without any restrictions!
@@ -1162,7 +1162,7 @@ This API is open and can be accessed without any restrictions!
 
 This servlet provides the retrieval of user followers and the accounts which the user is following. Just submit the screen_name as GET http attribute. Example:
 
-[http://loklak.org/api/user.json?screen_name=loklak_app](http://loklak.org/api/user.json?screen_name=loklak_app)
+[http://api.loklak.org/api/user.json?screen_name=loklak_app](http://api.loklak.org/api/user.json?screen_name=loklak_app)
 
 ```
 {
@@ -1247,7 +1247,7 @@ This servlet provides the retrieval of user followers and the accounts which the
 
 It is also possible to get the followers of an account all at once. To trigger this, just add the attribute followers=<maxcount> to the request. The same applies to the account which the user is following, just add following=<maxcount>. This will produce a list of <maxcount> user entries in a 'topology' object. Example:
 
-[http://loklak.org/api/user.json?screen_name=loklak_app&followers=10000&following=10000](http://loklak.org/api/user.json?screen_name=loklak_app&followers=10000&following=10000)
+[http://api.loklak.org/api/user.json?screen_name=loklak_app&followers=10000&following=10000](http://api.loklak.org/api/user.json?screen_name=loklak_app&followers=10000&following=10000)
 
 ```
 {
@@ -1286,7 +1286,7 @@ It is also possible to get the followers of an account all at once. To trigger t
 ```
 
 
-##/api/apps.json
+## /api/apps.json
 
 ```
 This API is open and can be accessed without any restrictions!
@@ -1300,7 +1300,7 @@ the json of /api/apps.json now contains two more objects:
 
 Furthermore, the servlet can now be called with an 'category' property, like:
 
-[http://loklak.org/api/apps.json?category=Demo](http://loklak.org/api/apps.json?category=Demo)
+[http://api.loklak.org/api/apps.json?category=Demo](http://api.loklak.org/api/apps.json?category=Demo)
 
 This will reduce the app list to the sub-list which contains only apps from that category.
 
@@ -1324,7 +1324,7 @@ This will reduce the app list to the sub-list which contains only apps from that
 ```
 
 
-##/api/asset
+## /api/asset
 
 ```
 This API has access limitations: localhost clients are granted more data than public clients.
@@ -1353,7 +1353,7 @@ Retrieval of this file with the browser you can do with GET request to:
 [http://localhost:9000/api/asset?id_str=608991531941425153&screen_name=loklak_messages&file=image0.png](http://localhost:9000/api/asset?id_str=608991531941425153&screen_name=loklak_messages&file=image0.png)
 
 
-##/api/threaddump.txt
+## /api/threaddump.txt
 
 ```
 This API has access limitations: localhost clients are granted more data than public clients.
@@ -1505,7 +1505,7 @@ Here is some example of [threaddump.txt](http://localhost:9000/api/threaddump.tx
 ```
 
 
-##/vis/map.png
+## /vis/map.png
 
 ```
 This API is open and can be accessed without any restrictions!
@@ -1531,7 +1531,7 @@ Result-Description
 }
 ```
 
-##/vis/markdown.png
+## /vis/markdown.png
 
 ```
 This API is open and can be accessed without any restrictions!
@@ -1551,9 +1551,9 @@ The servlet can produce also gif and jpg images, just change the extension of th
 
 Here is an example :
 
-[http://loklak.org/vis/markdown.png?text=hello%20world%0Dhello%20universe&color_text=000000&color_background=ffffff&padding=3](http://loklak.org/vis/markdown.png?text=hello%20world%0Dhello%20universe&color_text=000000&color_background=ffffff&padding=3)
+[http://api.loklak.org/vis/markdown.png?text=hello%20world%0Dhello%20universe&color_text=000000&color_background=ffffff&padding=3](http://api.loklak.org/vis/markdown.png?text=hello%20world%0Dhello%20universe&color_text=000000&color_background=ffffff&padding=3)
 
-##/vis/piechart.png
+## /vis/piechart.png
 
 ```
 This API is open and can be accessed without any restrictions!
@@ -1571,7 +1571,7 @@ Here is the request for the given data:
 }
 ```
   
-[http://loklak.org/vis/piechart.png?data={%22ford%22:%2217.272992%22,%22toyota%22:%2227.272992%22,%22renault%22:%2247.272992%22}&width=1000&height=1000](http://loklak.org/vis/piechart.png?data={%22ford%22:%2217.272992%22,%22toyota%22:%2227.272992%22,%22renault%22:%2247.272992%22}&width=1000&height=1000)
+[http://api.loklak.org/vis/piechart.png?data={%22ford%22:%2217.272992%22,%22toyota%22:%2227.272992%22,%22renault%22:%2247.272992%22}&width=1000&height=1000](http://api.loklak.org/vis/piechart.png?data={%22ford%22:%2217.272992%22,%22toyota%22:%2227.272992%22,%22renault%22:%2247.272992%22}&width=1000&height=1000)
 
 
 
@@ -1581,7 +1581,7 @@ width   = <text>  // Width of the image needed
 Height  = <text>  // Height of the image needed
 ```
 
-##Existing API libraries for using loklak API
+## Existing API libraries for using loklak API
 
 If you want to use loklak within your application, There are libraries that are available for you to install directly from the library installation tools. The libraries are currently available in the following languages
 
@@ -1613,7 +1613,7 @@ Contribute to this library by opening an issue in case you find a bug or any mis
     gem install loklak
 ```
 
-##/api/xml2json.json
+## /api/xml2json.json
 
 Any well formed XML data source can be converted to JSON using the loklak's `xml2json.json` API endpoint. This servlet provides the ability to send data to loklak's API as XML and receive a JSON response.
 
@@ -1940,7 +1940,7 @@ Resulting JSON
 }}
 ```
 
-##/api/csv2json.json
+## /api/csv2json.json
 
 Any well formed CSV data source can be converted to JSON using the loklak's `csv2json.json` API endpoint. This servlet provides the ability to send data to loklak's API as CSV and receive a JSON response. To do this, every CSV line ending with \n needs to be encoded as %0A. Then pass this information as a value to data and you'll get a response.
 

@@ -53,7 +53,7 @@ public class LoklakEmailHandler {
         String password = DAO.getConfig("smtp.sender.password", null);
 		String hostname = DAO.getConfig("smtp.host.name", null);
 		String encryption = DAO.getConfig("smtp.host.encryption", null);
-		Long port = DAO.getConfig("smtp.host.port", 0);
+		int port = DAO.getConfig("smtp.host.port", 0);
 		boolean disableCertChecking = DAO.getConfig("smtp.trustselfsignedcerts", false);
 
         if(senderEmail == null || password == null || hostname == null){
@@ -68,7 +68,7 @@ public class LoklakEmailHandler {
 			throw new Exception("Invalid sender ID");
 		}
 
-        Properties props = createProperties(hostname, port.intValue(), encryption, disableCertChecking);
+        Properties props = createProperties(hostname, port, encryption, disableCertChecking);
 
         Session session;
         if ("none".equals(encryption)) {

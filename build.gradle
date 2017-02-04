@@ -1,15 +1,49 @@
+buildscript {
+  repositories {
+    jcenter()
+  }
+
+  dependencies {
+    classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.4'
+  }
+}
+
 apply plugin: 'java'
+apply plugin: 'com.github.johnrengelman.shadow'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 sourceSets.main.java.srcDirs = ['src']
+sourceSets.main.resources.srcDirs = ['res']
 
 jar {
   manifest {
     attributes 'Main-Class': 'org.loklak.LoklakServer'
   }
 }
+
+shadowJar {
+  mergeServiceFiles()
+
+  from ('conf') {
+    into 'conf'
+  }
+
+  from ('html') {
+    into 'html'
+  }
+
+  from ('installation') {
+    into 'installation'
+  }
+
+  from ('ssi') {
+    into 'ssi'
+  }
+}
+
+assemble.dependsOn shadowJar
 
 repositories {
   flatDir {
@@ -92,4 +126,16 @@ dependencies {
   compile name: 'twitter4j-core-4.0.2'
   compile name: 'twitter4j-stream-4.0.2'
   compile name: 'xerces-2.9.1'
+}
+
+task setup(type: JavaExec, dependsOn: classes) {
+  main = 'org.loklak.LoklakInstallation'
+  classpath sourceSets.main.runtimeClasspath
+  classpath configurations.runtime
+}
+
+task start(type: JavaExec, dependsOn: classes) {
+  main = 'org.loklak.LoklakServer'
+  classpath sourceSets.main.runtimeClasspath
+  classpath configurations.runtime
 }

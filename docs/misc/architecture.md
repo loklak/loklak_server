@@ -76,30 +76,30 @@ Search results are combined from the internal Elasticsearch index and external s
 ### Dispatching the Search Request
 
 This happens when the search.json api is called: the api servlet concurrently queries a Twitter scraper and the internal Elasticsearch index:
-![software architecture phase 1](../html/images/architecture_phase1.png "Dispatching the Search Request")
+![software architecture phase 1](_assets/architecture_phase1.png "Dispatching the Search Request")
 As a part of this process, the Twitter scraper also  de-shortens( all links embedded in all Tweets from the search result.
 ### Merging the Search Results
 
 The search result is merged into one message list. Merging is easily done because all messages have an identifier and the messages are simply ordered by their date:
-![software architecture phase 2](../html/images/architecture_phase2.png "Merging the Search Results")
+![software architecture phase 2](_assets/architecture_phase2.png "Merging the Search Results")
 As part of the merge process, all new, previously unknown messages can be identified. These are pushed on a storage list for future processing.
 
 ### Distribution of Messages
 
 An independent caretaker-process runs every three seconds and looks how many new messages had been placed on the storage queue; if the number exceedes a given limit (i.e. 100) then all messages are stored to the own file system and pushed over the back-end API to the back-end peer.
-![software architecture phase 3](../html/images/architecture_phase3.png "Distribution of Messages")
+![software architecture phase 3](_assets/architecture_phase3.png "Distribution of Messages")
 Files pushed on the latest message file stack can be downloaded immediately. The same happens at the back-end peer: new messages appear immediately there as well.
 
 ## Large-Scale Search Topology
 
 To scale the build-in search to an unlimited index size within a single loklak node, loklak uses the scaling methods as provided by elasticsearch. While loklak comes by default with a deeply embedded elasticsearch node, it is also possible to replace this node with an elasticsearch transport client. This client then may connect to an external elasticsearch node, which can also be a node of a large elasticsearch cluster.
-![large-scale software architecture](../html/images/architecture_large_scaling.png "Large-Scale Search Topology")
+![large-scale software architecture](_assets/architecture_large_scaling.png "Large-Scale Search Topology")
 If the loklak search index is hosted outside of loklak, it is also possible to connect several loklak server to the same elasticsearch cluster. To provide high-availability, it is possible to use several loklak servers for one front-end at the same time using a load-balancer.
 
 ## Loklak Network Topology
 
 The topology of the `loklak` depends only on you: using the back-end configuration, you can chain peers and data from scraped content flows along the network chain until it reaches a back-end, which has no other back-end.
-![software achtitecture topology](../html/images/architecture_topology.png "Loklak Network Topology")
+![software achtitecture topology](_assets/architecture_topology.png "Loklak Network Topology")
 ### Organic Growth
 
 If you install loklak, you may keep the assigned back-end peer (see config.properties: backend property), or assign another one. If you tell people about `loklak`, tell them to assign your peer as backend. Your peer will get all Tweets from those new peers, and it will dispatch them also to your back-end.
@@ -115,7 +115,8 @@ The message dumps mentioned above are lists of JSON terms. loklak creates a new 
 
 A dump file looks like (these are four lines):
 
-```{"created_at":"2015-03-06T19:47:05.000Z","screen_name":"KohlerSolutions","text":"There will be a very interesting #Mozilla track at #FOSSASIA in Singapore: http://fossasia.org/track/FOSSASIA-Mozilla.pdf","link":"https://twitter.com/KohlerSolutions/status/573932833573568512","id_str":"573932833573568512","source_type":"TWITTER","provider_type":"SCRAPED","retweet_count":3,"favourites_count":2,"user":{"name":"Michael Kohler","screen_name":"KohlerSolutions","profile_image_url_https":"https://pbs.twimg.com/profile_images/554282692489924608/wPVGA62a_bigger.jpeg","appearance_first":"2015-03-07T11:00:45.798Z","appearance_latest":"2015-03-07T11:00:45.798Z"}}
+```
+{"created_at":"2015-03-06T19:47:05.000Z","screen_name":"KohlerSolutions","text":"There will be a very interesting #Mozilla track at #FOSSASIA in Singapore: http://fossasia.org/track/FOSSASIA-Mozilla.pdf","link":"https://twitter.com/KohlerSolutions/status/573932833573568512","id_str":"573932833573568512","source_type":"TWITTER","provider_type":"SCRAPED","retweet_count":3,"favourites_count":2,"user":{"name":"Michael Kohler","screen_name":"KohlerSolutions","profile_image_url_https":"https://pbs.twimg.com/profile_images/554282692489924608/wPVGA62a_bigger.jpeg","appearance_first":"2015-03-07T11:00:45.798Z","appearance_latest":"2015-03-07T11:00:45.798Z"}}
 {"created_at":"2015-03-07T05:51:10.000Z","screen_name":"bytebot","text":"Will you be @fossasia ? I9m excited to give a keynote about @mariadb there! http://fossasia.org/","link":"https://twitter.com/bytebot/status/574084855664783361","id_str":"574084855664783361","source_type":"TWITTER","provider_type":"SCRAPED","retweet_count":1,"favourites_count":1,"user":{"name":"Colin Charles","screen_name":"bytebot","profile_image_url_https":"https://pbs.twimg.com/profile_images/490878058648178688/TtpjnwOx_bigger.jpeg","appearance_first":"2015-03-07T11:02:07.754Z","appearance_latest":"2015-03-07T11:02:07.754Z"}}
 {"created_at":"2015-03-07T05:49:11.000Z","screen_name":"utianayuba","text":"di @fossasia akan bicara @tuanpembual dari @GLiBogor, @syaimif dari @BlankOnLinux, @emily_chen dari @gnome_asia.","link":"https://twitter.com/utianayuba/status/574084356295159808","id_str":"574084356295159808","source_type":"TWITTER","provider_type":"SCRAPED","retweet_count":3,"favourites_count":1,"user":{"name":"Utian Ayuba","screen_name":"utianayuba","profile_image_url_https":"https://pbs.twimg.com/profile_images/538635188478029825/RtgStA6W_bigger.jpeg","appearance_first":"2015-03-07T11:02:07.758Z","appearance_latest":"2015-03-07T11:02:07.758Z"}}
 {"created_at":"2015-03-07T03:31:47.000Z","screen_name":"comprock","text":"I9ve been presenting and working with http://fossasia.org/","link":"https://twitter.com/comprock/status/574049779975655424","id_str":"574049779975655424","source_type":"TWITTER","provider_type":"SCRAPED","retweet_count":1,"favourites_count":0,"user":{"name":"Michael Cannon","screen_name":"comprock","profile_image_url_https":"https://pbs.twimg.com/profile_images/574054683079090176/3-XSsyEh_bigger.jpeg","appearance_first":"2015-03-07T11:02:07.842Z","appearance_latest":"2015-03-07T11:02:07.842Z"}}```

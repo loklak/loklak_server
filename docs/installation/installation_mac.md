@@ -1,4 +1,4 @@
-# Installation on Linux or Mac OS
+# Installation on Mac OS
 
 Its very easy!
 
