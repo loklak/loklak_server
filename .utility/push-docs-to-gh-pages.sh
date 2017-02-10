@@ -6,7 +6,7 @@ cp .utility/CNAME $HOME
 
 echo -e "Creating javadoc...\n"
 
-ant javadoc
+./gradlew javadoc
 
 echo -e "Publishing javadoc...\n"
 

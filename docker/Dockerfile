@@ -11,21 +11,23 @@ EXPOSE 80 443
 ADD bin /loklak_server/bin/
 ADD conf /loklak_server/conf/
 ADD src /loklak_server/src/
-ADD lib /loklak_server/lib/
 ADD html /loklak_server/html/
 ADD installation /loklak_server/installation/
 ADD ssi /loklak_server/ssi/
-ADD build.xml /loklak_server/
+ADD gradle /loklak_server/gradle/
+ADD gradlew /loklak_server/
+ADD build.gradle /loklak_server/
+ADD settings.gradle /loklak_server/
 
 # install OpenJDK 8 JDK, Ant, and Bash
-RUN apk update && apk add openjdk8 apache-ant git bash && \
+RUN apk update && apk add openjdk8 git bash && \
     # compile loklak
-    cd /loklak_server && ant && \
+    cd /loklak_server && ./gradlew build && \
     # change config file
     sed -i 's/^\(port.http=\).*/\180/;s/^\(port.https=\).*/\1443/;s/^\(upgradeInterval=\).*/\186400000000/' \
         conf/config.properties && \
     # remove OpenJDK 8 JDK and Ant
-    apk del openjdk8 apache-ant git && \
+    apk del openjdk8 git && \
     # install OpenJDK 8 JRE without GUI support
     apk add openjdk8-jre-base
 
