@@ -125,6 +125,10 @@ dependencies {
   compile group: 'xerces', name: 'xerces', version: '2.4.0'
 }
 
+tasks.withType(Javadoc) {
+  options.addBooleanOption('Xdoclint:none', true)
+}
+
 task setup(type: JavaExec, dependsOn: classes) {
   main = 'org.loklak.LoklakInstallation'
   classpath sourceSets.main.runtimeClasspath
