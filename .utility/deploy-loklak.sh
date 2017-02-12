@@ -47,10 +47,6 @@ fi
 
 cd $SERVICE_DIRECTORY
 
-puts "Destroying containers ..."
+puts "Updating containers ..."
 
-docker-compose down
-
-puts "Starting containers ..."
-
-docker-compose up -d --build
+docker-compose up --force-recreate --remove-orphans --build -d
