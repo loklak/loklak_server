@@ -1,0 +1,114 @@
+# Loklak compose setup for test.loklak.org
+
+# IMPORTANT NOTES:
+#   - At this time of writing, for some reason the "latest" version of compose
+#     doesn't have extends implemented, yet. The documentation aren't really
+#     updated. If the problem is fixed, please decrease the duplication with extends
+#   - Version is set to 2.1, because setting it to 3 results in the depends_on have to
+#     be "arrays". Even though the documentation says to do it like below. This is
+#     probably because the docs isn't updated. If it's updated or fixed, please
+#     change it to version 3.
+
+version: '2.1'
+services:
+  elasticsearch:
+    image: elasticsearch:2
+    restart: always
+    volumes:
+    - ./elastic/config:/usr/share/elasticsearch/config
+    - ./elastic/data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: curl -f localhost:9200
+  loklak_1:
+    build:
+      context: ./loklak/repo
+      dockerfile: docker/Dockerfile
+    restart: always
+    volumes:
+    - ./loklak/customized_config.properties:/loklak_server/data/settings/customized_config.properties:ro
+    links:
+    - elasticsearch
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+       test: wget localhost -O -
+  loklak_2:
+    build:
+      context: ./loklak/repo
+      dockerfile: docker/Dockerfile
+    restart: always
+    volumes:
+    - ./loklak/customized_config.properties:/loklak_server/data/settings/customized_config.properties:ro
+    links:
+    - elasticsearch
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+       test: wget localhost -O -
+  loklak_3:
+    build:
+      context: ./loklak/repo
+      dockerfile: docker/Dockerfile
+    restart: always
+    volumes:
+    - ./loklak/customized_config.properties:/loklak_server/data/settings/customized_config.properties:ro
+    links:
+    - elasticsearch
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+       test: wget localhost -O -
+  loklak_4:
+    build:
+      context: ./loklak/repo
+      dockerfile: docker/Dockerfile
+    restart: always
+    volumes:
+    - ./loklak/customized_config.properties:/loklak_server/data/settings/customized_config.properties:ro
+    links:
+    - elasticsearch
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+       test: wget localhost -O -
+  loklak_5:
+    build:
+      context: ./loklak/repo
+      dockerfile: docker/Dockerfile
+    restart: always
+    volumes:
+    - ./loklak/customized_config.properties:/loklak_server/data/settings/customized_config.properties:ro
+    links:
+    - elasticsearch
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+       test: wget localhost -O -
+  web:
+    image: nginx
+    volumes:
+    - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+    - 80:80
+    links:
+    - loklak_1
+    - loklak_2
+    - loklak_3
+    - loklak_4
+    - loklak_5
+    depends_on:
+     loklak_1:
+       condition: service_healthy
+     loklak_2:
+       condition: service_healthy
+     loklak_3:
+       condition: service_healthy
+     loklak_4:
+       condition: service_healthy
+     loklak_5:
+       condition: service_healthy
