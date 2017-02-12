@@ -1,0 +1,40 @@
+# Loklak compose setup for test.loklak.org
+
+# IMPORTANT NOTES:
+#   - Version is set to 2.1, because setting it to 3 results in the depends_on have to
+#     be "arrays". Even though the documentation says to do it like below. This is
+#     probably because the docs isn't updated. If it's updated or fixed, please
+#     change it to version 3.
+
+version: '2.1'
+services:
+  elasticsearch:
+    image: elasticsearch:2
+    restart: always
+    volumes:
+    - ./elastic/config:/usr/share/elasticsearch/config
+    - ./elastic/data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: curl -f localhost:9200
+  worker:
+    build:
+      context: ./loklak/repo
+      dockerfile: docker/Dockerfile
+    restart: always
+    volumes:
+    - ./loklak/customized_config.properties:/loklak_server/data/settings/customized_config.properties:ro
+    links:
+    - elasticsearch
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+       test: wget localhost -O -
+  web:
+    image: dockercloud/haproxy
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+    - 80:80
+    links:
+    - worker

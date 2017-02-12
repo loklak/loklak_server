@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+JARFILE="build/libs/loklak_server-all.jar"
 INSTALLATIONCONFIG="data/settings/installation.txt"
 PIDFILE="data/loklak.pid"
 DFAULTCONFIG="conf/config.properties"
@@ -31,20 +32,12 @@ if [ -f $CUSTOMCONFIG ]; then
     if [ -n $j ]; then CUSTOMXmx="$j"; fi;
 fi
 
-CLASSPATH=""
-for N in lib/*.jar; do CLASSPATH="$CLASSPATH$N:"; done
-
-if [ -d "./classes" ]; then
-    CLASSPATH=".:./classes/:$CLASSPATH"
-elif [ -d "./build/classes/main" ]; then
-    CLASSPATH=".:./build/classes/main:$CLASSPATH"
+if [ -f $JARFILE ]; then
+    CLASSPATH="$JARFILE"
 else
     echo "It seems you haven't compile Loklak"
-    echo "You can use either Gradle or Ant to build Loklak"
-    echo "If you want to build with Ant,"
-    echo "$ ant"
-    echo "If you want to build with Gradle,"
-    echo "$ gradle build"
+    echo "To build Loklak,"
+    echo "$ ./gradlew build"
     exit 1
 fi
 
@@ -58,3 +51,4 @@ fi
 export INSTALLATIONCONFIG
 export LOGCONFIG
 export STARTUPFILE
+export CLASSPATH

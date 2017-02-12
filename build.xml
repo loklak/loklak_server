@@ -1,69 +1,77 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <project basedir="." default="build" name="loklak">
-    <property environment="env"/>
-    <property name="target" value="1.8"/>
-    <property name="source" value="1.8"/>
-    <path id="loklak.classpath">
-        <pathelement location="classes"/>
-        <fileset dir="lib">
-            <include name="**/*.jar"/>
-        </fileset>
-    </path>
+
+    <condition property="windows">
+        <os family="windows"/>
+    </condition>
+
+    <condition property="nix">
+        <os family="unix"/>
+    </condition>
     
-    <target name="init">
-        <copy includeemptydirs="false" todir="classes">
-            <fileset dir="src">
-                <exclude name="**/*.launch"/>
-                <exclude name="**/*.java"/>
-            </fileset>
-        </copy>
+    <target name="set-exec-win" if="windows">
+        <property name="gradlew-path"
+                  location="./gradlew.bat"/>
+        <echo message="It's a Windows system, gradlew-path has been set to ${gradlew-path} "/>
+    </target>
+
+    <target name="set-exec-nix" if="nix">
+        <property name="gradlew-path"
+                  location="./gradlew"/>
+        <echo message="It's a UNIX system, gradlew-path has been set to ${gradlew-path} "/>
     </target>
     
-    <target name="clean">
-        <delete dir="classes"/>
-        <delete dir="html/javadoc"/>
+    <target depends="set-exec-win, set-exec-nix" name="init">
+        <echo>
+            ======================================================
+            -- ATTENTION --
+
+            THE ANT BUILD SYSTEM IS DEPRECATED - PLEASE USE GRADLE
+
+            TO BUILD WITH GRADLE WITHOUT HAVING TO INSTALL IT RUN
+            $ ./gradlew build
+
+            THIS BUILD SCRIPT WILL USE GRADLE VIA EXEC
+
+            THANK YOU
+            ======================================================
+	</echo>
+    </target>
+    
+    <target depends="init" name="clean">
+        <exec executable="${gradlew-path}">
+            <arg value="clean"/>
+        </exec>
     </target>
     
     <target depends="init" name="build">
-        <delete dir="classes"/>
-        <mkdir dir="classes"/>
-        <echo message="${ant.project.name}: ${ant.file}"/>
-        <javac debug="true" destdir="classes" includeantruntime="false" source="${source}" target="${target}" encoding="UTF-8">
-            <src path="src"/>
-            <classpath refid="loklak.classpath"/>
-        </javac>
+        <exec executable="${gradlew-path}">
+            <arg value="build"/>
+        </exec>
+        <copy todir="classes">
+            <fileset dir="build/classes"/>
+        </copy>
     </target>
     
     <target name="javadoc" depends="init" description="make javadoc">
-        <delete dir="html/javadoc"/>
-        <javadoc destdir="html/javadoc" windowtitle="loklak javadoc" encoding="UTF-8" charset="UTF-8" access="private">
-            <classpath refid="loklak.classpath"/>
-            <fileset dir="src">
-                <include name="**/*.java"/>
-            </fileset>
-        </javadoc>
+        <exec executable="${gradlew-path}">
+            <arg value="javadoc"/>
+        </exec>
     </target>
     
     <target depends="build,javadoc" name="all"/>
     
     <target name="start">
-        <java classname="org.loklak.Main" failonerror="true" fork="yes">
-            <jvmarg line="-ea"/>
-            <classpath refid="loklak.classpath"/>
-        </java>
+        <exec executable="${gradlew-path}">
+            <arg value="start"/>
+        </exec>
     </target>
     
     <target name="jar" depends="build">
         <mkdir dir="dist"/>
-	    <manifestclasspath property="jar.classpath" jarfile="dist/loklak.jar">
-		    <classpath refid="loklak.classpath" />
-	    </manifestclasspath>
-	    <jar destfile="dist/loklak.jar" basedir="classes/">
-		    <manifest>
-			    <attribute name="Class-Path" value="${jar.classpath}" />
-			    <attribute name="Main-Class" value="org.loklak.LoklakServer" />
-		    </manifest>
-	    </jar>
+        <copy todir="dist">
+            <fileset dir="build/libs"/>
+        </copy>
     </target>
     
 </project>

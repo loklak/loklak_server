@@ -12,8 +12,6 @@ install:
 - pip install --user flake8
 script:
 - gradle build
-- gradle clean
-- ant
 - bin/start.sh
 - flake8 bin
 - docker build -t loklak_server -f docker/Dockerfile .
