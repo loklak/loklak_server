@@ -112,30 +112,54 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
         system.put("server_uri", LoklakServer.getServerURI());
 
         JSONObject index = new JSONObject(true);
-        long countLocalMinMessages  = DAO.countLocalMessages(60000L);
-        long countLocal10MMessages  = DAO.countLocalMessages(600000L);
-        long countLocalHourMessages = DAO.countLocalMessages(3600000L);
-        long countLocalDayMessages  = DAO.countLocalMessages(86400000L);
-        long countLocalWeekMessages = DAO.countLocalMessages(604800000L);
-        float mps1m  = countLocalMinMessages  / 60f;
-        float mps10m = countLocal10MMessages  / 600f;
-        float mps1h  = countLocalHourMessages / 3600f;
-        float mps1d  = countLocalDayMessages  / 86400f;
-        float mps1w  = countLocalWeekMessages / 604800f;
-        index.put("mps1m", mps1m);
-        index.put("mps10m", mps10m);
-        index.put("mps1h", mps1h);
-        index.put("mps1d", mps1d);
-        index.put("mps1w", mps1w);
-        index.put("mps", (int) Math.max(mps1d, Math.max(mps1h, Math.max(mps10m, mps1m)))); // best of 1d, 1h and 10m
+        long countLocalMinMessagesCreated  = DAO.countLocalMessages(60000L, true);
+        long countLocalMinMessagesTimestamp  = DAO.countLocalMessages(60000L, false);
+        long countLocal10MMessagesCreated  = DAO.countLocalMessages(600000L, true);
+        long countLocal10MMessagesTimestamp  = DAO.countLocalMessages(600000L, false);
+        long countLocalHourMessagesCreated = DAO.countLocalMessages(3600000L, true);
+        long countLocalHourMessagesTimestamp = DAO.countLocalMessages(3600000L, false);
+        long countLocalDayMessagesCreated  = DAO.countLocalMessages(86400000L, true);
+        long countLocalDayMessagesTimestamp  = DAO.countLocalMessages(86400000L, false);
+        long countLocalWeekMessagesCreated = DAO.countLocalMessages(604800000L, true);
+        long countLocalWeekMessagesTimestamp = DAO.countLocalMessages(604800000L, false);
+        float mps1mC  = countLocalMinMessagesCreated  / 60f;
+        float mps1mT  = countLocalMinMessagesTimestamp  / 60f;
+        float mps10mC = countLocal10MMessagesCreated  / 600f;
+        float mps10mT = countLocal10MMessagesTimestamp  / 600f;
+        float mps1hC  = countLocalHourMessagesCreated / 3600f;
+        float mps1hT  = countLocalHourMessagesTimestamp / 3600f;
+        float mps1dC  = countLocalDayMessagesCreated  / 86400f;
+        float mps1dT  = countLocalDayMessagesTimestamp  / 86400f;
+        float mps1wC  = countLocalWeekMessagesCreated / 604800f;
+        float mps1wT  = countLocalWeekMessagesTimestamp / 604800f;
+        index.put("mps1mC", mps1mC);
+        index.put("mps1mT", mps1mT);
+        index.put("mps10mC", mps10mC);
+        index.put("mps10mT", mps10mT);
+        index.put("mps1hC", mps1hC);
+        index.put("mps1hT", mps1hT);
+        index.put("mps1dC", mps1dC);
+        index.put("mps1dT", mps1dT);
+        index.put("mps1wC", mps1wC);
+        index.put("mps1wT", mps1wT);
+        index.put("mps", (int)  // best of 1d, 1h and 10m
+                Math.max(
+                        Math.max(mps1dC, Math.max(mps1hC, Math.max(mps10mC, mps1mC))),
+                        Math.max(mps1dT, Math.max(mps1hT, Math.max(mps10mT, mps1mT)))
+                ));
         JSONObject messages = new JSONObject(true);
         messages.put("size", local_messages + backend_messages);
         messages.put("size_local", local_messages);
-        messages.put("size_local_minute", countLocalMinMessages);
-        messages.put("size_local_10minutes", countLocal10MMessages);
-        messages.put("size_local_hour", countLocalHourMessages);
-        messages.put("size_local_day", countLocalDayMessages);
-        messages.put("size_local_week", countLocalWeekMessages);
+        messages.put("size_local_minute_created_at", countLocalMinMessagesCreated);
+        messages.put("size_local_minute_timestamp", countLocalMinMessagesTimestamp);
+        messages.put("size_local_10minutes_created_at", countLocal10MMessagesCreated);
+        messages.put("size_local_10minutes_timestamp", countLocal10MMessagesTimestamp);
+        messages.put("size_local_hour_created_at", countLocalHourMessagesCreated);
+        messages.put("size_local_hour_timestamp", countLocalHourMessagesTimestamp);
+        messages.put("size_local_day_created_at", countLocalDayMessagesCreated);
+        messages.put("size_local_day_timestamp", countLocalDayMessagesTimestamp);
+        messages.put("size_local_week_created_at", countLocalWeekMessagesCreated);
+        messages.put("size_local_week_timestamp", countLocalWeekMessagesTimestamp);
         messages.put("size_backend", backend_messages);
         messages.put("stats", DAO.messages.getStats());
         JSONObject queue = new JSONObject(true);

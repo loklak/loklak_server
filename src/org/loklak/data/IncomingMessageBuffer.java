@@ -159,5 +159,9 @@ public class IncomingMessageBuffer extends Thread {
         	Log.getLog().warn(e);
         }
     }
+
+    public static boolean addSchedulerAvailable() {
+        return messageQueue.remainingCapacity() > 0;
+    }
     
 }

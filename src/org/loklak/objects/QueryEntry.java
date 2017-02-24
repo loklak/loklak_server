@@ -608,13 +608,29 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
             List<QueryBuilder> ops = new ArrayList<>();
             List<QueryBuilder> nops = new ArrayList<>();
             List<QueryBuilder> filters = new ArrayList<>();
-            for (String text: text_positive_match)  {
-                ops.add(QueryBuilders.constantScoreQuery(QueryBuilders.matchQuery("text", text)));
+            if (text_positive_match.size() == 1) {
+                BoolQueryBuilder disjunction = QueryBuilders.boolQuery();
+                disjunction.should(QueryBuilders.constantScoreQuery(QueryBuilders.termQuery("screen_name", text_positive_match.get(0))));
+                disjunction.should(QueryBuilders.constantScoreQuery(QueryBuilders.matchQuery("text", text_positive_match.get(0))));
+                disjunction.minimumNumberShouldMatch(1);
+                ops.add(disjunction);
+            } else {
+                for (String text: text_positive_match)  {
+                    ops.add(QueryBuilders.constantScoreQuery(QueryBuilders.matchQuery("text", text)));
+                }
             }
-            for (String text: text_negative_match) {
-                // negation of terms in disjunctions would cause to retrieve almost all documents
-                // this cannot be the requirement of the user. It may be valid in conjunctions, but not in disjunctions
-                nops.add(QueryBuilders.constantScoreQuery(QueryBuilders.matchQuery("text", text)));
+            if (text_negative_match.size() == 1) {
+                BoolQueryBuilder disjunction = QueryBuilders.boolQuery();
+                disjunction.should(QueryBuilders.constantScoreQuery(QueryBuilders.termQuery("screen_name", text_negative_match.get(0))));
+                disjunction.should(QueryBuilders.constantScoreQuery(QueryBuilders.matchQuery("text", text_negative_match.get(0))));
+                disjunction.minimumNumberShouldMatch(1);
+                ops.add(disjunction);
+            } else {
+                for (String text: text_negative_match) {
+                    // negation of terms in disjunctions would cause to retrieve almost all documents
+                    // this cannot be the requirement of the user. It may be valid in conjunctions, but not in disjunctions
+                    nops.add(QueryBuilders.constantScoreQuery(QueryBuilders.matchQuery("text", text)));
+                }
             }
             
             // apply modifiers
@@ -699,7 +715,7 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
             if (modifier.containsKey("since")) try {
                 Calendar since = DateParser.parse(modifier.get("since").iterator().next(), timezoneOffset);
                 this.since = since.getTime();
-                RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery("created_at").from(this.since);
+                RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(AbstractObjectEntry.CREATED_AT_FIELDNAME).from(this.since);
                 if (modifier.containsKey("until")) {
                     Calendar until = DateParser.parse(modifier.get("until").iterator().next(), timezoneOffset);
                     if (until.get(Calendar.HOUR) == 0 && until.get(Calendar.MINUTE) == 0) {
@@ -721,7 +737,7 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
                     until.add(Calendar.DATE, 1);
                 }
                 this.until = until.getTime();
-                RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery("created_at").to(this.until);
+                RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(AbstractObjectEntry.CREATED_AT_FIELDNAME).to(this.until);
                 ops.add(rangeQuery);
             } catch (ParseException e) {}
 

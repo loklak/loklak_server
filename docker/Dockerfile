@@ -1,38 +1,38 @@
-FROM ubuntu:latest
+FROM alpine:latest
 MAINTAINER Ansgar Schmidt <ansgar.schmidt@gmx.net>
-ENV DEBIAN_FRONTEND noninteractive
 
-# update
-RUN apt-get update
-RUN apt-get upgrade -y
-
-# add packages
-RUN apt-get install -y git ant openjdk-8-jdk
-
-# clone the github repo
-RUN git clone --depth 1 https://github.com/loklak/loklak_server.git
-WORKDIR loklak_server
-
-RUN locale-gen en_US.UTF-8
-RUN update-locale LANG=en_US.UTF-8 LC_MESSAGES=POSIX
-ENV LANG en_US.UTF-8
-ENV LC_MESSAGES POSIX
-RUN locale
-
-
-# compile
-RUN ant
+# setup locales
+ENV LANG=en_US.UTF-8
 
 # Expose the web interface ports
 EXPOSE 80 443
 
-# change config file
-RUN sed -i.bak 's/^\(port.http=\).*/\180/'                conf/config.properties
-RUN sed -i.bak 's/^\(port.https=\).*/\1443/'              conf/config.properties
-RUN sed -i.bak 's/^\(upgradeInterval=\).*/\186400000000/' conf/config.properties
+# copy the required parts of the source code
+ADD bin /loklak_server/bin/
+ADD conf /loklak_server/conf/
+ADD src /loklak_server/src/
+ADD html /loklak_server/html/
+ADD installation /loklak_server/installation/
+ADD ssi /loklak_server/ssi/
+ADD gradle /loklak_server/gradle/
+ADD gradlew /loklak_server/
+ADD build.gradle /loklak_server/
+ADD settings.gradle /loklak_server/
 
-# hack until loklak support no-daemon
-COPY docker-cmd.sh docker-cmd.sh
+# install OpenJDK 8 JDK, Ant, and Bash
+RUN apk update && apk add openjdk8 git bash && \
+    # compile loklak
+    cd /loklak_server && ./gradlew build && \
+    # change config file
+    sed -i 's/^\(port.http=\).*/\180/;s/^\(port.https=\).*/\1443/;s/^\(upgradeInterval=\).*/\186400000000/' \
+        conf/config.properties && \
+    # remove OpenJDK 8 JDK and Ant
+    apk del openjdk8 git && \
+    # install OpenJDK 8 JRE without GUI support
+    apk add openjdk8-jre-base
+
+# set current working directory to loklak_server
+WORKDIR /loklak_server
 
 # start loklak
-CMD ["./docker-cmd.sh"]
+CMD ["/loklak_server/bin/start.sh", "-Idn"]

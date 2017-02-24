@@ -36,6 +36,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 public abstract class AbstractObjectEntry implements ObjectEntry {
 
     public  final static String TIMESTAMP_FIELDNAME = "timestamp";
+    public  final static String CREATED_AT_FIELDNAME = "created_at";
     
     public AbstractObjectEntry() {
     }

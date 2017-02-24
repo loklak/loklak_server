@@ -83,7 +83,7 @@ public class HelloService extends AbstractAPIHandler implements APIHandler {
         }
         long backend_messages = backend_status_index_sizes == null ? 0 : ((Number) backend_status_index_sizes.get("messages")).longValue();
         long backend_users = backend_status_index_sizes == null ? 0 : ((Number) backend_status_index_sizes.get("users")).longValue();
-        long local_messages = DAO.countLocalMessages(-1);
+        long local_messages = DAO.countLocalMessages(-1, true);
         long local_users = DAO.countLocalUsers();
         int timezoneOffset = DateParser.getTimezoneOffset();
         

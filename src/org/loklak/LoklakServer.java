@@ -24,16 +24,20 @@ import java.net.ServerSocket;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.Security;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.regex.Pattern;
 
 import javax.servlet.MultipartConfigElement;
@@ -124,6 +128,9 @@ import org.loklak.api.vis.PieChartServlet;
 import org.loklak.data.DAO;
 import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.harvester.TwitterScraper;
+import org.loklak.harvester.strategy.ClassicHarvester;
+import org.loklak.harvester.strategy.Harvester;
+import org.loklak.harvester.strategy.KaizenHarvester;
 import org.loklak.http.RemoteAccess;
 import org.loklak.server.APIHandler;
 import org.loklak.server.FileHandler;
@@ -133,9 +140,10 @@ import org.loklak.tools.OS;
 
 
 public class LoklakServer {
-	
-    public final static Set<String> blacklistedHosts = new ConcurrentHashSet<>();
 
+    private final static String[] FOLDER_TO_EXTRACT = { "conf", "html", "installation", "ssi"};
+
+    public final static Set<String> blacklistedHosts = new ConcurrentHashSet<>();
     
     private static Server server = null;
     private static Caretaker caretaker = null;
@@ -143,6 +151,7 @@ public class LoklakServer {
     private static DumpImporter dumpImporter = null;
     private static HttpsMode httpsMode = HttpsMode.OFF;
     public static Class<? extends Servlet>[] services;
+    public static Harvester harvester = null;
 
     public static Map<String, String> readConfig(Path data) throws IOException {
         File conf_dir = new File("conf");
@@ -164,6 +173,21 @@ public class LoklakServer {
         for (Map.Entry<Object, Object> entry: customized_config_props.entrySet()) config.put((String) entry.getKey(), (String) entry.getValue());
         return config;
     }
+
+    public static void saveConfig() throws IOException {
+        Path data = FileSystems.getDefault().getPath("data");
+        Path settings_dir = data.resolve("settings");
+        settings_dir.toFile().mkdirs();
+        OS.protectPath(settings_dir);
+        File customized_config = new File(settings_dir.toFile(), "customized_config.properties");
+        Properties prop = new Properties();
+        for (String key : DAO.getConfigKeys()) {
+            prop.put(key, DAO.getConfig(key, ""));
+        }
+        BufferedWriter w = new BufferedWriter(new FileWriter(customized_config));
+        prop.store(w, "This file can be used to customize the configuration file conf/config.properties");
+        w.close();
+    }
     
     public static int getServerThreads() {
         return server.getThreadPool().getThreads() - server.getThreadPool().getIdleThreads();
@@ -175,6 +199,9 @@ public class LoklakServer {
     
     public static void main(String[] args) throws Exception {
     	System.setProperty("java.awt.headless", "true"); // no awt used here so we can switch off that stuff
+
+        // extract contents
+        extractContents();
         
         // init config, log and elasticsearch
         Path data = FileSystems.getDefault().getPath("data");
@@ -259,6 +286,9 @@ public class LoklakServer {
 			System.exit(-1);
 		}
         setServerHandler(dataFile);
+
+        // init the harvester
+        initializeHarvester();
         
         LoklakServer.server.start();
         LoklakServer.caretaker = new Caretaker();
@@ -297,8 +327,11 @@ public class LoklakServer {
                     LoklakServer.server.stop();
                     DAO.close();
                     TwitterScraper.executor.shutdown();
-                    Harvester.executor.shutdown();
+                    LoklakServer.harvester.stop();
                     Log.getLog().info("main terminated, goodby.");
+
+                    LoklakServer.saveConfig();
+                    Log.getLog().info("saved customized_config.properties");
 
                     Log.getLog().info("Shutting down log4j2");
                     LogManager.shutdown();
@@ -316,7 +349,62 @@ public class LoklakServer {
         // After this, the jvm processes all shutdown hooks and terminates then.
         // The main termination line is therefore inside the shutdown hook.
     }
-    
+
+    private static void extractContents() {
+        // Check if we're running inside a JAR file
+        if(!LoklakServer.class.getResource("LoklakServer.class").getPath().startsWith("file:"))
+            return;
+
+        try {
+            JarFile jar =
+                    new JarFile(LoklakServer.class.getProtectionDomain().getCodeSource().getLocation().getPath());
+            Enumeration entries = jar.entries();
+            while (entries.hasMoreElements()) {
+                JarEntry file = (JarEntry) entries.nextElement();
+
+                for (String s : FOLDER_TO_EXTRACT) {
+                    if (file.getName().startsWith(s + File.separator)) {
+                        extract(jar, file);
+                        continue;
+                    }
+                }
+            }
+        } catch (IOException e) {
+            Log.getLog().warn("An exception has occurred while extracting contents from JAR File", e);
+            Log.getLog().info("Exiting due to fatal error ...");
+            System.exit(1);
+        }
+    }
+
+    private static void extract(JarFile jar, JarEntry file) throws IOException {
+        Path workingDirectory = Paths.get("").toAbsolutePath();
+        File target = new File(workingDirectory.toString() + File.separator + file.getName());
+
+        if (target.exists())
+            return;
+
+        if (file.isDirectory()) {
+            target.mkdir();
+            return;
+        }
+
+        Files.copy(jar.getInputStream(file), target.toPath());
+    }
+
+    // initialize harvester
+    private static void initializeHarvester() {
+        String type = DAO.getConfig("harvester.type", "classic");
+        switch (type) {
+            default:
+            case "classic":
+                harvester = new ClassicHarvester();
+                break;
+            case "kaizen":
+                harvester = new KaizenHarvester();
+                break;
+        }
+    }
+
     //initiate http server
     private static void setupHttpServer(int httpPort, int httpsPort) throws Exception{
     	QueuedThreadPool pool = new QueuedThreadPool();
@@ -524,6 +612,7 @@ public class LoklakServer {
                 TwitterAnalysisService.class,
                 AmazonProductService.class,
                 UserAccountPermissions.class,
+                SettingsManagementService.class,
 
                 // geo
                 

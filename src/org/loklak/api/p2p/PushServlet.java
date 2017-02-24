@@ -157,6 +157,11 @@ public class PushServlet extends HttpServlet {
             return;
         }
 
+        if (!IncomingMessageBuffer.addSchedulerAvailable()) {
+            response.sendError(503, "out of server capacity");
+            return;
+        }
+
         Map<String, byte[]> m = RemoteAccess.getPostMap(request);
         byte[] data = m.get("data");
         String callback = UTF8.String(m.get("callback"));
@@ -242,7 +247,7 @@ public class PushServlet extends HttpServlet {
         JSONObject json = new JSONObject(true);
         json.put("status", "ok");
         json.put("records", recordCount);
-        json.put("mps", DAO.countLocalMessages(3600000L) / 3600L); // to enable client throttling: mps measured by hour
+        json.put("mps", DAO.countLocalMessages(3600000L, true) / 3600L); // to enable client throttling: mps measured by hour
         if (remoteHashFromPeerId) json.put("contribution_message_count", messages_from_client);
         //json.field("new", newCount);
         //json.field("known", knownCount);

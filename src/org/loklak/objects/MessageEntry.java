@@ -45,11 +45,12 @@ import org.loklak.tools.bayes.Classification;
 
 public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
 
-    
-
     public static final String RICH_TEXT_SEPARATOR = "\n***\n";
     
-    protected Date timestamp, created_at, on, to; // created_at will allways be set, on means 'valid from' and 'to' means 'valid_until' and may not be set
+    protected Date timestamp;  // a time stamp that is given in loklak upon the arrival of the tweet which is the current local time
+    protected Date created_at; // the time given in the tweet which is the time when the user created it. This is also use to do the index partition into minute, hour, week
+    protected Date on;         // on means 'valid from'
+    protected Date to;         // 'to' means 'valid_until' and may not be set
     protected SourceType source_type; // where did the message come from
     protected ProviderType provider_type;  // who created the message
     protected String provider_hash, screen_name, retweet_from, id_str, canonical_id, parent, text;
@@ -112,7 +113,7 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
 
     public MessageEntry(JSONObject json) {
         Object timestamp_obj = lazyGet(json, AbstractObjectEntry.TIMESTAMP_FIELDNAME); this.timestamp = parseDate(timestamp_obj);
-        Object created_at_obj = lazyGet(json, "created_at"); this.created_at = parseDate(created_at_obj);
+        Object created_at_obj = lazyGet(json, AbstractObjectEntry.CREATED_AT_FIELDNAME); this.created_at = parseDate(created_at_obj);
         Object on_obj = lazyGet(json, "on"); this.on = on_obj == null ? null : parseDate(on);
         Object to_obj = lazyGet(json, "to"); this.to = to_obj == null ? null : parseDate(to);
         String source_type_string = (String) lazyGet(json, "source_type");
@@ -367,22 +368,46 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
         return this.hosts;
     }
     
-    public String getText(final int iflinkexceedslength, final String urlstub) {
+    public String getText() {
+        return this.text;
+    }
+    
+    public TextLinkMap getText(final int iflinkexceedslength, final String urlstub) {
         // check if we shall replace shortlinks
-        String t = this.text;
+        TextLinkMap tlm = new TextLinkMap();
+        tlm.text = this.text;
         String[] links = this.getLinks();
         if (links != null) {
-            linkloop: for (int nth = 0; nth < links.length; nth++) {
+            for (int nth = 0; nth < links.length; nth++) {
                 String link = links[nth];
                 if (link.length() > iflinkexceedslength) {
                     //if (!DAO.existMessage(this.getIdStr())) break linkloop;
-                    t = t.replace(link, urlstub + "/x?id=" + this.getIdStr() +
-                            (nth == 0 ? "" : ShortlinkFromTweetServlet.SHORTLINK_COUNTER_SEPERATOR + Integer.toString(nth)));
+                    String shortlink = urlstub + "/x?id=" + this.getIdStr() +
+                            (nth == 0 ? "" : ShortlinkFromTweetServlet.SHORTLINK_COUNTER_SEPERATOR + Integer.toString(nth));
+                    if (shortlink.length() < link.length()) {
+                        tlm.text = tlm.text.replace(link, shortlink);
+                        if (!shortlink.equals(link)) {
+                            int stublen = shortlink.length() + 3;
+                            if (link.length() >= stublen) link = link.substring(0, shortlink.length()) + "...";
+                            tlm.short2long.put(shortlink, link);
+                        }
+                    }
                 }
             }
         }
-        
-        return t;
+        return tlm;
+    }
+    
+    public static class TextLinkMap {
+        public String text;
+        public JSONObject short2long;
+        public TextLinkMap() {
+            text = "";
+            this.short2long = new JSONObject(true);
+        }
+        public String toString() {
+            return this.text;
+        }
     }
     
     public int getTextLength() {
@@ -536,12 +561,13 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
 
         // tweet data
         m.put(AbstractObjectEntry.TIMESTAMP_FIELDNAME, utcFormatter.print(getTimestamp().getTime()));
-        m.put("created_at", utcFormatter.print(getCreatedAt().getTime()));
+        m.put(AbstractObjectEntry.CREATED_AT_FIELDNAME, utcFormatter.print(getCreatedAt().getTime()));
         if (this.on != null) m.put("on", utcFormatter.print(this.on.getTime()));
         if (this.to != null) m.put("to", utcFormatter.print(this.to.getTime()));
         m.put("screen_name", this.screen_name);
         if (this.retweet_from != null && this.retweet_from.length() > 0) m.put("retweet_from", this.retweet_from);
-        m.put("text", this.getText(iflinkexceedslength, urlstub)); // the tweet; the cleanup is a helper function which cleans mistakes from the past in scraping
+        TextLinkMap tlm = this.getText(iflinkexceedslength, urlstub);
+        m.put("text", tlm); // the tweet; the cleanup is a helper function which cleans mistakes from the past in scraping
         if (this.status_id_url != null) m.put("link", this.status_id_url.toExternalForm());
         m.put("id_str", this.id_str);
         if (this.canonical_id != null) m.put("canonical_id", this.canonical_id);
@@ -582,6 +608,7 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
             m.put("hosts_count", this.hosts.length);
             m.put("links", this.links);
             m.put("links_count", this.links.length);
+            m.put("unshorten", tlm.short2long);
             m.put("images", this.images);
             m.put("images_count", this.images.size());
             m.put("audio", this.audio);
