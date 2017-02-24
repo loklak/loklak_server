@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Iterator;
@@ -41,16 +42,15 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.tools.Compression;
-import org.loklak.tools.UTF8;
 
 
 public class JsonRepository {
 
     // special keys which can be added to the data set to track changes
-    public final static byte[] OPERATION_KEY = "$P".getBytes();
-    public final static byte[] MOD_DATE_KEY  = "$D".getBytes();
-    public final static byte[] REFERRER_KEY  = "$U".getBytes();
-    public final static byte[][] META_KEYS = new byte[][]{OPERATION_KEY, MOD_DATE_KEY, REFERRER_KEY};
+    public final static String OPERATION_KEY_STRING = "$P";
+    public final static String MOD_DATE_KEY_STRING  = "$D";
+    public final static String REFERRER_KEY_STRING  = "$U";
+    public final static String[] META_KEYS_STRINGS = new String[]{OPERATION_KEY_STRING, MOD_DATE_KEY_STRING, REFERRER_KEY_STRING};
     
     public static final Mode COMPRESSED_MODE = Mode.COMPRESSED;
     public static final Mode REWRITABLE_MODE = Mode.REWRITABLE;
@@ -183,7 +183,7 @@ public class JsonRepository {
     public JsonFactory write(JSONObject json) throws IOException {
         String line = json.toString(); // new ObjectMapper().writer().writeValueAsString(map);
         JsonFactory jf = null;
-        byte[] b = UTF8.getBytes(line);
+        byte[] b = line.getBytes(StandardCharsets.UTF_8);
         long seekpos = this.json_log.appendLine(b);
         jf = this.json_log.getJsonFactory(seekpos, b.length);
         return jf;
@@ -193,9 +193,9 @@ public class JsonRepository {
         String line = json.toString(); // new ObjectMapper().writer().writeValueAsString(map);
         JsonFactory jf = null;
         StringBuilder sb = new StringBuilder();
-        sb.append('{').append('\"').append(UTF8.String(OPERATION_KEY)).append('\"').append(':').append('\"').append(opkey).append('\"').append(',');
+        sb.append('{').append('\"').append(OPERATION_KEY_STRING).append('\"').append(':').append('\"').append(opkey).append('\"').append(',');
         sb.append(line.substring(1));
-        byte[] b = UTF8.getBytes(sb.toString());
+        byte[] b = sb.toString().getBytes(StandardCharsets.UTF_8);
         long seekpos = this.json_log.appendLine(b);
         jf = this.json_log.getJsonFactory(seekpos, b.length);
         return jf;

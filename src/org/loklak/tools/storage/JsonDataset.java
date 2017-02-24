@@ -33,7 +33,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
-import org.loklak.tools.ASCII;
 
 public class JsonDataset {
     
@@ -107,8 +106,8 @@ public class JsonDataset {
                                     assert JsonDataset.this.indexDump.getMode() == JsonRepository.COMPRESSED_MODE;
                                     // create the json minifier object which contains the json in minified version
                                     // before we create the minifier, we remove the meta keys from the json to further minify it
-                                    for (byte[] meta_key: JsonRepository.META_KEYS) {
-                                        op.remove(ASCII.String(meta_key));
+                                    for (String meta_key: JsonRepository.META_KEYS_STRINGS) {
+                                        op.remove(meta_key);
                                     }
                                     jsonFactory = JsonDataset.this.minifier.minify(op);
                                 }
