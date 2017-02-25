@@ -21,6 +21,7 @@ package org.loklak;
 
 import java.io.*;
 import java.net.ServerSocket;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -184,7 +185,7 @@ public class LoklakServer {
         for (String key : DAO.getConfigKeys()) {
             prop.put(key, DAO.getConfig(key, ""));
         }
-        BufferedWriter w = new BufferedWriter(new FileWriter(customized_config));
+        Writer w = new OutputStreamWriter(new FileOutputStream(customized_config), StandardCharsets.UTF_8);
         prop.store(w, "This file can be used to customize the configuration file conf/config.properties");
         w.close();
     }
