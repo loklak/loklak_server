@@ -20,6 +20,7 @@
 package org.loklak.objects;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedHashSet;
@@ -29,7 +30,6 @@ import org.joda.time.format.ISODateTimeFormat;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.loklak.tools.UTF8;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 
@@ -47,7 +47,7 @@ public abstract class AbstractObjectEntry implements ObjectEntry {
 
     public byte[] toJSONBytes() {
         String s = toString();
-        return s == null ? null : UTF8.getBytes(s);
+        return s == null ? null : s.getBytes(StandardCharsets.UTF_8);
     }
     
     // helper methods to write json
