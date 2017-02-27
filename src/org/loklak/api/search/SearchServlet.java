@@ -72,6 +72,7 @@ public class SearchServlet extends HttpServlet {
     // possible values: cache, twitter, all
     public static Timeline search(final String protocolhostportstub, final String query, final Timeline.Order order, final String source, final int count, final int timezoneOffset, final String provider_hash, final long timeout) throws IOException {
         Timeline tl = new Timeline(order);
+        if ("".equals(query)) return tl;
         String urlstring = "";
         try {
             urlstring = protocolhostportstub + "/api/search.json?q=" + URLEncoder.encode(query.replace(' ', '+'), "UTF-8") + "&timezoneOffset=" + timezoneOffset + "&maximumRecords=" + count + "&source=" + (source == null ? "all" : source) + "&minified=true&shortlink=false&timeout=" + timeout;
