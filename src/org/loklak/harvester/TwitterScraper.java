@@ -199,11 +199,11 @@ public class TwitterScraper {
             }
             if ((p = input.indexOf("class=\"fullname js-action-profile-name")) > 0) {
                 props.put("userfullname", new prop(input, p, null));
-                continue;
+                // don't continue here, username is in the samme line
             }
             if ((p = input.indexOf("class=\"username js-action-profile-name")) > 0) {
                 props.put("usernickname", new prop(input.replace("<s>@</s>", "").replace("<b>", "").replace("</b>", ""), p, null));
-                continue;
+                // don't continue here, fullname is in the same line
             }
             if ((p = input.indexOf("class=\"tweet-timestamp")) > 0) {
                 props.put("tweetstatusurl", new prop(input, 0, "href"));
