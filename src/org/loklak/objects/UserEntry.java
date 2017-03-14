@@ -126,6 +126,10 @@ public class UserEntry extends AbstractObjectEntry implements ObjectEntry {
     public void setProfileImageUrl(String url) {
         this.map.put(url.startsWith("https:") ? field_profile_image_url_https : field_profile_image_url_http, url);
     }
+
+    public void setName(String Name) {
+        this.map.put(field_name, Name);
+    }
     
     public void setProfileImage(byte[] image) {
         this.map.put(field_profile_image, Base64.encodeBytes(image));
