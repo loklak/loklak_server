@@ -56,7 +56,8 @@ import org.loklak.objects.UserEntry;
 public class TwitterScraper {
 
     public final static ExecutorService executor = Executors.newFixedThreadPool(40);
-    
+    public final static Pattern emoji_pattern_span = Pattern.compile("<span [^>]*class=\"Emoji Emoji--forLinks\" [^>]*>[\\n]*[^<]*</span>[\\n]*<span [^>]*class=\"visuallyhidden\" [^>]*aria-hidden=\"true\"[^>]*>[\\n]*([^<]*)[\\n]*</span>");
+
     public static Timeline search(
             final String query,
             final Timeline.Order order,
@@ -468,6 +469,7 @@ public class TwitterScraper {
             try {
                 //DAO.log("TwitterTweet [" + this.id_str + "] start");
                 this.text = unshorten(this.text);
+                this.user.setName(unshorten(this.user.getName()));
                 //DAO.log("TwitterTweet [" + this.id_str + "] unshorten after " + (System.currentTimeMillis() - start) + "ms");
                 this.enrich();
                 //DAO.log("TwitterTweet [" + this.id_str + "] enrich    after " + (System.currentTimeMillis() - start) + "ms");
@@ -510,6 +512,17 @@ public class TwitterScraper {
                 }
             } catch (Throwable e) {
             	Log.getLog().warn(e);
+                break;
+            }
+            try {
+                Matcher m = emoji_pattern_span.matcher(text);
+                if (m.find()) {
+                    String emoji = m.group(1);
+                    text = m.replaceFirst(emoji);
+                    continue;
+                }
+            } catch (Throwable e) {
+                Log.getLog().warn(e);
                 break;
             }
             try {
