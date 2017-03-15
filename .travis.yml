@@ -14,7 +14,7 @@ script:
 - gradle build
 - bin/start.sh
 - flake8 bin
-- docker build -t loklak_server -f docker/Dockerfile .
+- docker build -t loklak_server .
 - docker images
 - docker run loklak_server bash /loklak_server/bin/start.sh -I
 before_script:
