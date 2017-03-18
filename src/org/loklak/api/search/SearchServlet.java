@@ -156,7 +156,7 @@ public class SearchServlet extends HttpServlet {
         final Timeline.Order order = Timeline.parseOrder(ordername);
         Timeline tl = DAO.timelineCache.getOrCreate(identity, query, startRecord <= 1, order);
         JSONObject hits = new JSONObject(true);
-        JSONObject aggregations = null;
+        final JSONObject[] aggregations = new JSONObject[]{null};
         if (tl.size() > 0) {
             // return the timeline from a cached search result
             // in case that the number of available records in the cache is too low, try to get more
@@ -195,13 +195,14 @@ public class SearchServlet extends HttpServlet {
                 // start a local search
                 Thread localThread = queryf == null || queryf.length() == 0 ? null : new Thread() {
                     public void run() {
-                        DAO.SearchLocalMessages localSearchResult = new DAO.SearchLocalMessages(queryf, order, timezoneOffsetf, last_cache_search_time.get() > SEARCH_CACHE_THREASHOLD_TIME ? Math.min(maximumRecords, (int) DAO.getConfig(SEARCH_LOW_COUNT_NAME, 10)) : maximumRecords, 0);
+                        DAO.SearchLocalMessages localSearchResult = new DAO.SearchLocalMessages(queryf, order, timezoneOffsetf, last_cache_search_time.get() > SEARCH_CACHE_THREASHOLD_TIME ? Math.min(maximumRecords, (int) DAO.getConfig(SEARCH_LOW_COUNT_NAME, 10)) : maximumRecords, agregation_limit, fields);
                         long time = System.currentTimeMillis() - start;
                         last_cache_search_time.set(time);
                         post.recordEvent("cache_time", time);
                         cache_hits.set(localSearchResult.timeline.getHits());
                         tl.putAll(localSearchResult.timeline);
                         tl.setResultIndex(localSearchResult.timeline.getResultIndex());
+                        aggregations[0] = localSearchResult.getAggregations();
                     }
                 };
                 if (localThread != null) localThread.start();
@@ -254,7 +255,7 @@ public class SearchServlet extends HttpServlet {
                 cache_hits.set(localSearchResult.timeline.getHits());
                 tl.putAll(localSearchResult.timeline);
                 tl.setResultIndex(localSearchResult.timeline.getResultIndex());
-                aggregations = localSearchResult.getAggregations();
+                aggregations[0] = localSearchResult.getAggregations();
                 long time = System.currentTimeMillis() - start;
                 last_cache_search_time.set(time);
                 post.recordEvent("cache_time", time);
@@ -320,7 +321,7 @@ public class SearchServlet extends HttpServlet {
             m.put("statuses", statuses);
             
             // aggregations
-            m.put("aggregations", aggregations);
+            m.put("aggregations", aggregations[0]);
             
             // write json
             response.setCharacterEncoding("UTF-8");
