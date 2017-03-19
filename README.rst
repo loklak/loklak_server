@@ -158,7 +158,7 @@ change this if you want to. This is how connected peers work:
 
 How do I install loklak: Download, Build, Run
 
-> **Note**: You must be logged in to Docker Cloud for the button to work correctly. If you are not logged in, you’ll see a 404 error  instead.
+.. note:: You must be logged in to Docker Cloud for the button to work correctly. If you are not logged in, you’ll see a 404 error  instead.
 
 ---------------------------------------------
 
