@@ -108,7 +108,7 @@ The application has built-in documentation web pages, you will see them when you
 
 Articles and tutorials are also on our blog at http://blog.loklak.net.
 
-### Where do I find the java?
+### Where do I find the Java documentation?
 
 At http://loklak.github.io/loklak_server/ or by building them via 'ant javadoc'
 
