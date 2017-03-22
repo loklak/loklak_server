@@ -29,7 +29,7 @@ If you like to be anonymous when searching things, want to archive tweets or mes
 - share tweets and tweet archives with other loklak users
 - search anonymously on your own search portal
 - create your own tweet search portal or statistical evaluations
-- use [Kibana](https://github.com/elastic/kibana) to analyze large amounts of tweets for statistical data.
+- use [Kibana](https://github.com/elastic/kibana) to analyze large amounts of tweets for statistical data(http://blog.loklak.net/tweet-analytics-with-loklak-and-kibana-as-a-search-front-end/).
 
 ## How do I install loklak: Download, Build, Run
 
@@ -99,6 +99,7 @@ Run elasticsearch-head with:
 ## How do I configure loklak?
 
 The basis configuration file is in ```conf/config.properties```. To customize these settings place a file ```customized_config.properties``` to the path ```data/settings/```
+See documentation(http://dev.loklak.org/) for details.
 
 ## Where can I find documentation?
 
@@ -149,7 +150,7 @@ Hey, this is the tool for that! Just put http://loklak.org/api/search.rss?q=%23l
 
 ## What is the software license?
 
-LGPL 2.1
+LGPL 2.1 (https://www.gnu.org/licenses/old-licenses/lgpl-2.1)
 
 
 ## Where can I report bugs and make feature requests?
