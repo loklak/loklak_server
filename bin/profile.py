@@ -5,7 +5,6 @@ Requirements:
 requests (installation: pip install requests)
 """
 import requests
-import json
 import os
 
 SEARCH_URL = 'http://127.0.0.1:9000/api/search.json'
