@@ -16,7 +16,7 @@ dist
 dist/loklak.jar
 /build/
 /.gradle/
-/.DS_Store
+.DS_Store
 
 /docs/_build
 .DS_Store

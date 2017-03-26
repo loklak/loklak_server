@@ -3,10 +3,10 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/mariobehling/loklak.svg?maxAge=2592000?style=flat-square)](https://hub.docker.com/r/mariobehling/loklak/)
 [![Percentage of issues still open](http://isitmaintained.com/badge/open/loklak/loklak_server.svg)](http://isitmaintained.com/project/loklak/loklak_server "Percentage of issues still open")
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/loklak/loklak_server.svg)](http://isitmaintained.com/project/loklak/loklak_server "Average time to resolve an issue")
-[![Twitter](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Wow Check Loklak on @gitHub @loklak_app @lklknt: https://github.com/loklak/loklak_server &url=%5Bobject%20Object%5D)
+[![Twitter](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Wow%20Check%20Loklak%20on%20@gitHub%20@loklak_app%20@lklknt:%20https://github.com/loklak/loklak_server%20&url=%5Bobject%20Object%5D)
 [![Twitter Follow](https://img.shields.io/twitter/follow/lklknt.svg?style=social&label=Follow&maxAge=2592000?style=flat-square)](https://twitter.com/lklknt)
 
-Development: [![Build Status](https://travis-ci.org/loklak/loklak_server.svg?branch=development)](https://travis-ci.org/loklak/loklak_server)
+Development: [![Build Status](https://travis-ci.org/loklak/loklak_server.svg?branch=development)](https://travis-ci.org/loklak/loklak_server) [![](https://dockerbuildbadges.quelltext.eu/status.svg?organization=mariobehling&repository=loklak)](https://hub.docker.com/r/mariobehling/loklak/builds/)
 Master: [![Build Status](https://travis-ci.org/loklak/loklak_server.svg?branch=master)](https://travis-ci.org/loklak/loklak_server)
 
 loklak is a server application which is able to collect messages from various sources, including twitter. The server contains a search index and a peer-to-peer index sharing interface. All messages are stored in an elasticsearch index. An automatic deployment from the development branch at GitHub is available for tests here https://loklak-server-dev.herokuapp.com
@@ -29,7 +29,7 @@ If you like to be anonymous when searching things, want to archive tweets or mes
 - share tweets and tweet archives with other loklak users
 - search anonymously on your own search portal
 - create your own tweet search portal or statistical evaluations
-- use [Kibana](https://github.com/elastic/kibana) to analyze large amounts of tweets for statistical data.
+- use [Kibana](https://github.com/elastic/kibana) to analyze large amounts of tweets for statistical data. [Tweets analytics with Kibana example.](http://blog.loklak.net/tweet-analytics-with-loklak-and-kibana-as-a-search-front-end/)
 
 ## How do I install loklak: Download, Build, Run
 
@@ -63,17 +63,17 @@ Nowhere, you must clone the git repository of loklak and build it yourself. That
 - then see above ("How do I run loklak")
 
 ### How do I install loklak with Docker?
-To install loklak with Docker please refer to the [loklak Docker installation readme](/docs/installation_docker.md).
+To install loklak with Docker please refer to the [loklak Docker installation readme](/docs/installation/installation_docker.md).
 
 ### How do I deploy loklak with Heroku?
-You can easily deploy to Heroku by clicking the Deploy to Heroku button above. To install loklak using Heroku Toolbelt, please refer to the [loklak Heroku installation readme](/docs/installation_heroku.md).
+You can easily deploy to Heroku by clicking the Deploy to Heroku button above. To install loklak using Heroku Toolbelt, please refer to the [loklak Heroku installation readme](/docs/installation/installation_heroku.md).
 
 ### How do I deploy loklak with cloud9?
-To install loklak with cloud9 please refer to the [loklak cloud9 installation readme](/docs/installation_cloud9.md).
+To install loklak with cloud9 please refer to the [loklak cloud9 installation readme](/docs/installation/installation_cloud9.md).
 
 ### How do I setup loklak on Eclipse?
 
-To install loklak on Eclipes, please refer to the [loklak Eclipse readme](/docs/eclipseSetup.md).
+To install loklak on Eclipes, please refer to the [loklak Eclipse readme](/docs/development/eclipseSetup.md).
 
 ### How do I run loklak?
 
@@ -99,6 +99,7 @@ Run elasticsearch-head with:
 ## How do I configure loklak?
 
 The basis configuration file is in ```conf/config.properties```. To customize these settings place a file ```customized_config.properties``` to the path ```data/settings/```
+[See documentation](http://dev.loklak.org/) for details.
 
 ## Where can I find documentation?
 
@@ -108,7 +109,7 @@ The application has built-in documentation web pages, you will see them when you
 
 Articles and tutorials are also on our blog at http://blog.loklak.net.
 
-### Where do I find the javadocs?
+### Where do I find the Java documentation?
 
 At http://loklak.github.io/loklak_server/ or by building them via 'ant javadoc'
 
@@ -149,7 +150,7 @@ Hey, this is the tool for that! Just put http://loklak.org/api/search.rss?q=%23l
 
 ## What is the software license?
 
-LGPL 2.1
+[LGPL 2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1)
 
 
 ## Where can I report bugs and make feature requests?

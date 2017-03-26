@@ -4,7 +4,6 @@ loklak Tweeet Searcher
 Works with Python 2 & 3
 """
 
-import sys
 import argparse
 import json
 try:
