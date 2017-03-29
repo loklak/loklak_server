@@ -178,7 +178,7 @@ public class TwitterScraper {
         String place_id = "", place_name = "";
         boolean parsing_favourite = false, parsing_retweet = false;
         int line = 0; // first line is 1, according to emacs which numbers the first line also as 1
-        boolean debuglog = false;
+        boolean debuglog = true;
         while ((input = br.readLine()) != null){
             line++;
             input = input.trim();
@@ -198,12 +198,12 @@ public class TwitterScraper {
                 props.put("useravatarurl", new prop(input, p, "src"));
                 continue;
             }
-            if ((p = input.indexOf("class=\"fullname js-action-profile-name")) > 0) {
-                props.put("userfullname", new prop(input, p, null));
-                // don't continue here, username is in the samme line
+            if ((p = input.indexOf("data-name=")) >= 0) {
+                props.put("userfullname", new prop(input, p, "data-name"));
+                // don't continue here, username is in the same line
             }
-            if ((p = input.indexOf("class=\"username js-action-profile-name")) > 0) {
-                props.put("usernickname", new prop(input.replace("<s>@</s>", "").replace("<b>", "").replace("</b>", ""), p, null));
+            if ((p = input.indexOf("data-screen-name=")) >= 0) {
+                props.put("usernickname", new prop(input, p, "data-screen-name"));
                 // don't continue here, fullname is in the same line
             }
             if ((p = input.indexOf("class=\"tweet-timestamp")) > 0) {
@@ -245,22 +245,40 @@ public class TwitterScraper {
                 continue;
             }
             // get images
-            if ((p = input.indexOf("class=\"media media-thumbnail twitter-timeline-link media-forward is-preview")) > 0 ||
-                (p = input.indexOf("class=\"multi-photo")) > 0) {
-                images.add(new prop(input, p, "data-resolved-url-large").value);
+            if ((p = input.indexOf("data-image-url=")) >= 0) {
+                String image_url = new prop(input, p, "data-image-url").value;
+                if (!image_url.endsWith(".jpg") && !image_url.endsWith(".png")) {
+                    System.out.println("strange image url: " + image_url);
+                }
+                images.add(image_url);
+                continue;
+            }
+            // get images
+            if ((p = input.lastIndexOf("background-image:url('")) >= 0) {
+                int q = input.lastIndexOf("'");
+                if (q > p + 22) {
+                    String image_url = input.substring(p + 22, q);
+                    if (!image_url.endsWith(".jpg") && !image_url.endsWith(".png")) {
+                        System.out.println("strange image url: " + image_url);
+                    }
+                    images.add(image_url);
+                }
                 continue;
             }
             // we have two opportunities to get video thumbnails == more images; images in the presence of video content should be treated as thumbnail for the video
             if ((p = input.indexOf("class=\"animated-gif-thumbnail\"")) > 0) {
-                images.add(new prop(input, 0, "src").value);
+                String image_url = new prop(input, 0, "src").value;
+                images.add(image_url);
                 continue;
             }
             if ((p = input.indexOf("class=\"animated-gif\"")) > 0) {
-                images.add(new prop(input, p, "poster").value);
+                String image_url = new prop(input, p, "poster").value;
+                images.add(image_url);
                 continue;
             }
             if ((p = input.indexOf("<source video-src")) >= 0 && input.indexOf("type=\"video/") > p) {
-                videos.add(new prop(input, p, "video-src").value);
+                String video_url = new prop(input, p, "video-src").value;
+                videos.add(video_url);
                 continue;
             }
             if ((p = input.indexOf("class=\"Tweet-geo")) > 0) {
@@ -364,7 +382,7 @@ public class TwitterScraper {
                 }
             } else {
                 int p  = line.indexOf(key + "=\"", start);
-                if (p > 0) {
+                if (p >= 0) {
                     int q = line.indexOf('"', p + key.length() + 2);
                     if (q > 0) {
                         value = line.substring(p + key.length() + 2, q);
