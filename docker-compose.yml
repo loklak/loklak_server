@@ -3,4 +3,4 @@ loklak:
   ports:
   - "80:80"
   volumes:
-    data:/loklak_server/data
+  - data:/loklak_server/data
