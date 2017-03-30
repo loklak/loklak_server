@@ -43,6 +43,10 @@ At this time, loklak is not provided in compiled form, you easily build it yours
     > git clone https://github.com/loklak/loklak_server.git
     > cd loklak_server
     > ant
+
+This command may give an error while building like `Unable to locate tools.jar`.
+It means that there is no java in your system or JAVA_HOME Environment Variable is not set. [Refererence](https://www.digitalocean.com/community/tutorials/how-to-install-java-on-ubuntu-with-apt-get) to fix it and run `ant` again.
+
     > bin/start.sh
 
 After all server processes are running, loklak tries to open a browser page itself. If that does not happen, just open http://localhost:9000; if you made the installation on a headless or remote server, then replace 'localhost' with your server name.
