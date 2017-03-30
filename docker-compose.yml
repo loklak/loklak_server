@@ -2,3 +2,5 @@ loklak:
   build: .
   ports:
   - "80:80"
+  volumes:
+    data:/loklak_server/data
