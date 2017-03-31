@@ -1,6 +1,12 @@
-loklak:
-  build: .
-  ports:
-  - "80:80"
-  volumes:
-  - /loklak_server/data
+version '2'
+
+services:
+         loklak:
+                build: .
+         ports:
+             - "80:80"
+         volumes:
+             - data:/data
+volumes:
+     - data: 
+           external: false
