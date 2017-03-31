@@ -8,5 +8,5 @@ services:
          volumes:
              - data:/data
 volumes:
-     - data: 
+       data: 
            external: false
