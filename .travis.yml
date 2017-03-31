@@ -36,11 +36,11 @@ deploy:
       branch: master
   - provider: script
     skip_cleanup: true
-    script: .utility/push-docs-to-gh-pages.sh
+    script: .utility/push-docs-to-gh-pages.sh && .utility/update-docs-repo.sh
     on:
       branch: development
   - provider: script
     skip_cleanup: true
-    script: .utility/push-docs-to-gh-pages.sh
+    script: .utility/push-docs-to-gh-pages.sh && .utility/update-docs-repo.sh
     on:
       branch: master
