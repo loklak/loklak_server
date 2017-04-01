@@ -7,6 +7,11 @@
 
 WORK="$HOME/central-docs"
 REPO="loklak/dev.loklak.org"
+PRIVATE_KEY="$(pwd)/.utility/loklakserver.2"
+
+echo "Preparing ssh agent ..."
+eval $(ssh-agent -s)
+ssh-add $PRIVATE_KEY
 
 echo "Preparing git ..."
 git config --global user.email "travis@travis-ci.org"
