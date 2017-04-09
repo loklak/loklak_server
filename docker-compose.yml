@@ -7,7 +7,7 @@ services:
              - "80:80"
          #Map volume-folder    
          volumes:
-             - data:/data
+             - data:/loklak_server/data
              
 #Create named volume             
 volumes:
