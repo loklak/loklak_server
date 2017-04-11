@@ -69,9 +69,8 @@ public class Query {
     public void finalize() {
         this.track.finalize();
     }
-    public void initGET(final Map<String, String> qm) {
-        for (String key : qm.keySet())
-            qm.put(key, qm.get(key));
+    public void initGET(final Map<String, String> q) {
+        q.keySet().forEach(k -> this.qm.put(k, q.get(k)));
     }
     // initPOST is deprecated because the purpose of it has been replaced by the constructor
     @Deprecated
