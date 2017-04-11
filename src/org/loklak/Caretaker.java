@@ -218,6 +218,10 @@ public class Caretaker extends Thread {
             if (d > 0) DAO.log("Deleted " + d + " outdated(day) messages");
             d = DAO.deleteOld(IndexName.messages_week, DateParser.oneWeekAgo());
             if (d > 0) DAO.log("Deleted " + d + " outdated(week) messages");
+            if (DAO.getConfig("autodeletion", false)) {
+                d = DAO.deleteOld(IndexName.messages, DateParser.oneMonthAgo());
+                if (d > 0) DAO.log("Deleted " + d + " outdated(month) messages");
+            }
         } catch (Throwable e) {
             Log.getLog().warn("CARETAKER THREAD", e);
         }
