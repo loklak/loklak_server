@@ -175,6 +175,7 @@ public class LoklakServer {
         return config;
     }
 
+    /*
     public static void saveConfig() throws IOException {
         Path data = FileSystems.getDefault().getPath("data");
         Path settings_dir = data.resolve("settings");
@@ -189,6 +190,7 @@ public class LoklakServer {
         prop.store(w, "This file can be used to customize the configuration file conf/config.properties");
         w.close();
     }
+    */
     
     public static int getServerThreads() {
         return server.getThreadPool().getThreads() - server.getThreadPool().getIdleThreads();
@@ -331,7 +333,7 @@ public class LoklakServer {
                     LoklakServer.harvester.stop();
                     Log.getLog().info("main terminated, goodby.");
 
-                    LoklakServer.saveConfig();
+                    //LoklakServer.saveConfig();
                     Log.getLog().info("saved customized_config.properties");
 
                     Log.getLog().info("Shutting down log4j2");

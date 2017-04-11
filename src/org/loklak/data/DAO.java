@@ -593,7 +593,7 @@ public class DAO {
             return default_val;
         }
     }
-
+/*
     public static void setConfig(String key, String value) {
         config.put(key, value);
     }
@@ -605,7 +605,7 @@ public class DAO {
     public static void setConfig(String key, double value) {
         setConfig(key, Double.toString(value));
     }
-
+*/
     public static JsonNode getSchema(String key) throws IOException {
         File schema = new File(schema_dir, key);
         if (!schema.exists()) {

@@ -55,7 +55,7 @@ public class SettingsManagementService extends AbstractAPIHandler implements API
         // Apply settings
         for (String key : call.getKeys()) {
             String value = call.get(key, "");
-            DAO.setConfig(key, value);
+            //DAO.setConfig(key, value);
             appliedSettings.put(key, value);
         }
 
