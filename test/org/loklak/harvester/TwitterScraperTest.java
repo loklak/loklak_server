@@ -5,8 +5,6 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 import org.loklak.objects.Timeline;
@@ -21,10 +19,8 @@ import org.loklak.objects.Timeline;
 */
 public class TwitterScraperTest {
 
-    Timeline ftweet_list;
-
     @Test
-    public void test_prepareSearchURL() {
+    public void testPrepareSearchURL() {
         String url;
         String[] query = {"fossasia", "from:loklak_test",
             "spacex since:2017-04-03 until:2017-04-05", };
@@ -39,12 +35,11 @@ public class TwitterScraperTest {
             //compare urls with urls created
             assertEquals(url, out_url[i]);
         }
-
     }
 
     @Test
-    public void test_search() {
-
+    public void testSearch() {
+        Timeline ftweet_list;
         Timeline.Order order = Timeline.parseOrder("created_at");
         String https_url = "https://twitter.com/search?f=tweets&vertical=default&q=from%3Aloklak_test&src=typd";
         Timeline[] tweet_list = null;
@@ -62,8 +57,6 @@ public class TwitterScraperTest {
 
                 //fetch list of tweets and set in ftweet_list
                 tweet_list = TwitterScraper.search(br, order, true, true);
-                this.ftweet_list = process_tweet_list(tweet_list);
-
             } catch (IOException e) {
                 System.out.println(e.getMessage());
             } finally {
@@ -73,13 +66,14 @@ public class TwitterScraperTest {
 
             // this could mean that twitter rejected the connection (DoS protection?) or we are offline (we should be silent then)
             if (tweet_list == null) tweet_list = new Timeline[]{new Timeline(order), new Timeline(order)};
-        };
+        }
 
+        ftweet_list = processTweetList(tweet_list);
         //compare no. of tweets with fetched no. of tweets
-        assertEquals(2, this.ftweet_list.size());
+        assertEquals(2, ftweet_list.size());
     }
 
-    public Timeline process_tweet_list(Timeline[] tweet_list) {
+    public Timeline processTweetList(Timeline[] tweet_list) {
 
         for (MessageEntry me: tweet_list[1]) {
             assert me instanceof TwitterScraper.TwitterTweet;
