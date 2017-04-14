@@ -159,8 +159,25 @@ Hey, this is the tool for that! Just put http://loklak.org/api/search.rss?q=%23l
 
 ## Where can I report bugs and make feature requests?
 
-This project is considered a community work. The development crew consist of YOU too. I am very thankful for pull request. So if you discovered that something can be enhanced, please do it yourself and make a pull request. If you find a bug, please try to fix it. If you report a bug to me I will possibly consider it but at the very end of a giant, always growing heap of work. The best chance for you to get things done is to try it yourself. Our [issue tracker is here](https://github.com/loklak/loklak_server/issues).
+This project is considered a community work. The development crew consist of YOU too. I am very thankful for pull request. So if you discovered that something can be enhanced, please do it yourself and make a pull request. If you find a bug, please try to fix it. If you report a bug to me I will possibly consider it but at the very end of a giant, always growing heap of work. The best chance for you to get things done is to try it yourself. Our [issue tracker is here][issues].
+
+
+## How can I contribute?
+
+There are a lot of [issues][issues] you can solve.
+If you are here for the first time, you can look at [`first-timers-only` issues][first-timers-issues].
+They are either
+
+- easy to do and introduce you to github and git
+- or descripe clearly how to solve the problem, so you have smoother start.
+
+If you want to solve an issue, please comment in it that you would like to solve it.
+In any case, if you run into problems, please report them in the issue.
 
 
 Have fun!
 @0rb1t3r
+
+
+[issues]: https://github.com/loklak/loklak_server/issues
+[first-timers-issues]: https://github.com/loklak/loklak_server/issues?q=is%3Aissue+is%3Aopen+label%3Afirst-timers-only
