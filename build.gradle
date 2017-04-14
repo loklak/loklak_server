@@ -17,6 +17,7 @@ targetCompatibility = 1.8
 
 sourceSets.main.java.srcDirs = ['src']
 sourceSets.main.resources.srcDirs = ['res']
+sourceSets.test.java.srcDirs = ['test']
 
 jar {
   manifest {
