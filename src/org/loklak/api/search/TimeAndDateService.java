@@ -62,7 +62,30 @@ public class TimeAndDateService extends AbstractAPIHandler implements APIHandler
 		JSONObject timeAndDate = new JSONObject();
 		
 		Date time_and_date = new Date();
-		timeAndDate.put("time_and_date", time_and_date.toString());
+		
+		String day = time_and_date.toString().substring(0, 3);
+		timeAndDate.put("day", day);
+		
+		String month = time_and_date.toString().substring(4, 7);
+		timeAndDate.put("month", month);
+		
+		String date = time_and_date.toString().substring(8, 10);
+		timeAndDate.put("date", date);
+		
+		String hours = time_and_date.toString().substring(11, 13);
+		timeAndDate.put("hours", hours);
+		
+		String minutes = time_and_date.toString().substring(14, 16);
+		timeAndDate.put("minutes", minutes);
+		
+		String seconds = time_and_date.toString().substring(17, 19);
+		timeAndDate.put("seconds", seconds);
+		
+		String timezone = time_and_date.toString().substring(20, 23);
+		timeAndDate.put("timezone", timezone);
+		
+		String year = time_and_date.toString().substring(24, 28);
+		timeAndDate.put("year", year);
 		
 		
 		JSONArray jsonArray = new JSONArray();
