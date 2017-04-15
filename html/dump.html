@@ -8,6 +8,19 @@
     <title>loklak Dump Download</title>
     <!--#include file="../ssi/common_head_back.include" -->
     <!--#include file="../data/ssi/custom_head.include" -->
+    <script type="application/javascript">
+
+      function resizeIFrameToFitContent( iFrame ) {
+          iFrame.width  = iFrame.contentWindow.document.body.scrollWidth;
+          iFrame.height = iFrame.contentWindow.document.body.scrollHeight;
+      }
+
+      window.addEventListener('DOMContentReady', function(e) {
+        var iFrame = document.getElementById('dump-iframe');
+        resizeIFrameToFitContent( iFrame );
+      });
+
+    </script>
   </head>
 
   <body>
@@ -33,7 +46,7 @@
     </nav>
 
     <div class="container-fluid">
-        <iframe src="dump/" width="99%" height="800" frameBorder="0"></iframe>
+        <iframe src="dump/" width="99%" height="800" frameBorder="0" id="dump-iframe"></iframe>
     </div>
     <!--#include file="../ssi/common_body_back.include" -->
     <!--#include file="../data/ssi/custom_body_back.include" -->
