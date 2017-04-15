@@ -75,7 +75,7 @@ public class TwitterScraper {
         return tl[0];
     }
 
-    private static String prepareSearchURL(final String query) {
+    public static String prepareSearchURL(final String query) {
         // check
         // https://twitter.com/search-advanced for a better syntax
         // https://support.twitter.com/articles/71577-how-to-use-advanced-twitter-search#
@@ -98,7 +98,7 @@ public class TwitterScraper {
         return https_url;
     }
     
-    private static Timeline[] search(
+    public static Timeline[] search(
             final String query,
             final Timeline.Order order,
             final boolean writeToIndex,
@@ -137,7 +137,7 @@ public class TwitterScraper {
         return timelines;
     }
     
-    private static Timeline[] parse(
+    public static Timeline[] parse(
             final File file,
             final Timeline.Order order,
             final boolean writeToIndex,
@@ -164,7 +164,7 @@ public class TwitterScraper {
      * @return two timelines in one array: Timeline[0] is the one which is finished to be used, Timeline[1] contains messages which are in postprocessing
      * @throws IOException
      */
-    private static Timeline[] search(
+    public static Timeline[] search(
             final BufferedReader br,
             final Timeline.Order order,
             final boolean writeToIndex,
@@ -350,7 +350,7 @@ public class TwitterScraper {
         return new Timeline[]{timelineReady, timelineWorking};
     }
     
-    private static class prop {
+    public static class prop {
         public String key, value = null;
         public prop(String value) {
             this.key = null;
