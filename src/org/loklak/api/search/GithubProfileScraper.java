@@ -40,6 +40,8 @@ import org.loklak.server.BaseUserRole;
 import org.loklak.server.Query;
 import org.loklak.susi.SusiThought;
 import org.loklak.tools.storage.JSONObjectWithDefault;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class GithubProfileScraper extends AbstractAPIHandler implements APIHandler {
 
@@ -70,7 +72,8 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
 	public static SusiThought scrapeGithub(String profile) {
 
 		Document html = null;
-
+		String user_id;
+    
 		JSONObject githubProfile = new JSONObject();
 
 		try {
@@ -101,55 +104,69 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
 			return json;
 		}
 
-		String avatarUrl = html.getElementsByAttributeValue("class", "avatar rounded-2").attr("src");
-		githubProfile.put("avatar_url", avatarUrl);		
+		String avatarUrl = html.getElementsByAttributeValueContaining("class", "avatar").attr("src");
+
+		Pattern avatar_url_to_user_id = Pattern.compile(".com\\/u\\/([0-9]+)\\?");
+		Matcher m = avatar_url_to_user_id.matcher(avatarUrl);
+		m.find();
+		user_id = m.group(1);
+		githubProfile.put("user_id", user_id);		
+
+		githubProfile.put("avatar_url", "https://avatars0.githubusercontent.com/u/" + user_id);
 		
-		String fullName = html.getElementsByAttributeValue("class", "vcard-fullname").text();
+		String fullName = html.getElementsByAttributeValueContaining("class", "vcard-fullname").text();
 		githubProfile.put("full_name", fullName);		
 		
-		String userName = html.getElementsByAttributeValue("class", "vcard-username").text();
+		String userName = html.getElementsByAttributeValueContaining("class", "vcard-username").text();
 		githubProfile.put("user_name", userName);
 		
-		String bio = html.getElementsByAttributeValue("class", "user-profile-bio").text();
+		String bio = html.getElementsByAttributeValueContaining("class", "user-profile-bio").text();
 		githubProfile.put("bio", bio);
 
-		String atomFeedLink = html.getElementsByAttributeValue("type", "application/atom+xml").attr("href");
+		String atomFeedLink = html.getElementsByAttributeValueContaining("type", "application/atom+xml").attr("href");
 		githubProfile.put("atom_feed_link", "https://github.com" + atomFeedLink);
 
-		String worksFor = html.getElementsByAttributeValue("itemprop", "worksFor").text();
+		String worksFor = html.getElementsByAttributeValueContaining("itemprop", "worksFor").text();
 		githubProfile.put("works_for", worksFor);
 
-		String homeLocation = html.getElementsByAttributeValue("itemprop", "homeLocation").attr("title");
+		String homeLocation = html.getElementsByAttributeValueContaining("itemprop", "homeLocation").attr("title");
 		githubProfile.put("home_location", homeLocation);
 
-		String email = html.getElementsByAttributeValue("itemprop", "email").text();
+		String email = html.getElementsByAttributeValueContaining("itemprop", "email").text();
+		if (!email.contains("@"))
+			email = "";
 		githubProfile.put("email", email);
 
-		String specialLink = html.getElementsByAttributeValue("itemprop", "url").text();
+		String specialLink = html.getElementsByAttributeValueContaining("itemprop", "url").text();
 		githubProfile.put("special_link", specialLink);
 
-		String joiningDate = html.getElementsByAttributeValue("class", "join-date").attr("datetime");
-		githubProfile.put("joining_date", joiningDate);
-
+		Elements joiningDates = html.getElementsByAttributeValueContaining("class", "dropdown-item");
+		for(Element joiningDate: joiningDates) {
+			String joinDate = joiningDate.attr("href");
+			if(joinDate.contains("join")) {
+				joinDate = joinDate.substring(joinDate.length() - 10);
+				githubProfile.put("joining_date", joinDate);
+			}
+		}
 		/* If Individual User */
 		if (html.getElementsByAttributeValue("class", "vcard-stat").size() != 0) {
 			
-			String followersUrl = html.getElementsByAttributeValue("class", "vcard-stat").get(0).attr("href");
+			String followersUrl = html.getElementsByAttributeValueContaining("class", "vcard-stat").get(0).attr("href");
 			githubProfile.put("followers_url", "https://github.com" + followersUrl);
 
-			String followers = html.getElementsByAttributeValue("class", "vcard-stat").get(0).tagName("strong").text();
+			String followers = html.getElementsByAttributeValueContaining("class", "vcard-stat").get(0).tagName("strong").text();
 			githubProfile.put("followers", followers);
 
-			String starredUrl = html.getElementsByAttributeValue("class", "vcard-stat").get(1).attr("href");
+			String starredUrl = html.getElementsByAttributeValueContaining("class", "vcard-stat").get(1).attr("href");
 			githubProfile.put("starred_url", "https://github.com" + starredUrl);
 
-			String starred = html.getElementsByAttributeValue("class", "vcard-stat").get(1).tagName("strong").text();
+			String starred = html.getElementsByAttributeValueContaining("class", "vcard-stat").get(1).tagName("strong").text();
 			githubProfile.put("starred", starred);
 
-			String followingUrl = html.getElementsByAttributeValue("class", "vcard-stat").get(2).attr("href");
+			String followingUrl = html.getElementsByAttributeValueContaining("class", "vcard-stat").get(2).attr("href");
 			githubProfile.put("following_url", "https://github.com" + followingUrl);
 
-			String following = html.getElementsByAttributeValue("class", "vcard-stat").get(2).tagName("strong").text();
+			String following = html.getElementsByAttributeValueContaining("class", "vcard-stat").get(2).tagName("strong").text();
 			githubProfile.put("following", following);
 		}
 		
@@ -168,7 +185,6 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
 		String receivedEventsUrl ="https://api.github.com/users/" + profile + "/received_events";
 		githubProfile.put("received_events_url", receivedEventsUrl);
 		
-
 		JSONArray organizations = new JSONArray();
 		Elements orgs = html.getElementsByAttributeValue("itemprop", "follows");
 		for (Element e : orgs) {
