@@ -15,11 +15,6 @@
           iFrame.height = iFrame.contentWindow.document.body.scrollHeight;
       }
 
-      window.addEventListener('DOMContentReady', function(e) {
-        var iFrame = document.getElementById('dump-iframe');
-        resizeIFrameToFitContent( iFrame );
-      });
-
     </script>
   </head>
 
@@ -46,7 +41,7 @@
     </nav>
 
     <div class="container-fluid">
-        <iframe src="dump/" width="99%" height="800" frameBorder="0" id="dump-iframe"></iframe>
+        <iframe src="dump/" width="99%" height="800" frameBorder="0" id="dump-iframe" onload="resizeIFrameToFitContent(this);"></iframe>
     </div>
     <!--#include file="../ssi/common_body_back.include" -->
     <!--#include file="../data/ssi/custom_body_back.include" -->
