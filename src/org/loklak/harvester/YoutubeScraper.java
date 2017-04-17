@@ -31,6 +31,7 @@ import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.base.CharMatcher;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -205,7 +206,8 @@ public class YoutubeScraper {
     }
     
     private static long parseNumber(String n) throws NumberFormatException {
-        return Long.parseLong(numberfix.matcher(n).replaceAll(""));
+        String withoutSpaces = CharMatcher.WHITESPACE.removeFrom(n);
+        return Long.parseLong(withoutSpaces);
     }
     
     private final static Pattern numberfix = Pattern.compile(",|\\.");

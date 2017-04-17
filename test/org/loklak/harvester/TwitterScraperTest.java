@@ -2,16 +2,14 @@ package org.loklak.harvester;
 
 import java.io.IOException;
 import org.junit.Test;
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertThat;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-
 import org.loklak.objects.Timeline;
-import org.loklak.harvester.TwitterScraper;
 import org.loklak.http.ClientConnection;
 import org.loklak.objects.MessageEntry;
-import org.loklak.objects.Timeline;
 
 /*
     This unit test tests org.loklak.harvester.TwitterScraper.java
@@ -33,7 +31,7 @@ public class TwitterScraperTest {
             url = TwitterScraper.prepareSearchURL(query[i]);
 
             //compare urls with urls created
-            assertEquals(url, out_url[i]);
+            assertThat(out_url[i], is(url));
         }
     }
 
@@ -65,12 +63,14 @@ public class TwitterScraperTest {
         } catch (IOException e) {
 
             // this could mean that twitter rejected the connection (DoS protection?) or we are offline (we should be silent then)
-            if (tweet_list == null) tweet_list = new Timeline[]{new Timeline(order), new Timeline(order)};
+            if (tweet_list == null) {
+                tweet_list = new Timeline[]{new Timeline(order), new Timeline(order)};
+            }
         }
 
         ftweet_list = processTweetList(tweet_list);
         //compare no. of tweets with fetched no. of tweets
-        assertEquals(2, ftweet_list.size());
+        assertThat(ftweet_list.size(), is(2));
     }
 
     public Timeline processTweetList(Timeline[] tweet_list) {
@@ -78,7 +78,9 @@ public class TwitterScraperTest {
         for (MessageEntry me: tweet_list[1]) {
             assert me instanceof TwitterScraper.TwitterTweet;
             TwitterScraper.TwitterTweet tweet = (TwitterScraper.TwitterTweet) me;
-            if (tweet.waitReady(400)) tweet_list[0].add(tweet, tweet.getUser());
+            if (tweet.waitReady(400)) {
+                tweet_list[0].add(tweet, tweet.getUser());
+            }
         }
         return tweet_list[0];
 
