@@ -113,11 +113,11 @@ Save changes and exit.
  
 Type `start.bat` enter then wait for your browser to open you own Loklak Server with the address of `http://localhost:9000` also bookmark this for when you close your internet browser and reopen it again.
 
-### Installed Finshed and running.
+### Installed Finished and running.
 
 
 ### Workarounds
-If you have you loklak server from 1 of the zip files and want to contiune using it after completing the `Git` and `Ant` install simply run upgrade.sh from a command window to update to the latest loklak server version. You must then run start.bat to restart your loklak server. 
+If you have you loklak server from 1 of the zip files and want to continue using it after completing the `Git` and `Ant` install simply run upgrade.sh from a command window to update to the latest loklak server version. You must then run start.bat to restart your loklak server. 
 
 In the folder `c:\loklak_server\bin` there is a `start a BAT file` create a shortcut to desktop and double click `once` after PC starts. 
 
