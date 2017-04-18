@@ -1,0 +1,135 @@
+img.Emoji {
+    height: 21px;
+}
+.card-panel {
+    margin: 0;
+    padding: 12px 12px 1px 12px;
+    transition: 1s;
+}
+.circle {
+    border-radius: 21%;
+}
+.side-nav{
+    background-color: #FFF5F6;
+        transition: 1s;
+}
+.side-nav.out{
+  left: -240px !important;
+}
+@media only screen and (max-width: 992px){
+  nav .nav-wrapper a.page-title {
+    font-size: 36px !imporant;
+  }
+  nav .nav-wrapper {
+      text-align: center;
+  }
+}
+
+/* Top nav textbox */
+nav.top-nav a.page-title {
+    line-height: 122px;
+    font-size: 48px;
+}
+nav.top-nav {
+    height: 122px;
+    box-shadow: none;
+    z-index: 1;
+}
+
+/* Menu */
+a.button-collapse.top-nav.full {
+    line-height: 122px;
+}
+
+a.button-collapse.top-nav {
+    position: absolute;
+    text-align: center;
+    height: 48px;
+    width: 48px;
+    left: 7.5%;
+    top: 0;
+    float: none;
+    margin-left: 1.5rem;
+    color: #fff;
+    font-size: 32px;
+    z-index: 2;
+}
+a.suggestion {
+    margin: 6px;
+    height: 21px;
+}
+/* fluid 5 columns */
+.grid-sizer{
+    width: 25%;
+}
+.grid-item {
+    width: 8%;
+}
+/* 2 columns wide */
+.grid-item--width2 { width: 40%; }
+
+/* tweet */
+/*.hidden{
+    display: none;
+}*/
+.wallTweet {
+    position: absolute;
+    transition: 1s;
+    width: 333%;
+    top: 90%;
+    /* right: 0; */
+    left: -66%;
+    z-index: 1000;
+}
+.progress {
+    position: relative;
+    height: 4px;
+    display: block;
+    width: 100%;
+    background-color: #ECACAC;
+    border-radius: 2px;
+    margin: 0.03rem 0px 1rem 0;
+    overflow: hidden;
+}
+.progress .indeterminate {
+    background-color: #A62626;
+}
+
+/*possible fix for bottom mouseovers*/
+/*
+.content {
+    min-height: calc(100vh - 120px);
+
+}*/
+.modal-img{
+    height: auto;
+    width: 90%;
+}
+
+
+.modal {
+    top:calc(100vh - 75%) !important;
+    background-color: rgba(49, 49, 49, 0.91);
+    border-radius: 21px;
+}
+
+.modal-toggle{
+    position: fixed;
+    right: 23px;
+    bottom: 110px;
+    padding-top: 15px;
+    margin-bottom: 0;
+    z-index: 998;
+}
+
+.row.content {
+    margin-left: 3%;
+}
+
+img.responsive-img, video.responsive-video{
+    max-height: 500px;
+}
+
+img.active{
+    max-height: none !important;
+}

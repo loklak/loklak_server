@@ -1,0 +1,26 @@
+<template name="sidebar">
+      <div class="container"><a href="#" data-activates="nav-mobile" class="button-collapse top-nav full hide-on-large-only"><i class="mdi-navigation-menu"></i></a></div>
+      <ul id="nav-mobile" class="side-nav fixed">
+        {{> searchbar}}
+        {{> suggestionList}}
+      </ul>
+</template>
+
+<template name="suggestionList">
+
+<h5 class="center-align pink-text text-darken-2">Trending</h5>
+<div class ="container">
+  <div class ="row">
+    {{#each suggestList}}
+      {{> suggestion}}
+    {{/each}}
+  </div>
+</div>
+
+</template>
+
+<template name="suggestion">
+  <a class="pink-text suggestion" id="{{query}}" href="#">
+    {{query}}
+  </a>
+</template>

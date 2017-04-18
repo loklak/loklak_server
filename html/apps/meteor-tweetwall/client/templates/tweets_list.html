@@ -1,0 +1,18 @@
+<template name="tweetsList">
+	<div class="container">
+	<div class="row">
+
+	<div class="col s12 m10 l9 offset-m1 offset-l3">
+
+	{{#if noSearchTerm}}
+		<h2 class = "center-align">Search something!</h2>
+	{{/if}}
+
+	{{#each tweets}}
+		{{> tweetsItem}}
+	{{/each}}
+
+	</div>
+</div>
+</div>
+</template>

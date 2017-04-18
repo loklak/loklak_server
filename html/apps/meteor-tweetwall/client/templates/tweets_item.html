@@ -1,0 +1,27 @@
+<template name="tweetsItem">
+
+    <div class="card-panel grey lighten-5 z-depth-1">
+      <div class="row">
+        <div class="col s2">
+          <a href="https://www.twitter.com/{{username}}">
+            <img src="{{userPicture}}" class="circle responsive-img"/>
+          </a>
+
+        </div>
+        <div class="col s10">
+          <a class="pink-text" href="https://www.twitter.com/{{username}}">
+            {{{userScreen}}} <small class="grey-text">@({{username}})</small>
+          </a>
+            <small class="grey-text">{{created_date}}</small>
+          <p class="black-text">
+            {{{tweetLink}}}
+          </p>
+          {{{displayImgs}}}
+        </div>
+      </div>
+
+  </div>
+
+
+
+</template>

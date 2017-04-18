@@ -1,0 +1,53 @@
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="icon" sizes="16x16 32x32" href="/favicon.ico?v=2"/>
+
+  <title> LokLak!</title>
+<!-- CSS  -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+</head>
+<body>
+    <p style="position: absolute; z-index: -1000"> Install MeteorJS and run /bin/startMeteorApp.sh</p>
+</body>
+<template name="main">
+  <header>
+    <!-- Navbar textbox -->
+    <nav class="top-nav">
+      <div class="container">
+        <div class="row">
+          <div class="col s12 m10 l9 offset-m1 offset-l3">
+            <div class="nav-wrapper"><a class="page-title">{{query}}</a></div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+  </header>
+
+  {{> sidebar}}
+
+  <!-- Fixed Button -->
+  <div class="fixed-action-btn" style="bottom: 45px; right: 24px;">
+		<a href="{{pathFor 'fullscreen'}}" class="btn-floating btn-large red waves-effect waves-light">
+      <i class="material-icons">view_quilt</i>
+		</a>
+	</div>
+
+  <body>
+{{#if gettingTweets}}
+{{> loadingTemplate}}
+{{/if}}
+          {{> yield}}
+
+
+  </body>
+<footer>
+    <div id="footer">
+
+    </div>
+</footer>
+</template>

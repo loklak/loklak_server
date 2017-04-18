@@ -1,0 +1,53 @@
+<template name="fullscreen">
+
+    <div class="fixed-action-btn" style="bottom: 45px; right: 24px;">
+        <a href="{{pathFor 'tweetsList'}}" class="btn-floating btn-large red waves-effect waves-light">
+            <i class="material-icons">view_day</i>
+        </a>
+    </div>
+    <div class="modal-toggle" >
+        <a class="btn-floating btn-large red waves-effect waves-light modal-trigger" href="#modal1">
+            <i class="material-icons">video_label</i>
+        </a>
+    </div>
+
+<div class="row content">
+
+{{> modal}}
+
+    <div class="grid">
+        {{#each gridList}}
+        {{>gridItem}}
+        {{/each}}
+    </div>
+</div>
+
+
+
+</template>
+
+<template name="gridItem">
+    <div class="grid-item">
+        {{#if showTweet}}
+        <div class="row wallTweet" >
+            <div class="col s12 m7">
+                <div class="card">
+                    <div class="card-content">
+                        <p class="black-text">
+                            {{{tweetLink}}}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {{/if}}
+
+        <a  class="wallPic" href="https://www.twitter.com/{{username}}">
+            <img src="{{userPicture}}" class="circle modal-img"
+            onError="this.onerror=null;this.src='https://abs.twimg.com/sticky/default_profile_images/default_profile_6_normal.png';"/>
+        </a>
+
+    </div>
+
+
+</template>
