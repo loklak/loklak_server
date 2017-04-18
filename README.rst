@@ -230,7 +230,7 @@ installation readme <https://dev.loklak.org/server/installation/installation_clo
 How do I setup loklak on Eclipse?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To install loklak on Eclipes, please refer to the `loklak Eclipse
+To install loklak on Eclipse, please refer to the `loklak Eclipse
 readme <https://dev.loklak.org/server/development/eclipseSetup.html>`__.
 
 How do I run loklak?

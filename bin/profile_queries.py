@@ -11,7 +11,7 @@ except ImportError:
 
 API_BASE_URL = 'http://127.0.0.1:9000/api/'
 
-# If user in bin directory set correct path to quires
+# If user in bin directory set correct path to queries
 if os.getcwd().endswith('bin'):
     queries_folder = os.getcwd().rstrip('bin') + 'test/queries'
 else:
