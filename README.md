@@ -77,7 +77,7 @@ To install loklak with cloud9 please refer to the [loklak cloud9 installation re
 
 ### How do I setup loklak on Eclipse?
 
-To install loklak on Eclipes, please refer to the [loklak Eclipse readme](/docs/development/eclipseSetup.md).
+To install loklak on Eclipse, please refer to the [loklak Eclipse readme](/docs/development/eclipseSetup.md).
 
 ### How do I run loklak?
 
