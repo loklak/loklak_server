@@ -63,7 +63,7 @@ public class MeetupsCrawlerService extends AbstractAPIHandler implements APIHand
 	}
 
 	public static SusiThought crawlMeetups(String url) {
-		
+
 		Document meetupHTML = null;
 		String meetupGroupName = null;
 		String meetupType = null;
@@ -99,7 +99,8 @@ public class MeetupsCrawlerService extends AbstractAPIHandler implements APIHand
 		meetupType = meetupHTML.getElementsByAttributeValue("property", "og:type").attr("content");
 		result.put("meetup_type", meetupType);
 
-		groupDescription = meetupHTML.getElementById("groupDesc").text();
+		groupDescription = (meetupHTML.getElementById("bubble-groupDescription-wrap") != null
+				? meetupHTML.getElementById("bubble-groupDescription-wrap").text() : null);
 		result.put("group_description", groupDescription);
 
 		groupLocality = meetupHTML.getElementsByAttributeValue("property", "og:locality").attr("content");
@@ -117,18 +118,22 @@ public class MeetupsCrawlerService extends AbstractAPIHandler implements APIHand
 		imageLink = meetupHTML.getElementsByAttributeValue("property", "og:image").attr("content");
 		result.put("group_imageLink", imageLink);
 
-		topicList = meetupHTML.getElementById("topic-box-2012").getElementsByTag("a");
-
-		int p = 0;
-		for (Element topicListStringsIterator : topicList) {
-			topicListArray[p] = topicListStringsIterator.text().toString();
-			p++;
-		}
-		numberOfTopics = p;
-
 		JSONArray groupTopics = new JSONArray();
-		for (int l = 0; l < numberOfTopics; l++) {
-			groupTopics.put(l, topicListArray[l]);
+		
+		if (meetupHTML.getElementById("topic-box-2012").getElementsByTag("a") == null) {
+			groupTopics = null;
+		} else {
+			topicList = meetupHTML.getElementById("topic-box-2012").getElementsByTag("a");
+			int p = 0;
+			for (Element topicListStringsIterator : topicList) {
+				topicListArray[p] = topicListStringsIterator.text().toString();
+				p++;
+			}
+			numberOfTopics = p;
+
+			for (int l = 0; l < numberOfTopics; l++) {
+				groupTopics.put(l, topicListArray[l]);
+			}
 		}
 		result.put("group_topics", groupTopics);
 
