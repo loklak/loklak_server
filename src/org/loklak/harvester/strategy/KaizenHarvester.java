@@ -17,6 +17,9 @@ import twitter4j.Twitter;
 import twitter4j.TwitterException;
 
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
@@ -39,6 +42,7 @@ public class KaizenHarvester implements Harvester {
     private final int PLACE_RADIUS;
     private final int QUERIES_LIMIT;
     private final boolean VERBOSE;
+    private final DateFormat dateToString = new SimpleDateFormat("yyyy-MM-dd");
 
     private Random random;
 
@@ -79,11 +83,22 @@ public class KaizenHarvester implements Harvester {
     }
 
     private void grabInformation(Timeline timeline) {
+        String query = timeline.getQuery();
         if (VERBOSE)
             DAO.log("Kaizen is going to grab more information" +
-                    (timeline.getQuery() != null ? " from results of '" + timeline.getQuery() + "'" : ""));
+                    (query != null ? " from results of '" + query + "'" : ""));
+
+        Date oldestTweetDate = null;
 
         for (MessageEntry message : timeline) {
+
+            // Calculate date for oldest Tweet
+            if (oldestTweetDate == null) {
+                oldestTweetDate = message.getCreatedAt();
+            } else if (oldestTweetDate.compareTo(message.getCreatedAt()) > 0) {
+                oldestTweetDate = message.getCreatedAt();
+            }
+
             for (String user : message.getMentions())
                 addQuery("from:" + user);
 
@@ -93,6 +108,17 @@ public class KaizenHarvester implements Harvester {
             String place = message.getPlaceName();
             if (!place.isEmpty())
                addQuery("near:\"" + message.getPlaceName() + "\" within:" + PLACE_RADIUS + "mi");
+        }
+
+        if (query != null && oldestTweetDate != null) {
+            String oldestTweetDateStr = dateToString.format(oldestTweetDate);
+            int startIndex = query.indexOf("until:");
+            if (startIndex == -1) {
+                addQuery(query + " until:" + oldestTweetDateStr);
+            } else {
+                int endIndex = startIndex + 16;  // until:yyyy-MM-dd = 16
+                addQuery(query.replace(query.substring(startIndex + 6, endIndex), oldestTweetDateStr));
+            }
         }
     }
 
