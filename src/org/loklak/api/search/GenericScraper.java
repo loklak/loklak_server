@@ -32,6 +32,8 @@ import org.loklak.server.Query;
 import java.net.URL;
 import java.net.MalformedURLException;
 
+import de.l3s.boilerpipe.extractors.ExtractorBase;
+import de.l3s.boilerpipe.extractors.CommonExtractors;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
@@ -57,12 +59,12 @@ public class GenericScraper extends HttpServlet {
      * @param JSONObject genericScraperData
      * @return genericScraperData
      */
-	public JSONObject articleAPI (String url, JSONObject genericScraperData) throws MalformedURLException{
+	public JSONObject bpipeExtract (String url, JSONObject genericScraperData, ExtractorBase extractor) throws MalformedURLException{
         URL qurl = new URL(url);
         String data = "";
 
         try {
-            data = null;// ArticleExtractor.INSTANCE.getText(qurl);
+            data = extractor.getText(qurl);
             genericScraperData.put("query", qurl);
             genericScraperData.put("data", data);
             genericScraperData.put("NLP", "true");
@@ -97,22 +99,47 @@ public class GenericScraper extends HttpServlet {
         Query post = RemoteAccess.evaluate(request);
 
         String url = post.get("url", "");
-        String type = post.get("type", "");
+        String type = post.get("type", "default");
 
         URL qurl = new URL(url);
 
         // This can also be done in one line:
         JSONObject genericScraperData = new JSONObject(true);
-        if ("article".equals(type)) {
-            genericScraperData = articleAPI(url, genericScraperData);
-            genericScraperData.put("type", type);
-            printJSON(response, genericScraperData);
-        } else {
-        	genericScraperData.put("error", "Please mentione type of scraper: <article>");
-        	printJSON(response, genericScraperData);
+        switch(type) {
+            // Returns articles text in the webpage
+            case "article":
+                genericScraperData = bpipeExtract(url, genericScraperData, CommonExtractors.ARTICLE_EXTRACTOR);
+                printJSON(response, genericScraperData);
+                break;
+            // Returns default main text in the webpage
+            case "default":
+                genericScraperData = bpipeExtract(url, genericScraperData, CommonExtractors.DEFAULT_EXTRACTOR);
+                printJSON(response, genericScraperData);
+                break;
+            // Returns big articles text in the webpage
+            case "main":
+                genericScraperData = bpipeExtract(url, genericScraperData, CommonExtractors.LARGEST_CONTENT_EXTRACTOR);
+                printJSON(response, genericScraperData);
+                break;            
+            // Returns all text in the webpage
+            case "all":
+                genericScraperData = bpipeExtract(url, genericScraperData, CommonExtractors.KEEP_EVERYTHING_EXTRACTOR);
+                printJSON(response, genericScraperData);
+                break;            
+            // Returns text in the webpage, based on trained data(see boilerpipe docs)
+            case "canola":
+                genericScraperData = bpipeExtract(url, genericScraperData, CommonExtractors.CANOLA_EXTRACTOR);
+                printJSON(response, genericScraperData);
+                break;            
+            // Returns error message for wrong type
+            default:
+                type = "error";
+                genericScraperData.put("error", "Please mention type of scraper: <type> ('article', 'default', 'main', 'all', 'canola')");
+            	printJSON(response, genericScraperData);
+                break;
         }
+        genericScraperData.put("type", type);
+        
         // Also try other extractors!
-//        System.out.println(DefaultExtractor.INSTANCE.getText(url));
-//       System.out.println(CommonExtractors.CANOLA_EXTRACTOR.getText(url));
     }
 }

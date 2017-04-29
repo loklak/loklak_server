@@ -125,6 +125,7 @@ dependencies {
   compile group: 'org.twitter4j', name: 'twitter4j-core', version: '4.0.2'
   compile group: 'org.twitter4j', name: 'twitter4j-stream', version: '4.0.2'
   compile group: 'xerces', name: 'xerces', version: '2.4.0'
+  compile fileTree(dir: 'libs', include: ['*.jar'])
 }
 
 tasks.withType(Javadoc) {
