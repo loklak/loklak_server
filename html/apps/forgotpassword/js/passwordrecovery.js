@@ -28,7 +28,7 @@ $(document).ready(function()
         }
     }
 
-	    $("#submit").click(function(){
+    $("#submit").click(function(){
         checkEmpty();
         if(emailerr){
             $("#status-box").text("Please fill email");
