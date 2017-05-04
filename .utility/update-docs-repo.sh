@@ -1,28 +1,44 @@
-#!/bin/sh
+#!/bin/bash
 
-# dev.loklak.org Update trigger script
+echo -e "Creating javadoc...\n"
 
-# This script is used to trigger the update process
-# of dev.loklak.org
+./gradlew javadoc
 
-WORK="$HOME/central-docs"
-REPO="loklak/dev.loklak.org"
-PRIVATE_KEY="$(pwd)/.utility/loklakserver.2"
+echo -e "Publishing javadoc...\n"
 
-echo "Preparing ssh agent ..."
-eval $(ssh-agent -s)
-ssh-add $PRIVATE_KEY
+cp -R html/javadoc $HOME/javadoc-latest
 
-echo "Preparing git ..."
+echo -e "Installing requirements...\n"
+
+cd docs
+pip3 install -r requirements.txt
+
+echo -e "Generating static HTML pages for documentation...\n"
+
+make html
+
+echo -e "Publishing documentation...\n"
+
+cp -Rf _build/html $HOME/docs
+
+cd $HOME
 git config --global user.email "travis@travis-ci.org"
 git config --global user.name "travis-ci"
+git clone --quiet --branch=gh-pages git@github.com:loklak/dev.loklak.org.git gh-pages
 
-echo "Cloning repository ..."
-git clone --quiet --branch=gh-pages "git@github.com:$REPO.git" "$WORK"
-cd "$WORK"
+cd gh-pages
+git rm -rf ./*
+cp -Rf $HOME/docs/* .
+cp -Rf $HOME/javadoc-latest ./javadoc
+touch .nojekyll
+git add -f .
+git commit -m "Latest javadoc on successful travis build $TRAVIS_BUILD_NUMBER auto-pushed to dev.loklak.org"
+git push -fq origin gh-pages > /dev/null 2>&1
 
-echo "Running pull script ..."
-./.ci/pull.sh config.csv
-
-echo "Pushing changes ..."
-git push -f origin gh-pages
+if [ $? -eq 0 ]; then
+    echo -e "Published Javadoc to dev.loklak.org.\n"
+    exit 0
+else
+    echo -e "Publishing failed. Maybe the access-token was invalid or had insufficient permissions.\n"
+    exit 1
+fi
