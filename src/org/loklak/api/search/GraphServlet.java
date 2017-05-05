@@ -6,12 +6,12 @@
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
- *  
+ *
  *  This library is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
@@ -37,21 +37,21 @@ import org.loklak.server.Query;
 import twitter4j.TwitterException;
 
 public class GraphServlet extends HttpServlet {
-    
+
     private static final long serialVersionUID = 8578478303032749879L;
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         doGet(request, response);
     }
-    
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         Query post = RemoteAccess.evaluate(request);
-     
+
         // manage DoS
         if (post.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;}
-        
+
         // parameters
         String callback = post.get("callback", "");
         boolean jsonp = callback != null && callback.length() > 0;
@@ -61,19 +61,15 @@ public class GraphServlet extends HttpServlet {
         String following = screen_names.length == 1 ? post.get("following", "0") : "0";
         int maxFollowers = Integer.parseInt(followers);
         int maxFollowing = Integer.parseInt(following);
-        
-        JSONArray twitterUserEntries = new JSONArray();
-        for (String screen_name: screen_names) {
-            try {
-                JSONObject twitterUserEntry = TwitterAPI.getUser(screen_name, false);
-                if (twitterUserEntry != null) twitterUserEntries.put(twitterUserEntry);
-            } catch (TwitterException e) {}
-        }
+
+        JSONArray twitterUserEntries = getTwitterUsersByScreenName(screen_names);
         JSONObject topology = null;
-        try {topology = TwitterAPI.getNetwork(screen_names[0], maxFollowers, maxFollowing);} catch (TwitterException e) {}
-        
+        try {
+            topology = TwitterAPI.getNetwork(screen_names[0], maxFollowers, maxFollowing);
+        } catch (TwitterException e) {}
+
         post.setResponse(response, "application/javascript");
-        
+
         // generate json
         JSONObject m = new JSONObject(true);
         m.put("edges", post.getClientHost());
@@ -81,7 +77,7 @@ public class GraphServlet extends HttpServlet {
         if (twitterUserEntries.length() == 1) m.put("user", twitterUserEntries.iterator().next());
         if (twitterUserEntries.length() > 1) m.put("users", twitterUserEntries);
         if (topology != null) m.put("topology", topology);
-        
+
         // write json
         FileHandler.setCaching(response, 10);
         response.setCharacterEncoding("UTF-8");
@@ -91,5 +87,17 @@ public class GraphServlet extends HttpServlet {
         if (jsonp) sos.println(");");
         sos.println();
         post.finalize();
+    }
+
+    public static JSONArray getTwitterUsersByScreenName(String []screenNames) throws IOException {
+        JSONArray twitterUserEntries = new JSONArray();
+        for (String screenName: screenNames) {
+            try {
+                JSONObject twitterUserEntry = TwitterAPI.getUser(screenName, false);
+                if (twitterUserEntry != null)
+                    twitterUserEntries.put(twitterUserEntry);
+            } catch (TwitterException e) {}
+        }
+        return twitterUserEntries;
     }
 }

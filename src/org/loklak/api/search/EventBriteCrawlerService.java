@@ -6,12 +6,12 @@
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
- *  
+ *
  *  This library is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
@@ -122,16 +122,16 @@ public class EventBriteCrawlerService extends AbstractAPIHandler implements APIH
 		eventLocation = htmlPage.select("p.listing-map-card-street-address.text-default").text();
 
 		temp = htmlPage.getElementsByAttributeValue("property", "event:start_time").attr("content");
-		if(temp.length() >= 20){
+		if (temp.length() >= 20) {
 			startingTime = htmlPage.getElementsByAttributeValue("property", "event:start_time").attr("content").substring(0,19);
-		}else{
+		} else {
 			startingTime = htmlPage.getElementsByAttributeValue("property", "event:start_time").attr("content");
 		}
 
 		temp = htmlPage.getElementsByAttributeValue("property", "event:end_time").attr("content");
-		if(temp.length() >= 20){
+		if (temp.length() >= 20) {
 			endingTime = htmlPage.getElementsByAttributeValue("property", "event:end_time").attr("content").substring(0,19);
-		}else{
+		} else {
 			endingTime = htmlPage.getElementsByAttributeValue("property", "event:end_time").attr("content");
 		}
 
@@ -158,13 +158,13 @@ public class EventBriteCrawlerService extends AbstractAPIHandler implements APIH
 		creator.put("id", "1"); // By Default
 
 		temp = htmlPage.getElementsByAttributeValue("property", "event:location:latitude").attr("content");
-		if(temp.length() > 0){
+		if (temp.length() > 0) {
 			latitude = Float
 				.valueOf(htmlPage.getElementsByAttributeValue("property", "event:location:latitude").attr("content"));
 		}
 
 		temp = htmlPage.getElementsByAttributeValue("property", "event:location:longitude").attr("content");
-		if(temp.length() > 0){
+		if (temp.length() > 0) {
 			longitude = Float
 				.valueOf(htmlPage.getElementsByAttributeValue("property", "event:location:longitude").attr("content"));
 		}
@@ -186,9 +186,9 @@ public class EventBriteCrawlerService extends AbstractAPIHandler implements APIH
 		String organizerTwitterAccountLink = null;
 
 		temp = htmlPage.select("a.js-d-scroll-to.listing-organizer-name.text-default").text();
-		if(temp.length() >= 5){
+		if (temp.length() >= 5) {
 			organizerName = htmlPage.select("a.js-d-scroll-to.listing-organizer-name.text-default").text().substring(4);
-		}else{
+		} else {
 			organizerName = "";
 		}
 		organizerLink = url + "#listing-organizer";
@@ -205,19 +205,19 @@ public class EventBriteCrawlerService extends AbstractAPIHandler implements APIH
 			e.printStackTrace();
 		}
 
-		if(orgProfilePage != null){
+		if (orgProfilePage != null) {
 
 			t = orgProfilePage.getElementsByAttributeValue("class", "l-pad-vert-1 organizer-website");
-			if(t != null){
+			if (t != null) {
 				organizerWebsite = orgProfilePage.getElementsByAttributeValue("class", "l-pad-vert-1 organizer-website").text();
-			}else{
+			} else {
 				organizerWebsite = "";
 			}
 
 			t = orgProfilePage.select("div.js-long-text.organizer-description");
-			if(t != null){
+			if (t != null) {
 				organizerDescription = orgProfilePage.select("div.js-long-text.organizer-description").text();
-			}else{
+			} else {
 				organizerDescription = "";
 			}
 
@@ -225,22 +225,20 @@ public class EventBriteCrawlerService extends AbstractAPIHandler implements APIH
 			organizerTwitterFeedLink = organizerProfileLink + "#twitter_feed";
 
 			t = orgProfilePage.getElementsByAttributeValue("class", "fb-page");
-			if(t != null){
+			if (t != null) {
 				organizerFacebookAccountLink = orgProfilePage.getElementsByAttributeValue("class", "fb-page").attr("data-href");
-			}else{
+			} else {
 				organizerFacebookAccountLink = "";
 			}
 
 			t = orgProfilePage.getElementsByAttributeValue("class", "twitter-timeline");
-			if(t != null){
+			if (t != null) {
 				organizerTwitterAccountLink = orgProfilePage.getElementsByAttributeValue("class", "twitter-timeline").attr("href");
-			}else{
+			} else {
 				organizerTwitterAccountLink = "";
 			}
 
 		}
-
-		
 
 		JSONArray socialLinks = new JSONArray();
 
@@ -383,7 +381,7 @@ public class EventBriteCrawlerService extends AbstractAPIHandler implements APIH
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
-        
+
 		SusiThought json = new SusiThought();
 		json.setData(jsonArray);
 		return json;
