@@ -1,0 +1,187 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Massive decrease of Docker Image &#8212; Loklak Server development documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     'development',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="top" title="Loklak Server development documentation" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="massive-decrease-of-docker-image">
+<span id="massive-decrease-of-docker-image"></span><h1>Massive decrease of Docker Image<a class="headerlink" href="#massive-decrease-of-docker-image" title="Permalink to this headline">¶</a></h1>
+<p>Before:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">REPOSITORY</span>          <span class="n">TAG</span>                 <span class="n">IMAGE</span> <span class="n">ID</span>            <span class="n">CREATED</span>                  <span class="n">SIZE</span>
+<span class="n">loklak_server</span>       <span class="n">latest</span>              <span class="mi">6775047619</span><span class="n">d8</span>        <span class="n">Less</span> <span class="n">than</span> <span class="n">a</span> <span class="n">second</span> <span class="n">ago</span>   <span class="mf">751.6</span> <span class="n">MB</span>
+<span class="n">ubuntu</span>              <span class="n">latest</span>              <span class="mi">104</span><span class="n">bec311bcd</span>        <span class="mi">9</span> <span class="n">days</span> <span class="n">ago</span>               <span class="mi">129</span> <span class="n">MB</span>
+</pre></div>
+</div>
+<p><a class="reference external" href="https://travis-ci.org/yukiisbored/loklak_server/builds/186665492">Travis Build</a></p>
+<p>After:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">REPOSITORY</span>          <span class="n">TAG</span>                 <span class="n">IMAGE</span> <span class="n">ID</span>            <span class="n">CREATED</span>             <span class="n">SIZE</span>
+<span class="n">loklak_server</span>       <span class="n">latest</span>              <span class="mi">1559</span><span class="n">b163a3dc</span>        <span class="mi">1</span> <span class="n">seconds</span> <span class="n">ago</span>       <span class="mf">173.5</span> <span class="n">MB</span>
+<span class="n">alpine</span>              <span class="n">latest</span>              <span class="n">baa5d63471ea</span>        <span class="mi">9</span> <span class="n">weeks</span> <span class="n">ago</span>         <span class="mf">4.803</span> <span class="n">MB</span>
+</pre></div>
+</div>
+<p><a class="reference external" href="https://travis-ci.org/yukiisbored/loklak_server/builds/186675655">Travis Build</a></p>
+<div class="section" id="how-i-did-it">
+<span id="how-i-did-it"></span><h2>How I did it?<a class="headerlink" href="#how-i-did-it" title="Permalink to this headline">¶</a></h2>
+<p>This is pretty easy, because it uses Java without having weird native libraries</p>
+<p>So to minify it to the extreme, This is how I come up with this:</p>
+<ol class="simple">
+<li>Use a smaller distro/distro that has smaller packages/a distro that focuses
+on being minimal</li>
+<li>DO NOT USE X</li>
+<li>Remove development tools because we don&#8217;t need those</li>
+<li>Do not create backup files</li>
+<li>Make it into a single <code class="docutils literal"><span class="pre">RUN</span></code> command for customizability (so we can remove
+development tools at the end)</li>
+<li>Use packages that doesn&#8217;t require X (X is heavy and we don&#8217;t even require X,
+We can&#8217;t even use X without doing fancy stuff like an X via SSH)</li>
+<li>Do not cache anything, good thing Alpine doesn&#8217;t cache by default</li>
+<li>Copy only the required files</li>
+</ol>
+</div>
+<div class="section" id="what-didn-t-work">
+<span id="what-didn-t-work"></span><h2>What didn&#8217;t work?<a class="headerlink" href="#what-didn-t-work" title="Permalink to this headline">¶</a></h2>
+<ol class="simple">
+<li>GNU Coreutils specific commands/arguments</li>
+<li>Not having <code class="docutils literal"><span class="pre">bash</span></code></li>
+</ol>
+</div>
+<div class="section" id="how-i-made-it-work">
+<span id="how-i-made-it-work"></span><h2>How I made it work?<a class="headerlink" href="#how-i-made-it-work" title="Permalink to this headline">¶</a></h2>
+<ol class="simple">
+<li>Replace <code class="docutils literal"><span class="pre">ps</span></code> statements into simple <code class="docutils literal"><span class="pre">kill</span> <span class="pre">-0</span></code> instructions since every
+<code class="docutils literal"><span class="pre">POSIX</span></code>-compliant has this feature</li>
+<li>Install <code class="docutils literal"><span class="pre">bash</span></code></li>
+</ol>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static//images/cow.svg" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Massive decrease of Docker Image</a><ul>
+<li><a class="reference internal" href="#how-i-did-it">How I did it?</a></li>
+<li><a class="reference internal" href="#what-didn-t-work">What didn&#8217;t work?</a></li>
+<li><a class="reference internal" href="#how-i-made-it-work">How I made it work?</a></li>
+</ul>
+</li>
+</ul>
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Home</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Welcome</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Installation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation/download.html">Download and Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation/installation_linux.html">Installation on Linux</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation/installation_mac.html">Installation on macOS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation/installation_windows.html">Installation on Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation/installation_docker.html">Installation with Docker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation/installation_cloud9.html">Installation on Cloud9</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation/installation_heroku.html">Installation on Heroku</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation/tutorials.html">Video Tutorials</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="development/api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="development/eclipseSetup.html">Setup Eclipse</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://dev.loklak.org/javadoc">Javadoc</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Miscellaneous</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="misc/architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="misc/parsers.html">Parsers</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Loklak.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
