@@ -142,7 +142,8 @@ public class EventBriteCrawlerService extends AbstractAPIHandler implements APIH
 		tagSpan = tagSection.select("span");
 		topic = "";
 
-		int iterator = 0, k = 0;
+		int iterator = 0;
+		int k = 0;
 		for (Element e : tagSpan) {
 			if (iterator % 2 == 0) {
 				tags[k][1] = "www.eventbrite.com"
