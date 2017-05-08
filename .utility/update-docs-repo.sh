@@ -1,25 +1,6 @@
 #!/bin/bash
 
-echo -e "Creating javadoc...\n"
-
-./gradlew javadoc
-
-echo -e "Publishing javadoc...\n"
-
-cp -R html/javadoc $HOME/javadoc-latest
-
-echo -e "Installing requirements...\n"
-
-cd docs
-pip3 install -r requirements.txt
-
-echo -e "Generating static HTML pages for documentation...\n"
-
-make html
-
-echo -e "Publishing documentation...\n"
-
-cp -Rf _build/html $HOME/docs
+cp README.rst $HOME/.
 
 cd $HOME
 git config --global user.email "travis@travis-ci.org"
@@ -27,16 +8,15 @@ git config --global user.name "travis-ci"
 git clone --quiet --branch=gh-pages git@github.com:loklak/dev.loklak.org.git gh-pages
 
 cd gh-pages
-git rm -rf ./*
-cp -Rf $HOME/docs/* .
-cp -Rf $HOME/javadoc-latest ./javadoc
-touch .nojekyll
+mkdir -p raw
+cd raw
+cp -f $HOME/README.rst ./server.rst
 git add -f .
-git commit -m "Latest javadoc on successful travis build $TRAVIS_BUILD_NUMBER auto-pushed to dev.loklak.org"
+git commit -m "Latest server documentation file on successful travis build $TRAVIS_BUILD_NUMBER auto-pushed to dev.loklak.org"
 git push -fq origin gh-pages > /dev/null 2>&1
 
 if [ $? -eq 0 ]; then
-    echo -e "Published Javadoc to dev.loklak.org.\n"
+    echo -e "Published Raw file to dev.loklak.org.\n"
     exit 0
 else
     echo -e "Publishing failed. Maybe the access-token was invalid or had insufficient permissions.\n"
