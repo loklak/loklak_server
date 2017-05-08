@@ -170,7 +170,7 @@ If you are here for the first time, you can look at [`first-timers-only` issues]
 They are either
 
 - easy to do and introduce you to github and git
-- or descripe clearly how to solve the problem, so you have smoother start.
+- or describe clearly how to solve the problem, so you have smoother start.
 
 If you want to solve an issue, please comment in it that you would like to solve it.
 In any case, if you run into problems, please report them in the issue.
