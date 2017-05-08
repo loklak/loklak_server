@@ -8,8 +8,14 @@ loklak
 |Twitter|
 |Twitter Follow|
 
+Development:
 |Build Status|
-|Build Status|
+|Docker Build Status|
+Master:
+|Build Status Master|
+
+Dependencies:
+|Gemnasium|
 
 loklak is a server application which is able to collect messages from
 various sources, including twitter. The server contains a search index
@@ -349,6 +355,13 @@ here <https://github.com/loklak/loklak_server/issues>`__.
    :target: https://twitter.com/lklknt
 .. |Build Status| image:: https://travis-ci.org/loklak/loklak_server.svg?branch=development
    :target: https://travis-ci.org/loklak/loklak_server
+.. |Docker Build Status| image:: https://img.shields.io/docker/build/jrottenberg/ffmpeg.svg?
+   :target: https://hub.docker.com/r/mariobehling/loklak/builds/
+.. |Build Status Master| image:: https://travis-ci.org/loklak/loklak_server.svg?branch=master
+   :target: https://travis-ci.org/loklak/loklak_server
+.. |Gemnasium| image:: https://img.shields.io/gemnasium/mathiasbynens/he.svg?
+   :target: https://gemnasium.com/loklak
+
 .. |Deploy| image:: https://www.herokucdn.com/deploy/button.svg
    :target: https://heroku.com/deploy
 .. |Deploy on Scalingo| image:: https://cdn.scalingo.com/deploy/button.svg

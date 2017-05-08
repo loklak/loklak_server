@@ -6,12 +6,12 @@
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
- *  
+ *
  *  This library is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
@@ -63,7 +63,7 @@ public class MeetupsCrawlerService extends AbstractAPIHandler implements APIHand
 	}
 
 	public static SusiThought crawlMeetups(String url) {
-		
+
 		Document meetupHTML = null;
 		String meetupGroupName = null;
 		String meetupType = null;
@@ -78,7 +78,8 @@ public class MeetupsCrawlerService extends AbstractAPIHandler implements APIHand
 		Integer numberOfTopics = 0;
 		Elements recentMeetupsSection = null;
 		Integer numberOfRecentMeetupsShown = 0;
-		Integer i = 0, j = 0;
+		Integer i = 0;
+		Integer j = 0;
 		String recentMeetupsResult[][] = new String[100][3];
 		// recentMeetupsResult[i][0] == date && time
 		// recentMeetupsResult[i][1] == Attendance && Review

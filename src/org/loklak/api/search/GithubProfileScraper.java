@@ -6,12 +6,12 @@
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
- *  
+ *
  *  This library is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
@@ -73,32 +73,32 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
 
 		Document html = null;
 		String user_id;
-    
+
 		JSONObject githubProfile = new JSONObject();
 
 		try {
 			html = Jsoup.connect("https://github.com/" + profile).get();
 		} catch (IOException e) {
-			
+
 			URI uri = null;
 			try {
 				uri = new URI("https://api.github.com/search/users?q=" + profile);
 			} catch (URISyntaxException e1) {
 				e1.printStackTrace();
 			}
-			
+
 			JSONTokener tokener = null;
 			try {
 				tokener = new JSONTokener(uri.toURL().openStream());
 			} catch (Exception e1) {
 				e1.printStackTrace();
 			}
-			
+
 			JSONObject obj = new JSONObject(tokener);
-			
+
 			JSONArray arr = new JSONArray();
 			arr.put(obj);
-			
+
 			SusiThought json = new SusiThought();
 			json.setData(arr);
 			return json;
@@ -110,16 +110,16 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
 		Matcher m = avatar_url_to_user_id.matcher(avatarUrl);
 		m.find();
 		user_id = m.group(1);
-		githubProfile.put("user_id", user_id);		
+		githubProfile.put("user_id", user_id);
 
 		githubProfile.put("avatar_url", "https://avatars0.githubusercontent.com/u/" + user_id);
-		
+
 		String fullName = html.getElementsByAttributeValueContaining("class", "vcard-fullname").text();
-		githubProfile.put("full_name", fullName);		
-		
+		githubProfile.put("full_name", fullName);
+
 		String userName = html.getElementsByAttributeValueContaining("class", "vcard-username").text();
 		githubProfile.put("user_name", userName);
-		
+
 		String bio = html.getElementsByAttributeValueContaining("class", "user-profile-bio").text();
 		githubProfile.put("bio", bio);
 
@@ -150,7 +150,7 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
 		}
 		/* If Individual User */
 		if (html.getElementsByAttributeValue("class", "vcard-stat").size() != 0) {
-			
+
 			String followersUrl = html.getElementsByAttributeValueContaining("class", "vcard-stat").get(0).attr("href");
 			githubProfile.put("followers_url", "https://github.com" + followersUrl);
 
@@ -169,22 +169,22 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
 			String following = html.getElementsByAttributeValueContaining("class", "vcard-stat").get(2).tagName("strong").text();
 			githubProfile.put("following", following);
 		}
-		
+
 		String gistsUrl ="https://api.github.com/users/" + profile + "/gists";
 		githubProfile.put("gists_url", gistsUrl);
-		
+
 		String subscriptionsUrl ="https://api.github.com/users/" + profile + "/subscriptions";
 		githubProfile.put("subscriptions_url", subscriptionsUrl);
-		
+
 		String reposUrl ="https://api.github.com/users/" + profile + "/repos";
 		githubProfile.put("repos_url", reposUrl);
-		
+
 		String eventsUrl ="https://api.github.com/users/" + profile + "/events";
 		githubProfile.put("events_url", eventsUrl);
-		
+
 		String receivedEventsUrl ="https://api.github.com/users/" + profile + "/received_events";
 		githubProfile.put("received_events_url", receivedEventsUrl);
-		
+
 		JSONArray organizations = new JSONArray();
 		Elements orgs = html.getElementsByAttributeValue("itemprop", "follows");
 		for (Element e : orgs) {
