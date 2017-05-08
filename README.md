@@ -6,8 +6,9 @@
 [![Twitter](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Wow%20Check%20Loklak%20on%20@gitHub%20@loklak_app%20@lklknt:%20https://github.com/loklak/loklak_server%20&url=%5Bobject%20Object%5D)
 [![Twitter Follow](https://img.shields.io/twitter/follow/lklknt.svg?style=social&label=Follow&maxAge=2592000?style=flat-square)](https://twitter.com/lklknt)
 
-Development: [![Build Status](https://travis-ci.org/loklak/loklak_server.svg?branch=development)](https://travis-ci.org/loklak/loklak_server) [![](https://dockerbuildbadges.quelltext.eu/status.svg?repository=loklak&organization=mariobehling)](https://hub.docker.com/r/mariobehling/loklak/builds/)
+Development: [![Build Status](https://travis-ci.org/loklak/loklak_server.svg?branch=development)](https://travis-ci.org/loklak/loklak_server) [![Docker Build Status](https://img.shields.io/docker/build/jrottenberg/ffmpeg.svg)](https://hub.docker.com/r/mariobehling/loklak/builds/)
 Master: [![Build Status](https://travis-ci.org/loklak/loklak_server.svg?branch=master)](https://travis-ci.org/loklak/loklak_server)
+Dependencies: [![Gemnasium](https://img.shields.io/gemnasium/mathiasbynens/he.svg)](https://gemnasium.com/loklak)
 
 loklak is a server application which is able to collect messages from various sources, including twitter. The server contains a search index and a peer-to-peer index sharing interface. All messages are stored in an elasticsearch index. An automatic deployment from the development branch at GitHub is available for tests here https://loklak-server-dev.herokuapp.com
 
@@ -77,7 +78,7 @@ To install loklak with cloud9 please refer to the [loklak cloud9 installation re
 
 ### How do I setup loklak on Eclipse?
 
-To install loklak on Eclipes, please refer to the [loklak Eclipse readme](/docs/development/eclipseSetup.md).
+To install loklak on Eclipse, please refer to the [loklak Eclipse readme](/docs/development/eclipseSetup.md).
 
 ### How do I run loklak?
 

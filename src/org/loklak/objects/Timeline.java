@@ -69,6 +69,7 @@ public class Timeline implements Iterable<MessageEntry> {
     private IndexName indexName;
     private int cursor; // used for pagination, set this to the number of tweets returned so far to the user; they should be considered as unchangable
     private long accessTime;
+    private final Map<Integer, MessageEntry> precursorTweetCache = new ConcurrentHashMap<>();
     
     public Timeline(Order order) {
         this.tweets = new ConcurrentSkipListMap<String, MessageEntry>();
@@ -255,7 +256,6 @@ public class Timeline implements Iterable<MessageEntry> {
         }
     }
     
-    private final Map<Integer, MessageEntry> precursorTweetCache = new ConcurrentHashMap<>();
     /**
      * get the precursor tweet, which is the latest tweet that the user has seen.
      * It is the tweet which appears at the end of the list.

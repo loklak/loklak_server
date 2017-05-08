@@ -6,12 +6,12 @@
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
- *  
+ *
  *  This library is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
@@ -74,8 +74,9 @@ import javax.servlet.http.HttpServletResponse;
 * */
 
 public class ConsoleService extends AbstractAPIHandler implements APIHandler {
-   
+
     private static final long serialVersionUID = 8578478303032749879L;
+    public final static SusiSkills dbAccess = new SusiSkills();
 
     @Override
     public BaseUserRole getMinimalBaseUserRole() { return BaseUserRole.ANONYMOUS; }
@@ -88,9 +89,8 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
     public String getAPIPath() {
         return "/api/console.json";
     }
-    
-    public final static SusiSkills dbAccess = new SusiSkills();
-    
+
+
     static {
         dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?\\( ??SELECT +?(.*?) ??\\) +?WHERE +?(.*?) ?+IN ?+\\((.*?)\\) ??;"), matcher -> {
             String subquery = matcher.group(2).trim();
@@ -120,7 +120,7 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
             DAO.SearchLocalMessages messages = new DAO.SearchLocalMessages(matcher.group(2), Timeline.Order.CREATED_AT, 0, 0, 100, group);
             JSONArray array = new JSONArray();
             JSONObject aggregation = messages.getAggregations().getJSONObject(group);
-            
+
             for (String key: aggregation.keySet()) array.put(new JSONObject(true).put(group, key).put("COUNT(*)", aggregation.get(key)));
             SusiThought json = messages.timeline.toSusi(true);
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
@@ -247,17 +247,15 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
             return json;
         });
     }
-    
-    
-    
+
     @Override
     public JSONObject serviceImpl(Query post, HttpServletResponse response, Authorization rights, final JSONObjectWithDefault permissions) throws APIException {
 
         // parameters
         String q = post.get("q", "");
         //int timezoneOffset = post.get("timezoneOffset", 0);
-        
+
         return dbAccess.deduce(q);
     }
-    
+
 }
