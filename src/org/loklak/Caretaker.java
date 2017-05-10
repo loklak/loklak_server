@@ -77,7 +77,9 @@ public class Caretaker extends Thread {
         Thread.currentThread().setName("CARETAKER");
         // send a message to other peers that I am alive
         String[] remote = DAO.getConfig("backend", new String[0], ",");
-        
+        int maxRetries = Integer.valueOf(DAO.getConfig("caretaker.backendpush.retries", "5"));
+        int backOffParameter = Integer.valueOf(DAO.getConfig("caretaker.backendpush.backoff", "3000"));
+
         boolean busy = false;
         // work loop
         beat: while (this.shallRun) try {
@@ -120,9 +122,9 @@ public class Caretaker extends Thread {
                 if (!success) {
                     // we should try again.. but not an infinite number because then
                     // our timeline in RAM would fill up our RAM creating a memory leak
-                    retrylook: for (int retry = 0; retry < 5; retry++) {
+                    retrylook: for (int retry = 0; retry < maxRetries; retry++) {
                         // give back-end time to recover
-                        try {Thread.sleep(3000 + retry * 3000);} catch (InterruptedException e) {}
+                        try {Thread.sleep((retry + 1) * backOffParameter);} catch (InterruptedException e) {}
                         DAO.log("trying to push (again) " + tl.size() + " messages to backend " + Arrays.toString(remote) + ", attempt #" + (retry + 1) + "/5");
                         start = System.currentTimeMillis();
                         if (PushServlet.push(remote, tl)) {
