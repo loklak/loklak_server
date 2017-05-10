@@ -1,0 +1,171 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Kaizen Harvester &#8212; Loklak Server development documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     'development',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="top" title="Loklak Server development documentation" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="kaizen-harvester">
+<span id="kaizen-harvester"></span><h1>Kaizen Harvester<a class="headerlink" href="#kaizen-harvester" title="Permalink to this headline">¶</a></h1>
+<blockquote>
+<div>Kaizen is an alternative approach to do Harvesting, it focuses on query and information collecting to generate more queries. Kaizen also uses Twitter API to get trending topics to increase the chance of getting relhungama hai kyon barpaevant or wanted messages (This feature is optional).</div></blockquote>
+<p>Source: <a class="reference external" href="https://github.com/loklak/loklak_server/pull/960">#960</a>.</p>
+<div class="section" id="generating-new-queries">
+<span id="generating-new-queries"></span><h2>Generating New Queries<a class="headerlink" href="#generating-new-queries" title="Permalink to this headline">¶</a></h2>
+<p>Kaizen harvester generates new queries in 3 ways -</p>
+<ol class="simple">
+<li>Getting trending queries from Twitter.</li>
+<li>Grab suggestions from backend.</li>
+<li>Get more data out of scraped timelines.
+a. Hashtags in timeline.
+b. User mentions in timeline.
+c. Tweets older than oldest in timeline.
+d. Tweets from areas near to tweets in timeline.</li>
+</ol>
+</div>
+<div class="section" id="enabling-kaizen-harvester">
+<span id="enabling-kaizen-harvester"></span><h2>Enabling Kaizen Harvester<a class="headerlink" href="#enabling-kaizen-harvester" title="Permalink to this headline">¶</a></h2>
+<p>To enable Kaizen harvester, set <code class="docutils literal"><span class="pre">harvester.type</span></code> to <code class="docutils literal"><span class="pre">kaizen</span></code> in <code class="docutils literal"><span class="pre">config.properties</span></code>.</p>
+</div>
+<div class="section" id="configuring-kaizen-harvester">
+<span id="configuring-kaizen-harvester"></span><h2>Configuring Kaizen Harvester<a class="headerlink" href="#configuring-kaizen-harvester" title="Permalink to this headline">¶</a></h2>
+<p>The following fields can be set in <code class="docutils literal"><span class="pre">config.properties</span></code> to tweak with Kaizen harvester -</p>
+<p>| Field | Description | Default |
+|&#8212;&#8212;-|&#8212;&#8212;&#8212;&#8212;-|&#8212;&#8212;&#8212;|
+| <code class="docutils literal"><span class="pre">harvester.kaizen.suggestions_count</span></code> | The amount of suggestions to request. | 1000 |
+| <code class="docutils literal"><span class="pre">harvester.kaizen.suggestions_random</span></code> | The amount of randomly selected suggestions to add. | 5 |
+| <code class="docutils literal"><span class="pre">harvester.kaizen.place_radius</span></code> | The radius for location/place queries (in miles) | 5 |
+| <code class="docutils literal"><span class="pre">harvester.kaizen.queries_limit</span></code> | The query limit (setting this to 0 or below means infinite). | 500 |
+| <code class="docutils literal"><span class="pre">harvester.kaizen.verbose</span></code> | Verbosity (gives information to logs, if enabled) | true |</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static//images/cow.svg" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Kaizen Harvester</a><ul>
+<li><a class="reference internal" href="#generating-new-queries">Generating New Queries</a></li>
+<li><a class="reference internal" href="#enabling-kaizen-harvester">Enabling Kaizen Harvester</a></li>
+<li><a class="reference internal" href="#configuring-kaizen-harvester">Configuring Kaizen Harvester</a></li>
+</ul>
+</li>
+</ul>
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Home</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Welcome</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Installation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation/download.html">Download and Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation/installation_linux.html">Installation on Linux</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation/installation_mac.html">Installation on macOS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation/installation_windows.html">Installation on Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation/installation_docker.html">Installation with Docker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation/installation_cloud9.html">Installation on Cloud9</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation/installation_heroku.html">Installation on Heroku</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation/tutorials.html">Video Tutorials</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="development/api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="development/eclipseSetup.html">Setup Eclipse</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://dev.loklak.org/javadoc">Javadoc</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Miscellaneous</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="misc/architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="misc/parsers.html">Parsers</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Loklak.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
