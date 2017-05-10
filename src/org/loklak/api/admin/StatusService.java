@@ -6,12 +6,12 @@
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
- *  
+ *
  *  This library is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
@@ -45,7 +45,7 @@ import org.loklak.tools.UTF8;
 import org.loklak.tools.storage.JSONObjectWithDefault;
 
 public class StatusService extends AbstractAPIHandler implements APIHandler {
-   
+
     private static final long serialVersionUID = 8578478303032749879L;
 
     @Override
@@ -67,7 +67,9 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
     public static JSONObject status(final String protocolhostportstub) throws IOException {
         final String urlstring = protocolhostportstub + "/api/status.json";
         byte[] response = ClientConnection.downloadPeer(urlstring);
-        if (response == null || response.length == 0) return new JSONObject();
+        if (response == null || response.length == 0) {
+            return new JSONObject();
+        }
         JSONObject json = new JSONObject(UTF8.String(response));
         return json;
     }
@@ -78,22 +80,24 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
         if (post.isLocalhostAccess() && OS.canExecUnix && post.get("upgrade", "").equals("true")) {
             Caretaker.upgrade(); // it's a hack to add this here, this may disappear anytime
         }
-        
+
         final String backend = DAO.getConfig("backend", "");
         final boolean backend_push = DAO.getConfig("backend.push.enabled", false);
         JSONObject backend_status = null;
         JSONObject backend_status_index_sizes = null;
-        if (backend.length() > 0 && !backend_push) try {
-            backend_status = StatusService.status(backend);
-            backend_status_index_sizes = backend_status == null ? null : (JSONObject) backend_status.get("index_sizes");
-        } catch (IOException e) {}
+        if (backend.length() > 0 && !backend_push) {
+            try {
+                backend_status = StatusService.status(backend);
+                backend_status_index_sizes = backend_status == null ? null : (JSONObject) backend_status.get("index_sizes");
+            } catch (IOException e) {}
+        }
         long backend_messages = backend_status_index_sizes == null ? 0 : ((Number) backend_status_index_sizes.get("messages")).longValue();
         long backend_users = backend_status_index_sizes == null ? 0 : ((Number) backend_status_index_sizes.get("users")).longValue();
         long local_messages = DAO.countLocalMessages();
         long local_users = DAO.countLocalUsers();
-        
+
         post.setResponse(response, "application/javascript");
-        
+
         // generate json
         Runtime runtime = Runtime.getRuntime();
         JSONObject json = new JSONObject(true);
@@ -165,7 +169,7 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
         JSONObject queue = new JSONObject(true);
         queue.put("size", IncomingMessageBuffer.getMessageQueueSize());
         queue.put("maxSize", IncomingMessageBuffer.getMessageQueueMaxSize());
-        queue.put("clients", IncomingMessageBuffer.getMessageQueueClients());   
+        queue.put("clients", IncomingMessageBuffer.getMessageQueueClients());
         messages.put("queue", queue);
         JSONObject users = new JSONObject(true);
         users.put("size", local_users + backend_users);
@@ -193,8 +197,8 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
         if (DAO.getConfig("retrieval.queries.enabled", false)) {
             List<QueryEntry> queryList = DAO.SearchLocalQueries("", 1000, "retrieval_next", "date", SortOrder.ASC, null, new Date(), "retrieval_next");
             index.put("queries_pending", queryList.size());
-        } 
-        
+        }
+
         JSONObject client_info = new JSONObject(true);
         client_info.put("RemoteHost", post.getClientHost());
         client_info.put("IsLocalhost", post.isLocalhostAccess() ? "true" : "false");
@@ -206,7 +210,7 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
             request_header.put(h, post.getRequest().getHeader(h));
         }
         client_info.put("request_header", request_header);
-        
+
         json.put("system", system);
         json.put("index", index);
         json.put("client_info", client_info);
@@ -223,7 +227,6 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        
     }
-    
+
 }

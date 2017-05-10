@@ -6,12 +6,12 @@
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
- *  
+ *
  *  This library is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
@@ -65,11 +65,11 @@ public class ThreaddumpServlet extends HttpServlet {
     private static final Pattern multiDumpFilterPattern = Pattern.compile(multiDumpFilter);
     private static ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
     private static OperatingSystemMXBean osBean = ManagementFactory.getOperatingSystemMXBean();
-    
+
     private static final Thread.State[] ORDERED_STATES = new Thread.State[]{
         Thread.State.BLOCKED, Thread.State.RUNNABLE, Thread.State.TIMED_WAITING,
         Thread.State.WAITING, Thread.State.NEW, Thread.State.TERMINATED};
-    
+
     @Override
     protected void doPost(final HttpServletRequest request, final HttpServletResponse response) throws ServletException, IOException {
         doGet(request, response);
@@ -98,7 +98,9 @@ public class ThreaddumpServlet extends HttpServlet {
             	Log.getLog().warn(e);
             }
             long sleep = post.get("sleep", 0L);
-            if (sleep > 0) try {Thread.sleep(sleep);} catch (InterruptedException e) {}
+            if (sleep > 0) try {
+                Thread.sleep(sleep);
+            } catch (InterruptedException e) {}
         }
 
         int multi = post.isLocalhostAccess() ? post.get("multi", post.get("count", 0)) : 0;
@@ -128,13 +130,15 @@ public class ThreaddumpServlet extends HttpServlet {
         int timetorestarthours = timetorestartminutes / 60; timetorestartminutes = timetorestartminutes % 60;
         bufferappend(buffer, keylen, "Time To Restart", timetorestarthours + "h " + timetorestartminutes + "m " + timetorestartseconds + "s");
         // print system beans
-        for (Method method : osBean.getClass().getDeclaredMethods()) try {
-            method.setAccessible(true);
-            if (method.getName().startsWith("get") && Modifier.isPublic(method.getModifiers())) {
-                bufferappend(buffer, keylen, method.getName(), method.invoke(osBean));
-            }
-        } catch (Throwable e) {}
-        
+        for (Method method : osBean.getClass().getDeclaredMethods()) {
+            try {
+                method.setAccessible(true);
+                if (method.getName().startsWith("get") && Modifier.isPublic(method.getModifiers())) {
+                    bufferappend(buffer, keylen, method.getName(), method.invoke(osBean));
+                }
+            } catch (Throwable e) {}
+        }
+
         bufferappend(buffer, "");
         bufferappend(buffer, "");
 
@@ -147,8 +151,9 @@ public class ThreaddumpServlet extends HttpServlet {
                     for (final Map.Entry<StackTrace, SortedSet<String>> e: dump.entrySet()) {
                         if (multiDumpFilterPattern.matcher(e.getKey().text).matches()) continue;
                         Integer c = dumps.get(e.getKey().text);
-                        if (c == null) dumps.put(e.getKey().text, Integer.valueOf(e.getValue().size()));
-                        else {
+                        if (c == null) {
+                            dumps.put(e.getKey().text, Integer.valueOf(e.getValue().size()));
+                        } else {
                             c = Integer.valueOf(c.intValue() + e.getValue().size());
                             dumps.put(e.getKey().text, c);
                         }
@@ -157,7 +162,7 @@ public class ThreaddumpServlet extends HttpServlet {
                     break;
                 }
             }
-            
+
             // write dumps
             while (!dumps.isEmpty()) {
                 final Map.Entry<String, Integer> e = removeMax(dumps);
@@ -170,7 +175,9 @@ public class ThreaddumpServlet extends HttpServlet {
             // generate a single thread dump
             final Map<Thread, StackTraceElement[]> stackTraces = ThreadDump.getAllStackTraces();
             // write those ordered into the stackTrace list
-            for (Thread.State state: ORDERED_STATES) new ThreadDump(stackTraces, state).appendStackTraces(buffer, state);
+            for (Thread.State state: ORDERED_STATES) {
+                new ThreadDump(stackTraces, state).appendStackTraces(buffer, state);
+            }
         }
 
         ThreadMXBean threadbean = ManagementFactory.getThreadMXBean();
@@ -189,7 +196,7 @@ public class ThreaddumpServlet extends HttpServlet {
         bufferappend(buffer, "");
         bufferappend(buffer, "ELASTICSEARCH PENDING ClUSTER TASKS");
         bufferappend(buffer, DAO.pendingClusterTasks());
-        
+
         if (post.isLocalhostAccess()) {
             // this can reveal private data, so keep it on localhost access only
             bufferappend(buffer, "");
@@ -221,7 +228,7 @@ public class ThreaddumpServlet extends HttpServlet {
             return this.text;
         }
     }
-    
+
     private static Map.Entry<String, Integer> removeMax(final Map<String, Integer> result) {
         Map.Entry<String, Integer> max = null;
         for (final Map.Entry<String, Integer> e: result.entrySet()) {
@@ -232,7 +239,7 @@ public class ThreaddumpServlet extends HttpServlet {
         result.remove(max.getKey());
         return max;
     }
-    
+
     private static void bufferappend(final StringBuilder buffer, int keylen, final String key, Object value) {
         if (value instanceof Double)
             bufferappend(buffer, keylen, key, ((Double) value).toString());
@@ -241,12 +248,12 @@ public class ThreaddumpServlet extends HttpServlet {
         else
             bufferappend(buffer, keylen, key, value.toString());
     }
-    
+
     private static final DecimalFormat cardinalFormatter = new DecimalFormat("###,###,###,###,###");
     private static void bufferappend(final StringBuilder buffer, int keylen, final String key, long value) {
         bufferappend(buffer, keylen, key, cardinalFormatter.format(value));
     }
-    
+
     private static void bufferappend(final StringBuilder buffer, int keylen, final String key, String value) {
         String a = key;
         while (a.length() < keylen) a += " ";
@@ -255,12 +262,12 @@ public class ThreaddumpServlet extends HttpServlet {
         a += value;
         bufferappend(buffer, a);
     }
-    
+
     private static void bufferappend(final StringBuilder buffer, final String a) {
         buffer.append(a);
         buffer.append('\n');
     }
-    
+
     private static class ThreadDump extends HashMap<StackTrace, SortedSet<String>> implements Map<StackTrace, SortedSet<String>> {
 
         private static final long serialVersionUID = -5587850671040354397L;
@@ -319,7 +326,9 @@ public class ThreaddumpServlet extends HttpServlet {
             // write dumps
             for (final Map.Entry<StackTrace, SortedSet<String>> entry: entrySet()) {
                 final SortedSet<String> threads = entry.getValue();
-                for (final String t: threads) bufferappend(buffer, t);
+                for (final String t: threads) {
+                    bufferappend(buffer, t);
+                }
                 bufferappend(buffer, entry.getKey().text);
                 bufferappend(buffer, "");
             }
@@ -327,48 +336,160 @@ public class ThreaddumpServlet extends HttpServlet {
         }
 
     }
-    
+
     private static class DummyResponse implements HttpServletResponse {
-        @Override public void flushBuffer() throws IOException {}
-        @Override public int getBufferSize() {return 2048;}
-        @Override public String getCharacterEncoding() {return "UTF-8";}
-        @Override public String getContentType() {return "text/plain";}
-        @Override public Locale getLocale() {return Locale.ENGLISH;}
-        @Override public boolean isCommitted() {return true;}
-        @Override public void reset() {}
-        @Override public void resetBuffer() {}
-        @Override public void setBufferSize(int arg0) {}
-        @Override public void setCharacterEncoding(String arg0) {}
-        @Override public void setContentLength(int arg0) {}
-        @Override public void setContentLengthLong(long arg0) {}
-        @Override public void setContentType(String arg0) {}
-        @Override public void setLocale(Locale arg0) {}
-        @Override public void addCookie(Cookie arg0) {}
-        @Override public void addDateHeader(String arg0, long arg1) {}
-        @Override public void addHeader(String arg0, String arg1) {}
-        @Override public void addIntHeader(String arg0, int arg1) {}
-        @Override public boolean containsHeader(String arg0) {return true;}
-        @Override public String encodeRedirectURL(String arg0) {return arg0;}
-        @Deprecated @Override public String encodeRedirectUrl(String arg0) {return arg0;}
-        @Override public String encodeURL(String arg0) {return arg0;}
-        @Deprecated @Override public String encodeUrl(String arg0) {return arg0;}
-        @Override public String getHeader(String arg0) {return "";}
-        @Override public Collection<String> getHeaderNames() {return new ArrayList<String>(0);}
-        @Override public Collection<String> getHeaders(String arg0) {return new ArrayList<String>(0);}
-        @Override public int getStatus() {return 200;}
-        @Override public void sendError(int arg0) throws IOException {}
-        @Override public void sendError(int arg0, String arg1) throws IOException {}
-        @Override public void sendRedirect(String arg0) throws IOException {}
-        @Override public void setDateHeader(String arg0, long arg1) {}
-        @Override public void setHeader(String arg0, String arg1) {}
-        @Override public void setIntHeader(String arg0, int arg1) {}
-        @Override public void setStatus(int arg0) {}
-        @Deprecated @Override public void setStatus(int arg0, String arg1) {}
-        @Override public PrintWriter getWriter() throws IOException {return new PrintWriter(new OutputStreamWriter(getOutputStream(), "UTF-8"));}
-        @Override public ServletOutputStream getOutputStream() throws IOException {return new ServletOutputStream(){
-            public void write(int aByte) throws IOException {}
-            public boolean isReady() { return true; }
-            public void setWriteListener(WriteListener arg0) {}
-        };}
+        @Override
+        public void flushBuffer() throws IOException {}
+
+        @Override
+        public int getBufferSize() {
+            return 2048;
+        }
+
+        @Override
+        public String getCharacterEncoding() {
+            return "UTF-8";
+        }
+
+        @Override
+        public String getContentType() {
+            return "text/plain";
+        }
+
+        @Override
+        public Locale getLocale() {
+            return Locale.ENGLISH;
+        }
+
+        @Override
+        public boolean isCommitted() {
+            return true;
+        }
+
+        @Override
+        public void reset() {}
+
+        @Override
+        public void resetBuffer() {}
+
+        @Override
+        public void setBufferSize(int arg0) {}
+
+        @Override
+        public void setCharacterEncoding(String arg0) {}
+
+        @Override
+        public void setContentLength(int arg0) {}
+
+        @Override
+        public void setContentLengthLong(long arg0) {}
+
+        @Override
+        public void setContentType(String arg0) {}
+
+        @Override
+        public void setLocale(Locale arg0) {}
+
+        @Override
+        public void addCookie(Cookie arg0) {}
+
+        @Override
+        public void addDateHeader(String arg0, long arg1) {}
+
+        @Override
+        public void addHeader(String arg0, String arg1) {}
+
+        @Override
+        public void addIntHeader(String arg0, int arg1) {}
+
+        @Override
+        public boolean containsHeader(String arg0) {
+            return true;
+        }
+
+        @Override
+        public String encodeRedirectURL(String arg0) {
+            return arg0;
+        }
+
+        @Deprecated
+        @Override
+        public String encodeRedirectUrl(String arg0) {
+            return arg0;
+        }
+
+        @Override
+        public String encodeURL(String arg0) {
+            return arg0;
+        }
+
+        @Deprecated
+        @Override
+        public String encodeUrl(String arg0) {
+            return arg0;
+        }
+
+        @Override
+        public String getHeader(String arg0) {
+            return "";
+        }
+
+        @Override
+        public Collection<String> getHeaderNames() {
+            return new ArrayList<String>(0);
+        }
+
+        @Override
+        public Collection<String> getHeaders(String arg0) {
+            return new ArrayList<String>(0);
+        }
+
+        @Override
+        public int getStatus() {
+            return 200;
+        }
+
+        @Override
+        public void sendError(int arg0) throws IOException {}
+
+        @Override
+        public void sendError(int arg0, String arg1) throws IOException {}
+
+        @Override
+        public void sendRedirect(String arg0) throws IOException {}
+
+        @Override
+        public void setDateHeader(String arg0, long arg1) {}
+
+        @Override
+        public void setHeader(String arg0, String arg1) {}
+
+        @Override
+        public void setIntHeader(String arg0, int arg1) {}
+
+        @Override
+        public void setStatus(int arg0) {}
+
+        @Deprecated
+        @Override
+        public void setStatus(int arg0, String arg1) {}
+
+        @Override
+        public PrintWriter getWriter() throws IOException {
+            return new PrintWriter(new OutputStreamWriter(getOutputStream(), "UTF-8"));
+        }
+
+        @Override
+        public ServletOutputStream getOutputStream() throws IOException {
+            return new ServletOutputStream(){
+                public void write(int aByte) throws IOException {}
+
+                public boolean isReady() {
+                    return true;
+                }
+
+                public void setWriteListener(WriteListener arg0) {}
+            };
+        }
     }
 }
