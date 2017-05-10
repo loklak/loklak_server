@@ -2,7 +2,7 @@ $(document).ready(function()
 {
     var emailerr = false, session = true;
 
-    $('#submit').click(function(){
+    $("#submit").click(function(){
         checkEmpty();
         if(emailerr){
             $('#status-box').text("Please fill email");
