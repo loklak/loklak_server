@@ -2,7 +2,7 @@ $(document).ready(function()
 {
     var emailerr = false, session = true;
 
-    function resetFields(){
+    function resetFields() {
         $("#status-box").text("");
         $("#status-box").removeClass();
         $("#email").val("");
@@ -11,9 +11,9 @@ $(document).ready(function()
         $("#emailfield").removeClass();
     }
 
-    function checkEmpty(){
+    function checkEmpty() {
         var emailval = $("#email").val();
-        if(!emailval && !($("#email").is(":focus"))){
+        if (!emailval && !($("#email").is(":focus"))) {
             $("#emailfield").text("Required field!");
             $("#email").removeClass();
             $("#emailfield").removeClass();
@@ -28,11 +28,11 @@ $(document).ready(function()
         }
     }
 
-    $("#submit").click(function(){
+    $("#submit").click(function() {
         checkEmpty();
-        if(emailerr){
+        if (emailerr) {
             $("#status-box").text("Please fill email");
-        } else{
+        } else {
             var mail = $("#email").val();
             $.ajax( "/api/recoverpassword.json", {
                 data: { forgotemail: mail },
