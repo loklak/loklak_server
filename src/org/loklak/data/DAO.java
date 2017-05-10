@@ -1290,10 +1290,16 @@ public class DAO {
         return chunk;
     }
 
+    /**
+     * For logging informational events
+     */
     public static void log(String line) {
         Log.getLog().info(line);
     }
 
+    /**
+     * For events serious enough to inform and log, but not fatal.
+     */
     public static void severe(String line) {
         Log.getLog().warn(line);
     }
@@ -1304,6 +1310,13 @@ public class DAO {
     
     public static void severe(Throwable e) {
         Log.getLog().warn(e);
+    }
+
+    /**
+     * For Debugging events (very noisy).
+     */
+    public static void debug(Throwable e) {
+        Log.getLog().debug(e);
     }
 
 }

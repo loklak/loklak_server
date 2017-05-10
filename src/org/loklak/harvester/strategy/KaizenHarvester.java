@@ -1,6 +1,5 @@
 package org.loklak.harvester.strategy;
 
-import org.eclipse.jetty.util.log.Log;
 import org.loklak.api.search.SearchServlet;
 import org.loklak.api.search.SuggestServlet;
 import org.loklak.data.DAO;
@@ -171,7 +170,7 @@ public class KaizenHarvester implements Harvester {
                     addQuery(trend.getQuery());
         } catch (TwitterException e) {
             if (e.getErrorCode() != 88)
-                Log.getLog().warn(e);
+                DAO.severe(e);
         }
     }
 
@@ -203,7 +202,7 @@ public class KaizenHarvester implements Harvester {
                 grabInformation(timeline);
             }
         } catch (IOException e) {
-            Log.getLog().warn(e);
+            DAO.severe(e);
         }
 
         if (twitter != null)
