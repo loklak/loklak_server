@@ -416,9 +416,10 @@ public class TwitterScraper {
     
     public static class TwitterTweet extends MessageEntry implements Runnable {
 
-        public final Semaphore ready;
-        public UserEntry user;
-        public boolean writeToIndex, writeToBackend;
+        private final Semaphore ready;
+        private UserEntry user;
+        public boolean writeToIndex;
+        public boolean writeToBackend;
         
         public TwitterTweet(
                 final String user_screen_name_raw,
