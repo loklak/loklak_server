@@ -27,6 +27,8 @@ package org.loklak.geo;
  */
 public class IntegerGeoPoint extends AbstractGeoPoint implements GeoPoint {
 
+    private static final double maxint = new Double(Integer.MAX_VALUE).doubleValue();
+    private static final double upscale = maxint / 360.0d;
     private final long latlon; // using one variable for the coordinate pair saves some space
 
     public IntegerGeoPoint(double lat, double lon) {
@@ -41,7 +43,6 @@ public class IntegerGeoPoint extends AbstractGeoPoint implements GeoPoint {
     public double lat() {
         return int2coord((int) (this.latlon >>> 32));
     }
-
 
     @Override
     public double lon() {
@@ -65,9 +66,6 @@ public class IntegerGeoPoint extends AbstractGeoPoint implements GeoPoint {
         return Math.abs(int2coord(1) - int2coord(2));
     }
 
-    private static final double maxint = new Double(Integer.MAX_VALUE).doubleValue();
-    private static final double upscale = maxint / 360.0d;
-
     private static final int coord2int(double coord) {
         return (int) ((coord + 180.0d) * upscale);
     }
@@ -90,7 +88,9 @@ public class IntegerGeoPoint extends AbstractGeoPoint implements GeoPoint {
      */
     @Override
     public boolean equals(final Object o) {
-        if (!(o instanceof IntegerGeoPoint)) return false;
+        if (!(o instanceof IntegerGeoPoint)) {
+            return false;
+        }
         IntegerGeoPoint oo = (IntegerGeoPoint) o;
         return (this.latlon == oo.latlon);
     }

@@ -30,8 +30,8 @@ public abstract class AbstractGeoPoint implements GeoPoint {
     public double distance(final GeoPoint othr) {
         return distance(this.lat(), this.lon(), othr.lat(), othr.lon());
     }
-    
-    public static double distance(final double lat1, final double lon1, final double lat2, final double lon2) {        
+
+    public static double distance(final double lat1, final double lon1, final double lat2, final double lon2) {
         double dlat = (lat2 - lat1) * D2R; double dlon = (lon2 - lon1) * D2R;
         double a = Math.pow(Math.sin(dlat / 2.0d), 2.0d) +
                    Math.cos(lat1 * D2R) * Math.cos(lat2 * D2R) * Math.pow(Math.sin(dlon / 2.0d), 2.0d);
