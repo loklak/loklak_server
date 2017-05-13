@@ -245,25 +245,14 @@ public class TwitterScraper {
                 continue;
             }
             // get images
-            if ((p = input.indexOf("data-image-url=")) >= 0) {
-                String image_url = new prop(input, p, "data-image-url").value;
-                if (!image_url.endsWith(".jpg") && !image_url.endsWith(".png")) {
-                    System.out.println("strange image url: " + image_url);
+            String img_link;
+            if ((p = input.indexOf("<img")) >= 0) {
+                img_link = new prop(input, p, "src").value;
+                if (img_link != null && img_link.contains("pbs.twimg.com/media/")) {
+                    images.add(img_link);
+                    bcc.logit("img ->" + img_link);
+                    continue;
                 }
-                images.add(image_url);
-                continue;
-            }
-            // get images
-            if ((p = input.lastIndexOf("background-image:url('")) >= 0) {
-                int q = input.lastIndexOf("'");
-                if (q > p + 22) {
-                    String image_url = input.substring(p + 22, q);
-                    if (!image_url.endsWith(".jpg") && !image_url.endsWith(".png")) {
-                        System.out.println("strange image url: " + image_url);
-                    }
-                    images.add(image_url);
-                }
-                continue;
             }
             // we have two opportunities to get video thumbnails == more images; images in the presence of video content should be treated as thumbnail for the video
             if ((p = input.indexOf("class=\"animated-gif-thumbnail\"")) > 0) {
