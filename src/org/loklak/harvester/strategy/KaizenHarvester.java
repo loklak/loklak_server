@@ -215,8 +215,14 @@ public class KaizenHarvester implements Harvester {
 
     @Override
     public int harvest() {
-        if (!queries.isEmpty() && random.nextBoolean())
+        float targetProb = random.nextFloat();
+        float prob = 0.5F;
+        if (QUERIES_LIMIT > 0) {
+            prob = queries.size() / (float)QUERIES_LIMIT;
+        }
+        if (!queries.isEmpty() && targetProb < prob) {
             return harvestMessages();
+        }
 
         grabSuggestions();
 
