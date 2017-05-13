@@ -49,8 +49,14 @@ This command may give an error while building like `Unable to locate tools.jar`.
 It means that there is no java in your system or JAVA_HOME Environment Variable is not set. [Refererence](https://www.digitalocean.com/community/tutorials/how-to-install-java-on-ubuntu-with-apt-get) to fix it and run `ant` again.
 
     > bin/start.sh
+    > bin/start.sh -p 8888 # Port to start Loklak
+After all server processes are running, loklak tries to open a browser page itself. If that does 
+not happen, just open http://localhost:9000 (if you have used a different port use that in place of 9000); if you made the installation on a headless or remote server, then replace 'localhost' with your server name.
 
-After all server processes are running, loklak tries to open a browser page itself. If that does not happen, just open http://localhost:9000; if you made the installation on a headless or remote server, then replace 'localhost' with your server name.
+Similarly installation of loklak can be done.
+
+    > bin/installation.sh
+    > bin/installation.sh -p 8888
 
 To stop loklak, run: (this will block until the server has actually terminated)
 
@@ -84,7 +90,7 @@ To install loklak on Eclipse, please refer to the [loklak Eclipse readme](/docs/
 
 - build loklak (you need to do this only once, see above)
 - run `bin/start.sh`
-- open `http://localhost:9000` in your browser
+- open `http://localhost:9000` in your browser (use port number **loklak** is running on)
 - to shut down loklak, run `bin/stop.sh`
 
 ## How do I analyze data acquired by loklak

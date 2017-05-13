@@ -130,7 +130,10 @@ public class LoklakInstallation {
         if(env.containsKey("PORTSSL")) {
             httpsPort = Integer.parseInt(env.get("PORTSSL"));
         }
-        
+
+        if (args.length > 0) {
+            httpPort = Integer.valueOf(args[0]);
+        }
         // check if a loklak service is already running on configured port
         try{
         	checkServerPorts(httpPort, httpsPort);
