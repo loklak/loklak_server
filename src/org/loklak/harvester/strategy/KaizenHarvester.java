@@ -14,6 +14,7 @@ import twitter4j.Location;
 import twitter4j.Trend;
 import twitter4j.Twitter;
 import twitter4j.TwitterException;
+import twitter4j.TwitterFactory;
 
 import java.io.IOException;
 import java.text.DateFormat;
@@ -60,7 +61,10 @@ public class KaizenHarvester implements Harvester {
 
         random = new Random();
 
-        twitter = TwitterAPI.getAppTwitterFactory().getInstance();
+        TwitterFactory twitterFactory = TwitterAPI.getAppTwitterFactory();
+
+        if (twitterFactory != null)
+            twitter = twitterFactory.getInstance();
 
         if (twitter == null)
             DAO.log("Kaizen can utilize Twitter API to get more queries, If you want to use it, " +
