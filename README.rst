@@ -233,6 +233,11 @@ How do I deploy loklak with cloud9?
 To install loklak with cloud9 please refer to the `loklak cloud9
 installation readme <https://dev.loklak.org/server/installation/installation_cloud9.html>`__.
 
+How do I deploy loklak on Google Cloud with Kubernetes?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To install loklak on Google Cloud with Kubernetes, please refer to the `loklak Google Cloud with Kubernetes installation <https://dev.loklak.org/server/installation/installation_google_cloud_kubernetes.html>`__.
+
 How do I setup loklak on Eclipse?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
