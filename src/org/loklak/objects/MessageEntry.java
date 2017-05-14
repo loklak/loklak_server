@@ -31,7 +31,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
 import org.loklak.api.search.ShortlinkFromTweetServlet;
 import org.loklak.data.Classifier;
@@ -654,7 +653,7 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
                 s = s.substring(0, p) + ((unicode == 10 || unicode == 13) ? "\n" : ((char) unicode)) + s.substring(q + 1);
             }
         } catch (Throwable e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         }
         // octal coding \\u
         try {
@@ -664,7 +663,7 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
                 s = s.substring(0, p) + r + s.substring(p + 6);
             }
         } catch (Throwable e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         }
         // remove tags
         s = A_END_TAG.matcher(s).replaceAll("");

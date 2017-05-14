@@ -28,7 +28,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.eclipse.jetty.util.log.Log;
 import org.elasticsearch.search.sort.SortOrder;
 import org.loklak.api.p2p.HelloService;
 import org.loklak.api.p2p.PushServlet;
@@ -69,7 +68,7 @@ public class Caretaker extends Thread {
     public void shutdown() {
         this.shallRun = false;
         this.interrupt();
-        Log.getLog().info("catched caretaker termination signal");
+        DAO.log("catched caretaker termination signal");
     }
     
     @Override
@@ -225,10 +224,10 @@ public class Caretaker extends Thread {
                 if (d > 0) DAO.log("Deleted " + d + " outdated(month) messages");
             }
         } catch (Throwable e) {
-            Log.getLog().warn("CARETAKER THREAD", e);
+            DAO.severe("CARETAKER THREAD", e);
         }
 
-        Log.getLog().info("caretaker terminated");
+        DAO.log("caretaker terminated");
     }
 
     public static boolean acceptQuery4Retrieval(String q) {
@@ -245,7 +244,7 @@ public class Caretaker extends Thread {
             List<String> rsp = OS.execSynchronous(upgradeScript.getAbsolutePath());
             for (String s: rsp) DAO.log("UPGRADE: " + s);
         } catch (IOException e) {
-        	Log.getLog().warn("UPGRADE failed: " + e.getMessage(), e);
+        	DAO.severe("UPGRADE failed: " + e.getMessage(), e);
         }
     }
     

@@ -32,7 +32,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
@@ -101,7 +100,7 @@ public class SearchServlet extends HttpServlet {
                 if (scraperInfo != null) tl.setScraperInfo(scraperInfo);
             }
         } catch (Throwable e) {
-            //Log.getLog().warn(e);
+            //DAO.severe(e);
             throw new IOException(e.getMessage());
         }
         //System.out.println(parser.text());
@@ -403,8 +402,8 @@ public class SearchServlet extends HttpServlet {
             DAO.log(request.getServletPath() + "?" + request.getQueryString() + " -> " + tl.size() + " records returned");
             post.finalize();
         } catch (Throwable e) {
-            Log.getLog().warn(e.getMessage(), e);
-            //Log.getLog().warn(e);
+            DAO.severe(e.getMessage(), e);
+            //DAO.severe(e);
         }
     }
 
@@ -413,7 +412,7 @@ public class SearchServlet extends HttpServlet {
             Timeline tl = search("http://loklak.org", "beer", Timeline.Order.CREATED_AT, "cache", 20, -120, backend_hash, 10000);
             System.out.println(tl.toJSON(false, "search_metadata", "statuses").toString(2));
         } catch (IOException e) {
-            Log.getLog().warn(e);
+            DAO.severe(e);
         }
     }
 }
