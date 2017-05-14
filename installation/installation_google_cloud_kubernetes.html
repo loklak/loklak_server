@@ -1,0 +1,234 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Deploying loklak on Google Cloud Platform with Kubernetes &#8212; Loklak Server development documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     'development',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="top" title="Loklak Server development documentation" href="../index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="deploying-loklak-on-google-cloud-platform-with-kubernetes">
+<span id="deploying-loklak-on-google-cloud-platform-with-kubernetes"></span><h1>Deploying loklak on Google Cloud Platform with Kubernetes<a class="headerlink" href="#deploying-loklak-on-google-cloud-platform-with-kubernetes" title="Permalink to this headline">¶</a></h1>
+<blockquote>
+<div><strong>Kubernetes</strong> is an open-source system for automating deployment, scaling, and management of containerized applications.</div></blockquote>
+<p>Source: https://kubernetes.io/</p>
+<p>Follow these 10 steps to get an instance of loklak running on Google Cloud platform using Kubernetes.</p>
+<p><strong>Note</strong>: The document uses predefined names for various properties like project ID and docker image name to avoid confusion. You may want to change them when needed.</p>
+<div class="section" id="create-google-cloud-platform-account">
+<span id="create-google-cloud-platform-account"></span><h2>1. Create Google Cloud Platform Account<a class="headerlink" href="#create-google-cloud-platform-account" title="Permalink to this headline">¶</a></h2>
+<p>Visit https://cloud.google.com/free/ and follow on-screen instructions to create an account and get the free trial.</p>
+</div>
+<div class="section" id="create-a-project">
+<span id="create-a-project"></span><h2>2. Create a Project<a class="headerlink" href="#create-a-project" title="Permalink to this headline">¶</a></h2>
+<p>Create a new project with desired name and ID.</p>
+<p><img alt="kub1" src="https://cloud.githubusercontent.com/assets/10860278/26034852/c7ff5cac-38e0-11e7-92fb-1fa711a4c05c.png" /></p>
+</div>
+<div class="section" id="create-a-container-engine-for-the-project">
+<span id="create-a-container-engine-for-the-project"></span><h2>3. Create a Container Engine for the Project<a class="headerlink" href="#create-a-container-engine-for-the-project" title="Permalink to this headline">¶</a></h2>
+<p>Go to https://console.cloud.google.com/kubernetes/list and wait for the container engine to get ready. You may need to select the project from the project section in the top-left corner.</p>
+</div>
+<div class="section" id="open-the-google-cloud-shell">
+<span id="open-the-google-cloud-shell"></span><h2>4. Open the Google Cloud Shell<a class="headerlink" href="#open-the-google-cloud-shell" title="Permalink to this headline">¶</a></h2>
+<p>In the top-right panel, click the shell button.</p>
+<p><img alt="screenshot from 2017-05-14 20-11-27" src="https://cloud.githubusercontent.com/assets/10860278/26034895/9703f85a-38e1-11e7-8dc1-81e38a5205d0.png" /></p>
+<p>You&#8217;ll be greeted by an online console.</p>
+<p><img alt="screenshot from 2017-05-14 20-19-07" src="https://cloud.githubusercontent.com/assets/10860278/26034960/a8147dbc-38e2-11e7-87a1-b9fef076ee6f.png" /></p>
+</div>
+<div class="section" id="clone-the-loklak-project">
+<span id="clone-the-loklak-project"></span><h2>5. Clone the loklak project<a class="headerlink" href="#clone-the-loklak-project" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-sh"><div class="highlight"><pre><span></span>$ git clone https://github.com/loklak/loklak_server.git
+$ <span class="nb">cd</span> loklak_server/
+</pre></div>
+</div>
+</div>
+<div class="section" id="build-the-docker-image-and-push-to-google-container-registry">
+<span id="build-the-docker-image-and-push-to-google-container-registry"></span><h2>6. Build the Docker Image and Push to Google Container Registry<a class="headerlink" href="#build-the-docker-image-and-push-to-google-container-registry" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-sh"><div class="highlight"><pre><span></span>$ docker build -t gcr.io/singhpratyush-loklak/loklak:v1 .
+$ gcloud docker -- push gcr.io/singhpratyush-loklak/loklak:v1
+</pre></div>
+</div>
+<p>This makes our cloud registry ready. Let us create a Kubernetes cluster where we can deploy this.</p>
+</div>
+<div class="section" id="creating-a-container-cluster">
+<span id="creating-a-container-cluster"></span><h2>7. Creating a Container Cluster<a class="headerlink" href="#creating-a-container-cluster" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal"><span class="pre">gcloud</span></code> provides easy to use interface for creating clusters. Let us take a look at the properties that we can configure while creating a cluster.</p>
+<p>| Argument | Function | Allowable Values |
+|&#8212;&#8212;&#8212;&#8212;-|&#8212;&#8212;&#8212;&#8212;|&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;-|
+| <code class="docutils literal"><span class="pre">--num-nodes</span></code> | Number of nodes in the cluster. | A natural number |
+| <code class="docutils literal"><span class="pre">--machine-type</span></code> | Type of each machine in the cluster. | <li> <code class="docutils literal"><span class="pre">f1-micro</span></code> <li> <code class="docutils literal"><span class="pre">g1-small</span></code> <li> <code class="docutils literal"><span class="pre">n1-standard-{1,2,4,8}</span></code> <li> <code class="docutils literal"><span class="pre">n1-highmem-{2,4,8}</span></code> <li> <code class="docutils literal"><span class="pre">n1-highcpu-{2,4,8}</span></code> |
+| <code class="docutils literal"><span class="pre">--zone</span></code> | Zone where nodes would be located. | See <a class="reference external" href="https://cloud.google.com/compute/docs/regions-zones/regions-zones">Compute Engine Docs</a> |</p>
+<p>For this example, let us create a cluster with following command -</p>
+<div class="highlight-sh"><div class="highlight"><pre><span></span>$ gcloud container clusters create loklak-cluster --num-nodes <span class="m">3</span> --machine-type n1-standard-1 --zone us-central1-c
+</pre></div>
+</div>
+<p>This will take a few minutes to complete. After done, you can see a new cluster active on your console.</p>
+<p><img alt="screenshot from 2017-05-14 21-01-12" src="https://cloud.githubusercontent.com/assets/10860278/26035369/91ec2912-38e8-11e7-9827-8052896ed842.png" /></p>
+</div>
+<div class="section" id="create-a-deployment-for-the-container-registry">
+<span id="create-a-deployment-for-the-container-registry"></span><h2>8. Create a Deployment for the Container Registry<a class="headerlink" href="#create-a-deployment-for-the-container-registry" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-sh"><div class="highlight"><pre><span></span>$ kubectl run loklak --image<span class="o">=</span>gcr.io/singhpratyush-loklak/loklak:v1 --port<span class="o">=</span><span class="m">80</span>
+deployment <span class="s2">&quot;loklak&quot;</span> created
+</pre></div>
+</div>
+<p>You can see a list of deployments by running the following commands -</p>
+<div class="highlight-sh"><div class="highlight"><pre><span></span>$ kubectl get deployments
+NAME      DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+loklak    <span class="m">1</span>         <span class="m">1</span>         <span class="m">1</span>            <span class="m">1</span>           2m
+</pre></div>
+</div>
+</div>
+<div class="section" id="expose-the-deployment">
+<span id="expose-the-deployment"></span><h2>9. Expose the Deployment<a class="headerlink" href="#expose-the-deployment" title="Permalink to this headline">¶</a></h2>
+<p>With the server now deployed internally on Google Cloud Platform, we need to expose it to the Internet. For this, we use the following command -</p>
+<div class="highlight-sh"><div class="highlight"><pre><span></span>$ kubectl expose deployment loklak --type<span class="o">=</span>LoadBalancer
+service <span class="s2">&quot;loklak&quot;</span> exposed
+</pre></div>
+</div>
+<p>Now, the platform will assign an external IP to the application. This may take some time. Run the following command to see the assigned external IP -</p>
+<div class="highlight-sh"><div class="highlight"><pre><span></span>$ kubectl get services
+NAME         CLUSTER-IP    EXTERNAL-IP     PORT<span class="o">(</span>S<span class="o">)</span>        AGE
+kubernetes   <span class="m">10</span>.79.240.1   &lt;none&gt;          <span class="m">443</span>/TCP        10m
+loklak       <span class="m">10</span>.79.248.1   <span class="m">104</span>.154.24.48   <span class="m">80</span>:30287/TCP   1m
+</pre></div>
+</div>
+</div>
+<div class="section" id="visit-the-webpage">
+<span id="visit-the-webpage"></span><h2>10. Visit the Webpage<a class="headerlink" href="#visit-the-webpage" title="Permalink to this headline">¶</a></h2>
+<p>On a browser, visit the deployment using the external IP (http://104.154.24.48/ in this case).</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static//images/cow.svg" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Deploying loklak on Google Cloud Platform with Kubernetes</a><ul>
+<li><a class="reference internal" href="#create-google-cloud-platform-account">1. Create Google Cloud Platform Account</a></li>
+<li><a class="reference internal" href="#create-a-project">2. Create a Project</a></li>
+<li><a class="reference internal" href="#create-a-container-engine-for-the-project">3. Create a Container Engine for the Project</a></li>
+<li><a class="reference internal" href="#open-the-google-cloud-shell">4. Open the Google Cloud Shell</a></li>
+<li><a class="reference internal" href="#clone-the-loklak-project">5. Clone the loklak project</a></li>
+<li><a class="reference internal" href="#build-the-docker-image-and-push-to-google-container-registry">6. Build the Docker Image and Push to Google Container Registry</a></li>
+<li><a class="reference internal" href="#creating-a-container-cluster">7. Creating a Container Cluster</a></li>
+<li><a class="reference internal" href="#create-a-deployment-for-the-container-registry">8. Create a Deployment for the Container Registry</a></li>
+<li><a class="reference internal" href="#expose-the-deployment">9. Expose the Deployment</a></li>
+<li><a class="reference internal" href="#visit-the-webpage">10. Visit the Webpage</a></li>
+</ul>
+</li>
+</ul>
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Home</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Welcome</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Installation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="download.html">Download and Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation_linux.html">Installation on Linux</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation_mac.html">Installation on macOS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation_windows.html">Installation on Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation_docker.html">Installation with Docker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation_cloud9.html">Installation on Cloud9</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation_heroku.html">Installation on Heroku</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Video Tutorials</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../development/api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../development/eclipseSetup.html">Setup Eclipse</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://dev.loklak.org/javadoc">Javadoc</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Miscellaneous</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../misc/architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../misc/parsers.html">Parsers</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Loklak.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
