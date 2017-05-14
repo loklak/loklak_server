@@ -12,8 +12,11 @@ import java.time.format.DateTimeFormatter;
 import java.time.ZoneId;
 import org.junit.Test;
 import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.StringContains.containsString;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+
 
 import org.loklak.objects.Timeline;
 import org.loklak.harvester.TwitterScraper;
@@ -107,18 +110,24 @@ public class TwitterScraperTest {
         // Test tweets data with TwitterTweet object
         TwitterScraper.TwitterTweet tweet = (TwitterScraper.TwitterTweet) ftweet_list.iterator().next();
 
-        assertTrue(String.valueOf(tweet.user).contains(tweet_check.get("user")));
-        assertTrue(String.valueOf(tweet.status_id_url).equals(tweet_check.get("status_id_url")));
+        assertThat(String.valueOf(tweet.getUser()), containsString(tweet_check.get("user")));
+        assertEquals(String.valueOf(tweet.getStatusIdUrl()), tweet_check.get("status_id_url"));
 
-        String created_date = dateFormatChange(String.valueOf(tweet.created_at));
-        assertTrue(created_date.equals(tweet_check.get("created_at")));
+        String created_date = dateFormatChange(String.valueOf(tweet.getCreatedAt()));
+        assertThat(created_date, is(tweet_check.get("created_at")));
         
-        assertTrue(String.valueOf(tweet.screen_name).equals(tweet_check.get("screen_name")));
-        assertTrue(String.valueOf(tweet.source_type).equals(tweet_check.get("source_type")));
-        assertTrue(String.valueOf(tweet.provider_type).equals(tweet_check.get("provider_type")));
-        assertTrue(String.valueOf(tweet.text).equals(tweet_check.get("text")));
-        assertTrue(tweet.writeToIndex);
-        assertTrue(tweet.writeToBackend);
+        assertEquals(tweet.getScreenName(), tweet_check.get("screen_name"));
+System.out.println(tweet.getSourceType()+ "   +++++   "+ tweet_check.get("source_type"));
+
+        assertEquals(String.valueOf(tweet.getSourceType()), tweet_check.get("source_type"));
+        assertEquals(String.valueOf(tweet.getProviderType()), tweet_check.get("provider_type"));
+        assertEquals(tweet.getText(), tweet_check.get("text"));
+        assertEquals(tweet.getPlaceId(), tweet_check.get("place_name"));
+        assertEquals(tweet.getPlaceName(), tweet_check.get("place_id"));
+
+        // Other parameters of twittertweet(used )
+        assertThat(tweet.writeToIndex, is(Boolean.parseBoolean(tweet_check.get("writeToIndex"))));
+        assertThat(tweet.writeToBackend, is(Boolean.parseBoolean(tweet_check.get("writeToBackend"))));
 
     }
 
