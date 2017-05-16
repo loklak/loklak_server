@@ -6,12 +6,12 @@
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
- *  
+ *
  *  This library is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
@@ -91,7 +91,7 @@ public class AmazonProductService extends AbstractAPIHandler implements APIHandl
 				return itemlookup;
 			}
 			itemlookup.put("number_of_items",
-					(operation.equals("ItemLookupResponse") ? "1" : (items.getJSONArray("Item").length())));
+					("ItemLookupResponse".equals(operation) ? "1" : (items.getJSONArray("Item").length())));
 			itemlookup.put("list_of_items", items);
 		} catch (Exception e) {
 			itemlookup.put("status", "error");
@@ -106,7 +106,7 @@ public class AmazonProductService extends AbstractAPIHandler implements APIHandl
 			JSONObjectWithDefault permissions) throws APIException {
 		String ITEM_ID = call.get("id", "");
 		String PRODUCT_NAME = call.get("q", "");
-		String responsegroup = (call.get("response_group", "") != "" ? call.get("response_group", "") : "Large");
+		String responsegroup = ("".equals(call.get("response_group", "")) ? "Large" : call.get("response_group", ""));
 		if (!("".equals(ITEM_ID)) && ITEM_ID.length() != 0) {
 			return itemLookup(ITEM_ID, responsegroup);
 		} else if (!("".equals(PRODUCT_NAME)) && PRODUCT_NAME.length() != 0) {
@@ -119,7 +119,7 @@ public class AmazonProductService extends AbstractAPIHandler implements APIHandl
 	public JSONObject itemSearch(String query, String responsegroup) {
 		JSONObject result = new JSONObject(true);
 		SignedRequestsHelper helper;
-		if (query.length() == 0 || "".equals(query)) {
+		if ("".equals(query)) {
 			result.put("error", "Please specify a query to search");
 			return result;
 		}
@@ -140,7 +140,7 @@ public class AmazonProductService extends AbstractAPIHandler implements APIHandl
 	public JSONObject itemLookup(String asin, String responsegroup) {
 		SignedRequestsHelper helper;
 		JSONObject result = new JSONObject(true);
-		if (asin.length() == 0 || "".equals(asin)) {
+		if ("".equals(asin)) {
 			result.put("error", "Please specify an Item ID");
 			return result;
 		}
