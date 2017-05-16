@@ -43,7 +43,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.eclipse.jetty.util.log.Log;
 import org.loklak.data.DAO;
 import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.http.ClientConnection;
@@ -115,13 +114,13 @@ public class TwitterScraper {
                 BufferedReader br = new BufferedReader(new InputStreamReader(connection.inputStream, StandardCharsets.UTF_8));
                 timelines = search(br, order, writeToIndex, writeToBackend);
             } catch (IOException e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
             } finally {
                 connection.close();
             }
         } catch (IOException e) {
             // this could mean that twitter rejected the connection (DoS protection?) or we are offline (we should be silent then)
-            // Log.getLog().warn(e);
+            // DAO.severe(e);
             if (timelines == null) timelines = new Timeline[]{new Timeline(order), new Timeline(order)};
         };
 
@@ -147,7 +146,7 @@ public class TwitterScraper {
             BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
             timelines = search(br, order, writeToIndex, writeToBackend);
         } catch (IOException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         } finally {
             if (timelines == null) timelines = new Timeline[]{new Timeline(order), new Timeline(order)};
         }
@@ -185,8 +184,8 @@ public class TwitterScraper {
             if (input.length() == 0) continue;
             
             // debug
-            if (debuglog) System.out.println(line + ": " + input);            
-            //if (input.indexOf("ProfileTweet-actionCount") > 0) System.out.println(input);
+            if (debuglog) DAO.log(line + ": " + input);            
+            //if (input.indexOf("ProfileTweet-actionCount") > 0) DAO.log(input);
 
             // parse
             int p;
@@ -248,7 +247,7 @@ public class TwitterScraper {
             if ((p = input.indexOf("data-image-url=")) >= 0) {
                 String image_url = new prop(input, p, "data-image-url").value;
                 if (!image_url.endsWith(".jpg") && !image_url.endsWith(".png")) {
-                    System.out.println("strange image url: " + image_url);
+                    DAO.log("strange image url: " + image_url);
                 }
                 images.add(image_url);
                 continue;
@@ -259,7 +258,7 @@ public class TwitterScraper {
                 if (q > p + 22) {
                     String image_url = input.substring(p + 22, q);
                     if (!image_url.endsWith(".jpg") && !image_url.endsWith(".png")) {
-                        System.out.println("strange image url: " + image_url);
+                        DAO.log("strange image url: " + image_url);
                     }
                     images.add(image_url);
                 }
@@ -293,11 +292,11 @@ public class TwitterScraper {
             }
             if (props.size() == 10 || (debuglog  && props.size() > 4 && input.indexOf("stream-item") > 0 /* li class="js-stream-item" starts a new tweet */)) {
                 // the tweet is complete, evaluate the result
-                if (debuglog) System.out.println("*** line " + line + " propss.size() = " + props.size());
-                prop userid = props.get("userid"); if (userid == null) {if (debuglog) System.out.println("*** line " + line + " MISSING value userid"); continue;}
-                prop usernickname = props.get("usernickname"); if (usernickname == null) {if (debuglog) System.out.println("*** line " + line + " MISSING value usernickname"); continue;}
-                prop useravatarurl = props.get("useravatarurl"); if (useravatarurl == null) {if (debuglog) System.out.println("*** line " + line + " MISSING value useravatarurl"); continue;}
-                prop userfullname = props.get("userfullname"); if (userfullname == null) {if (debuglog) System.out.println("*** line " + line + " MISSING value userfullname"); continue;}
+                if (debuglog) DAO.log("*** line " + line + " propss.size() = " + props.size());
+                prop userid = props.get("userid"); if (userid == null) {if (debuglog) DAO.log("*** line " + line + " MISSING value userid"); continue;}
+                prop usernickname = props.get("usernickname"); if (usernickname == null) {if (debuglog) DAO.log("*** line " + line + " MISSING value usernickname"); continue;}
+                prop useravatarurl = props.get("useravatarurl"); if (useravatarurl == null) {if (debuglog) DAO.log("*** line " + line + " MISSING value useravatarurl"); continue;}
+                prop userfullname = props.get("userfullname"); if (userfullname == null) {if (debuglog) DAO.log("*** line " + line + " MISSING value userfullname"); continue;}
                 UserEntry user = new UserEntry(
                         userid.value,
                         usernickname.value,
@@ -306,9 +305,23 @@ public class TwitterScraper {
                         );
                 ArrayList<String> imgs = new ArrayList<String>(images.size()); imgs.addAll(images);
                 ArrayList<String> vids = new ArrayList<String>(videos.size()); vids.addAll(videos);
-                prop tweettimems = props.get("tweettimems"); if (tweettimems == null) {if (debuglog) System.out.println("*** line " + line + " MISSING value tweettimems"); continue;}
-                prop tweetretweetcount = props.get("tweetretweetcount"); if (tweetretweetcount == null) {if (debuglog) System.out.println("*** line " + line + " MISSING value tweetretweetcount"); continue;}
-                prop tweetfavouritecount = props.get("tweetfavouritecount"); if (tweetfavouritecount == null) {if (debuglog) System.out.println("*** line " + line + " MISSING value tweetfavouritecount"); continue;}
+
+                prop tweettimems = props.get("tweettimems");
+                if (tweettimems == null) {
+                    if (debuglog) DAO.log("*** line " + line + " MISSING value tweettimems");
+                    continue;
+                }
+                prop tweetretweetcount = props.get("tweetretweetcount");
+                if (tweetretweetcount == null) {
+                    if (debuglog) DAO.log("*** line " + line + " MISSING value tweetretweetcount");
+                    continue;
+                }
+                prop tweetfavouritecount = props.get("tweetfavouritecount");
+                if (tweetfavouritecount == null) {
+                    if (debuglog) DAO.log("*** line " + line + " MISSING value tweetfavouritecount");
+                    continue;
+                }
+
                 TwitterTweet tweet = new TwitterTweet(
                         user.getScreenName(),
                         Long.parseLong(tweettimems.value),
@@ -377,7 +390,7 @@ public class TwitterScraper {
                     try {
                         value = line.substring(p + 1, q - 1);
                     } catch (StringIndexOutOfBoundsException e) {
-                        Log.getLog().debug(e);
+                        DAO.debug(e);
                     }
                 }
             } else {
@@ -416,9 +429,10 @@ public class TwitterScraper {
     
     public static class TwitterTweet extends MessageEntry implements Runnable {
 
-        public final Semaphore ready;
-        public UserEntry user;
-        public boolean writeToIndex, writeToBackend;
+        private final Semaphore ready;
+        private UserEntry user;
+        public boolean writeToIndex;
+        public boolean writeToBackend;
         
         public TwitterTweet(
                 final String user_screen_name_raw,
@@ -496,7 +510,7 @@ public class TwitterScraper {
                 if (this.writeToBackend) DAO.outgoingMessages.transmitMessage(this, this.user);
                 //DAO.log("TwitterTweet [" + this.id_str + "] transmit  after " + (System.currentTimeMillis() - start) + "ms");
             } catch (Throwable e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
             } finally {
                 this.ready.release(1000);
             }
@@ -529,7 +543,7 @@ public class TwitterScraper {
                     continue;
                 }
             } catch (Throwable e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
                 break;
             }
             try {
@@ -540,7 +554,7 @@ public class TwitterScraper {
                     continue;
                 }
             } catch (Throwable e) {
-                Log.getLog().warn(e);
+                DAO.severe(e);
                 break;
             }
             try {
@@ -550,7 +564,7 @@ public class TwitterScraper {
                     continue;
                 }
             } catch (Throwable e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
                 break;
             }
             try {
@@ -561,7 +575,7 @@ public class TwitterScraper {
                     continue;
                 }
             } catch (Throwable e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
                 break;
             }
             try {
@@ -572,7 +586,7 @@ public class TwitterScraper {
                     continue;
                 }
             } catch (Throwable e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
                 break;
             }
             break;

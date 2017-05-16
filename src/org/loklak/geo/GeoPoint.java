@@ -76,7 +76,7 @@ public interface GeoPoint {
      * @return the distance of this point and the other point in meter
      */
     public double distance(final GeoPoint othr);
-    
+
     /**
      * printout format of the point
      * @return

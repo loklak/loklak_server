@@ -271,26 +271,25 @@ public class SignedRequestsHelper {
 			for (int j = 0; j < tokens.length; j++) {
 				try {
 					tokens[j] = URLDecoder.decode(tokens[j], UTF8_CHARSET);
-				} catch (UnsupportedEncodingException e) {
-				}
+				} catch (UnsupportedEncodingException e) {}
 			}
 			switch (tokens.length) {
-			case 1: {
-				if (pair.charAt(0) == '=') {
-					map.put("", tokens[0]);
-				} else {
-					map.put(tokens[0], "");
+				case 1: {
+					if (pair.charAt(0) == '=') {
+						map.put("", tokens[0]);
+					} else {
+						map.put(tokens[0], "");
+					}
+					break;
 				}
-				break;
-			}
-			case 2: {
-				map.put(tokens[0], tokens[1]);
-				break;
-			}
-			default: {
-				// nothing
-				break;
-			}
+				case 2: {
+					map.put(tokens[0], tokens[1]);
+					break;
+				}
+				default: {
+					// nothing
+					break;
+				}
 			}
 		}
 		return map;

@@ -1,6 +1,5 @@
 package org.loklak.harvester.strategy;
 
-import org.eclipse.jetty.util.log.Log;
 import org.loklak.api.search.SearchServlet;
 import org.loklak.api.search.SuggestServlet;
 import org.loklak.data.DAO;
@@ -15,6 +14,7 @@ import twitter4j.Location;
 import twitter4j.Trend;
 import twitter4j.Twitter;
 import twitter4j.TwitterException;
+import twitter4j.TwitterFactory;
 
 import java.io.IOException;
 import java.text.DateFormat;
@@ -61,7 +61,10 @@ public class KaizenHarvester implements Harvester {
 
         random = new Random();
 
-        twitter = TwitterAPI.getAppTwitterFactory().getInstance();
+        TwitterFactory twitterFactory = TwitterAPI.getAppTwitterFactory();
+
+        if (twitterFactory != null)
+            twitter = twitterFactory.getInstance();
 
         if (twitter == null)
             DAO.log("Kaizen can utilize Twitter API to get more queries, If you want to use it, " +
@@ -171,7 +174,7 @@ public class KaizenHarvester implements Harvester {
                     addQuery(trend.getQuery());
         } catch (TwitterException e) {
             if (e.getErrorCode() != 88)
-                Log.getLog().warn(e);
+                DAO.severe(e);
         }
     }
 
@@ -203,7 +206,7 @@ public class KaizenHarvester implements Harvester {
                 grabInformation(timeline);
             }
         } catch (IOException e) {
-            Log.getLog().warn(e);
+            DAO.severe(e);
         }
 
         if (twitter != null)

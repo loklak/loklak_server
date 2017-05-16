@@ -33,11 +33,11 @@ public class GeoMark extends GeoLocation implements GeoPoint {
         this.mlat = mlat;
         this.mlon = mlon;
     }
-    
+
     public GeoMark(final GeoLocation loc, final String salt) {
         super(loc.lat(), loc.lon(), loc.getNames(), loc.getISO3166cc());
         super.setPopulation(loc.getPopulation());
-        
+
         // using the population, we compute a location radius
         // example city: middle-high density city (10,000 persons per square kilometer)
         // a large city in that density is Seoul, South Korea: 23,480,000 persons on 2,266 square kilometer
@@ -53,7 +53,9 @@ public class GeoMark extends GeoLocation implements GeoPoint {
         hs.append(loc.lon());
         hs.append(salt);
         int h = Math.abs(hs.hashCode());
-        if (h == Integer.MIN_VALUE) h = 0; // correction of the case that Math.abs is not possible
+        if (h == Integer.MIN_VALUE) {
+            h = 0; // correction of the case that Math.abs is not possible
+        }
         // with that hash we compute an actual distance and an angle
         double dist = (h & 0xff) * r / 255.0d / 40000000 * 360; // 40 million meter (the earth) has an angle of 360 degree
         double angle = 2 * Math.PI * ((double) ((h & 0xfff00) >> 8)) / ((double) 0xfff);        
@@ -61,15 +63,15 @@ public class GeoMark extends GeoLocation implements GeoPoint {
         this.mlat = this.lat() + Math.sin(angle) * dist;
         this.mlon = this.lon() + Math.cos(angle) * dist;
     }
-    
+
     public double mlon() {
         return this.mlon;
     }
-    
+
     public double mlat() {
         return this.mlat;
     }
-    
+
     public JSONObject toJSON(boolean minified) {
         JSONObject json = new JSONObject(true);
         json.put("place", minified ? new JSONArray(new String[]{this.getNames().iterator().next()}) : new JSONArray(this.getNames()));

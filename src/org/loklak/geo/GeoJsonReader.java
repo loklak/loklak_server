@@ -44,7 +44,7 @@ import com.fasterxml.jackson.core.JsonToken;
 public class GeoJsonReader implements Runnable {
 
     public final static Feature POISON_FEATURE = new Feature();
-    
+
     private final int concurrency;
     private final BlockingQueue<Feature> featureQueue;
     private final JsonParser parser;
@@ -55,7 +55,7 @@ public class GeoJsonReader implements Runnable {
         JsonFactory factory = new JsonFactory();
         this.parser = factory.createParser(is);
     }
-    
+
     @Override
     public void run() {
         // using a streamparser to be able to handle very large input files
@@ -91,48 +91,61 @@ public class GeoJsonReader implements Runnable {
             }
         }
     }
-    
+
     public Feature take() throws InterruptedException {
         return this.featureQueue.take();
     }
-    
+
     public static class Feature {
         public String id = "", feature_type = "", geometry_type = "";
         public Map<String, String> properties = new HashMap<>();
 
         public Feature() {} // only used to create a POISON object
-        
+
         public Feature(JsonParser parser) throws IOException {
             JsonToken token;
             while (!parser.isClosed() && (token = parser.nextToken()) != null && token != JsonToken.END_OBJECT) {
                 String name = parser.getCurrentName();
-    
+
                 if (JsonToken.FIELD_NAME.equals(token) && "id".equals(name)) {
-                    parser.nextToken(); this.id = parser.getText(); continue;
+                    parser.nextToken(); this.id = parser.getText();
+                    continue;
                 }
                 if (JsonToken.FIELD_NAME.equals(token) && "type".equals(name)) {
-                    parser.nextToken(); this.feature_type = parser.getText(); continue;
+                    parser.nextToken(); this.feature_type = parser.getText();
+                    continue;
                 }
-                
+
                 if (JsonToken.FIELD_NAME.equals(token) && "properties".equals(name)) {
                     this.properties = parseMap(parser);
                 }
-                
+
                 if (JsonToken.FIELD_NAME.equals(token) && "geometry".equals(name)) {
-                    token = parser.nextToken(); if (!JsonToken.START_OBJECT.equals(token)) break;
-    
+                    token = parser.nextToken();
+                    if (!JsonToken.START_OBJECT.equals(token)) {
+                        break;
+                    }
+
                     while (!parser.isClosed() && (token = parser.nextToken()) != null && token != JsonToken.END_OBJECT) {
                         name = parser.getCurrentName();
-    
+
                         if (JsonToken.FIELD_NAME.equals(token) && "type".equals(name)) {
-                            parser.nextToken(); this.geometry_type = parser.getText(); continue;
+                            parser.nextToken(); this.geometry_type = parser.getText();
+                            continue;
                         }
                         if (JsonToken.FIELD_NAME.equals(token) && "coordinates".equals(name)) {
-                            token = parser.nextToken(); if (!JsonToken.START_ARRAY.equals(token)) break;
+                            token = parser.nextToken();
+                            if (!JsonToken.START_ARRAY.equals(token)) {
+                                break;
+                            }
                             parser.nextToken(); double lon = parser.getDoubleValue();
-                            if (!properties.containsKey("geo_longitude")) properties.put("geo_longitude",  Double.toString(lon));
+                            if (!properties.containsKey("geo_longitude")) {
+                                properties.put("geo_longitude",  Double.toString(lon));
+                            }
                             parser.nextToken(); double lat = parser.getDoubleValue();
-                            if (!properties.containsKey("geo_latitude")) properties.put("geo_latitude",  Double.toString(lat));
+                            if (!properties.containsKey("geo_latitude")) {
+                                properties.put("geo_latitude",  Double.toString(lat));
+                            }
                             parser.nextToken(); // END_ARRAY
                             continue;
                         }
@@ -140,17 +153,19 @@ public class GeoJsonReader implements Runnable {
                 }
             }
         }
-        
+
         public String toString() {
             return "id:" + id + "; lon:" + properties.get("geo_longitude") + "; lat:" + properties.get("geo_latitude");
         }
     }
-    
+
     private static Map<String, String> parseMap(JsonParser parser) throws JsonParseException, IOException {
         Map<String, String> map = new HashMap<>();
         JsonToken token = parser.nextToken();
-        if (!JsonToken.START_OBJECT.equals(token)) return map;
-        
+        if (!JsonToken.START_OBJECT.equals(token)) {
+            return map;
+        }
+
         while (!parser.isClosed() && (token = parser.nextToken()) != null && token != JsonToken.END_OBJECT) {
             String name = parser.getCurrentName();
             token = parser.nextToken();
@@ -171,5 +186,5 @@ public class GeoJsonReader implements Runnable {
             e.printStackTrace();
         }
     }
-    
+
 }
