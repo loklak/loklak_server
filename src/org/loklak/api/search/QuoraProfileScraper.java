@@ -77,16 +77,16 @@ public class QuoraProfileScraper extends AbstractAPIHandler implements APIHandle
 
 		String bio = userHTML.getElementsByClass("qtext_para").text();
 		quoraProfile.put("bio", bio);
-		
-		String profileImage = userHTML.select("img.profile_photo_img").attr("data-src");
+
+		String profileImage = userHTML.getElementsByAttributeValueContaining("class", "profile_photo_img").attr("src");
 		quoraProfile.put("profileImage", profileImage);
 
-		String userName = userHTML.select("img.profile_photo_img").attr("alt");
+		String userName = userHTML.getElementsByAttributeValueContaining("class", "profile_photo_img").attr("alt");
 		quoraProfile.put("user", userName);
-		
+
 		String rssFeedLink = url + "/rss";
 		quoraProfile.put("rss_feed_link", rssFeedLink);
-		
+
 		JSONArray jsonArray = new JSONArray();
 		jsonArray.put(quoraProfile);
 
