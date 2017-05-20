@@ -84,7 +84,7 @@ public class WordpressCrawlerService extends AbstractAPIHandler implements APIHa
 		Integer iterator = 0;
 
 		try {
-			blogHTML = Jsoup.connect(blogURL).get();
+			blogHTML = Jsoup.connect(blogURL).userAgent("Mozilla").get();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -106,7 +106,9 @@ public class WordpressCrawlerService extends AbstractAPIHandler implements APIHa
 
 			articleList_author = article.getElementsByClass("byline");
 			for (Element blogs : articleList_author) {
-				blogPosts[iterator][2] = blogs.text().toString();
+				String author = blogs.text().toString();
+				author = author.substring(author.indexOf(' ') + 1);
+				blogPosts[iterator][2] = author;
 			}
 
 			articleList_content = article.getElementsByClass("entry-content");
