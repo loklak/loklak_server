@@ -75,17 +75,22 @@ public class RedirectUnshortener {
     
     public static String unShorten(String urlstring) {
         //long start = System.currentTimeMillis();
+        if (!isApplicable(urlstring)) {
+            return urlstring;
+        }
         try {
             int termination = 10; // loop for recursively shortened urls
-            while (isApplicable(urlstring) && termination-- > 0) {
+            while (termination-- > 0) {
                 String unshortened = ClientConnection.getRedirect(urlstring);
-                if (unshortened.equals(urlstring)) return urlstring;
+                if (unshortened.equals(urlstring)) {
+                    return urlstring;
+                }
                 urlstring = unshortened; // recursive apply unshortener because some unshortener are applied several times
             }
             //DAO.log("UNSHORTENED in " + (System.currentTimeMillis() - start) + " milliseconds: " + urlstring);
             return urlstring;
         } catch (IOException e) {
-            DAO.log("UNSHORTEN failed for " + urlstring);
+            DAO.log("UNSHORTEN failed for " + urlstring + " : " + e);
             return urlstring;
         }
     }
