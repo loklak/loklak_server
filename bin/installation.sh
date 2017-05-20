@@ -7,6 +7,7 @@ cd $(dirname $0)/..
 
 # Execute preload script
 source bin/.preload.sh
+source bin/utility.sh
 
 echo "starting loklak installation"
 echo "startup" > $STARTUPFILE
@@ -43,8 +44,9 @@ if [ -f $STARTUPFILE ] && [ $(ps -p $PID -o pid=) ]; then
     else
 	    CUSTOMPORT=$(grep -iw 'port.http' conf/config.properties | sed 's/^[^=]*=//' );
 	fi
+	change_shortlink_urlstub $CUSTOMPORT # function defined in utility.sh
 	LOCALHOST=$(grep -iw 'shortlink.urlstub' conf/config.properties | sed 's/^[^=]*=//');
-	echo "loklak installation started at port $CUSTOMPORT, open your browser at $LOCALHOST$CUSTOMPORT"
+	echo "loklak installation started at port $CUSTOMPORT, open your browser at $LOCALHOST"
 	rm -f $STARTUPFILE
 
     echo "waiting for installation to finish"

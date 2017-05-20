@@ -7,6 +7,7 @@ cd $(dirname $0)/..
 
 # Execute preload script
 source bin/.preload.sh
+source bin/utility.sh
 
 while getopts ":I:d:n:p:" opt; do
     case $opt in
@@ -89,8 +90,8 @@ PID=$!
 echo $PID > $PIDFILE
 
 if [[ $SKIP_WAITING -eq 0 ]]; then
-    while [ -f $STARTUPFILE ] && kill -0 $PID > /dev/null 2>&1; do
-        if [ $(cat $STARTUPFILE) = 'done' ]; then
+    while [[ -f $STARTUPFILE ]] && kill -0 $PID > /dev/null 2>&1; do
+        if [[ $(cat $STARTUPFILE) = 'done' ]]; then
             break
         else
             sleep 1
@@ -99,11 +100,12 @@ if [[ $SKIP_WAITING -eq 0 ]]; then
 fi
 
 if [ -f $STARTUPFILE ] && kill -0 $PID > /dev/null 2>&1; then
-    if [ "$PORT_NUMBER" ]; then
+    if [[ $PORT_NUMBER ]]; then
         CUSTOMPORT=$PORT_NUMBER
     else
         CUSTOMPORT=$(grep -iw 'port.http' conf/config.properties | sed 's/^[^=]*=//' );
     fi
+    change_shortlink_urlstub $CUSTOMPORT # function defined in utility.sh
     LOCALHOST=$(grep -iw 'shortlink.urlstub' conf/config.properties | sed 's/^[^=]*=//');
     echo "loklak server started at port $CUSTOMPORT, open your browser at $LOCALHOST"
     rm -f $STARTUPFILE
