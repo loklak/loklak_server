@@ -17,7 +17,6 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 
-
 import org.loklak.objects.Timeline;
 import org.loklak.harvester.TwitterScraper;
 import org.loklak.objects.MessageEntry;
@@ -30,33 +29,49 @@ import org.loklak.objects.MessageEntry;
 */
 public class TwitterScraperTest {
 
-/*
-    This unit-test tests twitter url creation
-*/
+    /*
+        This unit-test tests twitter url creation
+    */
     @Test
     public void testPrepareSearchURL() {
         String url;
         String[] query = {"fossasia", "from:loklak_test",
-            "spacex since:2017-04-03 until:2017-04-05", };
+                "spacex since:2017-04-03 until:2017-04-05"};
+        String[] filter = {"video", "image", "video,image", "abc,video"};
         String[] out_url = {
             "https://twitter.com/search?f=tweets&vertical=default&q=fossasia&src=typd",
             "https://twitter.com/search?f=tweets&vertical=default&q=from%3Aloklak_test&src=typd",
-            "https://twitter.com/search?f=tweets&vertical=default&q=spacex+since%3A2017-04-03+until%3A2017-04-05&src=typd"};
+            "https://twitter.com/search?f=tweets&vertical=default&q=spacex+since%3A2017-04-03+until%3A2017-04-05&src=typd",
+            "https://twitter.com/search?f=videos&vertical=default&q=fossasia&src=typd",
+            "https://twitter.com/search?f=tweets&vertical=default&q=fossasia&src=typd",
+            "https://twitter.com/search?f=tweets&vertical=default&q=fossasia&src=typd",
+            "https://twitter.com/search?f=tweets&vertical=default&q=fossasia&src=typd",
+        };
 
+        // checking simple urls
         for (int i = 0; i < query.length; i++) {
-            url = TwitterScraper.prepareSearchURL(query[i]);
+            url = TwitterScraper.prepareSearchURL(query[i], "");
 
             //compare urls with urls created
             assertThat(out_url[i], is(url));
         }
+
+        // checking urls having filters
+        for (int i = 0; i < filter.length; i++) {
+            url = TwitterScraper.prepareSearchURL(query[0], filter[i]);
+
+            //compare urls with urls created
+            assertThat(out_url[i+3], is(url));
+        }
+
     }
 
-/*
-    This unit-test tests tweet data fetched from TwitterScraper object.
-    THis test uses TwitterTweet object to get and check tweets
-*/
+    /*
+        This unit-test tests data fetched in TwitterScraper.search() method.
+        This test uses TwitterTweet object to get and check tweets
+    */
     @Test
-    public void testSearch() {
+    public void testSimpleSearch() {
         Timeline ftweet_list;
         Timeline.Order order = Timeline.parseOrder("created_at");
         String https_url = "https://twitter.com/search?f=tweets&vertical=default&q=from%3Aloklak_test&src=typd";
@@ -115,10 +130,8 @@ public class TwitterScraperTest {
 
         String created_date = dateFormatChange(String.valueOf(tweet.getCreatedAt()));
         assertThat(created_date, is(tweet_check.get("created_at")));
-        
-        assertEquals(tweet.getScreenName(), tweet_check.get("screen_name"));
-System.out.println(tweet.getSourceType()+ "   +++++   "+ tweet_check.get("source_type"));
 
+        assertEquals(tweet.getScreenName(), tweet_check.get("screen_name"));
         assertEquals(String.valueOf(tweet.getSourceType()), tweet_check.get("source_type"));
         assertEquals(String.valueOf(tweet.getProviderType()), tweet_check.get("provider_type"));
         assertEquals(tweet.getText(), tweet_check.get("text"));
@@ -128,12 +141,11 @@ System.out.println(tweet.getSourceType()+ "   +++++   "+ tweet_check.get("source
         // Other parameters of twittertweet(used )
         assertThat(tweet.writeToIndex, is(Boolean.parseBoolean(tweet_check.get("writeToIndex"))));
         assertThat(tweet.writeToBackend, is(Boolean.parseBoolean(tweet_check.get("writeToBackend"))));
-
     }
 
-/*
-    This method merges 2 arrays of Timeline Objects(containing array of TwitterTweet objects) into one Timeline object
-*/
+    /*
+        This method merges 2 arrays of Timeline Objects(containing array of TwitterTweet objects) into one Timeline object
+    */
     public Timeline processTweetList(Timeline[] tweet_list) {
 
         for (MessageEntry me: tweet_list[1]) {
@@ -147,9 +159,9 @@ System.out.println(tweet.getSourceType()+ "   +++++   "+ tweet_check.get("source
 
     }
 
-/*
-    Change Date format to compare with other dates
-*/
+    /*
+        Change Date format to compare with other dates
+    */
     public String dateFormatChange(String time) {
 
         String k;
