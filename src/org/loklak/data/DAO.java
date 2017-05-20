@@ -1099,8 +1099,29 @@ public class DAO {
         return latests.values();
     }
     
-    public static Timeline scrapeTwitter(final Query post, final String q, final Timeline.Order order, final int timezoneOffset, boolean byUserQuery, long timeout, boolean recordQuery) {
+    public static Timeline scrapeTwitter(
+            final Query post,
+            final String q,
+            final Timeline.Order order,
+            final int timezoneOffset,
+            boolean byUserQuery,
+            long timeout,
+            boolean recordQuery) {
+
+        return scrapeTwitter(post, "", q, order, timezoneOffset, byUserQuery, timeout, recordQuery);
+    }
+
+    public static Timeline scrapeTwitter(
+            final Query post,
+            final String filter,
+            final String q,
+            final Timeline.Order order,
+            final int timezoneOffset,
+            boolean byUserQuery,
+            long timeout,
+            boolean recordQuery) {
         // retrieve messages from remote server
+
         ArrayList<String> remote = DAO.getFrontPeers();
         Timeline tl;
         if (remote.size() > 0 && (peerLatency.get(remote.get(0)) == null || peerLatency.get(remote.get(0)).longValue() < 3000)) {
@@ -1111,7 +1132,8 @@ public class DAO {
             if (tl == null || tl.size() == 0) {
                 // maybe the remote server died, we try then ourself
                 start = System.currentTimeMillis();
-                tl = TwitterScraper.search(q, order, true, true, 400);
+
+                tl = TwitterScraper.search(q, filter, order, true, true, 400);
                 if (post != null) post.recordEvent("local_scraper_after_unsuccessful_remote", System.currentTimeMillis() - start);
             } else {
                 tl.writeToIndex();
@@ -1119,7 +1141,8 @@ public class DAO {
         } else {
             if (post != null && remote.size() > 0) post.recordEvent("omitted_scraper_latency_" + remote.get(0), peerLatency.get(remote.get(0)));
             long start = System.currentTimeMillis();
-            tl = TwitterScraper.search(q, order, true, true, 400);
+
+            tl = TwitterScraper.search(q, filter, order, true, true, 400);
             if (post != null) post.recordEvent("local_scraper", System.currentTimeMillis() - start);
         }
 

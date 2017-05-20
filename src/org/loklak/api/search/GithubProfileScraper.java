@@ -42,10 +42,14 @@ import org.loklak.susi.SusiThought;
 import org.loklak.tools.storage.JSONObjectWithDefault;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.Arrays;
 
 public class GithubProfileScraper extends AbstractAPIHandler implements APIHandler {
 
 	private static final long serialVersionUID = -4166800345379685201L;
+	private static final String GITHUB_API_BASE = "https://api.github.com/users/";
 
 	@Override
 	public String getAPIPath() {
@@ -66,53 +70,42 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
 	public JSONObject serviceImpl(Query call, HttpServletResponse response, Authorization rights, JSONObjectWithDefault permissions)
 			throws APIException {
 		String profile = call.get("profile", "");
+		String termsParam = call.get("terms", "");
+		Set terms = null;
+		if  (!"".equals(termsParam)) {
+			terms = new HashSet(Arrays.asList(termsParam.split(",")));
+			return scrapeGithub(profile, terms);
+		}
 		return scrapeGithub(profile);
 	}
 
-	public static SusiThought scrapeGithub(String profile) {
-
-		Document html = null;
-		String user_id;
-
-		JSONObject githubProfile = new JSONObject();
-
+	private static JSONArray getDataFromApi(String url) {
+		URI uri = null;
 		try {
-			html = Jsoup.connect("https://github.com/" + profile).get();
-		} catch (IOException e) {
-
-			URI uri = null;
-			try {
-				uri = new URI("https://api.github.com/search/users?q=" + profile);
-			} catch (URISyntaxException e1) {
-				e1.printStackTrace();
-			}
-
-			JSONTokener tokener = null;
-			try {
-				tokener = new JSONTokener(uri.toURL().openStream());
-			} catch (Exception e1) {
-				e1.printStackTrace();
-			}
-
-			JSONObject obj = new JSONObject(tokener);
-
-			JSONArray arr = new JSONArray();
-			arr.put(obj);
-
-			SusiThought json = new SusiThought();
-			json.setData(arr);
-			return json;
+				uri = new URI(url);
+		} catch (URISyntaxException e1) {
+			e1.printStackTrace();
 		}
 
-		String avatarUrl = html.getElementsByAttributeValueContaining("class", "avatar").attr("src");
+		JSONTokener tokener = null;
+		try {
+			tokener = new JSONTokener(uri.toURL().openStream());
+		} catch (Exception e1) {
+			e1.printStackTrace();
+		}
+		JSONArray arr = new JSONArray(tokener);
+		return arr;
+	}
 
-		Pattern avatar_url_to_user_id = Pattern.compile(".com\\/u\\/([0-9]+)\\?");
-		Matcher m = avatar_url_to_user_id.matcher(avatarUrl);
-		m.find();
-		user_id = m.group(1);
-		githubProfile.put("user_id", user_id);
+	private static void scrapeGithubUser(
+		JSONObject githubProfile,
+		Set terms,
+		String profile,
+		Document html) {
 
-		githubProfile.put("avatar_url", "https://avatars0.githubusercontent.com/u/" + user_id);
+		final String STARRED_ENDPOINT = "/starred";
+		final String FOLLOWERS_ENDPOINT = "/followers";
+		final String FOLLOWING_ENDPOINT = "/following";
 
 		String fullName = html.getElementsByAttributeValueContaining("class", "vcard-fullname").text();
 		githubProfile.put("full_name", fullName);
@@ -132,6 +125,120 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
 		String homeLocation = html.getElementsByAttributeValueContaining("itemprop", "homeLocation").attr("title");
 		githubProfile.put("home_location", homeLocation);
 
+		if (terms.contains("starred") || terms.contains("all")) {
+			String starredUrl = GITHUB_API_BASE + profile + STARRED_ENDPOINT;
+			JSONArray starredData = getDataFromApi(starredUrl);
+			githubProfile.put("starred_data", starredData);
+
+			int starred = Integer.parseInt(html.getElementsByAttributeValue("class", "Counter").get(1).text());
+			githubProfile.put("starred", starred);
+		}
+
+		if (terms.contains("follows") || terms.contains("all")) {
+			String followersUrl = GITHUB_API_BASE + profile + FOLLOWERS_ENDPOINT;
+			JSONArray followersData = getDataFromApi(followersUrl);
+			githubProfile.put("followers_data", followersData);
+
+			int followers = Integer.parseInt(html.getElementsByAttributeValue("class", "Counter").get(2).text());
+			githubProfile.put("followers", followers);
+		}
+
+		if (terms.contains("following") || terms.contains("all")) {
+			String followingUrl = GITHUB_API_BASE + profile + FOLLOWING_ENDPOINT;
+			JSONArray followingData = getDataFromApi(followingUrl);
+			githubProfile.put("following_data", followingData);
+
+			int following = Integer.parseInt(html.getElementsByAttributeValue("class", "Counter").get(3).text());
+			githubProfile.put("following", following);
+		}
+
+		if (terms.contains("organizations") || terms.contains("all")) {
+			JSONArray organizations = new JSONArray();
+			Elements orgs = html.getElementsByAttributeValue("itemprop", "follows");
+			for (Element e : orgs) {
+				JSONObject obj = new JSONObject();
+
+				String label = e.attr("aria-label");
+				obj.put("label", label);
+
+				String link = e.attr("href");
+				obj.put("link", "https://github.com" + link);
+
+				String imgLink = e.children().attr("src");
+				obj.put("img_link", imgLink);
+
+				String imgAlt = e.children().attr("alt");
+				obj.put("img_Alt", imgAlt);
+
+				organizations.put(obj);
+			}
+			githubProfile.put("organizations", organizations);
+		}
+	}
+
+	private static void scrapeGithubOrg(
+		String profile,
+		JSONObject githubProfile,
+		Document html) {
+
+		githubProfile.put("user_name", profile);
+
+		String shortDescription = html.getElementsByAttributeValueContaining("class", "TableObject-item TableObject-item--primary").get(0).child(2).text();
+		githubProfile.put("short_description", shortDescription);
+
+		String homeLocation = html.getElementsByAttributeValueContaining("itemprop", "location").attr("title");
+		githubProfile.put("location", homeLocation);
+
+		Elements navigation = html.getElementsByAttributeValue("class", "orgnav");
+		for (Element e : navigation) {
+			String orgRepositoriesLink = e.child(0).tagName("a").attr("href");
+			githubProfile.put("organization_respositories_link", "https://github.com" + orgRepositoriesLink);
+
+			String orgPeopleLink = e.child(1).tagName("a").attr("href");
+			githubProfile.put("organization_people_link", "https://github.com" + orgPeopleLink);
+
+			String orgPeopleNumber = e.child(1).tagName("a").child(1).text();
+			githubProfile.put("organization_people_number", orgPeopleNumber);
+		}
+	}
+
+	public static SusiThought scrapeGithub(String profile) {
+		Set terms = new HashSet();
+		terms.add("all");
+		return scrapeGithub(profile, terms);
+	}
+
+	public static SusiThought scrapeGithub(String profile, Set terms) {
+
+		final String GISTS_ENDPOINT = "/gists";
+		final String SUBSCRIPTIONS_ENDPOINT = "/subscriptions";
+		final String REPOS_ENDPOINT = "/repos";
+		final String EVENTS_ENDPOINT = "/events";
+		final String RECEIVED_EVENTS_ENDPOINT = "/received_events";
+		Document html = null;
+		String user_id;
+
+		JSONObject githubProfile = new JSONObject();
+
+		try {
+			html = Jsoup.connect("https://github.com/" + profile).get();
+		} catch (IOException e) {
+			JSONArray arr = getDataFromApi("https://api.github.com/search/users?q=" + profile);
+			SusiThought json = new SusiThought();
+			json.setData(arr);
+			return json;
+		}
+
+		String avatarUrl = html.getElementsByAttributeValueContaining("class", "avatar").attr("src");
+
+		Pattern avatar_url_to_user_id = Pattern.compile(".com\\/u\\/([0-9]+)\\?");
+		Matcher m = avatar_url_to_user_id.matcher(avatarUrl);
+		m.find();
+		user_id = m.group(1);
+		githubProfile.put("user_id", user_id);
+
+		githubProfile.put("avatar_url", "https://avatars0.githubusercontent.com/u/" + user_id);
+	
 		String email = html.getElementsByAttributeValueContaining("itemprop", "email").text();
 		if (!email.contains("@"))
 			email = "";
@@ -149,76 +256,38 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
 			}
 		}
 		/* If Individual User */
-		if (html.getElementsByAttributeValue("class", "vcard-stat").size() != 0) {
-
-			String followersUrl = html.getElementsByAttributeValueContaining("class", "vcard-stat").get(0).attr("href");
-			githubProfile.put("followers_url", "https://github.com" + followersUrl);
-
-			String followers = html.getElementsByAttributeValueContaining("class", "vcard-stat").get(0).tagName("strong").text();
-			githubProfile.put("followers", followers);
-
-			String starredUrl = html.getElementsByAttributeValueContaining("class", "vcard-stat").get(1).attr("href");
-			githubProfile.put("starred_url", "https://github.com" + starredUrl);
-
-			String starred = html.getElementsByAttributeValueContaining("class", "vcard-stat").get(1).tagName("strong").text();
-			githubProfile.put("starred", starred);
-
-			String followingUrl = html.getElementsByAttributeValueContaining("class", "vcard-stat").get(2).attr("href");
-			githubProfile.put("following_url", "https://github.com" + followingUrl);
-
-			String following = html.getElementsByAttributeValueContaining("class", "vcard-stat").get(2).tagName("strong").text();
-			githubProfile.put("following", following);
+		if (html.getElementsByAttributeValueContaining("class", "user-profile-nav").size() != 0) {
+			scrapeGithubUser(githubProfile, terms, profile, html);
 		}
-
-		String gistsUrl ="https://api.github.com/users/" + profile + "/gists";
-		githubProfile.put("gists_url", gistsUrl);
-
-		String subscriptionsUrl ="https://api.github.com/users/" + profile + "/subscriptions";
-		githubProfile.put("subscriptions_url", subscriptionsUrl);
-
-		String reposUrl ="https://api.github.com/users/" + profile + "/repos";
-		githubProfile.put("repos_url", reposUrl);
-
-		String eventsUrl ="https://api.github.com/users/" + profile + "/events";
-		githubProfile.put("events_url", eventsUrl);
-
-		String receivedEventsUrl ="https://api.github.com/users/" + profile + "/received_events";
-		githubProfile.put("received_events_url", receivedEventsUrl);
-
-		JSONArray organizations = new JSONArray();
-		Elements orgs = html.getElementsByAttributeValue("itemprop", "follows");
-		for (Element e : orgs) {
-			JSONObject obj = new JSONObject();
-
-			String label = e.attr("aria-label");
-			obj.put("label", label);
-
-			String link = e.attr("href");
-			obj.put("link", "https://github.com" + link);
-
-			String imgLink = e.children().attr("src");
-			obj.put("img_link", imgLink);
-
-			String imgAlt = e.children().attr("alt");
-			obj.put("img_Alt", imgAlt);
-
-			organizations.put(obj);
+		if (terms.contains("gists") || terms.contains("all")) {
+			String gistsUrl = GITHUB_API_BASE + profile + GISTS_ENDPOINT;
+			JSONArray gists = getDataFromApi(gistsUrl);
+			githubProfile.put("gists", gists);
 		}
-		githubProfile.put("organizations", organizations);
-
+		if (terms.contains("subscriptions") || terms.contains("all")) {
+			String subscriptionsUrl = GITHUB_API_BASE + profile + SUBSCRIPTIONS_ENDPOINT;
+			JSONArray subscriptions = getDataFromApi(subscriptionsUrl);
+			githubProfile.put("subscriptions", subscriptions);
+		}
+		if (terms.contains("repos") || terms.contains("all")) {
+			String reposUrl = GITHUB_API_BASE + profile + REPOS_ENDPOINT;
+			JSONArray repos = getDataFromApi(reposUrl);
+			githubProfile.put("repos", repos);
+		}
+		if (terms.contains("events") || terms.contains("all")) {
+			String eventsUrl = GITHUB_API_BASE + profile + EVENTS_ENDPOINT;
+			JSONArray events = getDataFromApi(eventsUrl);
+			githubProfile.put("events", events);
+		}
+		if (terms.contains("received_events") || terms.contains("all")) {
+			String receivedEventsUrl = GITHUB_API_BASE + profile + RECEIVED_EVENTS_ENDPOINT;
+			JSONArray receivedEvents = getDataFromApi(receivedEventsUrl);
+			githubProfile.put("received_events", receivedEvents);
+		}
 		/* If Organization */
-		Elements navigation = html.getElementsByAttributeValue("class", "orgnav");
-		for (Element e : navigation) {
-			String orgRepositoriesLink = e.child(0).tagName("a").attr("href");
-			githubProfile.put("organization_respositories_link", "https://github.com" + orgRepositoriesLink);
-
-			String orgPeopleLink = e.child(1).tagName("a").attr("href");
-			githubProfile.put("organization_people_link", "https://github.com" + orgPeopleLink);
-
-			String orgPeopleNumber = e.child(1).tagName("a").child(1).text();
-			githubProfile.put("organization_people_number", orgPeopleNumber);
+		if (html.getElementsByAttributeValue("class", "orgnav").size() != 0) {
+			scrapeGithubOrg(profile, githubProfile, html);
 		}
-
 		JSONArray jsonArray = new JSONArray();
 		jsonArray.put(githubProfile);
 

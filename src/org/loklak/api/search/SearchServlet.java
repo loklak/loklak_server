@@ -150,6 +150,8 @@ public class SearchServlet extends HttpServlet {
                                     DAO.getConfig(SEARCH_MAX_LOCALHOST_COUNT_NAME, 1000) :
                                     DAO.getConfig(SEARCH_MAX_PUBLIC_COUNT_NAME, 100)));
 
+            String filter = post.get("filter", post.get("filter", ""));
+            
             // create tweet timeline
             final String ordername = post.get("order", Timeline.Order.CREATED_AT.getMessageFieldName());
             final Timeline.Order order = Timeline.parseOrder(ordername);
@@ -186,7 +188,7 @@ public class SearchServlet extends HttpServlet {
                         public void run() {
                             final String scraper_query = tokens.translate4scraper();
                             DAO.log(request.getServletPath() + " scraping with query: " + scraper_query);
-                            Timeline twitterTl = DAO.scrapeTwitter(post, scraper_query, order, timezoneOffsetf, true, timeout, true);
+                            Timeline twitterTl = DAO.scrapeTwitter(post, filter, scraper_query, order, timezoneOffsetf, true, timeout, true);
                             count_twitter_new.set(twitterTl.size());
                             tl.putAll(QueryEntry.applyConstraint(twitterTl, tokens, false)); // pre-localized results are not filtered with location constraint any more
                             tl.setScraperInfo(twitterTl.getScraperInfo());
@@ -263,7 +265,8 @@ public class SearchServlet extends HttpServlet {
                 } else if ("twitter".equals(source) && tokens.raw.length() > 0) {
                     final String scraper_query = tokens.translate4scraper();
                     DAO.log(request.getServletPath() + " scraping with query: " + scraper_query);
-                    Timeline twitterTl = DAO.scrapeTwitter(post, scraper_query, order, timezoneOffset, true, timeout, true);
+                    Timeline twitterTl = DAO.scrapeTwitter(post, filter, scraper_query, order, timezoneOffset, true, timeout, true);
+                            
                     count_twitter_new.set(twitterTl.size());
                     tl.putAll(QueryEntry.applyConstraint(twitterTl, tokens, false)); // pre-localized results are not filtered with location constraint any more
                     tl.setScraperInfo(twitterTl.getScraperInfo());
@@ -321,6 +324,7 @@ public class SearchServlet extends HttpServlet {
                 metadata.put("hits", tl.getHits());                               // number of records in the search index (so far, may be increased later as well)
                 if (tl.getOrder() == Timeline.Order.CREATED_AT) metadata.put("period", tl.period());
                 metadata.put("query", query);
+                metadata.put("filter", filter);
                 metadata.put("client", post.getClientHost());
                 metadata.put("time", System.currentTimeMillis() - post.getAccessTime());
                 metadata.put("servicereduction", post.isDoS_servicereduction() ? "true" : "false");
