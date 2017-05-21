@@ -242,7 +242,7 @@ public class TwitterScraper {
         String place_name = "";
         boolean parsing_favourite = false, parsing_retweet = false;
         int line = 0; // first line is 1, according to emacs which numbers the first line also as 1
-        boolean debuglog = true;
+        boolean debuglog = DAO.getConfig("flag.debug.twitter_scraper", "false").equals("true");
         
         while ((input = br.readLine()) != null){
             line++;
