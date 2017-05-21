@@ -79,7 +79,7 @@ public class ClientConnection {
     private static final byte LF = 10;
     private static final byte CR = 13;
     public static final byte[] CRLF = {CR, LF};
-    private static final boolean debugLog = true;
+    private static final boolean debugLog = DAO.getConfig("flag.debug.redirect_unshortener", "false").equals("true");
 
     public static PoolingHttpClientConnectionManager cm;
     private static RequestConfig defaultRequestConfig = RequestConfig.custom()
