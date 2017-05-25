@@ -19,6 +19,10 @@
 
 package org.loklak.data;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.github.fge.jackson.JsonLoader;
+import com.google.common.base.Charsets;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -40,14 +44,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.stream.Collectors;
+import java.util.TreeMap;
 
 import org.eclipse.jetty.util.ConcurrentHashSet;
-
-import com.github.fge.jackson.JsonLoader;
-import com.google.common.base.Charsets;
-
 import org.eclipse.jetty.util.log.Log;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
 import org.elasticsearch.common.logging.ESLoggerFactory;
@@ -79,8 +79,6 @@ import org.loklak.server.*;
 import org.loklak.tools.DateParser;
 import org.loklak.tools.OS;
 import org.loklak.tools.storage.*;
-
-import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * The Data Access Object for the message project.
@@ -933,31 +931,40 @@ public class DAO {
          * @param resultCount - the number of messages in the result; can be zero if only aggregations are wanted
          * @param aggregationLimit - the maximum count of facet entities, not search results
          * @param aggregationFields - names of the aggregation fields. If no aggregation is wanted, pass no (zero) field(s)
+         * @param filterList - list of filters in String datatype
          */
-        public SearchLocalMessages(final String q, final Timeline.Order order_field, final int timezoneOffset, final int resultCount, final int aggregationLimit, final String... aggregationFields) {
-            this.timeline = new Timeline(order_field);
-            QueryEntry.ElasticsearchQuery sq = new QueryEntry.ElasticsearchQuery(q, timezoneOffset);
+        public SearchLocalMessages (
+                final String q,
+                final Timeline.Order orderField,
+                final int timezoneOffset,
+                final int resultCount,
+                final int aggregationLimit,
+                final ArrayList<String> filterList,
+                final String... aggregationFields
+        ) {
+            this.timeline = new Timeline(orderField);
+            QueryEntry.ElasticsearchQuery sq = new QueryEntry.ElasticsearchQuery(q, timezoneOffset, filterList);
             long interval = sq.until.getTime() - sq.since.getTime();
             IndexName resultIndex;
             if (aggregationFields.length > 0 && q.contains("since:")) {
                 if (q.contains("since:hour")) {
-                    this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_hour).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
+                    this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_hour).name(), sq.queryBuilder, orderField.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
                 } else if (q.contains("since:day")) {
-                    this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_day).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
+                    this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_day).name(), sq.queryBuilder, orderField.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
                 } else if (q.contains("since:week")) {
-                    this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_week).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
+                    this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_week).name(), sq.queryBuilder, orderField.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
                 } else {
-                    this.query = elasticsearch_client.query((resultIndex = IndexName.messages).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
+                    this.query = elasticsearch_client.query((resultIndex = IndexName.messages).name(), sq.queryBuilder, orderField.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
                 }
             } else {
                 // use only a time frame that is sufficient for a result
-                this.query = elasticsearch_client.query((resultIndex = IndexName.messages_hour).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
+                this.query = elasticsearch_client.query((resultIndex = IndexName.messages_hour).name(), sq.queryBuilder, orderField.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
                 if (!q.contains("since:hour") && insufficient(this.query, resultCount, aggregationLimit, aggregationFields)) {
-                    this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_day).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
+                    this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_day).name(), sq.queryBuilder, orderField.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
                     if (!q.contains("since:day") && insufficient(this.query, resultCount, aggregationLimit, aggregationFields)) {
-                        this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_week).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
+                        this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_week).name(), sq.queryBuilder, orderField.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
                         if (!q.contains("since:week") && insufficient(this.query, resultCount, aggregationLimit, aggregationFields)) {
-                            this.query =  elasticsearch_client.query((resultIndex = IndexName.messages).name(), sq.queryBuilder, order_field.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
+                            this.query =  elasticsearch_client.query((resultIndex = IndexName.messages).name(), sq.queryBuilder, orderField.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
                 }}}
             }
             timeline.setHits(query.hitCount);
@@ -977,6 +984,25 @@ public class DAO {
                 }
             }
             this.aggregations = query.aggregations;
+        }
+
+        public SearchLocalMessages (
+                final String q,
+                final Timeline.Order orderField,
+                final int timezoneOffset,
+                final int resultCount,
+                final int aggregationLimit,
+                final String... aggregationFields
+        ) {
+            this(
+                q,
+                orderField,
+                timezoneOffset,
+                resultCount,
+                aggregationLimit,
+                new ArrayList<>(),
+                aggregationFields
+            );
         }
         
         private static boolean insufficient(ElasticsearchClient.Query query, int resultCount, int aggregationLimit, String... aggregationFields) {
@@ -1108,12 +1134,12 @@ public class DAO {
             long timeout,
             boolean recordQuery) {
 
-        return scrapeTwitter(post, "", q, order, timezoneOffset, byUserQuery, timeout, recordQuery);
+        return scrapeTwitter(post, new ArrayList<>(), q, order, timezoneOffset, byUserQuery, timeout, recordQuery);
     }
 
     public static Timeline scrapeTwitter(
             final Query post,
-            final String filter,
+            final ArrayList<String> filterList,
             final String q,
             final Timeline.Order order,
             final int timezoneOffset,
@@ -1133,7 +1159,7 @@ public class DAO {
                 // maybe the remote server died, we try then ourself
                 start = System.currentTimeMillis();
 
-                tl = TwitterScraper.search(q, filter, order, true, true, 400);
+                tl = TwitterScraper.search(q, filterList, order, true, true, 400);
                 if (post != null) post.recordEvent("local_scraper_after_unsuccessful_remote", System.currentTimeMillis() - start);
             } else {
                 tl.writeToIndex();
@@ -1142,7 +1168,7 @@ public class DAO {
             if (post != null && remote.size() > 0) post.recordEvent("omitted_scraper_latency_" + remote.get(0), peerLatency.get(remote.get(0)));
             long start = System.currentTimeMillis();
 
-            tl = TwitterScraper.search(q, filter, order, true, true, 400);
+            tl = TwitterScraper.search(q, filterList, order, true, true, 400);
             if (post != null) post.recordEvent("local_scraper", System.currentTimeMillis() - start);
         }
 

@@ -22,6 +22,8 @@ package org.loklak.api.search;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -150,8 +152,9 @@ public class SearchServlet extends HttpServlet {
                                     DAO.getConfig(SEARCH_MAX_LOCALHOST_COUNT_NAME, 1000) :
                                     DAO.getConfig(SEARCH_MAX_PUBLIC_COUNT_NAME, 100)));
 
-            String filter = post.get("filter", post.get("filter", ""));
-            
+            String filter = post.get("filter", "").replaceAll("\\s","");
+            ArrayList<String> filterList = new ArrayList<String>(Arrays.asList(filter.split(",")));
+
             // create tweet timeline
             final String ordername = post.get("order", Timeline.Order.CREATED_AT.getMessageFieldName());
             final Timeline.Order order = Timeline.parseOrder(ordername);
@@ -188,7 +191,7 @@ public class SearchServlet extends HttpServlet {
                         public void run() {
                             final String scraper_query = tokens.translate4scraper();
                             DAO.log(request.getServletPath() + " scraping with query: " + scraper_query);
-                            Timeline twitterTl = DAO.scrapeTwitter(post, filter, scraper_query, order, timezoneOffsetf, true, timeout, true);
+                            Timeline twitterTl = DAO.scrapeTwitter(post, filterList, scraper_query, order, timezoneOffsetf, true, timeout, true);
                             count_twitter_new.set(twitterTl.size());
                             tl.putAll(QueryEntry.applyConstraint(twitterTl, tokens, false)); // pre-localized results are not filtered with location constraint any more
                             tl.setScraperInfo(twitterTl.getScraperInfo());
@@ -200,7 +203,18 @@ public class SearchServlet extends HttpServlet {
                     // start a local search
                     Thread localThread = queryf == null || queryf.length() == 0 ? null : new Thread() {
                         public void run() {
-                            DAO.SearchLocalMessages localSearchResult = new DAO.SearchLocalMessages(queryf, order, timezoneOffsetf, last_cache_search_time.get() > SEARCH_CACHE_THREASHOLD_TIME ? Math.min(maximumRecords, (int) DAO.getConfig(SEARCH_LOW_COUNT_NAME, 10)) : maximumRecords, agregation_limit, fields);
+
+                            DAO.SearchLocalMessages localSearchResult =
+                                    new DAO.SearchLocalMessages(
+                                            queryf,
+                                            order,
+                                            timezoneOffsetf,
+                                            last_cache_search_time.get() > SEARCH_CACHE_THREASHOLD_TIME ? Math.min(maximumRecords,
+                                            (int) DAO.getConfig(SEARCH_LOW_COUNT_NAME, 10)) : maximumRecords,
+                                            agregation_limit,
+                                            filterList,
+                                            fields
+                                    );
                             long time = System.currentTimeMillis() - start;
                             last_cache_search_time.set(time);
                             post.recordEvent("cache_time", time);
@@ -265,7 +279,7 @@ public class SearchServlet extends HttpServlet {
                 } else if ("twitter".equals(source) && tokens.raw.length() > 0) {
                     final String scraper_query = tokens.translate4scraper();
                     DAO.log(request.getServletPath() + " scraping with query: " + scraper_query);
-                    Timeline twitterTl = DAO.scrapeTwitter(post, filter, scraper_query, order, timezoneOffset, true, timeout, true);
+                    Timeline twitterTl = DAO.scrapeTwitter(post, filterList, scraper_query, order, timezoneOffset, true, timeout, true);
                             
                     count_twitter_new.set(twitterTl.size());
                     tl.putAll(QueryEntry.applyConstraint(twitterTl, tokens, false)); // pre-localized results are not filtered with location constraint any more
@@ -274,7 +288,18 @@ public class SearchServlet extends HttpServlet {
                     // in this case we use all tweets, not only the latest one because it may happen that there are no new and that is not what the user expects
 
                 } else if ("cache".equals(source)) {
-                    DAO.SearchLocalMessages localSearchResult = new DAO.SearchLocalMessages(query, order, timezoneOffset, last_cache_search_time.get() > SEARCH_CACHE_THREASHOLD_TIME ? Math.min(maximumRecords, (int) DAO.getConfig(SEARCH_LOW_COUNT_NAME, 10)) : maximumRecords, agregation_limit, fields);
+                    DAO.SearchLocalMessages localSearchResult =
+                            new DAO.SearchLocalMessages(
+                                    query,
+                                    order,
+                                    timezoneOffset,
+                                    last_cache_search_time.get() > SEARCH_CACHE_THREASHOLD_TIME
+                                            ? Math.min(maximumRecords,(int) DAO.getConfig(SEARCH_LOW_COUNT_NAME, 10))
+                                            : maximumRecords,
+                                    agregation_limit,
+                                    filterList,
+                                    fields
+                            );
                     cache_hits.set(localSearchResult.timeline.getHits());
                     tl.putAll(localSearchResult.timeline);
                     tl.setResultIndex(localSearchResult.timeline.getResultIndex());
