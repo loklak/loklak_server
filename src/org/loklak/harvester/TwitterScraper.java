@@ -29,15 +29,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.Arrays;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
@@ -54,10 +46,13 @@ import org.loklak.objects.SourceType;
 import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
 
+import org.unbescape.html.HtmlEscape;
+
 public class TwitterScraper {
 
     public final static ExecutorService executor = Executors.newFixedThreadPool(40);
     public final static Pattern emoji_pattern_span = Pattern.compile("<span [^>]*class=\"Emoji Emoji--forLinks\" [^>]*>[\\n]*[^<]*</span>[\\n]*<span [^>]*class=\"visuallyhidden\" [^>]*aria-hidden=\"true\"[^>]*>[\\n]*([^<]*)[\\n]*</span>");
+    public final static Pattern videoURL = Pattern.compile("video_url\\\":\\\"(.*?)\\\"");
 
     public static Timeline search(
             final String query,
@@ -347,6 +342,19 @@ public class TwitterScraper {
                 videos.add(video_url);
                 continue;
             }
+            // Extraction of video from iFrame
+            if (input.indexOf("AdaptiveMedia-videoContainer") > 0) {
+                // Fetch Tweet ID
+                String tweetURL = props.get("tweetstatusurl").value;
+                int slashIndex = tweetURL.lastIndexOf('/');
+                if (slashIndex < 0) {
+                    continue;
+                }
+                String tweetID = tweetURL.substring(slashIndex + 1);
+                String iframeURL = "https://twitter.com/i/videos/tweet/" + tweetID;
+                String[] videoURLs = fetchTwitterIframeVideos(iframeURL);
+                Collections.addAll(videos, videoURLs);
+            }
             if ((p = input.indexOf("class=\"Tweet-geo")) > 0) {
                 prop place_name_prop = new prop(input, p, "title");
                 place_name = place_name_prop.value;
@@ -397,6 +405,7 @@ public class TwitterScraper {
                         );
                 ArrayList<String> imgs = new ArrayList<String>(images.size()); imgs.addAll(images);
                 ArrayList<String> vids = new ArrayList<String>(videos.size()); vids.addAll(videos);
+                videos.clear();
 
                 prop tweettimems = props.get("tweettimems");
                 if (tweettimems == null) {
@@ -453,6 +462,71 @@ public class TwitterScraper {
         //for (prop p: props.values()) System.out.println(p);
         br.close();
         return new Timeline[]{timelineReady, timelineWorking};
+    }
+
+    private static String[] fetchTwitterIframeVideos(String iframeURL) {
+        try {
+            ClientConnection conn = new ClientConnection(iframeURL);
+            if (conn.inputStream == null) {
+                return new String[]{};
+            }
+            BufferedReader br = new BufferedReader(new InputStreamReader(conn.inputStream, StandardCharsets.UTF_8));
+            String line;
+            while ((line = br.readLine()) != null ) {
+                int index;
+                if ((index = line.indexOf("data-config=")) >= 0) {
+                    String jsonEscHTML = (new prop(line, index, "data-config")).value;
+                    String jsonUnescHTML = HtmlEscape.unescapeHtml(jsonEscHTML);
+                    Matcher m = videoURL.matcher(jsonUnescHTML);
+                    if (!m.find()) {
+                        return new String[]{};
+                    }
+                    String url = m.group(1);
+                    url = url.replace("\\/", "/");
+                    if (url.endsWith(".mp4")) {
+                        return new String[]{url};
+                    } else if (url.endsWith(".m3u8")) {
+                        return extractM3u8(url);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            DAO.severe("Exception in iFrame Fetch", e);
+            return new String[]{};
+        }
+        return new String[]{};
+    }
+
+    private static String[] extractM3u8(String url) {
+        return extractM3u8(url, "https://video.twimg.com/");
+    }
+
+    private static String[] extractM3u8(String url, String baseURL) {
+        try {
+            ClientConnection conn = new ClientConnection(url);
+            if (conn.inputStream == null) {
+                return new String[]{};
+            }
+            BufferedReader br = new BufferedReader(new InputStreamReader(conn.inputStream, StandardCharsets.UTF_8));
+            String line;
+            ArrayList<String> links = new ArrayList<>();
+            while ((line = br.readLine()) != null) {
+                if (line.startsWith("#")) {
+                    continue;
+                }
+                String currentURL = (new URL(new URL(baseURL), line)).toString();
+                if (currentURL.endsWith(".m3u8")) {
+                    String[] more = extractM3u8(currentURL, baseURL);
+                    Collections.addAll(links, more);
+                } else {
+                    links.add(currentURL);
+                }
+            }
+            return links.toArray(new String[links.size()]);
+        } catch (IOException e) {
+            DAO.severe("Exception while m3u8 extraction", e);
+            return new String[]{};
+        }
     }
 
     public static class prop {
