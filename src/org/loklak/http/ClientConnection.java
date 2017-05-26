@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -363,8 +364,9 @@ public class ClientConnection {
                     if (debugLog) {
                         DAO.log("Fetched Meta redirect URL for " + urlstring + " : " + metaURL);
                     }
-                    if (!metaURL.startsWith("http") && !urlstring.endsWith("/")) {
-                        return urlstring + "/" + metaURL;
+                    if (!metaURL.startsWith("http")) {
+                        URL u = new URL(new URL(urlstring), metaURL);
+                        return u.toString();
                     }
                     return metaURL;
                 }
