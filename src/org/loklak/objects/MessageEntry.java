@@ -42,6 +42,8 @@ import org.loklak.geo.LocationSource;
 import org.loklak.objects.QueryEntry.PlaceContext;
 import org.loklak.tools.bayes.Classification;
 
+import org.unbescape.html.HtmlEscape;
+
 public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
 
     public static final String RICH_TEXT_SEPARATOR = "\n***\n";
@@ -640,8 +642,16 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
         if (user != null) m.put("user", user.toJSON());
         return m;
     }
-    
+
     public static String html2utf8(String s) {
+        String unescape = HtmlEscape.unescapeHtml(s);
+        unescape = A_END_TAG.matcher(unescape).replaceAll("");
+        unescape = unescape.trim().replaceAll(" +", " ");
+        return unescape;
+    }
+
+    public static String html2utf8Custom(String str) {
+        String s = str;
         int p, q;
         // hex coding &#
         try {
@@ -678,7 +688,7 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
             else clean.append(c);
         }
         // remove double spaces
-        return clean.toString().replaceAll("  ", " ");
+        return clean.toString().trim().replaceAll(" +", " ");
     }
 
     private final static Pattern A_END_TAG = Pattern.compile("</a>");
