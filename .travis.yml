@@ -39,16 +39,6 @@ deploy:
       branch: master
   - provider: script
     skip_cleanup: true
-    script: .utility/push-docs-to-gh-pages.sh
-    on:
-      branch: development
-  - provider: script
-    skip_cleanup: true
-    script: .utility/push-docs-to-gh-pages.sh
-    on:
-      branch: master
-  - provider: script
-    skip_cleanup: true
     script: .utility/update-docs-repo.sh
     on:
       branch: development
