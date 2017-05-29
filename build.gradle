@@ -11,6 +11,7 @@ buildscript {
 apply plugin: 'java'
 apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'eclipse'
+apply plugin: 'checkstyle'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
@@ -18,6 +19,12 @@ targetCompatibility = 1.8
 sourceSets.main.java.srcDirs = ['src']
 sourceSets.main.resources.srcDirs = ['res']
 sourceSets.test.java.srcDirs = ['test']
+
+checkstyle {
+    configFile = file("${project.rootDir}/conf/checkstyle.xml")
+    toolVersion = '7.7'
+    showViolations = false
+}
 
 jar {
   manifest {
