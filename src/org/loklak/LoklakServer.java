@@ -129,6 +129,7 @@ import org.loklak.api.vis.PieChartServlet;
 import org.loklak.data.DAO;
 import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.harvester.TwitterScraper;
+import org.loklak.harvester.strategy.BlockingKaizenHarvester;
 import org.loklak.harvester.strategy.ClassicHarvester;
 import org.loklak.harvester.strategy.Harvester;
 import org.loklak.harvester.strategy.KaizenHarvester;
@@ -408,6 +409,9 @@ public class LoklakServer {
                 break;
             case "kaizen":
                 harvester = new KaizenHarvester();
+                break;
+            case "blocking_kaizen":
+                harvester = new BlockingKaizenHarvester();
                 break;
         }
     }
