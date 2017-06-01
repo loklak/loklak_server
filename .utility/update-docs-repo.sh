@@ -13,7 +13,9 @@ git clone --quiet --branch=master git@github.com:loklak/dev.loklak.org.git lokla
 
 cd loklak_docs
 
-git subtree pull --prefix=raw/server ../loklak_server documentation --squash -m "Update server subtree"
+if ! git subtree pull --prefix=raw/server ../loklak_server documentation --squash -m "Update server subtree"
+  git subtree add --prefix=raw/server ../loklak_server documentation --squash -m "Update server subtree"
+fi
 
 cp -f $HOME/README.rst .
 git add -f .
