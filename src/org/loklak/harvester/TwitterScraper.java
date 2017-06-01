@@ -102,7 +102,7 @@ public class TwitterScraper {
         return search(query, "", order, writeToIndex, writeToBackend, jointime);
     }
 
-    public static String prepareSearchURL(final String query, final String filter) {
+    private static String prepareSearchURL(final String query, final String filter) {
         // check
         // https://twitter.com/search-advanced for a better syntax
         // build queries like https://twitter.com/search?f=tweets&vertical=default&q=kaffee&src=typd
@@ -136,7 +136,8 @@ public class TwitterScraper {
         return https_url;
     }
 
-    public static Timeline[] search(
+    @SuppressWarnings("unused")
+    private static Timeline[] search(
             final String query,
             final Timeline.Order order,
             final boolean writeToIndex,
@@ -144,7 +145,7 @@ public class TwitterScraper {
         return search(query, "", order, writeToIndex, writeToBackend);
     }
 
-    public static Timeline[] search(
+    private static Timeline[] search(
             final String query,
             final String filter,
             final Timeline.Order order,
@@ -185,7 +186,7 @@ public class TwitterScraper {
         return timelines;
     }
 
-    public static Timeline[] parse(
+    private static Timeline[] parse(
             final File file,
             final Timeline.Order order,
             final boolean writeToIndex,
@@ -193,7 +194,7 @@ public class TwitterScraper {
         return parse(file, "", order, writeToIndex, writeToBackend);
     }
 
-    public static Timeline[] parse(
+    private static Timeline[] parse(
             final File file,
             String filter,
             final Timeline.Order order,
@@ -216,7 +217,7 @@ public class TwitterScraper {
 
 
 
-    public static Timeline[] search(
+    private static Timeline[] search(
             final BufferedReader br,
             final Timeline.Order order,
             final boolean writeToIndex,
@@ -232,7 +233,7 @@ public class TwitterScraper {
      * @return two timelines in one array: Timeline[0] is the one which is finished to be used, Timeline[1] contains messages which are in postprocessing
      * @throws IOException
      */
-    public static Timeline[] search(
+    private static Timeline[] search(
             final BufferedReader br,
             String filter,
             final Timeline.Order order,
@@ -567,7 +568,7 @@ public class TwitterScraper {
         throw new IOException("Couldn't get BEARER_TOKEN");
     }
 
-    public static class prop {
+    private static class prop {
         public String key, value = null;
         public prop(String value) {
             this.key = null;
@@ -635,8 +636,8 @@ public class TwitterScraper {
 
         private final Semaphore ready;
         private UserEntry user;
-        public boolean writeToIndex;
-        public boolean writeToBackend;
+        private boolean writeToIndex;
+        private boolean writeToBackend;
 
         public TwitterTweet(
                 final String user_screen_name_raw,
