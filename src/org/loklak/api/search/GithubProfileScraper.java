@@ -82,7 +82,7 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
 	private static JSONArray getDataFromApi(String url) {
 		URI uri = null;
 		try {
-				uri = new URI(url);
+			uri = new URI(url);
 		} catch (URISyntaxException e1) {
 			e1.printStackTrace();
 		}
