@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export LOC=$(pwd)
+
 cp README.rst $HOME/.
 
 git config --global user.email "travis@travis-ci.org"
@@ -13,8 +15,8 @@ git clone --quiet --branch=master git@github.com:loklak/dev.loklak.org.git lokla
 
 cd loklak_docs
 
-if ! git subtree pull --prefix=raw/server ../loklak_server documentation --squash -m "Update server subtree" ; then
-  git subtree add --prefix=raw/server ../loklak_server documentation --squash -m "Update server subtree"
+if ! git subtree pull --prefix=raw/server $LOC documentation --squash -m "Update server subtree" ; then
+  git subtree add --prefix=raw/server $LOC documentation --squash -m "Update server subtree"
 fi
 
 cp -f $HOME/README.rst .
