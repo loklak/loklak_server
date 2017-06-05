@@ -7,9 +7,8 @@ cd $(dirname $0)/..
 
 # Execute preload script
 source bin/.preload.sh
-source bin/utility.sh
 
-while getopts ":I:d:n:p:" opt; do
+while getopts ":Idn" opt; do
     case $opt in
         I)
             SKIP_INSTALL_CHECK=1
@@ -20,15 +19,11 @@ while getopts ":I:d:n:p:" opt; do
         n)
             DO_NOT_DAEMONIZE=1
             ;;
-        p)
-            PORT_NUMBER=$OPTARG
-            ;;
         \?)
             echo "Usage: $0 [options...]"
             echo -e " -I\tIgnore installation config"
             echo -e " -d\tSkip waiting for Loklak"
             echo -e " -n\tDo not Daemonize"
-            echo -e " -p\tPort to start LoklakServer on"
             exit 1
             ;;
     esac
@@ -76,7 +71,7 @@ fi
 echo "starting loklak"
 echo "startup" > $STARTUPFILE
 
-cmdline="$cmdline -server -classpath $CLASSPATH -Dlog4j.configurationFile=$LOGCONFIG org.loklak.LoklakServer $PORT_NUMBER";
+cmdline="$cmdline -server -classpath $CLASSPATH -Dlog4j.configurationFile=$LOGCONFIG org.loklak.LoklakServer";
 
 # If DO_NOT_DAEMONIZE, pass it to the java command, end of this script.
 if [[ $DO_NOT_DAEMONIZE -eq 1 ]]; then
@@ -90,8 +85,8 @@ PID=$!
 echo $PID > $PIDFILE
 
 if [[ $SKIP_WAITING -eq 0 ]]; then
-    while [[ -f $STARTUPFILE ]] && kill -0 $PID > /dev/null 2>&1; do
-        if [[ $(cat $STARTUPFILE) = 'done' ]]; then
+    while [ -f $STARTUPFILE ] && kill -0 $PID > /dev/null 2>&1; do
+        if [ $(cat $STARTUPFILE) = 'done' ]; then
             break
         else
             sleep 1
@@ -100,12 +95,7 @@ if [[ $SKIP_WAITING -eq 0 ]]; then
 fi
 
 if [ -f $STARTUPFILE ] && kill -0 $PID > /dev/null 2>&1; then
-    if [[ $PORT_NUMBER ]]; then
-        CUSTOMPORT=$PORT_NUMBER
-    else
-        CUSTOMPORT=$(grep -iw 'port.http' conf/config.properties | sed 's/^[^=]*=//' );
-    fi
-    change_shortlink_urlstub $CUSTOMPORT # function defined in utility.sh
+    CUSTOMPORT=$(grep -iw 'port.http' conf/config.properties | sed 's/^[^=]*=//' );
     LOCALHOST=$(grep -iw 'shortlink.urlstub' conf/config.properties | sed 's/^[^=]*=//');
     echo "loklak server started at port $CUSTOMPORT, open your browser at $LOCALHOST"
     rm -f $STARTUPFILE
