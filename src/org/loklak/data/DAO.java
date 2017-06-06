@@ -1317,29 +1317,48 @@ public class DAO {
      * For logging informational events
      */
     public static void log(String line) {
-        Log.getLog().info(line);
+        if(DAO.getConfig("flag.log.dao", "true").equals("true")) {
+            Log.getLog().info(line);
+        }
     }
 
     /**
      * For events serious enough to inform and log, but not fatal.
      */
     public static void severe(String line) {
-        Log.getLog().warn(line);
+        if(DAO.getConfig("flag.severe.dao", "true").equals("true")) {
+            Log.getLog().warn(line);
+        }
     }
 
     public static void severe(String line, Throwable e) {
-        Log.getLog().warn(line, e);
+        if(DAO.getConfig("flag.severe.dao", "true").equals("true")) {
+            Log.getLog().warn(line, e);
+        }
     }
     
     public static void severe(Throwable e) {
-        Log.getLog().warn(e);
+        if(DAO.getConfig("flag.severe.dao", "true").equals("true")) {
+            Log.getLog().warn(e);
+        }
     }
 
     /**
      * For Debugging events (very noisy).
      */
     public static void debug(Throwable e) {
-        Log.getLog().debug(e);
+        if(DAO.getConfig("flag.debug.dao", "true").equals("true")) {
+            Log.getLog().debug(e);
+        }
+    }
+
+    /**
+     * For Stacktracing exceptions (preferred over debug).
+     */
+    public static void trace(Throwable e) {
+        if(DAO.getConfig("flag.trace.dao", "true").equals("true")) {
+            e.printStackTrace();
+        }
     }
 
 }
