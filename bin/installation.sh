@@ -7,31 +7,18 @@ cd $(dirname $0)/..
 
 # Execute preload script
 source bin/.preload.sh
-source bin/utility.sh
 
 echo "starting loklak installation"
 echo "startup" > $STARTUPFILE
 
-while getopts ":p:" opt; do
-    case $opt in
-        p)
-            PORT_NUMBER=$OPTARG
-            ;;
-        \?)
-            echo -e " -p\tPort to start LoklakServer on"
-            exit 1
-            ;;
-    esac
-done
-
-cmdline="$cmdline -server -classpath $CLASSPATH -Dlog4j.configurationFile=$LOGCONFIG org.loklak.LoklakInstallation $PORT_NUMBER >> data/loklak.log 2>&1 &";
+cmdline="$cmdline -server -classpath $CLASSPATH -Dlog4j.configurationFile=$LOGCONFIG org.loklak.LoklakInstallation >> data/loklak.log 2>&1 &";
 
 eval $cmdline
 PID=$!
 echo $PID > $PIDFILE
 
 while [ -f $STARTUPFILE ] && [ $(ps -p $PID -o pid=) ]; do
-	if [ $(cat "$STARTUPFILE") = 'done' ]; then
+	if [ $(cat $STARTUPFILE) = 'done' ]; then
 		break
 	else
 		sleep 1
@@ -39,12 +26,7 @@ while [ -f $STARTUPFILE ] && [ $(ps -p $PID -o pid=) ]; do
 done
 
 if [ -f $STARTUPFILE ] && [ $(ps -p $PID -o pid=) ]; then
-    if [ "$PORT_NUMBER" ]; then
-        CUSTOMPORT=$PORT_NUMBER
-    else
-	    CUSTOMPORT=$(grep -iw 'port.http' conf/config.properties | sed 's/^[^=]*=//' );
-	fi
-	change_shortlink_urlstub $CUSTOMPORT # function defined in utility.sh
+	CUSTOMPORT=$(grep -iw 'port.http' conf/config.properties | sed 's/^[^=]*=//' );
 	LOCALHOST=$(grep -iw 'shortlink.urlstub' conf/config.properties | sed 's/^[^=]*=//');
 	echo "loklak installation started at port $CUSTOMPORT, open your browser at $LOCALHOST"
 	rm -f $STARTUPFILE
