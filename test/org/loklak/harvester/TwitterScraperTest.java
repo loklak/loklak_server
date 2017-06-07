@@ -6,6 +6,8 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.time.ZonedDateTime;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -33,11 +35,18 @@ public class TwitterScraperTest {
         This unit-test tests twitter url creation
     */
     @Test
-    public void testPrepareSearchURL() {
+    public void testPrepareSearchUrl() {
         String url;
         String[] query = {"fossasia", "from:loklak_test",
                 "spacex since:2017-04-03 until:2017-04-05"};
-        String[] filter = {"video", "image", "video,image", "abc,video"};
+        ArrayList<String>[] filterList = (ArrayList<String>[])new ArrayList[3];
+        for (int i = 0; i < filterList.length; i++) {
+            filterList[i] = new ArrayList<String>();
+        }
+        filterList[0].add("video");
+        filterList[1].addAll(Arrays.asList("image", "video"));
+        filterList[2].addAll(Arrays.asList("abc", "video"));
+
         String[] out_url = {
             "https://twitter.com/search?f=tweets&vertical=default&q=fossasia&src=typd",
             "https://twitter.com/search?f=tweets&vertical=default&q=from%3Aloklak_test&src=typd",
@@ -45,13 +54,12 @@ public class TwitterScraperTest {
             "https://twitter.com/search?f=videos&vertical=default&q=fossasia&src=typd",
             "https://twitter.com/search?f=tweets&vertical=default&q=fossasia&src=typd",
             "https://twitter.com/search?f=tweets&vertical=default&q=fossasia&src=typd",
-            "https://twitter.com/search?f=tweets&vertical=default&q=fossasia&src=typd",
         };
 
         // checking simple urls
         for (int i = 0; i < query.length; i++) {
             try {
-                url = (String)executePrivateMethod(TwitterScraper.class, "prepareSearchURL",new Class[]{String.class, String.class}, query[i], "");
+                url = (String)executePrivateMethod(TwitterScraper.class, "prepareSearchUrl",new Class[]{String.class, String.class}, query[i], "");
 
                 //compare urls with urls created
                 assertThat(out_url[i], is(url));
@@ -61,9 +69,9 @@ public class TwitterScraperTest {
         }
 
         // checking urls having filters
-        for (int i = 0; i < filter.length; i++) {
+        for (int i = 0; i < filterList.length; i++) {
             try {
-                url = (String)executePrivateMethod(TwitterScraper.class, "prepareSearchURL",new Class[]{String.class, String.class}, query[0], filter[i]);
+                url = (String)executePrivateMethod(TwitterScraper.class, "prepareSearchUrl",new Class[]{String.class, String.class}, query[0], filterList[i]);
                 //compare urls with urls created
                 assertThat(out_url[i+3], is(url));
             } catch(Exception e) {

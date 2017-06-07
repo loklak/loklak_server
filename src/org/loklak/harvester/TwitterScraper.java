@@ -76,19 +76,22 @@ public class TwitterScraper {
 
     public static Timeline search(
             final String query,
-            final String filter,
+            final ArrayList<String> filterList,
             final Timeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend,
             int jointime) {
 
-        Timeline[] tl = search(query, filter.replaceAll("\\s",""), order, writeToIndex, writeToBackend);
+        Timeline[] tl = search(query, filterList, order, writeToIndex, writeToBackend);
         long timeout = System.currentTimeMillis() + jointime;
         for (MessageEntry me: tl[1]) {
             assert me instanceof TwitterTweet;
             TwitterTweet tt = (TwitterTweet) me;
             long remainingWait = Math.max(10, timeout - System.currentTimeMillis());
-            if (tt.waitReady(remainingWait)) tl[0].add(tt, tt.getUser()); // double additions are detected
+            if (tt.waitReady(remainingWait)) {
+                 // double additions are detected
+                tl[0].add(tt, tt.getUser());
+            }
         }
         return tl[0];
     }
@@ -99,15 +102,16 @@ public class TwitterScraper {
             final boolean writeToIndex,
             final boolean writeToBackend,
             int jointime) {
-        return search(query, "", order, writeToIndex, writeToBackend, jointime);
+
+        return search(query, new ArrayList<>(), order, writeToIndex, writeToBackend, jointime);
     }
 
-    private static String prepareSearchURL(final String query, final String filter) {
+    private static String prepareSearchUrl(final String query, final ArrayList<String> filterList) {
         // check
         // https://twitter.com/search-advanced for a better syntax
         // build queries like https://twitter.com/search?f=tweets&vertical=default&q=kaffee&src=typd
         // https://support.twitter.com/articles/71577-how-to-use-advanced-twitter-search#
-        String https_url = "";
+        String httpsUrl = "";
         String type = "tweets";
         try {
 
@@ -125,15 +129,16 @@ public class TwitterScraper {
             String q = t.length() == 0 ? "*" : URLEncoder.encode(t.substring(1), "UTF-8");
 
             // type of content to fetch
-            if(filter.equals("video"))
+            if (filterList.contains("video") && filterList.size() == 1) {
                 type = "videos";
+            }
 
             // building url
-            https_url = "https://twitter.com/search?f="
+            httpsUrl = "https://twitter.com/search?f="
                     + type + "&vertical=default&q=" + q + "&src=typd";
 
         } catch (UnsupportedEncodingException e) {}
-        return https_url;
+        return httpsUrl;
     }
 
     @SuppressWarnings("unused")
@@ -142,19 +147,19 @@ public class TwitterScraper {
             final Timeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend) {
-        return search(query, "", order, writeToIndex, writeToBackend);
+        return search(query, new ArrayList<>(), order, writeToIndex, writeToBackend);
     }
 
     private static Timeline[] search(
             final String query,
-            final String filter,
+            final ArrayList<String> filterList,
             final Timeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend) {
         // check
         // https://twitter.com/search-advanced for a better syntax
         // https://support.twitter.com/articles/71577-how-to-use-advanced-twitter-search#
-        String https_url = prepareSearchURL(query, filter);
+        String https_url = prepareSearchUrl(query, filterList);
         Timeline[] timelines = null;
         try {
             ClientConnection connection = new ClientConnection(https_url);
@@ -162,7 +167,7 @@ public class TwitterScraper {
             try {
                 BufferedReader br = new BufferedReader(new InputStreamReader(connection.inputStream, StandardCharsets.UTF_8));
 
-                timelines = search(br, filter, order, writeToIndex, writeToBackend);
+                timelines = search(br, filterList, order, writeToIndex, writeToBackend);
             } catch (IOException e) {
                 DAO.severe(e);
             } finally {
@@ -191,19 +196,19 @@ public class TwitterScraper {
             final Timeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend) {
-        return parse(file, "", order, writeToIndex, writeToBackend);
+        return parse(file, new ArrayList<>(), order, writeToIndex, writeToBackend);
     }
 
     private static Timeline[] parse(
             final File file,
-            String filter,
+            final ArrayList<String> filterList,
             final Timeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend) {
         Timeline[] timelines = null;
         try {
             BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
-            timelines = search(br, filter, order, writeToIndex, writeToBackend);
+            timelines = search(br, filterList, order, writeToIndex, writeToBackend);
         } catch (IOException e) {
             DAO.severe(e);
         } finally {
@@ -223,7 +228,7 @@ public class TwitterScraper {
             final boolean writeToIndex,
             final boolean writeToBackend) throws IOException {
 
-        return search(br, "", order, writeToIndex, writeToBackend);
+        return search(br, new ArrayList<>(), order, writeToIndex, writeToBackend);
     }
 
     /**
@@ -235,21 +240,12 @@ public class TwitterScraper {
      */
     private static Timeline[] search(
             final BufferedReader br,
-            String filter,
+            final ArrayList<String> filterList,
             final Timeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend) throws IOException {
-        Matcher match_video1;
-        Matcher match_video2;
-        Pattern[] video_url_patterns = {
-                Pattern.compile("youtu.be\\/[0-9A-z]+"),
-                Pattern.compile("youtube.com\\/watch?v=[0-9A-z]+")
-        };
         Timeline timelineReady = new Timeline(order);
         Timeline timelineWorking = new Timeline(order);
-        Set<String> filter_array = new HashSet<String>(Arrays.asList(
-                (filter.toLowerCase()).split(",")
-        ));
         String input;
         Map<String, prop> props = new HashMap<String, prop>();
         Set<String> images = new LinkedHashSet<>();
@@ -381,21 +377,7 @@ public class TwitterScraper {
 
             if (props.size() == 10 || (debuglog  && props.size() > 4 && input.indexOf("stream-item") > 0)) {
 
-                // filter tweets with videos and others
-                if (filter_array.contains("video") && filter_array.size() > 1) {
-                    match_video1 = video_url_patterns[0].matcher(props.get("tweettext").value);
-                    match_video2 = video_url_patterns[1].matcher(props.get("tweettext").value);
-
-                    if(!match_video1.find() && !match_video2.find() && videos.size() < 1) {
-                        props = new HashMap<String, prop>();
-                        place_id = "";
-                        place_name = "";
-                        continue;
-                    }
-                }
-
-                // filter tweets with images
-                if (filter_array.contains("image") && images.size() < 1) {
+                if(!filterPosts(filterList, props, videos, images)) {
                     props = new HashMap<String, prop>();
                     place_id = "";
                     place_name = "";
@@ -566,6 +548,45 @@ public class TwitterScraper {
             return m.group(1);
         }
         throw new IOException("Couldn't get BEARER_TOKEN");
+    }
+
+    /*
+     * Filter Posts(here tweets) according to values.
+        image: filter tweets with images, neglect 'tweets without images'
+        video: filter tweets also having video and other values like image. For only value as video,
+               tweets with videos are filtered in prepareUrl() method
+     */
+    private static boolean filterPosts(
+            ArrayList<String> filterList,
+            Map<String, prop> props,
+            Set<String> videos,
+            Set<String> images
+    ) {
+        Matcher matchVideo1;
+        Matcher matchVideo2;
+        Pattern[] videoUrlPatterns = {
+                Pattern.compile("youtu.be\\/[0-9A-z]+"),
+                Pattern.compile("youtube.com\\/watch?v=[0-9A-z]+")
+        };
+
+        // filter tweets with videos and others
+        if (filterList.contains("video") && filterList.size() > 1) {
+            matchVideo1 = videoUrlPatterns[0].matcher(props.get("tweettext").value);
+            matchVideo2 = videoUrlPatterns[1].matcher(props.get("tweettext").value);
+
+            if(!matchVideo1.find() && !matchVideo2.find() && videos.size() < 1) {
+                return false;
+            }
+        }
+
+        // filter tweets with images
+        if (filterList.contains("image") && images.size() < 1) {
+            return false;
+        }
+
+        //TODO: Add more filters
+
+        return true;
     }
 
     private static class prop {
@@ -811,12 +832,13 @@ public class TwitterScraper {
      */
     public static void main(String[] args) {
         //wget --no-check-certificate "https://twitter.com/search?q=eifel&src=typd&f=realtime"
-        String filter = "image";
+        ArrayList<String> filterList = new ArrayList<String>();
+        filterList.add("image");
         Timeline[] result = null;
         if (args[0].startsWith("/"))
             result = parse(new File(args[0]),Timeline.Order.CREATED_AT, true, true);
         else
-            result = TwitterScraper.search(args[0], filter, Timeline.Order.CREATED_AT, true, true);
+            result = TwitterScraper.search(args[0], filterList, Timeline.Order.CREATED_AT, true, true);
         int all = 0;
         for (int x = 0; x < 2; x++) {
             if (x == 0) System.out.println("Timeline[0] - finished to be used:");
