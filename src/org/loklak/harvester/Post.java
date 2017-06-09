@@ -1,7 +1,7 @@
 package org.loklak.harvester;
 
-import org.json.JSONObject;
 import java.util.Date;
+import org.json.JSONObject;
 
 /**
  * @author vibhcool (Vibhor Verma)
@@ -10,13 +10,31 @@ import java.util.Date;
  *
  * Post abstract class for data objects.
  */
-public abstract class Post extends JSONObject {
+public class Post extends JSONObject {
 
     protected long timestamp = 0;
     protected String postId;
+    private boolean wrapper = false;
 
-    protected Post() {
+    public Post() {
         this.setTimestamp();
+    }
+
+    /*
+     * If wrapper=true, then this object will be used just to as wrapper of data
+     * with no post-id and timestamp
+     */
+    public Post(boolean wrapper) {
+        if(!wrapper) {
+            this.setTimestamp();
+        } else {
+            this.wrapper = true;
+        }
+    }
+
+
+    public Post(JSONObject json) {
+        this();
     }
 
     protected Post(long timestamp) {
@@ -33,24 +51,38 @@ public abstract class Post extends JSONObject {
     }
 
     public void setTimestamp() {
-        long timestamp = System.currentTimeMillis();
-        this.setTimestamp(timestamp);
+        if(this.has("timestamp")) {
+            long timestampValue = Long.parseLong(String.valueOf(this.get("timestamp")));
+            this.setTimestamp(timestampValue);
+        } else {
+            long timestamp = System.currentTimeMillis();
+            this.setTimestamp(timestamp);
+        }
     }
 
     public Date getTimestampDate() {
         return new Date(this.timestamp);
     }
 
-    //TODO: Set up TwitterTweet before setting this as abstract
-    private void setPostId() { }
+    private void setPostId() {
+        if(this.has("post_id")) {
+            this.setPostId(String.valueOf(this.get("post_id")));
+        } else {
+            this.setPostId(String.valueOf(this.getTimestamp()));
+        }
+    }
 
     public void setPostId(String postId) {
+        this.put("post_id", postId);
         this.postId = postId;
     }
 
-    //TODO: Set up TwitterTweet before setting this as abstract
     public String getPostId() {
-        return "";
+        return this.postId;
+    }
+
+    public boolean isWrapper() {
+        return this.wrapper;
     }
 }
 
