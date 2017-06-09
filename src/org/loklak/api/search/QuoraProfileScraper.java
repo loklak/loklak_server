@@ -6,12 +6,12 @@
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
- *  
+ *
  *  This library is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
@@ -32,7 +32,15 @@ import org.jsoup.select.Elements;
 import org.loklak.data.DAO;
 import org.loklak.harvester.Post;
 import org.loklak.harvester.BaseScraper;
+import org.loklak.objects.Timeline;
+import org.loklak.server.APIException;
+import org.loklak.server.APIHandler;
+import org.loklak.server.AbstractAPIHandler;
+import org.loklak.server.Authorization;
 import org.loklak.server.BaseUserRole;
+import org.loklak.server.Query;
+import org.loklak.susi.SusiThought;
+import org.loklak.tools.storage.JSONObjectWithDefault;
 
 public class QuoraProfileScraper extends BaseScraper {
 
@@ -79,7 +87,7 @@ public class QuoraProfileScraper extends BaseScraper {
 
         Post quoraProfile = new QuoraPost(this.query, 0);
         Document userHTML = Jsoup.parse(this.html);
-        
+
         String bio = userHTML.getElementsByAttributeValueContaining("class", "ProfileDescription").text();
         quoraProfile.put("bio", bio);
 
@@ -97,27 +105,27 @@ public class QuoraProfileScraper extends BaseScraper {
             String infoText = info.text();
             if (infoText.startsWith("Studi")) {
                 quoraProfile.put(infoText.split(" ")[0].toLowerCase().trim() + "_at", infoText);
-	        } else if (infoText.startsWith("Lives")) {
-		        quoraProfile.put("lives_in", infoText);
-	        } else {
-		        quoraProfile.put("works_at", infoText);
-	        }
+            } else if (infoText.startsWith("Lives")) {
+                quoraProfile.put("lives_in", infoText);
+            } else {
+                quoraProfile.put("works_at", infoText);
+            }
         }
 
         Elements knowsAbout = userHTML.getElementsByAttributeValueContaining("class",  "TopicNameSpan TopicName");
         JSONArray topics = new JSONArray();
         for (Element topic: knowsAbout) {
-	        topics.put(topic.text());
+            topics.put(topic.text());
         }
         quoraProfile.put("knows_about", topics);
 
         JSONObject feeds = new JSONObject();
         Elements counts = userHTML.getElementsByAttributeValueContaining("class", "list_count");
         for (Element count: counts) {
-	        String topic = count.parent().text();
-	        topic = topic.substring(0, topic.indexOf(count.text())).trim();
-	        feeds.put(topic.toLowerCase() + "_url", baseUrl + count.parent().attr("href"));
-	        feeds.put(topic.toLowerCase(), count.text());
+            String topic = count.parent().text();
+            topic = topic.substring(0, topic.indexOf(count.text())).trim();
+            feeds.put(topic.toLowerCase() + "_url", baseUrl + count.parent().attr("href"));
+            feeds.put(topic.toLowerCase(), count.text());
         }
         quoraProfile.put("feeds", feeds);
 

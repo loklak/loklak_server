@@ -43,6 +43,8 @@ import org.loklak.server.Query;
 import org.loklak.susi.SusiProcedures;
 import org.loklak.susi.SusiThought;
 import org.loklak.susi.SusiTransfer;
+import org.loklak.harvester.Post;
+import org.loklak.harvester.BaseScraper;
 
 import org.loklak.tools.storage.JSONObjectWithDefault;
 
