@@ -242,11 +242,10 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
             Timeline2 dataList = quoraScrape.getData();
             SusiThought json = new SusiThought(dataList.toJSON());
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            json.setData(transfer.conclude(json.getData()));
-            return json;
+            return quoraScrape.getData().toJSON(transfer.conclude(json.getData()));
         });
 
-		dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?wikigeodata +?WHERE +?place ??= ??'(.*?)' ??;"), matcher -> {
+        dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?wikigeodata +?WHERE +?place ??= ??'(.*?)' ??;"), matcher -> {
             SusiThought json = WikiGeoData.wikiGeoData(matcher.group(2));
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
             json.setData(transfer.conclude(json.getData()));

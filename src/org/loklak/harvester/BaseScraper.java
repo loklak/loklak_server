@@ -2,21 +2,36 @@ package org.loklak.harvester;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.io.IOException;
+import org.loklak.tools.storage.JSONObjectWithDefault;
+import java.lang.StringBuilder;
+import org.loklak.server.AbstractAPIHandler;
+import org.loklak.data.DAO;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Date;
+import org.loklak.http.ClientConnection;
+import org.json.JSONObject;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.loklak.objects.ProviderType;
+import org.loklak.objects.SourceType;
+import org.loklak.objects.Timeline;
+import org.loklak.objects.QueryEntry;
+import java.util.HashMap;
+import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.loklak.tools.storage.JSONObjectWithDefault;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.http.ClientConnection;
-import org.loklak.objects.ProviderType;
-import org.loklak.objects.SourceType;
-import org.loklak.server.AbstractAPIHandler;
-import org.loklak.server.APIException;
-import org.loklak.server.Authorization;
-import org.loklak.server.Query;
-import org.loklak.objects.Timeline2;
-import org.loklak.tools.storage.JSONObjectWithDefault;
+import org.loklak.server.*;
+import java.io.IOException;
+import org.loklak.http.RemoteAccess;
+import org.loklak.tools.UTF8;
 
 /**
  * @author vibhcool (Vibhor Verma)

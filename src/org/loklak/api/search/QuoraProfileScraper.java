@@ -178,4 +178,56 @@ public class QuoraProfileScraper extends BaseScraper {
         //clean data
     }
 
+    //TODO: this method shall return Timeline object
+    @Override
+//    protected Timeline scrape(BufferedReader br) {
+    protected Post scrape(BufferedReader br) {
+//        Timeline dataSet = new Timeline(order);
+        //for profile
+        Post qPost;
+        try {
+            this.html = ReadBigStringIn(br);
+        } catch(IOException e) {
+            DAO.trace(e);
+        }
+        qPost = scrapeProfile();
+
+//        return dataSet.add(qPost);
+        return qPost;
+    }
+
+
+
+    public static class QuoraPost extends Post {
+
+        //quora post-id, for profile it will be username
+        private String quoraId;
+        private int quoraPostNo;
+
+        public QuoraPost(String _quoraId, int _quoraPostNo) {
+            //not UTC, may be error prone
+            super();
+            this.quoraId = _quoraId;
+            this.quoraPostNo = _quoraPostNo;
+        }
+
+        public void getQuoraId(String _quoraId) {
+            this.quoraId = _quoraId;
+        }
+
+        public void getQuoraPostNo(int _quoraPostNo) {
+            this.quoraPostNo = _quoraPostNo;
+        }
+
+        public void getPostId() {
+            this.postId = this.timestamp + this.quoraPostNo + this.quoraId;
+        }
+
+        public String setPostId() {
+            this.postId = this.timestamp + this.quoraPostNo + this.quoraId;
+            return String.valueOf(this.postId);
+        }
+        //clean data
+    }
+
 }
