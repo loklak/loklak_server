@@ -46,7 +46,7 @@ public abstract class BaseScraper extends AbstractAPIHandler {
     public JSONObject serviceImpl(Query call, HttpServletResponse response, Authorization rights,
             JSONObjectWithDefault permissions) throws APIException {
         this.query = call.get("query", "");
-        
+
         //TODO: add different extra paramenters. this is dummy variable
         this.extra = call.get("extra", "");
         //TODO: to be implemented to use Timeline
@@ -67,7 +67,7 @@ public abstract class BaseScraper extends AbstractAPIHandler {
 
         try {
             connection = new ClientConnection(this.url);
-        
+
             try {
                 // get instance of bufferReader
                 br = getHtml(connection);
