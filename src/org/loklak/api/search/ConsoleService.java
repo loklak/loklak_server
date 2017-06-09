@@ -90,7 +90,6 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
         return "/api/console.json";
     }
 
-
     static {
         dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?\\( ??SELECT +?(.*?) ??\\) +?WHERE +?(.*?) ?+IN ?+\\((.*?)\\) ??;"), matcher -> {
             String subquery = matcher.group(2).trim();
@@ -234,12 +233,14 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
             json.setData(transfer.conclude(json.getData()));
             return json;
-        });dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?quoraprofile +?WHERE +?profile ??= ??'(.*?)' ??;"), matcher -> {
-            SusiThought json = QuoraProfileScraper.scrapeQuora(matcher.group(2));
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            json.setData(transfer.conclude(json.getData()));
-            return json;
         });
+        /*
+        dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?quoraprofile +?WHERE +?profile ??= ??'(.*?)' ??;"), matcher -> {
+            BaseScraper quoraScrape = new QuoraProfileScraper(matcher.group(2));
+            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+            return quoraScrape.getData().toJSON(transfer.conclude(json.getData()));
+        });
+        */
 		dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?wikigeodata +?WHERE +?place ??= ??'(.*?)' ??;"), matcher -> {
             SusiThought json = WikiGeoData.wikiGeoData(matcher.group(2));
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
