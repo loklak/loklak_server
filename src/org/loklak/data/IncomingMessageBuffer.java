@@ -57,7 +57,7 @@ public class IncomingMessageBuffer extends Thread {
     public MessageEntry readMessage(String id) {
         if (id == null || id.length() == 0) return null;
         for (DAO.MessageWrapper mw: messageQueue) {
-            if (id.equals(mw.t.getIdStr())) return mw.t;
+            if (id.equals(mw.t.getPostId())) return mw.t;
         }
         return null;
     }
@@ -100,7 +100,7 @@ public class IncomingMessageBuffer extends Thread {
             int maxBulkSize = 200;
             List<DAO.MessageWrapper> bulk = new ArrayList<>();
             pollloop: while ((mw = messageQueue.poll()) != null) {
-                if (DAO.messages.existsCache(mw.t.getIdStr())) {
+                if (DAO.messages.existsCache(mw.t.getPostId())) {
                      knownMessagesCache.incrementAndGet();
                      continue pollloop;
                 }

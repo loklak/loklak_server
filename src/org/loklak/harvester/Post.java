@@ -41,8 +41,12 @@ public abstract class Post extends JSONObject {
         return new Date(this.timestamp);
     }
 
-    //TODO: Set up TwitterTweet before setting this as abstract    
+    //TODO: Set up TwitterTweet before setting this as abstract
     private void setPostId() { }
+
+    public void setPostId(String postId) {
+        this.postId = postId;
+    }
 
     //TODO: Set up TwitterTweet before setting this as abstract
     public String getPostId() {

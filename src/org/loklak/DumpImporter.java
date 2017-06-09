@@ -100,7 +100,7 @@ public class DumpImporter extends Thread {
                                     MessageEntry t = new MessageEntry(json);
                                     // record user into search index
                                     userBulk.add(new IndexEntry<UserEntry>(u.getScreenName(), t.getSourceType(), u));
-                                    messageBulk.add(new IndexEntry<MessageEntry>(t.getIdStr(), t.getSourceType(), t));
+                                    messageBulk.add(new IndexEntry<MessageEntry>(t.getPostId(), t.getSourceType(), t));
                                     if (userBulk.size() > 1500 || messageBulk.size() > 1500) {
                                         DAO.users.writeEntries(userBulk);
                                         DAO.messages.writeEntries(messageBulk);
