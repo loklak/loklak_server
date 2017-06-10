@@ -7,7 +7,11 @@ import java.util.HashSet;
  */
 public abstract class KaizenQueries {
 
-    public abstract boolean addQuery(String query);
+    public boolean addQuery(String query) {
+        return this.addQuery(query, 0.5);
+    }
+
+    public abstract boolean addQuery(String query, double score);
 
     public abstract String getQuery();
 
@@ -26,7 +30,7 @@ public abstract class KaizenQueries {
             int queryLimit = qLimit;
 
             @Override
-            public boolean addQuery(String query) {
+            public boolean addQuery(String query, double score) {
                 if (this.queryLimit > 0 && this.queries.size() > this.queryLimit)
                     return false;
 

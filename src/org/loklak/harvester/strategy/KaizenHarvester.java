@@ -85,6 +85,8 @@ public class KaizenHarvester implements Harvester {
 
         for (MessageEntry message : timeline) {
 
+            double score = this.getScore(message);
+
             // Calculate date for oldest Tweet
             if (oldestTweetDate == null) {
                 oldestTweetDate = message.getCreatedAt();
@@ -93,16 +95,16 @@ public class KaizenHarvester implements Harvester {
             }
 
             for (String user : message.getMentions()) {
-                this.queries.addQuery("from:" + user);
+                this.queries.addQuery("from:" + user, score);
             }
 
             for (String hashtag : message.getHashtags()) {
-                this.queries.addQuery(hashtag);
+                this.queries.addQuery(hashtag, score);
             }
 
             String place = message.getPlaceName();
             if (!place.isEmpty()) {
-                this.queries.addQuery("near:\"" + message.getPlaceName() + "\" within:" + PLACE_RADIUS + "mi");
+                this.queries.addQuery("near:\"" + message.getPlaceName() + "\" within:" + PLACE_RADIUS + "mi", score);
             }
         }
 
@@ -219,6 +221,11 @@ public class KaizenHarvester implements Harvester {
             prob = queries.getSize() / (float)queries.getMaxSize();
         }
         return !this.queries.isEmpty() && targetProb < prob;
+    }
+
+    protected double getScore(MessageEntry message) {
+        long score = message.getFavouritesCount() + message.getRetweetCount() * 5;
+        return score / (score + 10 * Math.exp(-0.1 * score));
     }
 
     @Override
