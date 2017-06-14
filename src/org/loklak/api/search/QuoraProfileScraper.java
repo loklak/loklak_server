@@ -30,17 +30,10 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.loklak.data.DAO;
-import org.loklak.harvester.Post;
 import org.loklak.harvester.BaseScraper;
-import org.loklak.objects.Timeline;
-import org.loklak.server.APIException;
-import org.loklak.server.APIHandler;
-import org.loklak.server.AbstractAPIHandler;
-import org.loklak.server.Authorization;
+import org.loklak.harvester.Post;
+import org.loklak.objects.Timeline2;
 import org.loklak.server.BaseUserRole;
-import org.loklak.server.Query;
-import org.loklak.susi.SusiThought;
-import org.loklak.tools.storage.JSONObjectWithDefault;
 
 public class QuoraProfileScraper extends BaseScraper {
 
@@ -135,9 +128,9 @@ public class QuoraProfileScraper extends BaseScraper {
 
     //TODO: this method shall return Timeline object
     @Override
-//    protected Timeline scrape(BufferedReader br) {
-    protected Post scrape(BufferedReader br) {
-//        Timeline dataSet = new Timeline(order);
+    protected Timeline2 scrape(BufferedReader br) {
+//    protected Post scrape(BufferedReader br) {
+        Timeline2 dataSet = new Timeline2(order);
         //for profile
         Post qPost;
         try {
@@ -147,8 +140,8 @@ public class QuoraProfileScraper extends BaseScraper {
         }
         qPost = scrapeProfile();
 
-//        return dataSet.add(qPost);
-        return qPost;
+        return dataSet.add(qPost);
+//        return qPost;
     }
 
 
@@ -164,6 +157,7 @@ public class QuoraProfileScraper extends BaseScraper {
             super();
             this.quoraId = _quoraId;
             this.quoraPostNo = _quoraPostNo;
+            this.setPostId();
         }
 
         public void getQuoraId(String _quoraId) {
@@ -174,12 +168,11 @@ public class QuoraProfileScraper extends BaseScraper {
             this.quoraPostNo = _quoraPostNo;
         }
 
-        public void getPostId() {
+        private void setPostId() {
             this.postId = this.timestamp + this.quoraPostNo + this.quoraId;
         }
 
-        public String setPostId() {
-            this.postId = this.timestamp + this.quoraPostNo + this.quoraId;
+        public String getPostId() {
             return String.valueOf(this.postId);
         }
         //clean data
