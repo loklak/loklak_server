@@ -48,7 +48,7 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
 
     public static final String RICH_TEXT_SEPARATOR = "\n***\n";
 
-    protected Date timestamp;  // a time stamp that is given in loklak upon the arrival of the tweet which is the current local time
+    protected Date timestampDate;  // a time stamp that is given in loklak upon the arrival of the tweet which is the current local time
     protected Date created_at; // the time given in the tweet which is the time when the user created it. This is also use to do the index partition into minute, hour, week
     protected Date on;         // on means 'valid from'
     protected Date to;         // 'to' means 'valid_until' and may not be set
@@ -74,7 +74,8 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
     private Map<Context, Classification<String, Category>> classifier;
 
     public MessageEntry() throws MalformedURLException {
-        this.timestamp = new Date();
+        this.timestamp = new Date().getTime();
+        this.timestampDate = new Date(this.timestamp);
         this.created_at = new Date();
         this.on = null;
         this.to = null;
@@ -113,7 +114,8 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
     }
 
     public MessageEntry(JSONObject json) {
-        Object timestamp_obj = lazyGet(json, AbstractObjectEntry.TIMESTAMP_FIELDNAME); this.timestamp = parseDate(timestamp_obj);
+        Object timestamp_obj = lazyGet(json, AbstractObjectEntry.TIMESTAMP_FIELDNAME); this.timestampDate = parseDate(timestamp_obj);
+        this.timestamp = this.timestampDate.getTime();
         Object created_at_obj = lazyGet(json, AbstractObjectEntry.CREATED_AT_FIELDNAME); this.created_at = parseDate(created_at_obj);
         Object on_obj = lazyGet(json, "on"); this.on = on_obj == null ? null : parseDate(on);
         Object to_obj = lazyGet(json, "to"); this.to = to_obj == null ? null : parseDate(to);
@@ -174,8 +176,8 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
         enrich();
     }
 
-    public Date getTimestamp() {
-        return this.timestamp == null ? new Date() : this.timestamp;
+    public Date getTimestampDate() {
+        return this.timestampDate == null ? new Date() : this.timestampDate;
     }
 
     public Date getCreatedAt() {
@@ -308,6 +310,14 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
      */
     public void setLocationPoint(double[] location_point) {
         this.location_point = location_point;
+    }
+
+    public void setPostId() {
+        this.postId = String.valueOf(this.timestamp) + String.valueOf(this.created_at.getTime());
+    }
+
+    public String getPostId() {
+        return String.valueOf(this.postId);
     }
 
     /**
@@ -561,7 +571,7 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
         JSONObject m = new JSONObject(true);
 
         // tweet data
-        m.put(AbstractObjectEntry.TIMESTAMP_FIELDNAME, utcFormatter.print(getTimestamp().getTime()));
+        m.put(AbstractObjectEntry.TIMESTAMP_FIELDNAME, utcFormatter.print(getTimestampDate().getTime()));
         m.put(AbstractObjectEntry.CREATED_AT_FIELDNAME, utcFormatter.print(getCreatedAt().getTime()));
         if (this.on != null) m.put("on", utcFormatter.print(this.on.getTime()));
         if (this.to != null) m.put("to", utcFormatter.print(this.to.getTime()));
