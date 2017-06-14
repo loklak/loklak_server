@@ -180,9 +180,9 @@ public class QuoraProfileScraper extends BaseScraper {
 
     //TODO: this method shall return Timeline object
     @Override
-//    protected Timeline scrape(BufferedReader br) {
-    protected Post scrape(BufferedReader br) {
-//        Timeline dataSet = new Timeline(order);
+    protected Timeline2 scrape(BufferedReader br) {
+//    protected Post scrape(BufferedReader br) {
+        Timeline2 dataSet = new Timeline2(order);
         //for profile
         Post qPost;
         try {
@@ -192,8 +192,8 @@ public class QuoraProfileScraper extends BaseScraper {
         }
         qPost = scrapeProfile();
 
-//        return dataSet.add(qPost);
-        return qPost;
+        return dataSet.add(qPost);
+//        return qPost;
     }
 
 
@@ -209,6 +209,7 @@ public class QuoraProfileScraper extends BaseScraper {
             super();
             this.quoraId = _quoraId;
             this.quoraPostNo = _quoraPostNo;
+            this.postId = this.timestamp + this.quoraPostNo + this.quoraId;
         }
 
         public void getQuoraId(String _quoraId) {
@@ -219,12 +220,11 @@ public class QuoraProfileScraper extends BaseScraper {
             this.quoraPostNo = _quoraPostNo;
         }
 
-        public void getPostId() {
+        public void setPostId() {
             this.postId = this.timestamp + this.quoraPostNo + this.quoraId;
         }
 
-        public String setPostId() {
-            this.postId = this.timestamp + this.quoraPostNo + this.quoraId;
+        public String getPostId() {
             return String.valueOf(this.postId);
         }
         //clean data

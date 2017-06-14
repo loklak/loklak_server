@@ -17,6 +17,7 @@ import org.json.JSONException;
 import org.loklak.objects.ProviderType;
 import org.loklak.objects.SourceType;
 import org.loklak.objects.Timeline;
+import org.loklak.objects.Timeline2;
 import org.loklak.objects.QueryEntry;
 import java.util.HashMap;
 import javax.servlet.ServletException;

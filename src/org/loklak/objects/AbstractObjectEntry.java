@@ -27,6 +27,7 @@ import java.util.LinkedHashSet;
 
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
+import org.loklak.harvester.Post;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
