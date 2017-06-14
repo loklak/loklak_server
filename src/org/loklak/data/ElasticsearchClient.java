@@ -83,6 +83,9 @@ import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramInter
 import org.elasticsearch.search.aggregations.bucket.histogram.InternalHistogram;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsBuilder;
+import org.elasticsearch.search.aggregations.metrics.avg.Avg;
+import org.elasticsearch.search.aggregations.metrics.sum.Sum;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 import org.joda.time.format.DateTimeFormatter;
@@ -95,9 +98,9 @@ public class ElasticsearchClient {
     private static long throttling_time_threshold = 2000L; // update time high limit
     private static long throttling_ops_threshold = 1000L; // messages per second low limit
     private static double throttling_factor = 1.0d; // factor applied on update duration if both thresholds are passed
-    
+
     public final static BulkWriteResult EMPTY_BULK_RESULT = new BulkWriteResult();
-    
+
     private Node elasticsearchNode;
     private Client elasticsearchClient;
 
@@ -129,7 +132,7 @@ public class ElasticsearchClient {
         }
         this.elasticsearchClient = tc;
     }
-    
+
     /**
      * create a elasticsearch node client (embedded elasticsearch)
      * @param settings
@@ -149,7 +152,7 @@ public class ElasticsearchClient {
         ClusterStatsNodes clusterStatsNodes = clusterStatsResponse.getNodesStats();
         return clusterStatsNodes;
     }
-    
+
     private boolean clusterReadyCache = false;
     public boolean clusterReady() {
         if (clusterReadyCache) return true;
@@ -166,11 +169,11 @@ public class ElasticsearchClient {
             // wait for yellow status
             ClusterHealthResponse health = elasticsearchClient.admin().cluster().prepareHealth().setWaitForStatus(status).execute().actionGet();
             is_ready = !health.isTimedOut();
-            if (!is_ready && System.currentTimeMillis() - start > maxtimemillis) return false; 
+            if (!is_ready && System.currentTimeMillis() - start > maxtimemillis) return false;
         } while (!is_ready);
         return is_ready;
     }
-    
+
     public void createIndexIfNotExists(String indexName, final int shards, final int replicas) {
         // create an index if not existent
         if (!this.elasticsearchClient.admin().indices().prepareExists(indexName).execute().actionGet().isExists()) {
@@ -236,7 +239,7 @@ public class ElasticsearchClient {
         PendingClusterTasksResponse r = this.elasticsearchClient.admin().cluster().preparePendingClusterTasks().get();
         return r.prettyPrint();
     }
-    
+
     public String clusterStats() {
         ClusterStatsResponse r = this.elasticsearchClient.admin().cluster().prepareClusterStats().get();
         return r.toString();
@@ -245,7 +248,7 @@ public class ElasticsearchClient {
     public Map<String, String> nodeSettings() {
         return this.elasticsearchClient.settings().getAsMap();
     }
-    
+
     /**
      * Close the connection to the remote elasticsearch client. This should only be called when the application is
      * terminated.
@@ -276,7 +279,7 @@ public class ElasticsearchClient {
 
     /**
      * Retrieve a statistic object from the connected elasticsearch cluster
-     * 
+     *
      * @return cluster stats from connected cluster
      */
     public ClusterStatsNodes getStats() {
@@ -292,7 +295,7 @@ public class ElasticsearchClient {
 
     /**
      * Get the number of documents in the search index
-     * 
+     *
      * @return the count of all documents in the index
      */
     public long count(String indexName) {
@@ -302,7 +305,7 @@ public class ElasticsearchClient {
 
     /**
      * Get the number of documents in the search index for a given search query
-     * 
+     *
      * @param q
      *            the query
      * @return the count of all documents in the index which matches with the query
@@ -326,7 +329,7 @@ public class ElasticsearchClient {
             return 0;
         }
     }
-    
+
     public long countLocal(final String index, final String provider_hash) {
         try {
             SearchResponse response = elasticsearchClient.prepareSearch(index)
@@ -356,7 +359,7 @@ public class ElasticsearchClient {
      * if (type != null) {
      *   ...
      * }
-     * 
+     *
      * @param indexName
      *            the name of the index
      * @param typeName
@@ -373,7 +376,7 @@ public class ElasticsearchClient {
                 .execute()
                 .actionGet();
         return getResponse.isExists();
-    }    
+    }
 
     public Set<String> existBulk(String indexName, String typeName, final Collection<String> ids) {
         if (ids == null || ids.size() == 0) return new HashSet<>();
@@ -381,15 +384,15 @@ public class ElasticsearchClient {
                 .add(indexName, typeName, ids)
                 .get();
         Set<String> er = new HashSet<>();
-        for (MultiGetItemResponse itemResponse : multiGetItemResponses) { 
+        for (MultiGetItemResponse itemResponse : multiGetItemResponses) {
             GetResponse response = itemResponse.getResponse();
-            if (response.isExists()) {                      
+            if (response.isExists()) {
                 er.add(response.getId());
             }
         }
         return er;
-    }    
-    
+    }
+
     /**
      * Get the type name of a document or null if the document does not exist.
      * This is a replacement of the exist() method which does exactly the same as exist()
@@ -413,7 +416,7 @@ public class ElasticsearchClient {
      * rule. The information which document was deleted persists for one minute and
      * then inserting documents with the same version number as before is possible.
      * To modify this behavior, change the configuration setting index.gc_deletes
-     * 
+     *
      * @param id
      *            the unique identifier of a document
      * @return true if the document existed and was deleted, false otherwise
@@ -425,7 +428,7 @@ public class ElasticsearchClient {
     /**
      * Delete a list of documents for a given set of ids
      * ATTENTION: read about the time-out of version number checking in the method above.
-     * 
+     *
      * @param ids
      *            a map from the unique identifier of a document to the document type
      * @return the number of deleted documents
@@ -440,14 +443,14 @@ public class ElasticsearchClient {
         bulkRequest.execute().actionGet();
         return ids.size();
     }
-    
+
     /**
      * Delete documents using a query. Check what would be deleted first with a normal search query!
      * Elasticsearch once provided a native prepareDeleteByQuery method, but this was removed
      * in later versions. Instead, there is a plugin which iterates over search results,
      * see https://www.elastic.co/guide/en/elasticsearch/plugins/current/plugins-delete-by-query.html
      * We simulate the same behaviour here without the need of that plugin.
-     * 
+     *
      * @param q
      * @return delete document count
      */
@@ -478,7 +481,7 @@ public class ElasticsearchClient {
      * elasticsearch does not do any json transformation or parsing. We
      * get simply the text from the '_source' field. This might be useful to
      * make a dump from the index content.
-     * 
+     *
      * @param id
      *            the unique identifier of a document
      * @return the document as source text
@@ -491,7 +494,7 @@ public class ElasticsearchClient {
     /**
      * Read a json document from the search index for a given id.
      * Elasticsearch reads the '_source' field and parses the content as json.
-     * 
+     *
      * @param id
      *            the unique identifier of a document
      * @return the document as json, matched on a Map<String, Object> object instance
@@ -501,7 +504,7 @@ public class ElasticsearchClient {
         Map<String, Object> map = getMap(response);
         return map;
     }
-    
+
     protected static Map<String, Object> getMap(GetResponse response) {
         Map<String, Object> map = null;
         if (response.isExists() && (map = response.getSourceAsMap()) != null) {
@@ -509,11 +512,11 @@ public class ElasticsearchClient {
         }
         return map;
     }
-    
+
     /**
      * Write a json document into the search index.
      * Writing using a XContentBuilder is the most efficient way to add content to elasticsearch
-     * 
+     *
      * @param jsonMap
      *            the json document to be indexed in elasticsearch
      * @param id
@@ -538,7 +541,7 @@ public class ElasticsearchClient {
      * Write a json document into the search index. The id must be calculated by the calling environment.
      * This id should be unique for the json. The best way to calculate this id is, to use an existing
      * field from the jsonMap which contains a unique identifier for the jsonMap.
-     * 
+     *
      * @param indexName
      *            the name of the index
      * @param jsonMap
@@ -620,7 +623,7 @@ public class ElasticsearchClient {
         Log.getLog().info("elastic write bulk to index " + indexName + ": " + jsonMapList.size() + " entries, " + result.created.size() + " created, " + result.errors.size() + " errors, " + duration + " ms" + (regulator == 0 ? "" : ", throttled with " + regulator + " ms") + ", " + ops + " objects/second");
         return result;
     }
-    
+
     public static class BulkWriteResult {
         private Map<String, String> errors;
         private Set<String> created;
@@ -637,13 +640,13 @@ public class ElasticsearchClient {
     }
 
     private final static DateTimeFormatter utcFormatter = ISODateTimeFormat.dateTime().withZoneUTC();
-    
+
     public static class BulkEntry {
         private String id;
         private String type;
         private Long version;
         public Map<String, Object> jsonMap;
-        
+
         /**
          * initialize entry for bulk writes
          * @param id the id of the entry
@@ -669,7 +672,7 @@ public class ElasticsearchClient {
      * https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-match-query.html.
      * A better way to do this would be the usage of a cursor.
      * See the delete method to find out how cursors work.
-     * 
+     *
      * @param q
      *            a search query string
      * @param operator
@@ -718,11 +721,11 @@ public class ElasticsearchClient {
         Map<String, Object> map = hits[0].getSource();
         return map;
     }
-    
+
     public Query query(final String indexName, final QueryBuilder queryBuilder, String order_field, int timezoneOffset, int resultCount, long histogram_interval, String histogram_timefield, int aggregationLimit, String... aggregationFields) {
         return new Query(indexName,  queryBuilder, order_field, timezoneOffset, resultCount, histogram_interval, histogram_timefield, aggregationLimit, aggregationFields);
     }
-    
+
     public class Query {
         public List<Map<String, Object>> result;
         public int hitCount;
@@ -766,7 +769,7 @@ public class ElasticsearchClient {
             // get response
             SearchResponse response = request.execute().actionGet();
             hitCount = (int) response.getHits().getTotalHits();
-                    
+
             // evaluate search result
             //long totalHitCount = response.getHits().getTotalHits();
             SearchHit[] hits = response.getHits().getHits();
@@ -775,7 +778,7 @@ public class ElasticsearchClient {
                 Map<String, Object> map = hit.getSource();
                 this.result.add(map);
             }
-            
+
             // evaluate aggregation
             // collect results: fields
             this.aggregations = new HashMap<>();
@@ -809,7 +812,7 @@ public class ElasticsearchClient {
             }
             // date histogram:
             if (addTimeHistogram) {
-                InternalHistogram<InternalHistogram.Bucket> dateCounts = response.getAggregations().get(histogram_timefield);              
+                InternalHistogram<InternalHistogram.Bucket> dateCounts = response.getAggregations().get(histogram_timefield);
                 ArrayList<Map.Entry<String, Long>> list = new ArrayList<>();
                 for (InternalHistogram.Bucket bucket : dateCounts.getBuckets()) {
                     Calendar cal = Calendar.getInstance(DateParser.UTCtimeZone);
@@ -827,7 +830,7 @@ public class ElasticsearchClient {
             }
         }
     }
-    
+
 
     /**
      * Search the local message cache using a elasticsearch query.
@@ -837,7 +840,7 @@ public class ElasticsearchClient {
      * @param sort_order - the sort order (you want to use SortOrder.DESC here)
      */
     public ResultList<Map<String, Object>> fuzzyquery(final String indexName, final String fieldName, final String q, final int resultCount, final String sort_field, final String default_sort_type, final SortOrder sort_order, final Date since, final Date until, final String range_field) {
-        
+
         // prepare request
         BoolQueryBuilder suggest = QueryBuilders.boolQuery();
         if (q != null && q.length() > 0) {
@@ -849,7 +852,7 @@ public class ElasticsearchClient {
         }
 
         BoolQueryBuilder query;
-        
+
         if (range_field != null && range_field.length() > 0 && (since != null || until != null)) {
             query = QueryBuilders.boolQuery();
             if (q.length() > 0) query.filter(suggest);
@@ -860,7 +863,7 @@ public class ElasticsearchClient {
         } else {
             query = suggest;
         }
-        
+
         SearchRequestBuilder request = this.elasticsearchClient.prepareSearch(indexName)
                 .setSearchType(SearchType.QUERY_THEN_FETCH)
                 .setQuery(query)
@@ -885,10 +888,10 @@ public class ElasticsearchClient {
             result.add(map);
         }
         result.setHits(rhits.getTotalHits());
-            
+
         return result;
     }
-    
+
     public List<Map<String, Object>> queryWithConstraints(final String indexName, final String fieldName, final String fieldValue, final Map<String, String> constraints, boolean latest) throws IOException {
         SearchRequestBuilder request = this.elasticsearchClient.prepareSearch(indexName)
                 .setSearchType(SearchType.QUERY_THEN_FETCH)
@@ -902,7 +905,7 @@ public class ElasticsearchClient {
             bFilter.filter(QueryBuilders.constantScoreQuery(QueryBuilders.termQuery((String) entry.getKey(), ((String) entry.getValue()).toLowerCase())));
         }
         request.setQuery(bFilter);
-        
+
         // get response
         SearchResponse response = request.execute().actionGet();
 
@@ -916,7 +919,7 @@ public class ElasticsearchClient {
 
         return result;
     }
-    
+
     public LinkedHashMap<String, Long> fullDateHistogram(final String indexName, int timezoneOffset, String histogram_timefield) {
         // prepare request
         SearchRequestBuilder request = elasticsearchClient.prepareSearch(indexName)
@@ -926,12 +929,12 @@ public class ElasticsearchClient {
                 .setSize(0);
         request.clearRescorers();
         request.addAggregation(AggregationBuilders.dateHistogram(histogram_timefield).field(histogram_timefield).timeZone("UTC").minDocCount(1).interval(DateHistogramInterval.DAY));
-         
+
         // get response
         SearchResponse response = request.execute().actionGet();
-                
+
         // evaluate date histogram:
-        InternalHistogram<InternalHistogram.Bucket> dateCounts = response.getAggregations().get(histogram_timefield);              
+        InternalHistogram<InternalHistogram.Bucket> dateCounts = response.getAggregations().get(histogram_timefield);
         LinkedHashMap<String, Long> list = new LinkedHashMap<>();
         for (InternalHistogram.Bucket bucket : dateCounts.getBuckets()) {
             Calendar cal = Calendar.getInstance(DateParser.UTCtimeZone);
@@ -942,5 +945,47 @@ public class ElasticsearchClient {
             list.put(DateParser.dayDateFormat.format(cal.getTime()), docCount);
         }
         return list;
+    }
+
+    public HashMap<String, HashMap<String, Long>> classifierScore(String index, String classifierName, ArrayList<String> classes) {
+        SearchRequestBuilder request = elasticsearchClient.prepareSearch(index)
+            .setSearchType(SearchType.QUERY_THEN_FETCH)
+            .setQuery(QueryBuilders.matchAllQuery())
+            .setFrom(0)
+            .setSize(0)
+            .addAggregation(getClassifierAggregation(classifierName));
+
+        SearchResponse response = request.execute().actionGet();
+
+        Terms aggrs = response.getAggregations().get("by_class");
+
+        HashMap<String, HashMap<String, Long>> aggregatedMap = new HashMap<>();
+
+        for (Bucket bucket : aggrs.getBuckets()) {
+            String key = bucket.getKeyAsString();
+            if (!classes.contains(key)) {
+                continue;
+            }
+            long docCount = bucket.getDocCount();
+            Sum sum = bucket.getAggregations().get("sum_probability");
+            Avg avg = bucket.getAggregations().get("avg_probability");
+            HashMap<String, Long> map = new HashMap<>();
+            map.put("count", docCount);
+            map.put("sum", (long) sum.getValue());
+            map.put("avg", (long) avg.getValue());
+            aggregatedMap.put(key,  map);
+        }
+        return aggregatedMap;
+    }
+
+    public TermsBuilder getClassifierAggregation(String classifierName) {
+        String probabilityField = classifierName + "_probability";
+        return AggregationBuilders.terms("by_class").field(classifierName)
+            .subAggregation(
+                AggregationBuilders.avg("avg_probability").field(probabilityField)
+            )
+            .subAggregation(
+                AggregationBuilders.sum("sum_probability").field(probabilityField)
+            );
     }
 }
