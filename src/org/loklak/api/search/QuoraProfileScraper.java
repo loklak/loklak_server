@@ -315,7 +315,7 @@ public class QuoraProfileScraper extends BaseScraper {
             default:
                 break;
         }
-                
+
         return dataSet;
     }
 
