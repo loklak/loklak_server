@@ -32,7 +32,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
-<<<<<<< 3a52dd0aef7ad4c26b3ea3446057cb32e03f7031
 import org.loklak.data.DAO.IndexName;
 import org.loklak.harvester.Post;
 import org.loklak.susi.SusiThought;
@@ -251,7 +250,7 @@ public class Timeline2 implements Iterable<Post> {
     }
 */
 
-    private Timeline2 addPost(Post post) {
+    public Timeline2 addPost(Post post) {
         String key = "";
         if (this.order == Order.TIMESTAMP) {
             key = Long.toHexString(post.getTimestamp()) + "_" + post.getPostId();
@@ -265,6 +264,18 @@ public class Timeline2 implements Iterable<Post> {
             }
         }
         return this;
+    }
+
+    public void mergePost(Timeline2 list) {
+        for (Post post: list) {
+            this.add(post);
+        }
+    }
+
+    public void mergePost(Timeline2[] lists) {
+        for (Timeline2 list: lists) {
+            this.mergePost(list);
+        }
     }
 
     protected UserEntry getUser(String user_screen_name) {

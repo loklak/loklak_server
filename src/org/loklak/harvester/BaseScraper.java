@@ -1,38 +1,24 @@
 package org.loklak.harvester;
 
+import java.io.*;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import org.loklak.tools.storage.JSONObjectWithDefault;
-import java.lang.StringBuilder;
 import org.loklak.server.AbstractAPIHandler;
 import org.loklak.data.DAO;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.Date;
 import org.loklak.http.ClientConnection;
 import org.json.JSONObject;
-import org.json.JSONArray;
-import org.json.JSONException;
 import org.loklak.objects.ProviderType;
 import org.loklak.objects.SourceType;
-import org.loklak.objects.Timeline;
 import org.loklak.objects.Timeline2;
-import org.loklak.objects.QueryEntry;
-import java.util.HashMap;
-import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.loklak.tools.storage.JSONObjectWithDefault;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.http.ClientConnection;
 import org.loklak.server.*;
-import java.io.IOException;
-import org.loklak.http.RemoteAccess;
-import org.loklak.tools.UTF8;
 
 /**
  * @author vibhcool (Vibhor Verma)
@@ -47,12 +33,13 @@ public abstract class BaseScraper extends AbstractAPIHandler {
     //TODO: check if UTC time needed
     protected String scraperName;
     protected String html;
-    protected String url;
     protected String baseUrl;
-    protected String midUrl = "";
+    protected String midUrl;
     protected String query;
-    protected SourceType source_type; // where did the message come from
-    protected ProviderType provider_type;  // who created the message
+    // where did the message come from
+    protected SourceType source_type;
+    // who created the message
+    protected ProviderType provider_type;
     //TODO: dummy variable, add datastructure for filter, type_of_posts, location, etc
     protected String extra = "";
     //TODO: setup Timeline for Post
@@ -66,37 +53,46 @@ public abstract class BaseScraper extends AbstractAPIHandler {
         //TODO: add different extra paramenters. this is dummy variable
         this.extra = call.get("extra", "");
         //TODO: to be implemented to use Timeline
-        return getData().toJSON(false, "metadata_base", "statuses_base");
+        return this.getData().toJSON(false, "metadata", "statuses");
         //return this.getData();
     }
 
     protected abstract Map<?, ?> getExtra(String _extra);
 
     public Timeline2 getData() {
-//    public Post getData() {
-        ClientConnection connection;
-        BufferedReader br;
+        String url = null;
 
         Timeline2 tl = new Timeline2(order);
-//        Post tl = null;
-        this.url = this.baseUrl + this.midUrl + this.query;
+        url = this.baseUrl + this.midUrl + this.query;
 
         try {
-            connection = new ClientConnection(this.url);
-
-            try {
-                // get instance of bufferReader
-                br = getHtml(connection);
-                tl = scrape(br);
-            } catch (Exception e) {
-                DAO.trace(e);
-            } finally {
-                connection.close();
-            }
+            tl = getDataFromConnection(url);
         } catch (IOException e) {
             DAO.severe("check internet connection");
         }
         return tl;
+    }
+
+    public Timeline2 getDataFromConnection(String url, String type) throws IOException {
+        ClientConnection connection = new ClientConnection(url);
+        BufferedReader br;
+        Timeline2 tl = null;
+        try {
+            // get instance of bufferReader
+            br = getHtml(connection);
+            tl = scrape(br, type, url);
+        } catch (Exception e) {
+            DAO.trace(e);
+            tl = new Timeline2(order);
+        } finally {
+            connection.close();
+        }
+        return tl;
+
+    }
+
+    public Timeline2 getDataFromConnection(String url) throws IOException {
+        return getDataFromConnection(url, "all");
     }
 
     public BufferedReader getHtml(ClientConnection connection) {
@@ -108,9 +104,8 @@ public abstract class BaseScraper extends AbstractAPIHandler {
         return br;
     }
 
-    protected abstract Timeline2 scrape(BufferedReader br);
-    //protected abstract Post scrape(BufferedReader br);
-
+    protected abstract Timeline2 scrape(BufferedReader br, String type, String url);
+ 
     public String bufferedReaderToString(BufferedReader br) throws IOException {
     StringBuilder everything = new StringBuilder();
     String line;

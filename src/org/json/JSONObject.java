@@ -488,11 +488,11 @@ public class JSONObject {
      */
     public Object get(String key) throws JSONException {
         if (key == null) {
-            //throw new JSONException("Null key.");
+            throw new JSONException("Null key.");
         }
         Object object = this.opt(key);
         if (object == null) {
-            //throw new JSONException("JSONObject[" + quote(key) + "] not found.");
+            throw new JSONException("JSONObject[" + quote(key) + "] not found.");
         }
         return object;
     }
