@@ -84,6 +84,7 @@ import org.loklak.api.admin.CrawlerServlet;
 import org.loklak.api.admin.SettingsServlet;
 import org.loklak.api.admin.StatusService;
 import org.loklak.api.admin.ThreaddumpServlet;
+import org.loklak.api.aggregation.ClassifierServlet;
 import org.loklak.api.amazon.AmazonProductService;
 import org.loklak.api.cms.*;
 import org.loklak.api.geo.GeocodeServlet;
@@ -660,6 +661,7 @@ public class LoklakServer {
         servletHandler.addServlet(AccessServlet.class, "/api/access.json");
         servletHandler.addServlet(AccessServlet.class, "/api/access.html");
         servletHandler.addServlet(AccessServlet.class, "/api/access.txt");
+        servletHandler.addServlet(ClassifierServlet.class, "/api/classifier.json");
         servletHandler.addServlet(PeersServlet.class, "/api/peers.json");
         servletHandler.addServlet(PeersServlet.class, "/api/peers.csv");
         servletHandler.addServlet(CrawlerServlet.class, "/api/crawler.json");

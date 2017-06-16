@@ -6,12 +6,12 @@
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
- *  
+ *
  *  This library is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
@@ -84,18 +84,18 @@ import org.loklak.tools.storage.*;
  * The Data Access Object for the message project.
  * This provides only static methods because the class methods shall be available for
  * all other classes.
- * 
+ *
  * To debug, call elasticsearch directly i.e.:
- * 
+ *
  * get statistics
  * curl localhost:9200/_stats?pretty=true
- * 
+ *
  * get statistics for message index
  * curl -XGET 'http://127.0.0.1:9200/messages?pretty=true'
- * 
+ *
  * get mappings in message index
  * curl -XGET "http://localhost:9200/messages/_mapping?pretty=true"
- * 
+ *
  * get search result from message index
  * curl -XGET 'http://127.0.0.1:9200/messages/_search?q=*&pretty=true'
  */
@@ -104,7 +104,7 @@ public class DAO {
     public final static com.fasterxml.jackson.core.JsonFactory jsonFactory = new com.fasterxml.jackson.core.JsonFactory();
     public final static com.fasterxml.jackson.databind.ObjectMapper jsonMapper = new com.fasterxml.jackson.databind.ObjectMapper(DAO.jsonFactory);
     public final static com.fasterxml.jackson.core.type.TypeReference<HashMap<String,Object>> jsonTypeRef = new com.fasterxml.jackson.core.type.TypeReference<HashMap<String,Object>>() {};
-    
+
     public final static String MESSAGE_DUMP_FILE_PREFIX = "messages_";
     public final static String ACCOUNT_DUMP_FILE_PREFIX = "accounts_";
     public final static String USER_DUMP_FILE_PREFIX = "users_";
@@ -112,10 +112,10 @@ public class DAO {
     public final static String FOLLOWERS_DUMP_FILE_PREFIX = "followers_";
     public final static String FOLLOWING_DUMP_FILE_PREFIX = "following_";
     private static final String IMPORT_PROFILE_FILE_PREFIX = "profile_";
-    
+
     public final static int CACHE_MAXSIZE =   10000;
     public final static int EXIST_MAXSIZE = 4000000;
-    
+
     public  static File conf_dir, bin_dir, html_dir;
     private static File external_data, assets, dictionaries;
     public static Settings public_settings, private_settings;
@@ -127,7 +127,7 @@ public class DAO {
     public  static JsonDataset user_dump, followers_dump, following_dump;
     public  static AccessTracker access;
     private static File schema_dir, conv_schema_dir;
-    private static ElasticsearchClient elasticsearch_client;
+    public static ElasticsearchClient elasticsearch_client;
     //private static Node elasticsearch_node;
     //private static Client elasticsearch_client;
     public static UserFactory users;
@@ -142,7 +142,7 @@ public class DAO {
     public  static GeoNames geoNames = null;
     public static Peers peers = new Peers();
     public static OutgoingMessageBuffer outgoingMessages = new OutgoingMessageBuffer();
-    
+
     // AAA Schema for server usage
     public static JsonTray authentication;
     public static JsonTray authorization;
@@ -152,7 +152,7 @@ public class DAO {
     public static Map<String, Accounting> accounting_temporary = new HashMap<>();
     public static JsonFile login_keys;
     public static TimelineCache timelineCache;
-    
+
     public static enum IndexName {
     	messages_hour("messages.json"), messages_day("messages.json"), messages_week("messages.json"), messages, queries, users, accounts, import_profiles;
         private String schemaFileName;
@@ -166,7 +166,7 @@ public class DAO {
     	    return this.schemaFileName;
     	}
     }
-    
+
     /**
      * initialize the DAO
      * @param configMap
@@ -175,21 +175,21 @@ public class DAO {
     public static void init(Map<String, String> configMap, Path dataPath) throws Exception{
 
         log("initializing loklak DAO");
-        
+
         config = configMap;
         conf_dir = new File("conf");
         bin_dir = new File("bin");
         html_dir = new File("html");
-        
+
         // initialize public and private keys
 		public_settings = new Settings(new File("data/settings/public.settings.json"));
 		File private_file = new File("data/settings/private.settings.json");
 		private_settings = new Settings(private_file);
 		OS.protectPath(private_file.toPath());
-		
+
 		if(!private_settings.loadPrivateKey() || !public_settings.loadPublicKey()){
         	log("Can't load key pair. Creating new one");
-        	
+
         	// create new key pair
         	KeyPairGenerator keyGen;
 			try {
@@ -207,7 +207,7 @@ public class DAO {
         else{
         	log("Key pair loaded from file. Peer hash: " + public_settings.getPeerHashAlgorithm() + " " + public_settings.getPeerHash());
         }
-        
+
         File datadir = dataPath.toFile();
         // check if elasticsearch shall be accessed as external cluster
         String transport = configMap.get("elasticsearch_transport.enabled");
@@ -220,7 +220,7 @@ public class DAO {
             }
         } else {
             // use all config attributes with a key starting with "elasticsearch." to set elasticsearch settings
-        	
+
         	ESLoggerFactory.setDefaultFactory(new Slf4jESLoggerFactory());
             org.elasticsearch.common.settings.Settings.Builder settings = org.elasticsearch.common.settings.Settings.builder();
             for (Map.Entry<String, String> entry: config.entrySet()) {
@@ -231,11 +231,11 @@ public class DAO {
             settings.put("path.home", datadir.getAbsolutePath());
             settings.put("path.data", datadir.getAbsolutePath());
             settings.build();
-            
+
             // start elasticsearch
             elasticsearch_client = new ElasticsearchClient(settings);
         }
-        
+
         // open AAA storage
         Path settings_dir = dataPath.resolve("settings");
         settings_dir.toFile().mkdirs();
@@ -308,7 +308,7 @@ public class DAO {
         external_data = new File(datadir, "external");
         dictionaries = new File(external_data, "dictionaries");
         dictionaries.mkdirs();
-        
+
         push_cache_dir = dataPath.resolve("pushcache");
         push_cache_dir.toFile().mkdirs();
 
@@ -323,7 +323,7 @@ public class DAO {
             "Each dump file must start with the prefix '" + MESSAGE_DUMP_FILE_PREFIX + "' to be recognized.\n";
         message_dump_dir = dataPath.resolve("dump");
         message_dump = new JsonRepository(message_dump_dir.toFile(), MESSAGE_DUMP_FILE_PREFIX, message_dump_readme, JsonRepository.COMPRESSED_MODE, true, Runtime.getRuntime().availableProcessors());
-        
+
         account_dump_dir = dataPath.resolve("accounts");
         account_dump_dir.toFile().mkdirs();
         OS.protectPath(account_dump_dir); // no other permissions to this path
@@ -346,7 +346,7 @@ public class DAO {
                 new JsonDataset.Column[]{new JsonDataset.Column("screen_name", true)},
                 "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
                 JsonRepository.REWRITABLE_MODE, false, Integer.MAX_VALUE);
-        
+
         Path log_dump_dir = dataPath.resolve("log");
         log_dump_dir.toFile().mkdirs();
         OS.protectPath(log_dump_dir); // no other permissions to this path
@@ -354,13 +354,13 @@ public class DAO {
         access.start(); // start monitor
 
         timelineCache = new TimelineCache(60000);
-        
+
         import_profile_dump_dir = dataPath.resolve("import-profiles");
         import_profile_dump = new JsonRepository(import_profile_dump_dir.toFile(), IMPORT_PROFILE_FILE_PREFIX, null, JsonRepository.COMPRESSED_MODE, false, Runtime.getRuntime().availableProcessors());
 
         // load schema folder
         conv_schema_dir = new File("conf/conversion");
-        schema_dir = new File("conf/schema");            
+        schema_dir = new File("conf/schema");
 
         // load dictionaries if they are embedded here
         // read the file allCountries.zip from http://download.geonames.org/export/dump/allCountries.zip
@@ -370,7 +370,7 @@ public class DAO {
             // download this file
             ClientConnection.download("http://download.geonames.org/export/dump/cities1000.zip", cities1000);
         }
-        
+
         if(cities1000.exists()){
 	        try{
 	        	geoNames = new GeoNames(cities1000, new File(conf_dir, "iso3166.json"), 1);
@@ -380,7 +380,7 @@ public class DAO {
 	        	geoNames = null;
 	        }
     	}
-        
+
         // finally wait for healthy status of elasticsearch shards
         ClusterHealthStatus required_status = ClusterHealthStatus.fromString(config.get("elasticsearch_requiredClusterHealthStatus"));
         boolean ok;
@@ -449,19 +449,19 @@ public class DAO {
             }
         }
         log("queries initialized.");
-        
+
         log("finished DAO initialization");
     }
-    
+
     public static boolean wait_ready(long maxtimemillis) {
         ClusterHealthStatus required_status = ClusterHealthStatus.fromString(config.get("elasticsearch_requiredClusterHealthStatus"));
         return elasticsearch_client.wait_ready(maxtimemillis, required_status);
     }
-    
+
     public static String pendingClusterTasks() {
         return elasticsearch_client.pendingClusterTasks();
     }
-    
+
     public static String clusterStats() {
         return elasticsearch_client.clusterStats();
     }
@@ -469,14 +469,14 @@ public class DAO {
     public static Map<String, String> nodeSettings() {
         return elasticsearch_client.nodeSettings();
     }
-    
+
     public static File getAssetFile(String screen_name, String id_str, String file) {
         String letter0 = ("" + screen_name.charAt(0)).toLowerCase();
         String letter1 = ("" + screen_name.charAt(1)).toLowerCase();
         File storage_path = new File(new File(new File(assets, letter0), letter1), screen_name);
         return new File(storage_path, id_str + "_" + file); // all assets for one user in one file
     }
-    
+
     public static Collection<File> getTweetOwnDumps(int count) {
         return message_dump.getOwnDumps(count);
     }
@@ -521,7 +521,7 @@ public class DAO {
      */
     public static void close() {
         Log.getLog().info("closing DAO");
-        
+
         // close the dump files
         message_dump.close();
         account_dump.close();
@@ -529,10 +529,10 @@ public class DAO {
         user_dump.close();
         followers_dump.close();
         following_dump.close();
-        
+
         // close the tracker
         access.close();
-        
+
         // close the index factories (flushes the caches)
         messages.close();
         messages_hour.close();
@@ -548,9 +548,9 @@ public class DAO {
 
         Log.getLog().info("closed DAO");
     }
-    
+
     /**
-     * get values from 
+     * get values from
      * @param key
      * @param default_val
      * @return
@@ -559,12 +559,12 @@ public class DAO {
         String value = config.get(key);
         return value == null ? default_val : value;
     }
-    
+
     public static String[] getConfig(String key, String[] default_val, String delim) {
         String value = config.get(key);
         return value == null || value.length() == 0 ? default_val : value.split(delim);
     }
-    
+
     public static long getConfig(String key, long default_val) {
         String value = config.get(key);
         try {
@@ -573,7 +573,7 @@ public class DAO {
             return default_val;
         }
     }
-    
+
     public static double getConfig(String key, double default_val) {
         String value = config.get(key);
         try {
@@ -624,7 +624,7 @@ public class DAO {
         String value = config.get(key);
         return value == null ? default_val : value.equals("true") || value.equals("on") || value.equals("1");
     }
-    
+
     public static Set<String> getConfigKeys() {
         return config.keySet();
     }
@@ -639,7 +639,7 @@ public class DAO {
             this.dump = dump;
         }
     }
-    
+
     /**
      * Store a message together with a user into the search index
      * @param mw a message wrapper
@@ -673,7 +673,7 @@ public class DAO {
                 // record tweet into text file
                 if (mw.dump) message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
              }
-            
+
             // teach the classifier
             Classifier.learnPhrase(mw.t.getText());
         } catch (IOException e) {
@@ -709,11 +709,11 @@ public class DAO {
             synchronized (DAO.class) {
                 // write the user into the index
                 userBulk.add(new IndexEntry<UserEntry>(mw.u.getScreenName(), mw.t.getSourceType(), mw.u));
-    
+
                 // record tweet into search index
                 messageBulk.add(new IndexEntry<MessageEntry>(mw.t.getIdStr(), mw.t.getSourceType(), mw.t));
              }
-                
+
             // teach the classifier
             Classifier.learnPhrase(mw.t.getText());
         }
@@ -724,7 +724,7 @@ public class DAO {
             final Set<String> existed = new HashSet<>();
 
             //DAO.log("***DEBUG messages     INIT: " + messageBulk.size());
-            
+
             limitDate.setTime(DateParser.oneHourAgo().getTime());
             macc = messageBulk.stream().filter(i -> i.getObject().getCreatedAt().after(limitDate)).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for HOUR: " + macc.size());
@@ -732,7 +732,7 @@ public class DAO {
             //DAO.log("***DEBUG messages for HOUR: " + result.getCreated().size() + "  created");
             for (IndexEntry<MessageEntry> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for HOUR: " + existed.size() + "  existed");
-            
+
             limitDate.setTime(DateParser.oneDayAgo().getTime());
             macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getIdStr()))).filter(i -> i.getObject().getCreatedAt().after(limitDate)).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for  DAY : " + macc.size());
@@ -740,7 +740,7 @@ public class DAO {
             //DAO.log("***DEBUG messages for  DAY: " + result.getCreated().size() + " created");
             for (IndexEntry<MessageEntry> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for  DAY: " + existed.size()  + "  existed");
-            
+
             limitDate.setTime(DateParser.oneWeekAgo().getTime());
             macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getIdStr()))).filter(i -> i.getObject().getCreatedAt().after(limitDate)).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for WEEK: " + macc.size());
@@ -748,23 +748,23 @@ public class DAO {
             //DAO.log("***DEBUG messages for WEEK: " + result.getCreated().size() + "  created");
             for (IndexEntry<MessageEntry> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for WEEK: " + existed.size()  + "  existed");
-            
+
             macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getIdStr()))).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for  ALL : " + macc.size());
             result = messages.writeEntries(macc);
             //DAO.log("***DEBUG messages for  ALL: " + result.getCreated().size() + "  created");
             for (IndexEntry<MessageEntry> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for  ALL: " + existed.size()  + "  existed");
-            
+
             users.writeEntries(userBulk);
-            
+
         } catch (IOException e) {
         	Log.getLog().warn(e);
         }
         if (result == null) return new HashSet<String>();
         return result.getCreated();
     }
-    
+
     private static Set<String> writeMessageBulkDump(Collection<MessageWrapper> mws) {
         Set<String> created = writeMessageBulkNoDump(mws);
 
@@ -774,20 +774,20 @@ public class DAO {
                 // record tweet into text file
                 message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
              }
-                
+
             // teach the classifier
             Classifier.learnPhrase(mw.t.getText());
         } catch (IOException e) {
         	Log.getLog().warn(e);
         }
-        
+
         return created;
     }
-    
+
     /**
      * Store an account together with a user into the search index
      * This method is synchronized to prevent concurrent IO caused by this call.
-     * @param a an account 
+     * @param a an account
      * @param dump
      * @return true if the record was stored because it did not exist, false if it was not stored because the record existed already
      */
@@ -821,7 +821,7 @@ public class DAO {
         }
         return true;
     }
-    
+
     private static long countLocalHourMessages(final long millis, boolean created_at) {
         if (millis > 3600000L) return countLocalDayMessages(millis, created_at);
         if (created_at && millis == 3600000L) return elasticsearch_client.count(IndexName.messages_hour.name());
@@ -830,7 +830,7 @@ public class DAO {
                 created_at ? AbstractObjectEntry.CREATED_AT_FIELDNAME : AbstractObjectEntry.TIMESTAMP_FIELDNAME,
                 millis);
     }
-    
+
     private static long countLocalDayMessages(final long millis, boolean created_at) {
         if (millis > 86400000L) return countLocalWeekMessages(millis, created_at);
         if (created_at && millis == 86400000L) return elasticsearch_client.count(IndexName.messages_hour.name());
@@ -839,7 +839,7 @@ public class DAO {
                 created_at ? AbstractObjectEntry.CREATED_AT_FIELDNAME : AbstractObjectEntry.TIMESTAMP_FIELDNAME,
                 millis);
     }
-    
+
     private static long countLocalWeekMessages(final long millis, boolean created_at) {
         if (millis > 604800000L) return countLocalMessages(millis, created_at);
         if (created_at && millis == 604800000L) return elasticsearch_client.count(IndexName.messages_hour.name());
@@ -861,7 +861,7 @@ public class DAO {
                 created_at ? AbstractObjectEntry.CREATED_AT_FIELDNAME : AbstractObjectEntry.TIMESTAMP_FIELDNAME,
                 millis == Long.MAX_VALUE ? -1 : millis);
     }
-    
+
     public static long countLocalMessages() {
         return elasticsearch_client.count(IndexName.messages.name(), AbstractObjectEntry.TIMESTAMP_FIELDNAME, -1);
     }
@@ -869,7 +869,7 @@ public class DAO {
     public static long countLocalMessages(String provider_hash) {
         return elasticsearch_client.countLocal(IndexName.messages.name(), provider_hash);
     }
-    
+
     public static long countLocalUsers() {
         return elasticsearch_client.count(IndexName.users.name(), AbstractObjectEntry.TIMESTAMP_FIELDNAME, -1);
     }
@@ -877,7 +877,7 @@ public class DAO {
     public static long countLocalQueries() {
         return elasticsearch_client.count(IndexName.queries.name(), AbstractObjectEntry.TIMESTAMP_FIELDNAME, -1);
     }
-    
+
     public static long countLocalAccounts() {
         return elasticsearch_client.count(IndexName.accounts.name(), AbstractObjectEntry.TIMESTAMP_FIELDNAME, -1);
     }
@@ -889,22 +889,22 @@ public class DAO {
                messages_week != null && ((m = messages_week.read(id)) != null) ? m :
                messages.read(id);
     }
-    
+
     public static boolean existMessage(String id) {
         return messages_hour != null && messages_hour.exists(id) ||
                messages_day  != null && messages_day.exists(id)  ||
                messages_week != null && messages_week.exists(id) ||
                messages      != null && messages.exists(id);
     }
-    
+
     public static boolean existUser(String id) {
         return users.exists(id);
     }
-    
+
     public static boolean existQuery(String id) {
         return queries.exists(id);
     }
-    
+
     public static boolean deleteQuery(String id, SourceType sourceType) {
         return queries.delete(id, sourceType);
     }
@@ -912,17 +912,17 @@ public class DAO {
     public static boolean deleteImportProfile(String id, SourceType sourceType) {
         return importProfiles.delete(id, sourceType);
     }
-    
+
     public static int deleteOld(IndexName indexName, Date createDateLimit) {
         RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery(AbstractObjectEntry.CREATED_AT_FIELDNAME).to(createDateLimit);
         return elasticsearch_client.deleteByQuery(indexName.name(), rangeQuery);
     }
-    
+
     public static class SearchLocalMessages {
         public Timeline timeline;
         public Map<String, List<Map.Entry<String, Long>>> aggregations;
         public ElasticsearchClient.Query query;
-            
+
         /**
          * Search the local message cache using a elasticsearch query.
          * @param q - the query, for aggregation this which should include a time frame in the form since:yyyy-MM-dd until:yyyy-MM-dd
@@ -969,7 +969,7 @@ public class DAO {
             }
             timeline.setHits(query.hitCount);
             timeline.setResultIndex(resultIndex);
-                    
+
             // evaluate search result
             for (Map<String, Object> map: query.result) {
                 MessageEntry tweet = new MessageEntry(new JSONObject(map));
@@ -1004,7 +1004,7 @@ public class DAO {
                 aggregationFields
             );
         }
-        
+
         private static boolean insufficient(ElasticsearchClient.Query query, int resultCount, int aggregationLimit, String... aggregationFields) {
             return query.hitCount < resultCount || (aggregationFields.length > 0 && getAggregationResultLimit(query.aggregations) < aggregationLimit);
         }
@@ -1022,7 +1022,7 @@ public class DAO {
             }
             return json;
         }
-        
+
         private static int getAggregationResultLimit(Map<String, List<Map.Entry<String, Long>>> agg) {
             if (agg == null) return 0;
             int l = 0;
@@ -1034,7 +1034,7 @@ public class DAO {
     public static LinkedHashMap<String, Long> FullDateHistogram(int timezoneOffset) {
         return elasticsearch_client.fullDateHistogram(IndexName.messages.name(), timezoneOffset, AbstractObjectEntry.CREATED_AT_FIELDNAME);
     }
-    
+
     /**
      * Search the local user cache using a elasticsearch query.
      * @param screen_name - the user id
@@ -1054,7 +1054,7 @@ public class DAO {
         if (map == null) return null;
         return new UserEntry(new JSONObject(map));
     }
-    
+
     /**
      * Search the local account cache using an elasticsearch query.
      * @param screen_name - the user id
@@ -1067,7 +1067,7 @@ public class DAO {
             return null;
         }
     }
-    
+
     /**
      * Search the local message cache using a elasticsearch query.
      * @param q - the query, can be empty for a matchall-query
@@ -1124,7 +1124,7 @@ public class DAO {
         }
         return latests.values();
     }
-    
+
     public static Timeline scrapeTwitter(
             final Query post,
             final String q,
@@ -1180,7 +1180,7 @@ public class DAO {
         } catch (IOException | JSONException e) {
         	Log.getLog().warn(e);
         }
-        
+
         if (recordQuery && Caretaker.acceptQuery4Retrieval(q)) {
             if (qe == null) {
                 // a new query occurred
@@ -1200,10 +1200,10 @@ public class DAO {
         }
         if (post != null) post.recordEvent("query_recorder", System.currentTimeMillis() - start2);
         //log("SCRAPER: TIME LEFT after recording = " + (termination - System.currentTimeMillis()));
-        
+
         return tl;
     }
-    
+
     public static final Random random = new Random(System.currentTimeMillis());
     private static final Map<String, Long> peerLatency = new HashMap<>();
     private static ArrayList<String> getBestPeers(Collection<String> peers) {
@@ -1229,7 +1229,7 @@ public class DAO {
 
     private static Set<String> frontPeerCache = new HashSet<String>();
     private static Set<String> backendPeerCache = new HashSet<String>();
-    
+
     public static void updateFrontPeerCache(RemoteAccess remoteAccess) {
         if (remoteAccess.getLocalHTTPPort() >= 80) {
             frontPeerCache.add("http://" + remoteAccess.getRemoteHost() + (remoteAccess.getLocalHTTPPort() == 80 ? "" : ":" + remoteAccess.getLocalHTTPPort()));
@@ -1237,7 +1237,7 @@ public class DAO {
             frontPeerCache.add("https://" + remoteAccess.getRemoteHost() + (remoteAccess.getLocalHTTPSPort() == 443 ? "" : ":" + remoteAccess.getLocalHTTPSPort()));
         }
     }
-    
+
     /**
      * from all known front peers, generate a list of available peers, ordered by the peer latency
      * @return a list of front peers. only the first one shall be used, but the other are fail-over peers
@@ -1260,7 +1260,7 @@ public class DAO {
         testpeers.addAll(frontPeerCache);
         return getBestPeers(testpeers);
     }
-    
+
     public static List<String> getBackendPeers() {
         List<String> testpeers = new ArrayList<>();
         if (backendPeerCache.size() == 0) {
@@ -1270,10 +1270,10 @@ public class DAO {
         testpeers.addAll(backendPeerCache);
         return getBestPeers(testpeers);
     }
-    
+
     public static Timeline searchBackend(final String q, final Timeline.Order order, final int count, final int timezoneOffset, final String where, final long timeout) {
         List<String> remote = getBackendPeers();
-        
+
         if (remote.size() > 0 /*&& (peerLatency.get(remote.get(0)) == null || peerLatency.get(remote.get(0)) < 3000)*/) { // condition deactivated because we need always at least one peer
             Timeline tt = searchOnOtherPeers(remote, q, order, count, timezoneOffset, where, SearchServlet.backend_hash, timeout);
             if (tt != null) tt.writeToIndex();
@@ -1283,7 +1283,7 @@ public class DAO {
     }
 
     private final static Random randomPicker = new Random(System.currentTimeMillis());
-    
+
     public static Timeline searchOnOtherPeers(final List<String> remote, final String q, final Timeline.Order order, final int count, final int timezoneOffset, final String source, final String provider_hash, final long timeout) {
         // select remote peer
         while (remote.size() > 0) {
@@ -1308,9 +1308,9 @@ public class DAO {
         }
         return null;
     }
-    
+
     public final static Set<Number> newUserIds = new ConcurrentHashSet<>();
-    
+
     public static void announceNewUserId(Timeline tl) {
         for (MessageEntry message: tl) {
             UserEntry user = tl.getUser(message);
@@ -1327,7 +1327,7 @@ public class DAO {
         try {map = mapcapsule == null ? null : mapcapsule.getJSON();} catch (IOException e) {}
         if (map == null) newUserIds.add(id);
     }
-    
+
     public static Set<Number> getNewUserIdsChunk() {
         if (newUserIds.size() < 100) return null;
         Set<Number> chunk = new HashSet<>();
@@ -1362,7 +1362,7 @@ public class DAO {
             Log.getLog().warn(line, e);
         }
     }
-    
+
     public static void severe(Throwable e) {
         if(DAO.getConfig("flag.severe.dao", "true").equals("true")) {
             Log.getLog().warn(e);

@@ -947,7 +947,7 @@ public class ElasticsearchClient {
         return list;
     }
 
-    public HashMap<String, HashMap<String, Long>> classifierScore(String index, String classifierName, ArrayList<String> classes) {
+    public HashMap<String, HashMap<String, Double>> classifierScore(String index, String classifierName, ArrayList<String> classes) {
         SearchRequestBuilder request = elasticsearchClient.prepareSearch(index)
             .setSearchType(SearchType.QUERY_THEN_FETCH)
             .setQuery(QueryBuilders.matchAllQuery())
@@ -959,7 +959,7 @@ public class ElasticsearchClient {
 
         Terms aggrs = response.getAggregations().get("by_class");
 
-        HashMap<String, HashMap<String, Long>> aggregatedMap = new HashMap<>();
+        HashMap<String, HashMap<String, Double>> aggregatedMap = new HashMap<>();
 
         for (Bucket bucket : aggrs.getBuckets()) {
             String key = bucket.getKeyAsString();
@@ -969,10 +969,10 @@ public class ElasticsearchClient {
             long docCount = bucket.getDocCount();
             Sum sum = bucket.getAggregations().get("sum_probability");
             Avg avg = bucket.getAggregations().get("avg_probability");
-            HashMap<String, Long> map = new HashMap<>();
-            map.put("count", docCount);
-            map.put("sum", (long) sum.getValue());
-            map.put("avg", (long) avg.getValue());
+            HashMap<String, Double> map = new HashMap<>();
+            map.put("count", (double) docCount);
+            map.put("sum", sum.getValue());
+            map.put("avg", avg.getValue());
             aggregatedMap.put(key,  map);
         }
         return aggregatedMap;
