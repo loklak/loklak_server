@@ -1,5 +1,5 @@
 /**
- *  SusiSkill
+ *  SusiIntent
  *  Copyright 14.07.2016 by Michael Peter Christen, @0rb1t3r
  *
  *  This library is free software; you can redistribute it and/or
@@ -25,31 +25,24 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * A skill is the ability to inspire, to create thoughts from perception. The data structure of
- * a skill set is a mapping from perception patterns to lambda expressions which induce thoughts.
- */
-public class SusiSkills extends LinkedHashMap<Pattern, Function<Matcher, SusiThought>> implements Map<Pattern, Function<Matcher, SusiThought>> {
+public class SusiProcedures extends LinkedHashMap<Pattern, Function<Matcher, SusiThought>> implements Map<Pattern, Function<Matcher, SusiThought>> {
 
     private static final long serialVersionUID = 4531596762427825563L;
 
-    /**
-     * create an empty skill set
-     */
-    public SusiSkills() {
+    public SusiProcedures() {
         super();
     }
     
     /**
-     * Deduction is the application of a skill on perception and a world model.
-     * In this method the mappings from the skill set is applied to the perception q and previous
+     * Deduction is the application of an intent on perception and a world model.
+     * In this method the mappings from the intent set is applied to the perception q and previous
      * deduction steps as given with the flow. Every mapping that has a matcher 
      * with the perception causes the application of the stored lambda function on the perception
      * producing a thought. If the thought generation is not successful (which means that the lambda
-     * fails or produces a null output) then the next mappings from the skill set is tried.
+     * fails or produces a null output) then the next mappings from the intent set is tried.
      * In case that no inspiration is possible, an empty thought is produced, containing nothing.
      * @param q the perception
-     * @return a thought from the application of the skill set
+     * @return a thought from the application of the intent set
      */
     public SusiThought deduce(String q) {
         if (q == null) return new SusiThought();
@@ -64,9 +57,9 @@ public class SusiSkills extends LinkedHashMap<Pattern, Function<Matcher, SusiTho
                     return json;
                 }
             } catch (Throwable e) {
-                // applying a skill may produce various failure, including
-                // - IOExceptions if the skill needs external resources
-                // - NullPointerException if the skill needs a flow which can be null in case of the attempt of an inspiration
+                // applying a intent may produce various failure, including
+                // - IOExceptions if the intent needs external resources
+                // - NullPointerException if the intent needs a flow which can be null in case of the attempt of an inspiration
                 // we silently ignore these exceptions as they are normal and acceptable during thinking
             }
         }

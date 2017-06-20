@@ -40,7 +40,7 @@ import org.loklak.server.BaseUserRole;
 import org.loklak.server.AbstractAPIHandler;
 import org.loklak.server.Authorization;
 import org.loklak.server.Query;
-import org.loklak.susi.SusiSkills;
+import org.loklak.susi.SusiProcedures;
 import org.loklak.susi.SusiThought;
 import org.loklak.susi.SusiTransfer;
 
@@ -76,7 +76,7 @@ import javax.servlet.http.HttpServletResponse;
 public class ConsoleService extends AbstractAPIHandler implements APIHandler {
 
     private static final long serialVersionUID = 8578478303032749879L;
-    public final static SusiSkills dbAccess = new SusiSkills();
+    public final static SusiProcedures dbAccess = new SusiProcedures();
 
     @Override
     public BaseUserRole getMinimalBaseUserRole() { return BaseUserRole.ANONYMOUS; }
