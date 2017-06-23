@@ -216,6 +216,13 @@ public class Timeline2 implements Iterable<Post> {
         return this;
     }
     */
+
+    public Timeline2 add(Post post, UserEntry user) {
+        this.addUser(user);
+        this.addPost(post);
+        return this;
+    }
+
     public Timeline2 add(Post post) {
         this.addPost(post);
         return this;
@@ -223,7 +230,9 @@ public class Timeline2 implements Iterable<Post> {
 
     private Timeline2 addUser(UserEntry user) {
         assert user != null;
-        if (user != null) this.users.put(user.getScreenName(), user);
+        if (user != null) {
+            this.users.put(user.getScreenName(), user);
+        }
         return this;
     }
 
@@ -453,5 +462,15 @@ public class Timeline2 implements Iterable<Post> {
     
     public int getHits() {
         return this.hits == -1 ? this.size() : this.hits;
+    }
+
+    //TODO: temporary method to prevent issues related to Timeline class popping-up
+    public Timeline toTimeline() {
+
+        Timeline tweetList = new Timeline(Timeline.Order.CREATED_AT);
+        for (MessageEntry me : this) {
+            assert me instanceof MessageEntry;
+            tweetList.add(me);
+        }
     }
 }

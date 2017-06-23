@@ -72,7 +72,7 @@ import org.loklak.objects.Peers;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.ResultList;
 import org.loklak.objects.SourceType;
-import org.loklak.objects.Timeline;
+import org.loklak.objects.Timeline2;
 import org.loklak.objects.TimelineCache;
 import org.loklak.objects.UserEntry;
 import org.loklak.server.*;
@@ -919,7 +919,7 @@ public class DAO {
     }
 
     public static class SearchLocalMessages {
-        public Timeline timeline;
+        public Timeline2 timeline;
         public Map<String, List<Map.Entry<String, Long>>> aggregations;
         public ElasticsearchClient.Query query;
 
@@ -935,14 +935,14 @@ public class DAO {
          */
         public SearchLocalMessages (
                 final String q,
-                final Timeline.Order orderField,
+                final Timeline2.Order orderField,
                 final int timezoneOffset,
                 final int resultCount,
                 final int aggregationLimit,
                 final ArrayList<String> filterList,
                 final String... aggregationFields
         ) {
-            this.timeline = new Timeline(orderField);
+            this.timeline = new Timeline2(orderField);
             QueryEntry.ElasticsearchQuery sq = new QueryEntry.ElasticsearchQuery(q, timezoneOffset, filterList);
             long interval = sq.until.getTime() - sq.since.getTime();
             IndexName resultIndex;
@@ -988,7 +988,7 @@ public class DAO {
 
         public SearchLocalMessages (
                 final String q,
-                final Timeline.Order orderField,
+                final Timeline2.Order orderField,
                 final int timezoneOffset,
                 final int resultCount,
                 final int aggregationLimit,
@@ -1125,10 +1125,10 @@ public class DAO {
         return latests.values();
     }
 
-    public static Timeline scrapeTwitter(
+    public static Timeline2 scrapeTwitter(
             final Query post,
             final String q,
-            final Timeline.Order order,
+            final Timeline2.Order order,
             final int timezoneOffset,
             boolean byUserQuery,
             long timeout,
@@ -1137,11 +1137,11 @@ public class DAO {
         return scrapeTwitter(post, new ArrayList<>(), q, order, timezoneOffset, byUserQuery, timeout, recordQuery);
     }
 
-    public static Timeline scrapeTwitter(
+    public static Timeline2 scrapeTwitter(
             final Query post,
             final ArrayList<String> filterList,
             final String q,
-            final Timeline.Order order,
+            final Timeline2.Order order,
             final int timezoneOffset,
             boolean byUserQuery,
             long timeout,
@@ -1149,7 +1149,7 @@ public class DAO {
         // retrieve messages from remote server
 
         ArrayList<String> remote = DAO.getFrontPeers();
-        Timeline tl;
+        Timeline2 tl;
         if (remote.size() > 0 && (peerLatency.get(remote.get(0)) == null || peerLatency.get(remote.get(0)).longValue() < 3000)) {
             long start = System.currentTimeMillis();
             tl = searchOnOtherPeers(remote, q, order, 100, timezoneOffset, "all", SearchServlet.frontpeer_hash, timeout); // all must be selected here to catch up missing tweets between intervals
@@ -1271,11 +1271,11 @@ public class DAO {
         return getBestPeers(testpeers);
     }
 
-    public static Timeline searchBackend(final String q, final Timeline.Order order, final int count, final int timezoneOffset, final String where, final long timeout) {
+    public static Timeline2 searchBackend(final String q, final Timeline2.Order order, final int count, final int timezoneOffset, final String where, final long timeout) {
         List<String> remote = getBackendPeers();
 
         if (remote.size() > 0 /*&& (peerLatency.get(remote.get(0)) == null || peerLatency.get(remote.get(0)) < 3000)*/) { // condition deactivated because we need always at least one peer
-            Timeline tt = searchOnOtherPeers(remote, q, order, count, timezoneOffset, where, SearchServlet.backend_hash, timeout);
+            Timeline2 tt = searchOnOtherPeers(remote, q, order, count, timezoneOffset, where, SearchServlet.backend_hash, timeout);
             if (tt != null) tt.writeToIndex();
             return tt;
         }
@@ -1284,14 +1284,14 @@ public class DAO {
 
     private final static Random randomPicker = new Random(System.currentTimeMillis());
 
-    public static Timeline searchOnOtherPeers(final List<String> remote, final String q, final Timeline.Order order, final int count, final int timezoneOffset, final String source, final String provider_hash, final long timeout) {
+    public static Timeline2 searchOnOtherPeers(final List<String> remote, final String q, final Timeline2.Order order, final int count, final int timezoneOffset, final String source, final String provider_hash, final long timeout) {
         // select remote peer
         while (remote.size() > 0) {
             int pick = randomPicker.nextInt(remote.size());
             String peer = remote.get(pick);
             long start = System.currentTimeMillis();
             try {
-                Timeline tl = SearchServlet.search(peer, q, order, source, count, timezoneOffset, provider_hash, timeout);
+                Timeline2 tl = SearchServlet.search(peer, q, order, source, count, timezoneOffset, provider_hash, timeout);
                 peerLatency.put(peer, System.currentTimeMillis() - start);
                 // to show which peer was used for the retrieval, we move the picked peer to the front of the list
                 if (pick != 0) remote.add(0, remote.remove(pick));
@@ -1311,8 +1311,8 @@ public class DAO {
 
     public final static Set<Number> newUserIds = new ConcurrentHashSet<>();
 
-    public static void announceNewUserId(Timeline tl) {
-        for (MessageEntry message: tl) {
+    public static void announceNewUserId(Timeline2 tl) {
+        for (Post message: tl) {
             UserEntry user = tl.getUser(message);
             assert user != null;
             if (user == null) continue;
