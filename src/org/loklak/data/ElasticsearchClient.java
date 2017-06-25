@@ -78,12 +78,14 @@ import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramInterval;
 import org.elasticsearch.search.aggregations.bucket.histogram.InternalHistogram;
+import org.elasticsearch.search.aggregations.bucket.range.Range;
+import org.elasticsearch.search.aggregations.bucket.range.date.DateRangeBuilder;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
-import org.elasticsearch.search.aggregations.bucket.terms.TermsBuilder;
 import org.elasticsearch.search.aggregations.metrics.avg.Avg;
 import org.elasticsearch.search.aggregations.metrics.sum.Sum;
 import org.elasticsearch.search.sort.SortBuilders;
@@ -978,7 +980,7 @@ public class ElasticsearchClient {
         return aggregatedMap;
     }
 
-    public TermsBuilder getClassifierAggregation(String classifierName) {
+    public AggregationBuilder getClassifierAggregation(String classifierName) {
         String probabilityField = classifierName + "_probability";
         return AggregationBuilders.terms("by_class").field(classifierName)
             .subAggregation(
@@ -987,5 +989,65 @@ public class ElasticsearchClient {
             .subAggregation(
                 AggregationBuilders.sum("sum_probability").field(probabilityField)
             );
+    }
+
+    public HashMap<String, HashMap<String, Double>> classifierScore(String index, String classifierName, ArrayList<String> classes, String startDate, String endDate) {
+        if (startDate == null && endDate == null) {
+            return classifierScore(index, classifierName, classes);
+        }
+
+        SearchRequestBuilder request = elasticsearchClient.prepareSearch(index)
+            .setSearchType(SearchType.QUERY_THEN_FETCH)
+            .setQuery(QueryBuilders.matchAllQuery())
+            .setFrom(0)
+            .setSize(0)
+            .addAggregation(getClassifierAggregation(classifierName, startDate, endDate));
+
+        SearchResponse response = request.execute().actionGet();
+        Range aggrs = response.getAggregations().get("by_date");
+
+        HashMap<String, HashMap<String, Double>> aggregatedMap = new HashMap<>();
+
+        for (Range.Bucket bkt : aggrs.getBuckets()) {
+            Terms termAggrs = bkt.getAggregations().get("by_class");
+            for (Terms.Bucket bucket: termAggrs.getBuckets()) {
+                String key = bucket.getKeyAsString();
+                if (!classes.contains(key)) {
+                    continue;
+                }
+                long docCount = bucket.getDocCount();
+                Sum sum = bucket.getAggregations().get("sum_probability");
+                Avg avg = bucket.getAggregations().get("avg_probability");
+                HashMap<String, Double> map = new HashMap<>();
+                map.put("count", (double) docCount);
+                map.put("sum", sum.getValue());
+                map.put("avg", avg.getValue());
+                aggregatedMap.put(key,  map);
+            }
+        }
+        return aggregatedMap;
+    }
+
+    public AggregationBuilder getClassifierAggregation(String classifierName, String fromDate, String toDate) {
+        String probabilityField = classifierName + "_probability";
+        DateRangeBuilder dateRangeAggregation = AggregationBuilders.dateRange("by_date").field("created_at");
+        if (fromDate == null && toDate != null) {
+            dateRangeAggregation = dateRangeAggregation.addUnboundedTo(toDate);
+        } else if (toDate == null && fromDate != null) {
+            dateRangeAggregation = dateRangeAggregation.addUnboundedFrom(fromDate);
+        } else {
+            dateRangeAggregation = dateRangeAggregation.addRange(fromDate, toDate);
+        }
+
+        dateRangeAggregation = dateRangeAggregation.subAggregation(
+            AggregationBuilders.terms("by_class").field(classifierName)
+                .subAggregation(
+                    AggregationBuilders.avg("avg_probability").field(probabilityField)
+                )
+                .subAggregation(
+                    AggregationBuilders.sum("sum_probability").field(probabilityField)
+                )
+        );
+        return dateRangeAggregation;
     }
 }
