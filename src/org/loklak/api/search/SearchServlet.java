@@ -182,7 +182,38 @@ public class SearchServlet extends HttpServlet {
                 final boolean backend_push = DAO.getConfig("backend.push.enabled", false);
                 final QueryEntry.Tokens tokens = new QueryEntry.Tokens(query);
 
-                if ("all".equals(source)) {
+                if ("cache".equals(source)) {
+                    DAO.SearchLocalMessages localSearchResult =
+                            new DAO.SearchLocalMessages(
+                                    query,
+                                    order,
+                                    timezoneOffset,
+                                    last_cache_search_time.get() > SEARCH_CACHE_THREASHOLD_TIME
+                                            ? Math.min(maximumRecords,(int) DAO.getConfig(SEARCH_LOW_COUNT_NAME, 10))
+                                            : maximumRecords,
+                                    agregation_limit,
+                                    filterList,
+                                    fields
+                            );
+                    cache_hits.set(localSearchResult.timeline.getHits());
+                    tl.putAll(localSearchResult.timeline);
+                    tl.setResultIndex(localSearchResult.timeline.getResultIndex());
+                    aggregations[0] = localSearchResult.getAggregations();
+                    long time = System.currentTimeMillis() - start;
+                    last_cache_search_time.set(time);
+                    post.recordEvent("cache_time", time);
+
+                } else if ("backend".equals(source) && query.length() > 0) {
+                    Timeline2 backendTl = DAO.searchBackend(query, order, maximumRecords, timezoneOffset, "cache", timeout);
+                    if (backendTl != null) {
+                        tl.putAll(QueryEntry.applyConstraint(backendTl, tokens, true));
+                        tl.setScraperInfo(backendTl.getScraperInfo());
+                        // TODO: read and aggregate aggregations from backend as well
+                        count_backend.set(tl.size());
+                    }
+                    post.recordEvent("backend_time", System.currentTimeMillis() - start);
+
+                } else if ("all".equals(source)) {
                     // start all targets for search concurrently
                     final int timezoneOffsetf = timezoneOffset;
                     final String queryf = query;
@@ -277,7 +308,16 @@ public class SearchServlet extends HttpServlet {
                         } catch (InterruptedException e) {
                         }
                     }
-                } else if ("twitter".equals(source) && tokens.raw.length() > 0) {
+                }
+                
+                // check the latest user_ids
+                DAO.announceNewUserId(tl);
+
+                hits.put("count_twitter_all", count_twitter_all.get());
+                hits.put("count_twitter_new", count_twitter_new.get());
+                hits.put("count_backend", count_backend.get());
+                hits.put("cache_hits", cache_hits.get());
+            } else if ("twitter".equals(source) && tokens.raw.length() > 0) {
                     final String scraper_query = tokens.translate4scraper();
                     DAO.log(request.getServletPath() + " scraping with query: " + scraper_query);
                     Timeline2 twitterTl = DAO.scrapeTwitter(post, filterList, scraper_query, order, timezoneOffset, true, timeout, true);
@@ -287,47 +327,6 @@ public class SearchServlet extends HttpServlet {
                     tl.setScraperInfo(twitterTl.getScraperInfo());
                     post.recordEvent("twitterscraper_time", System.currentTimeMillis() - start);
                     // in this case we use all tweets, not only the latest one because it may happen that there are no new and that is not what the user expects
-
-                } else if ("cache".equals(source)) {
-                    DAO.SearchLocalMessages localSearchResult =
-                            new DAO.SearchLocalMessages(
-                                    query,
-                                    order,
-                                    timezoneOffset,
-                                    last_cache_search_time.get() > SEARCH_CACHE_THREASHOLD_TIME
-                                            ? Math.min(maximumRecords,(int) DAO.getConfig(SEARCH_LOW_COUNT_NAME, 10))
-                                            : maximumRecords,
-                                    agregation_limit,
-                                    filterList,
-                                    fields
-                            );
-                    cache_hits.set(localSearchResult.timeline.getHits());
-                    tl.putAll(localSearchResult.timeline);
-                    tl.setResultIndex(localSearchResult.timeline.getResultIndex());
-                    aggregations[0] = localSearchResult.getAggregations();
-                    long time = System.currentTimeMillis() - start;
-                    last_cache_search_time.set(time);
-                    post.recordEvent("cache_time", time);
-
-                } else if ("backend".equals(source) && query.length() > 0) {
-                    Timeline2 backendTl = DAO.searchBackend(query, order, maximumRecords, timezoneOffset, "cache", timeout);
-                    if (backendTl != null) {
-                        tl.putAll(QueryEntry.applyConstraint(backendTl, tokens, true));
-                        tl.setScraperInfo(backendTl.getScraperInfo());
-                        // TODO: read and aggregate aggregations from backend as well
-                        count_backend.set(tl.size());
-                    }
-                    post.recordEvent("backend_time", System.currentTimeMillis() - start);
-
-                }
-
-                // check the latest user_ids
-                DAO.announceNewUserId(tl);
-
-                hits.put("count_twitter_all", count_twitter_all.get());
-                hits.put("count_twitter_new", count_twitter_new.get());
-                hits.put("count_backend", count_backend.get());
-                hits.put("cache_hits", cache_hits.get());
             }
 
             // create json or xml according to path extension
