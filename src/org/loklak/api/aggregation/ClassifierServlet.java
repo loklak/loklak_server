@@ -86,6 +86,10 @@ public class ClassifierServlet extends AbstractAPIHandler implements APIHandler 
             classes = allClasses.toArray(new String[classes.length]);
         }
 
+        // Dates
+        String sinceDate = call.get("since", null);
+        String untilDate = call.get("until", null);
+
         // Build response
         call.setResponse(response, jsonp ? "application/javascript" : "application/json");
         JSONObject retMessage = new JSONObject(true);
@@ -98,11 +102,16 @@ public class ClassifierServlet extends AbstractAPIHandler implements APIHandler 
         // Put metadata
         retMessage.put("metadata", getMetadata(classifier, classes, fetchAllClasses, call));
 
-        HashMap<String, HashMap<String, Double>> result = DAO.elasticsearch_client.classifierScore(
-            "messages", "classifier_" + classifier, new ArrayList<>(Arrays.asList(classes)));
-
-        // Put aggregation data
-        retMessage.put("aggregations", getAggregationsJson(result));
+        try {
+            HashMap<String, HashMap<String, Double>> result = DAO.elasticsearch_client.classifierScore(
+                "messages", "classifier_" + classifier, new ArrayList<>(Arrays.asList(classes)),
+                sinceDate, untilDate
+            );
+            // Put aggregation data
+            retMessage.put("aggregations", getAggregationsJson(result));
+        } catch (Exception e) {
+            throw new APIException(400, "Unable to parse the provided date");
+        }
 
         return retMessage;
     }
@@ -132,6 +141,8 @@ public class ClassifierServlet extends AbstractAPIHandler implements APIHandler 
         JSONObject metadata = new JSONObject(true);
         metadata.put("classifier", classifier);
         metadata.put("classes", Arrays.toString(classes).substring(1, Arrays.toString(classes).length() - 1));
+        metadata.put("since", post.get("since", null));
+        metadata.put("until", post.get("until", null));
         metadata.put("all", fetchAllClasses ? "true" : "false");
         metadata.put("client", post.getClientHost());
         metadata.put("time", System.currentTimeMillis() - post.getAccessTime());
