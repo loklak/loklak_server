@@ -369,4 +369,16 @@ public class Timeline implements Iterable<MessageEntry> {
     public int getHits() {
         return this.hits == -1 ? this.size() : this.hits;
     }
+
+    //TODO: temporary method to prevent issues related to Timeline class popping-up till next PR
+    public Timeline2 toPostTimeline() {
+
+        Timeline2 postList = new Timeline2(Timeline.Order.TIMESTAMP);
+        for (MessageEntry me : this) {
+            assert me instanceof Post;
+            postList.add(me);
+        }
+        return postList;
+    }
+
 }

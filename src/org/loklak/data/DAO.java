@@ -60,6 +60,7 @@ import org.json.JSONObject;
 import org.loklak.Caretaker;
 import org.loklak.api.search.SearchServlet;
 import org.loklak.geo.GeoNames;
+import org.loklak.harvester.Post;
 import org.loklak.harvester.TwitterScraper;
 import org.loklak.http.AccessTracker;
 import org.loklak.http.ClientConnection;
@@ -1201,7 +1202,7 @@ public class DAO {
         if (post != null) post.recordEvent("query_recorder", System.currentTimeMillis() - start2);
         //log("SCRAPER: TIME LEFT after recording = " + (termination - System.currentTimeMillis()));
 
-        return tl;
+        return tl.toTimeline();
     }
 
     public static final Random random = new Random(System.currentTimeMillis());

@@ -38,6 +38,7 @@ import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.harvester.TwitterAPI;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.Timeline;
+import org.loklak.objects.Timeline2;
 import org.loklak.tools.DateParser;
 import org.loklak.tools.OS;
 
@@ -194,7 +195,7 @@ public class Caretaker extends Thread {
                         t = DAO.scrapeTwitter(
                                 null,
                                 qe.getQuery(),
-                                Timeline.Order.CREATED_AT,
+                                Timeline2.Order.CREATED_AT,
                                 qe.getTimezoneOffset(),
                                 false,
                                 10000,

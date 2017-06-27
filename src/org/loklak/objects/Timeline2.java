@@ -464,13 +464,15 @@ public class Timeline2 implements Iterable<Post> {
         return this.hits == -1 ? this.size() : this.hits;
     }
 
-    //TODO: temporary method to prevent issues related to Timeline class popping-up
-    public Timeline toTimeline() {
+    public Timeline2 toTimeline() {
 
-        Timeline tweetList = new Timeline(Timeline.Order.CREATED_AT);
-        for (MessageEntry me : this) {
-            assert me instanceof MessageEntry;
-            tweetList.add(me);
+        Timeline postList = new Timeline(Timeline.Order.CREATED_AT);
+        for (Post post : this) {
+            assert post instanceof MessageEntry;
+            
+            postList.add((MessageEntry)post);
         }
+        return postList;
     }
+
 }
