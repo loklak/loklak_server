@@ -429,7 +429,7 @@ public class TwitterScraper {
                         imgs, vids, place_name, place_id,
                         user, writeToIndex,  writeToBackend
                 );
-                if (DAO.messages == null || !DAO.messages.existsCache(tweet.getIdStr())) {
+                if (DAO.messages == null || !DAO.messages.existsCache(tweet.getPostId())) {
                     // checking against the exist cache is incomplete. A false negative would just cause that a tweet is
                     // indexed again.
                     if (tweet.willBeTimeConsuming()) {

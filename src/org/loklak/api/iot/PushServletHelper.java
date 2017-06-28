@@ -5,10 +5,12 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.harvester.HarvestingFrequency;
+import org.loklak.harvester.Post;
 import org.loklak.objects.ImportProfileEntry;
 import org.loklak.objects.MessageEntry;
 import org.loklak.objects.SourceType;
 import org.loklak.objects.Timeline;
+import org.loklak.objects.Timeline2;
 import org.loklak.objects.UserEntry;
 import org.loklak.server.Query;
 
@@ -169,12 +171,12 @@ public class PushServletHelper {
         Double longitude = (Double) location_point.get(1);
         String query = "/source_type=" + source_type + " /location=" + latitude + "," + longitude;
         // search only latest message
-        DAO.SearchLocalMessages search = new DAO.SearchLocalMessages(query, Timeline.Order.CREATED_AT, 0, 1, 0);
-        Iterator<MessageEntry> it = search.timeline.iterator();
+        DAO.SearchLocalMessages search = new DAO.SearchLocalMessages(query, Timeline2.Order.CREATED_AT, 0, 1, 0);
+        Iterator<Post> it = search.timeline.iterator();
         while (it.hasNext()) {
             MessageEntry messageEntry = it.next();
             if (compareMessage(messageEntry.toJSON(), message)) {
-                return messageEntry.getIdStr();
+                return messageEntry.getPostId();
             }
         }
         return null;

@@ -208,13 +208,13 @@ public class Timeline implements Iterable<MessageEntry> {
         if (this.order == Order.RETWEET_COUNT) {
             key = Long.toHexString(tweet.getRetweetCount());
             while (key.length() < 16) key = "0" + key;
-            key = key + "_" + tweet.getIdStr();
+            key = key + "_" + tweet.getPostId();
         } else if (this.order == Order.FAVOURITES_COUNT) {
             key = Long.toHexString(tweet.getFavouritesCount());
             while (key.length() < 16) key = "0" + key;
-            key = key + "_" + tweet.getIdStr();
+            key = key + "_" + tweet.getPostId();
         } else {
-            key = Long.toHexString(tweet.getCreatedAt().getTime()) + "_" + tweet.getIdStr();
+            key = Long.toHexString(tweet.getCreatedAt().getTime()) + "_" + tweet.getPostId();
         }
         synchronized (tweets) {
             MessageEntry precursorTweet = getPrecursorTweet();
@@ -369,7 +369,7 @@ public class Timeline implements Iterable<MessageEntry> {
     public int getHits() {
         return this.hits == -1 ? this.size() : this.hits;
     }
-
+/*
     //TODO: temporary method to prevent issues related to Timeline class popping-up till next PR
     public Timeline2 toPostTimeline() {
 
@@ -380,5 +380,5 @@ public class Timeline implements Iterable<MessageEntry> {
         }
         return postList;
     }
-
+*/
 }

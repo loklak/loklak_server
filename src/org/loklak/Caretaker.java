@@ -190,7 +190,7 @@ public class Caretaker extends Thread {
                         DAO.deleteQuery(qe.getQuery(), qe.getSourceType());
                         continue;
                     }
-                    Timeline t;
+                    Timeline2 t;
                     try {
                         t = DAO.scrapeTwitter(
                                 null,
@@ -205,7 +205,7 @@ public class Caretaker extends Thread {
                     } catch (NullPointerException e) {
                         DAO.severe("TwitterScraper.search() returns null (no twitter results)"
                                 + " or any other issue in DAO.scrapeTwitter() method", e);
-                        t = new Timeline(Timeline.Order.CREATED_AT);
+                        t = new Timeline2(Timeline2.Order.TIMESTAMP);
                     }
                     DAO.log("retrieval of " + t.size() + " new messages for q = \"" + qe.getQuery() + "\"");
 

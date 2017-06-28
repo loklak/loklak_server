@@ -312,12 +312,12 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
         this.location_point = location_point;
     }
 
-    public void setPostId() {
-        this.postId = String.valueOf(this.timestamp) + String.valueOf(this.created_at.getTime());
+    public void setPostId(String id_str) {
+        this.id_str = id_str;
     }
 
     public String getPostId() {
-        return String.valueOf(this.postId);
+        return String.valueOf(this.id_str);
     }
 
     /**
@@ -393,7 +393,7 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
                 String link = links[nth];
                 if (link.length() > iflinkexceedslength) {
                     //if (!DAO.existMessage(this.getIdStr())) break linkloop;
-                    String shortlink = urlstub + "/x?id=" + this.getIdStr() +
+                    String shortlink = urlstub + "/x?id=" + this.PostId() +
                         (nth == 0 ? "" : ShortlinkFromTweetServlet.SHORTLINK_COUNTER_SEPERATOR + Integer.toString(nth));
                     if (shortlink.length() < link.length()) {
                         tlm.text = tlm.text.replace(link, shortlink);

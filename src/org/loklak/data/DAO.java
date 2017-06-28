@@ -74,6 +74,7 @@ import org.loklak.objects.QueryEntry;
 import org.loklak.objects.ResultList;
 import org.loklak.objects.SourceType;
 import org.loklak.objects.Timeline2;
+import org.loklak.objects.Timeline;
 import org.loklak.objects.TimelineCache;
 import org.loklak.objects.UserEntry;
 import org.loklak.server.*;
@@ -654,18 +655,18 @@ public class DAO {
                 // and check if the message exists
                 boolean exists = false;
                 if (mw.t.getCreatedAt().after(DateParser.oneHourAgo())) {
-                    exists = messages_hour.writeEntry(new IndexEntry<MessageEntry>(mw.t.getIdStr(), mw.t.getSourceType(), mw.t));
+                    exists = messages_hour.writeEntry(new IndexEntry<MessageEntry>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
                     if (exists) return false;
                 }
                 if (mw.t.getCreatedAt().after(DateParser.oneDayAgo())) {
-                    exists = messages_day.writeEntry(new IndexEntry<MessageEntry>(mw.t.getIdStr(), mw.t.getSourceType(), mw.t));
+                    exists = messages_day.writeEntry(new IndexEntry<MessageEntry>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
                     if (exists) return false;
                 }
                 if (mw.t.getCreatedAt().after(DateParser.oneWeekAgo())) {
-                    exists = messages_week.writeEntry(new IndexEntry<MessageEntry>(mw.t.getIdStr(), mw.t.getSourceType(), mw.t));
+                    exists = messages_week.writeEntry(new IndexEntry<MessageEntry>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
                     if (exists) return false;
                 }
-                exists = messages.writeEntry(new IndexEntry<MessageEntry>(mw.t.getIdStr(), mw.t.getSourceType(), mw.t));
+                exists = messages.writeEntry(new IndexEntry<MessageEntry>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
                 if (exists) return false;
 
                 // write the user into the index
@@ -706,13 +707,13 @@ public class DAO {
         List<IndexEntry<UserEntry>> userBulk = new ArrayList<>();
         List<IndexEntry<MessageEntry>> messageBulk = new ArrayList<>();
         for (MessageWrapper mw: mws) {
-            if (messages.existsCache(mw.t.getIdStr())) continue; // we omit writing this again
+            if (messages.existsCache(mw.t.getPostId())) continue; // we omit writing this again
             synchronized (DAO.class) {
                 // write the user into the index
                 userBulk.add(new IndexEntry<UserEntry>(mw.u.getScreenName(), mw.t.getSourceType(), mw.u));
 
                 // record tweet into search index
-                messageBulk.add(new IndexEntry<MessageEntry>(mw.t.getIdStr(), mw.t.getSourceType(), mw.t));
+                messageBulk.add(new IndexEntry<MessageEntry>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
              }
 
             // teach the classifier
@@ -735,7 +736,7 @@ public class DAO {
             //DAO.log("***DEBUG messages for HOUR: " + existed.size() + "  existed");
 
             limitDate.setTime(DateParser.oneDayAgo().getTime());
-            macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getIdStr()))).filter(i -> i.getObject().getCreatedAt().after(limitDate)).collect(Collectors.toList());
+            macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getId()))).filter(i -> i.getObject().getCreatedAt().after(limitDate)).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for  DAY : " + macc.size());
             result = messages_day.writeEntries(macc);
             //DAO.log("***DEBUG messages for  DAY: " + result.getCreated().size() + " created");
@@ -743,14 +744,14 @@ public class DAO {
             //DAO.log("***DEBUG messages for  DAY: " + existed.size()  + "  existed");
 
             limitDate.setTime(DateParser.oneWeekAgo().getTime());
-            macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getIdStr()))).filter(i -> i.getObject().getCreatedAt().after(limitDate)).collect(Collectors.toList());
+            macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getId()))).filter(i -> i.getObject().getCreatedAt().after(limitDate)).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for WEEK: " + macc.size());
             result = messages_week.writeEntries(macc);
             //DAO.log("***DEBUG messages for WEEK: " + result.getCreated().size() + "  created");
             for (IndexEntry<MessageEntry> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for WEEK: " + existed.size()  + "  existed");
 
-            macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getIdStr()))).collect(Collectors.toList());
+            macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getId()))).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for  ALL : " + macc.size());
             result = messages.writeEntries(macc);
             //DAO.log("***DEBUG messages for  ALL: " + result.getCreated().size() + "  created");
@@ -770,7 +771,7 @@ public class DAO {
         Set<String> created = writeMessageBulkNoDump(mws);
 
         for (MessageWrapper mw: mws) try {
-            if (!created.contains(mw.t.getIdStr())) continue;
+            if (!created.contains(mw.t.getPostId())) continue;
             synchronized (DAO.class) {
                 // record tweet into text file
                 message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
@@ -1202,7 +1203,7 @@ public class DAO {
         if (post != null) post.recordEvent("query_recorder", System.currentTimeMillis() - start2);
         //log("SCRAPER: TIME LEFT after recording = " + (termination - System.currentTimeMillis()));
 
-        return tl.toTimeline();
+        return tl;
     }
 
     public static final Random random = new Random(System.currentTimeMillis());

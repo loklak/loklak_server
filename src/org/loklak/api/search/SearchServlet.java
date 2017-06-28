@@ -400,7 +400,7 @@ public class SearchServlet extends HttpServlet {
                         m.setTitle(u.getName() + " @" + u.getScreenName());
                         m.setDescription(t.getText(shortlink_iflinkexceedslength, shortlink_urlstub).text);
                         m.setPubDate(t.getCreatedAt());
-                        m.setGuid(t.getIdStr());
+                        m.setGuid(t.getPostId());
                         feed.addMessage(m);
                     }
                 } catch (ConcurrentModificationException e) {
