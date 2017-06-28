@@ -42,6 +42,7 @@ import org.loklak.http.RemoteAccess;
 import org.loklak.objects.MessageEntry;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.Timeline;
+import org.loklak.objects.Timeline2;
 import org.loklak.objects.UserEntry;
 import org.loklak.rss.RSSFeed;
 import org.loklak.rss.RSSMessage;
@@ -71,8 +72,8 @@ public class SearchServlet extends HttpServlet {
     public final static String frontpeer_hash = Integer.toHexString(Integer.MAX_VALUE - 1);
 
     // possible values: cache, twitter, all
-    public static Timeline search(final String protocolhostportstub, final String query, final Timeline.Order order, final String source, final int count, final int timezoneOffset, final String provider_hash, final long timeout) throws IOException {
-        Timeline tl = new Timeline(order);
+    public static Timeline2 search(final String protocolhostportstub, final String query, final Timeline2.Order order, final String source, final int count, final int timezoneOffset, final String provider_hash, final long timeout) throws IOException {
+        Timeline2 tl = new Timeline2(order);
         if ("".equals(query)) return tl;
         String urlstring = "";
         try {
@@ -155,10 +156,10 @@ public class SearchServlet extends HttpServlet {
             String filter = post.get("filter", "").replaceAll("\\s","");
             ArrayList<String> filterList = new ArrayList<String>(Arrays.asList(filter.split(",")));
 
-            // create tweet timeline
-            final String ordername = post.get("order", Timeline.Order.CREATED_AT.getMessageFieldName());
-            final Timeline.Order order = Timeline.parseOrder(ordername);
-            Timeline tl = DAO.timelineCache.getOrCreate(identity, query, startRecord <= 1, order);
+            // create post timeline
+            final String ordername = post.get("order", Timeline2.Order.CREATED_AT.getMessageFieldName());
+            final Timeline2.Order order = Timeline2.parseOrder(ordername);
+            Timeline2 tl = DAO.timelineCache.getOrCreate(identity, query, startRecord <= 1, order);
             JSONObject hits = new JSONObject(true);
             final JSONObject[] aggregations = new JSONObject[]{null};
             if (tl.size() > 0) {
@@ -191,7 +192,7 @@ public class SearchServlet extends HttpServlet {
                         public void run() {
                             final String scraper_query = tokens.translate4scraper();
                             DAO.log(request.getServletPath() + " scraping with query: " + scraper_query);
-                            Timeline twitterTl = DAO.scrapeTwitter(post, filterList, scraper_query, order, timezoneOffsetf, true, timeout, true);
+                            Timeline2 twitterTl = DAO.scrapeTwitter(post, filterList, scraper_query, order, timezoneOffsetf, true, timeout, true);
                             count_twitter_new.set(twitterTl.size());
                             tl.putAll(QueryEntry.applyConstraint(twitterTl, tokens, false)); // pre-localized results are not filtered with location constraint any more
                             tl.setScraperInfo(twitterTl.getScraperInfo());
@@ -279,7 +280,7 @@ public class SearchServlet extends HttpServlet {
                 } else if ("twitter".equals(source) && tokens.raw.length() > 0) {
                     final String scraper_query = tokens.translate4scraper();
                     DAO.log(request.getServletPath() + " scraping with query: " + scraper_query);
-                    Timeline twitterTl = DAO.scrapeTwitter(post, filterList, scraper_query, order, timezoneOffset, true, timeout, true);
+                    Timeline2 twitterTl = DAO.scrapeTwitter(post, filterList, scraper_query, order, timezoneOffset, true, timeout, true);
                             
                     count_twitter_new.set(twitterTl.size());
                     tl.putAll(QueryEntry.applyConstraint(twitterTl, tokens, false)); // pre-localized results are not filtered with location constraint any more
@@ -309,7 +310,7 @@ public class SearchServlet extends HttpServlet {
                     post.recordEvent("cache_time", time);
 
                 } else if ("backend".equals(source) && query.length() > 0) {
-                    Timeline backendTl = DAO.searchBackend(query, order, maximumRecords, timezoneOffset, "cache", timeout);
+                    Timeline2 backendTl = DAO.searchBackend(query, order, maximumRecords, timezoneOffset, "cache", timeout);
                     if (backendTl != null) {
                         tl.putAll(QueryEntry.applyConstraint(backendTl, tokens, true));
                         tl.setScraperInfo(backendTl.getScraperInfo());
@@ -399,7 +400,7 @@ public class SearchServlet extends HttpServlet {
                         m.setTitle(u.getName() + " @" + u.getScreenName());
                         m.setDescription(t.getText(shortlink_iflinkexceedslength, shortlink_urlstub).text);
                         m.setPubDate(t.getCreatedAt());
-                        m.setGuid(t.getIdStr());
+                        m.setGuid(t.getPostId());
                         feed.addMessage(m);
                     }
                 } catch (ConcurrentModificationException e) {
@@ -438,7 +439,7 @@ public class SearchServlet extends HttpServlet {
 
     public static void main(String[] args) {
         try {
-            Timeline tl = search("http://loklak.org", "beer", Timeline.Order.CREATED_AT, "cache", 20, -120, backend_hash, 10000);
+            Timeline2 tl = search("http://loklak.org", "beer", Timeline2.Order.CREATED_AT, "cache", 20, -120, backend_hash, 10000);
             System.out.println(tl.toJSON(false, "search_metadata", "statuses").toString(2));
         } catch (IOException e) {
             DAO.severe(e);

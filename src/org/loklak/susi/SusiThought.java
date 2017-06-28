@@ -33,7 +33,7 @@ import org.json.JSONObject;
  */
 public class SusiThought extends JSONObject {
 
-    final String metadata_name, data_name;
+    final public String metadata_name, data_name;
 
     /**
      * create an empty thought, to be filled with single data entities.

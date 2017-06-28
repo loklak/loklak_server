@@ -27,8 +27,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.loklak.harvester.Post;
 import org.loklak.objects.MessageEntry;
-import org.loklak.objects.Timeline;
+import org.loklak.objects.Timeline2;
 import org.loklak.tools.bayes.BayesClassifier;
 import org.loklak.tools.bayes.Classification;
 
@@ -161,13 +162,13 @@ public class Classifier {
         // load a test set
         if (DAO.countLocalMessages(-1, true) > 0) {
             DAO.log("Classifier: loading test set for " + initsize + " messages...");
-            DAO.SearchLocalMessages testset = new DAO.SearchLocalMessages("", Timeline.Order.CREATED_AT, 0, initsize, 0);
-            Timeline tl = testset.timeline;
+            DAO.SearchLocalMessages testset = new DAO.SearchLocalMessages("", Timeline2.Order.TIMESTAMP, 0, initsize, 0);
+            Timeline2 tl = testset.timeline;
             DAO.log("Classifier: awaiting " + tl.size() * Context.values().length + " learn steps...");
             int count = 0;
             for (Context c: Context.values()) {
                 //Set<String> voc = c.vocabulary();
-                for (MessageEntry m: tl) {
+                for (Post m: tl) {
                     c.learnPhrase(m.getText());
                     count++;
                     if (count % 100 == 0) DAO.log("Classifier: performed " + count + " learn steps");

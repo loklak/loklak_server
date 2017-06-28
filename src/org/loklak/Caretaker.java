@@ -38,6 +38,7 @@ import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.harvester.TwitterAPI;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.Timeline;
+import org.loklak.objects.Timeline2;
 import org.loklak.tools.DateParser;
 import org.loklak.tools.OS;
 
@@ -189,12 +190,12 @@ public class Caretaker extends Thread {
                         DAO.deleteQuery(qe.getQuery(), qe.getSourceType());
                         continue;
                     }
-                    Timeline t;
+                    Timeline2 t;
                     try {
                         t = DAO.scrapeTwitter(
                                 null,
                                 qe.getQuery(),
-                                Timeline.Order.CREATED_AT,
+                                Timeline2.Order.CREATED_AT,
                                 qe.getTimezoneOffset(),
                                 false,
                                 10000,
@@ -204,7 +205,7 @@ public class Caretaker extends Thread {
                     } catch (NullPointerException e) {
                         DAO.severe("TwitterScraper.search() returns null (no twitter results)"
                                 + " or any other issue in DAO.scrapeTwitter() method", e);
-                        t = new Timeline(Timeline.Order.CREATED_AT);
+                        t = new Timeline2(Timeline2.Order.TIMESTAMP);
                     }
                     DAO.log("retrieval of " + t.size() + " new messages for q = \"" + qe.getQuery() + "\"");
 

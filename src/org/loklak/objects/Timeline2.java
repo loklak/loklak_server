@@ -1,5 +1,5 @@
 /**
- *  Timeline
+ *  Timeline2
  *  Copyright 22.02.2015 by Michael Peter Christen, @0rb1t3r
  *
  *  This library is free software; you can redistribute it and/or
@@ -28,23 +28,24 @@ import java.util.NavigableMap;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
-import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.data.DAO.IndexName;
+import org.loklak.harvester.Post;
 import org.loklak.susi.SusiThought;
 
 /**
- * A timeline is a structure which holds tweet for the purpose of presentation
+ * A timeline2 is a structure which holds tweet for the purpose of presentation
  * There is no tweet retrieval method here, just an iterator which returns the tweets in reverse appearing order
  */
-public class Timeline implements Iterable<MessageEntry> {
+//TODO: remove MessageEntry
+public class Timeline2 implements Iterable<Post> {
 
     public static enum Order {
         CREATED_AT("date"),
+        TIMESTAMP("long"),
         RETWEET_COUNT("long"),
         FAVOURITES_COUNT("long");
         String field_type;
@@ -59,8 +60,9 @@ public class Timeline implements Iterable<MessageEntry> {
             return this.field_type;
         }
     }
-    
-    private NavigableMap<String, MessageEntry> tweets; // the key is the date plus id of the tweet
+    //TODO: remove tweets
+    // the key is the date plus id of the post
+    private NavigableMap<String, Post> posts;
     private Map<String, UserEntry> users;
     private int hits = -1;
     private String scraperInfo = "";
@@ -69,10 +71,10 @@ public class Timeline implements Iterable<MessageEntry> {
     private IndexName indexName;
     private int cursor; // used for pagination, set this to the number of tweets returned so far to the user; they should be considered as unchangable
     private long accessTime;
-    private final Map<Integer, MessageEntry> precursorTweetCache = new ConcurrentHashMap<>();
-    
-    public Timeline(Order order) {
-        this.tweets = new ConcurrentSkipListMap<String, MessageEntry>();
+    private final Map<Integer, Post> precursorPostCache = new ConcurrentHashMap<>();
+
+    public Timeline2(Order order) {
+        this.posts = new ConcurrentSkipListMap<String, Post>();
         this.users = new ConcurrentHashMap<String, UserEntry>();
         this.order = order;
         this.query = null;
@@ -80,7 +82,8 @@ public class Timeline implements Iterable<MessageEntry> {
         this.cursor = 0;
         this.accessTime = System.currentTimeMillis();
     }
-    public Timeline(Order order, String scraperInfo) {
+
+    public Timeline2(Order order, String scraperInfo) {
         this(order);
         this.scraperInfo = scraperInfo;
     }
@@ -89,17 +92,17 @@ public class Timeline implements Iterable<MessageEntry> {
         try {
             return Order.valueOf(order.toUpperCase());
         } catch (Throwable e) {
-            return Order.CREATED_AT;
+            return Order.TIMESTAMP;
         }
     }
 
     public void clear() {
-        this.tweets.clear();
+        this.posts.clear();
         this.users.clear();
         // we keep the other details (like order, scraperInfo and query) to be able to test with zero-size pushes
     }
 
-    public Timeline setResultIndex(IndexName index) {
+    public Timeline2 setResultIndex(IndexName index) {
         this.indexName = index;
         return this;
     }
@@ -108,7 +111,7 @@ public class Timeline implements Iterable<MessageEntry> {
         return this.indexName;
     }
     
-    public Timeline setScraperInfo(String info) {
+    public Timeline2 setScraperInfo(String info) {
         this.scraperInfo = info;
         return this;
     }
@@ -121,7 +124,7 @@ public class Timeline implements Iterable<MessageEntry> {
         return this.accessTime;
     }
     
-    public Timeline updateAccessTime() {
+    public Timeline2 updateAccessTime() {
         this.accessTime = System.currentTimeMillis();
         return this;
     }
@@ -134,7 +137,7 @@ public class Timeline implements Iterable<MessageEntry> {
         return this.query;
     }
     
-    public Timeline setQuery(String query) {
+    public Timeline2 setQuery(String query) {
         this.query = query;
         return this;
     }
@@ -153,57 +156,71 @@ public class Timeline implements Iterable<MessageEntry> {
      * @param newCursor the new cursor position which must be higher than the previous one.
      * @return this
      */
-    public Timeline setCursor(int newCursor) {
+    public Timeline2 setCursor(int newCursor) {
         if (newCursor > this.cursor) this.cursor = newCursor;
         return this;
     }
     
     public int size() {
-        return this.tweets.size();
+        return this.posts.size();
     }
-    
-    public Timeline reduceToMaxsize(final int maxsize) {
-        List<MessageEntry> m = new ArrayList<>();
-        Timeline t = new Timeline(this.order);
+
+    //TODO: to fix this    
+    public Timeline2 reduceToMaxsize(final int maxsize) {
+        List<Post> m = new ArrayList<>();
+        Timeline2 t = new Timeline2(this.order);
         if (maxsize < 0) return t;
         
-        // remove tweets from this timeline
-        synchronized (tweets) {
-            while (this.tweets.size() > maxsize) m.add(this.tweets.remove(this.tweets.firstEntry().getKey()));
+        // remove tweets from this timeline2
+        synchronized (posts) {
+            while (this.posts.size() > maxsize) m.add(this.posts.remove(this.posts.firstEntry().getKey()));
         }
         
-        // create new timeline
-        for (MessageEntry me: m) {
-            t.addUser(this.users.get(me.getScreenName()));
-            t.addTweet(me);
+        // create new timeline2
+        for (Post me: m) {
+            t.addUser(this.users.get(me.get("ScreenName")));
+            t.addPost(me);
         }
         
         // prune away users not needed any more in this structure
+        
         Set<String> screen_names = new HashSet<>();
-        for (MessageEntry me: this.tweets.values()) screen_names.add(me.getScreenName());
+        for (Post me: this.posts.values()) {
+            //TODO: compare with Timeline
+            screen_names.add(String.valueOf(me.get("ScreenName")));
+        }
         synchronized (this.users) {
             Iterator<Map.Entry<String, UserEntry>> i = this.users.entrySet().iterator();
             while (i.hasNext()) {
                 Map.Entry<String, UserEntry> e = i.next();
                 if (!screen_names.contains(e.getValue().getScreenName())) i.remove();
             }
-        }        
+        }
+               
         return t;
     }
-    
-    public Timeline add(MessageEntry tweet, UserEntry user) {
+
+    public Timeline2 add(Post post, UserEntry user) {
         this.addUser(user);
-        this.addTweet(tweet);
+        this.addPost(post);
         return this;
     }
-    
-    private Timeline addUser(UserEntry user) {
+
+    public Timeline2 add(Post post) {
+        this.addPost(post);
+        return this;
+    }
+
+    private Timeline2 addUser(UserEntry user) {
         assert user != null;
-        if (user != null) this.users.put(user.getScreenName(), user);
+        if (user != null) {
+            this.users.put(user.getScreenName(), user);
+        }
         return this;
     }
-    
-    private Timeline addTweet(MessageEntry tweet) {
+
+/*  //TODO: remove this
+    private Timeline2 addTweet(MessageEntry tweet) {
         String key = "";
         if (this.order == Order.RETWEET_COUNT) {
             key = Long.toHexString(tweet.getRetweetCount());
@@ -223,16 +240,33 @@ public class Timeline implements Iterable<MessageEntry> {
         }
         return this;
     }
+*/
+
+    private Timeline2 addPost(Post post) {
+        String key = "";
+        if (this.order == Order.TIMESTAMP) {
+            key = Long.toHexString(post.getTimestamp()) + "_" + post.getPostId();
+        }
+        //
+        synchronized (this.posts) {
+            Post precursorPost = getPrecursorPost();
+            if (precursorPost == null || !post.getTimestampDate().before(precursorPost.getTimestampDate())) {
+                // ignore this post in case it would change the list of shown posts
+                this.posts.put(key, post);
+            }
+        }
+        return this;
+    }
 
     protected UserEntry getUser(String user_screen_name) {
         return this.users.get(user_screen_name);
     }
     
-    public UserEntry getUser(MessageEntry fromTweet) {
-        return this.users.get(fromTweet.getScreenName());
+    public UserEntry getUser(Post fromPost) {
+        return this.users.get(fromPost.get("ScreenName"));
     }
     
-    public void putAll(Timeline other) {
+    public void putAll(Timeline2 other) {
         if (other == null) return;
         assert this.order.equals(other.order);
         for (Map.Entry<String, UserEntry> u: other.users.entrySet()) {
@@ -241,18 +275,18 @@ public class Timeline implements Iterable<MessageEntry> {
                 this.users.put(u.getKey(), u.getValue());
             }
         }
-        for (MessageEntry t: other) this.addTweet(t);
+        for (Post t: other) this.addPost(t);
     }
     
-    public MessageEntry getBottomTweet() {
-        synchronized (tweets) {
-            return this.tweets.firstEntry().getValue();
+    public Post getBottomTweet() {
+        synchronized (posts) {
+            return this.posts.firstEntry().getValue();
         }
     }
     
-    public MessageEntry getTopTweet() {
-        synchronized (tweets) {
-            return this.tweets.lastEntry().getValue();
+    public Post getTopTweet() {
+        synchronized (posts) {
+            return this.posts.lastEntry().getValue();
         }
     }
     
@@ -264,11 +298,12 @@ public class Timeline implements Iterable<MessageEntry> {
      * New tweets must have an entry date after that last tweet to create a stable list
      * @return the last tweet that a user has seen. It is also the oldest tweet that the user has seen.
      */
+/*
     private MessageEntry getPrecursorTweet() {
         if (this.cursor == 0) return null;
         MessageEntry m = this.precursorTweetCache.get(this.cursor);
         if (m != null) return m;
-        synchronized (tweets) {
+        synchronized (messageEntry) {
             int count = 0;
             for (MessageEntry messageEntry: this) {
                 if (++count == this.cursor) {
@@ -279,19 +314,41 @@ public class Timeline implements Iterable<MessageEntry> {
         }
         return null;
     }
-    
-    public List<MessageEntry> getNextTweets(int start, int maxCount) {
-        List<MessageEntry> tweets = new ArrayList<>();
-        synchronized (tweets) {
+*/
+    private Post getPrecursorPost() {
+        if (this.cursor == 0) {
+            return null;
+        }
+        Post post = this.precursorPostCache.get(this.cursor);
+
+        if (post != null) {
+            return post;
+        }
+        synchronized (posts) {
             int count = 0;
-            for (MessageEntry messageEntry: this) {
-                if (count >= start) tweets.add(messageEntry);
-                if (tweets.size() >= maxCount) break;
+            for (Post p: this) {
+                if (++count == this.cursor) {
+                    this.precursorPostCache.put(this.cursor, p);
+                    post = p;
+                    break;
+                }
+            }
+        }
+        return post;
+    }
+
+    public List<Post> getNextTweets(int start, int maxCount) {
+        List<Post> posts = new ArrayList<>();
+        synchronized (posts) {
+            int count = 0;
+            for (Post post: this) {
+                if (count >= start) posts.add(post);
+                if (posts.size() >= maxCount) break;
                 count++;
             }
-            if (start >= this.cursor) this.cursor = start + tweets.size();
+            if (start >= this.cursor) this.cursor = start + posts.size();
         }
-        return tweets;
+        return posts;
     }
     
     public String toString() {
@@ -301,7 +358,16 @@ public class Timeline implements Iterable<MessageEntry> {
 
     public JSONObject toJSON(boolean withEnrichedData, String metadata_field_name, String statuses_field_name) throws JSONException {
         JSONObject json = toSusi(withEnrichedData, new SusiThought(metadata_field_name, statuses_field_name));
-        json.getJSONObject(metadata_field_name).put("count", Integer.toString(this.tweets.size()));
+        json.getJSONObject(metadata_field_name).put("count", Integer.toString(this.posts.size()));
+        json.put("peer_hash", DAO.public_settings.getPeerHash());
+        json.put("peer_hash_algorithm", DAO.public_settings.getPeerHashAlgorithm());
+        return json;
+    }
+
+    public JSONObject toJSON() throws JSONException {
+        SusiThought susiThought = new SusiThought();
+        SusiThought json = toSusi(false, susiThought);
+        json.getJSONObject(susiThought.metadata_name).put("count", Integer.toString(this.posts.size()));
         json.put("peer_hash", DAO.public_settings.getPeerHash());
         json.put("peer_hash_algorithm", DAO.public_settings.getPeerHashAlgorithm());
         return json;
@@ -312,14 +378,19 @@ public class Timeline implements Iterable<MessageEntry> {
     }
     
     private SusiThought toSusi(boolean withEnrichedData, SusiThought json) throws JSONException {
-        json
-            .setQuery(this.query)
+        UserEntry user;
+        json.setQuery(this.query)
             .setHits(Math.max(this.hits, this.size()));
         if (this.scraperInfo.length() > 0) json.setScraperInfo(this.scraperInfo);
         JSONArray statuses = new JSONArray();
-        for (MessageEntry t: this) {
-            UserEntry u = this.users.get(t.getScreenName());
-            statuses.put(t.toJSON(u, withEnrichedData, Integer.MAX_VALUE, ""));
+        for (JSONObject t: this) {
+            if(t.has("ScreenName")) {
+                user = this.users.get(t.get("ScreenName"));
+                // add user
+                if (user != null) t.put("user", user.toJSON());
+            }
+            statuses.put(t);
+            //TODO: add data with enriched data
         }
         json.setData(statuses);
         return json;
@@ -329,8 +400,8 @@ public class Timeline implements Iterable<MessageEntry> {
      * the tweet iterator returns tweets in descending appearance order (top first)
      */
     @Override
-    public Iterator<MessageEntry> iterator() {
-        return this.tweets.descendingMap().values().iterator();
+    public Iterator<Post> iterator() {
+        return this.posts.descendingMap().values().iterator();
     }
 
     /**
@@ -342,11 +413,16 @@ public class Timeline implements Iterable<MessageEntry> {
         
         // calculate the time based on the latest 20 tweets (or less)
         long latest = 0;
+        long time;
         long earliest = 0;
         int count = 0;
-        for (MessageEntry messageEntry: this) {
-            if (latest == 0) {latest = messageEntry.created_at.getTime(); continue;}
-            earliest = messageEntry.created_at.getTime();
+        for (Post post: this) {
+            time = post.getTimestamp();
+            if (latest == 0) {
+                latest = time;
+                continue;
+            }
+            earliest = time;
             count++;
             if (count >= 19) break;
         }
@@ -356,12 +432,13 @@ public class Timeline implements Iterable<MessageEntry> {
         long p = 1 + timeInterval / count;
         return p < 4000 ? p / 4 + 3000 : p;
     }    
-    
+
+    //TODO: this passes Timeline as argument
     public void writeToIndex() {
-        IncomingMessageBuffer.addScheduler(this, true);
+        //IncomingMessageBuffer.addScheduler(this, true);
     }
     
-    public Timeline setHits(int hits) {
+    public Timeline2 setHits(int hits) {
         this.hits = hits;
         return this;
     }
@@ -369,16 +446,16 @@ public class Timeline implements Iterable<MessageEntry> {
     public int getHits() {
         return this.hits == -1 ? this.size() : this.hits;
     }
-/*
-    //TODO: temporary method to prevent issues related to Timeline class popping-up till next PR
-    public Timeline2 toPostTimeline() {
 
-        Timeline2 postList = new Timeline2(Timeline.Order.TIMESTAMP);
-        for (MessageEntry me : this) {
-            assert me instanceof Post;
-            postList.add(me);
+    public Timeline toTimeline() {
+
+        Timeline postList = new Timeline(Timeline.Order.CREATED_AT);
+        for (Post post : this) {
+            assert post instanceof MessageEntry;
+            MessageEntry tweet = (MessageEntry)post;
+            postList.add(tweet, tweet.getUser());
         }
         return postList;
     }
-*/
+
 }
