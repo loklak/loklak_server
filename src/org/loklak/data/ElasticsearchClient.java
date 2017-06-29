@@ -1050,4 +1050,126 @@ public class ElasticsearchClient {
         );
         return dateRangeAggregation;
     }
+
+    public HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(String index, String classifierName, ArrayList<String> classes, String startDate, String endDate) {
+        // No time restrictions
+        if (startDate == null && endDate == null) {
+            return classifierScoreForCountry(index, classifierName, classes);
+        }
+
+        SearchRequestBuilder request = this.elasticsearchClient.prepareSearch(index)
+            .setSearchType(SearchType.QUERY_THEN_FETCH)
+            .setQuery(QueryBuilders.matchAllQuery())
+            .setFrom(0)
+            .setSize(0)
+            .addAggregation(getClassifierAggregationByCountry("place_country_code", classifierName, startDate, endDate));
+
+        SearchResponse response = request.execute().actionGet();
+
+        Terms countriesAggregations = response.getAggregations().get("by_country");
+        HashMap<String, HashMap<String, HashMap<String,Double>>> retMap = new HashMap<>();
+
+        for (Terms.Bucket countryBucket: countriesAggregations.getBuckets()) {
+            Range timeAggregations = countryBucket.getAggregations().get("by_date");
+            HashMap<String, HashMap<String, Double>> countryMap = new HashMap<>();
+            for (Range.Bucket timeAggregation: timeAggregations.getBuckets()) {
+                Terms countryAggregation = timeAggregation.getAggregations().get("by_class");
+                for (Terms.Bucket bucket : countryAggregation.getBuckets()) {
+                    String key = bucket.getKeyAsString();
+                    if (!classes.contains(key)) {
+                        continue;
+                    }
+                    long docCount = bucket.getDocCount();
+                    Sum sum = bucket.getAggregations().get("sum_probability");
+                    Avg avg = bucket.getAggregations().get("avg_probability");
+                    HashMap<String, Double> map = new HashMap<>();
+                    map.put("count", (double) docCount);
+                    map.put("sum", sum.getValue());
+                    map.put("avg", avg.getValue());
+                    countryMap.put(key,  map);
+                }
+            }
+            retMap.put(countryBucket.getKeyAsString(), countryMap);
+        }
+
+        retMap.put("GLOBAL", classifierScore(index, classifierName, classes, startDate, endDate));
+        return retMap;
+    }
+
+    public AggregationBuilder getClassifierAggregationByCountry(String fieldName, String classifierName) {
+        return AggregationBuilders.terms("by_country").field(fieldName)
+            .subAggregation(getClassifierAggregation(classifierName));
+    }
+
+    public AggregationBuilder getClassifierAggregationByCountry(String fieldName, String classifierName, String startDate, String endDate) {
+        return AggregationBuilders.terms("by_country").field(fieldName)
+            .subAggregation(getClassifierAggregation(classifierName, startDate, endDate));
+    }
+
+    public HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(String index, String classifierName, ArrayList<String> classes) {
+        SearchRequestBuilder request = this.elasticsearchClient.prepareSearch(index)
+            .setSearchType(SearchType.QUERY_THEN_FETCH)
+            .setQuery(QueryBuilders.matchAllQuery())
+            .setFrom(0)
+            .setSize(0)
+            .addAggregation(getClassifierAggregationByCountry("place_country_code", classifierName));
+
+        SearchResponse response = request.execute().actionGet();
+
+        Terms countriesAggregations = response.getAggregations().get("by_country");
+
+        HashMap<String, HashMap<String, HashMap<String,Double>>> retMap = new HashMap<>();
+
+        for (Terms.Bucket countryBucket: countriesAggregations.getBuckets()) {
+            HashMap<String, HashMap<String, Double>> countryMap = new HashMap<>();
+            Terms countryAggregation = countryBucket.getAggregations().get("by_class");
+            for (Terms.Bucket bucket : countryAggregation.getBuckets()) {
+                String key = bucket.getKeyAsString();
+                if (!classes.contains(key)) {
+                    continue;
+                }
+                long docCount = bucket.getDocCount();
+                Sum sum = bucket.getAggregations().get("sum_probability");
+                Avg avg = bucket.getAggregations().get("avg_probability");
+                HashMap<String, Double> map = new HashMap<>();
+                map.put("count", (double) docCount);
+                map.put("sum", sum.getValue());
+                map.put("avg", avg.getValue());
+                countryMap.put(key,  map);
+            }
+            retMap.put(countryBucket.getKeyAsString(), countryMap);
+        }
+
+        // Put global score
+        retMap.put("GLOBAL", classifierScore(index, classifierName, classes));
+        return retMap;
+    }
+
+    public HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(String index, String classifierName, ArrayList<String> classes, String startDate, String endDate, ArrayList<String> countries) {
+        HashMap<String, HashMap<String, HashMap<String,Double>>> retMap = new HashMap<>();
+
+        HashMap<String, HashMap<String, HashMap<String,Double>>> copy = classifierScoreForCountry(index, classifierName, classes, startDate, endDate);
+
+        for (String key: copy.keySet()) {
+            if (!countries.contains(key) && !"GLOBAL".equals(key)) {
+                continue;
+            }
+            retMap.put(key, copy.get(key));
+        }
+        return retMap;
+    }
+
+    public HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(String index, String classifierName, ArrayList<String> classes, ArrayList<String> countries) {
+        HashMap<String, HashMap<String, HashMap<String,Double>>> retMap = new HashMap<>();
+
+        HashMap<String, HashMap<String, HashMap<String,Double>>> copy = classifierScoreForCountry(index, classifierName, classes);
+
+        for (String key: copy.keySet()) {
+            if (!countries.contains(key) && !"GLOBAL".equals(key)) {
+                continue;
+            }
+            retMap.put(key, copy.get(key));
+        }
+        return retMap;
+    }
 }
