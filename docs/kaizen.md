@@ -1,6 +1,6 @@
 # Kaizen Harvester
 
-> Kaizen is an alternative approach to do Harvesting, it focuses on query and information collecting to generate more queries. Kaizen also uses Twitter API to get trending topics to increase the chance of getting relhungama hai kyon barpaevant or wanted messages (This feature is optional).
+> Kaizen is an alternative approach to do Harvesting, it focuses on query and information collecting to generate more queries. Kaizen also uses Twitter API to get trending topics to increase the chance of getting relevant or wanted messages (This feature is optional).
 
 Source: [#960](https://github.com/loklak/loklak_server/pull/960).
 

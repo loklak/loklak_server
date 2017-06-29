@@ -73,6 +73,9 @@ To install loklak with Docker please refer to the [loklak Docker installation re
 ### How do I deploy loklak with Heroku?
 You can easily deploy to Heroku by clicking the Deploy to Heroku button above. To install loklak using Heroku Toolbelt, please refer to the [loklak Heroku installation readme](/docs/installation/installation_heroku.md).
 
+### How do I deploy loklak on Google Cloud with Kubernetes?
+To install loklak on Google Cloud with Kubernetes, please refer to the [loklak Google Cloud with Kubernetes installation readme](/docs/installation/installation_google_cloud_kubernetes.md).
+
 ### How do I deploy loklak with cloud9?
 To install loklak with cloud9 please refer to the [loklak cloud9 installation readme](/docs/installation/installation_cloud9.md).
 

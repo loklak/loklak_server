@@ -1,4 +1,3 @@
-
 /**
  *  DumpDownloadServlet
  *  Copyright 22.02.2015 by Michael Peter Christen, @0rb1t3r
@@ -7,12 +6,12 @@
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
- *  
+ *
  *  This library is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
@@ -36,7 +35,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.eclipse.jetty.util.log.Log;
 import org.loklak.data.DAO;
 import org.loklak.http.RemoteAccess;
 import org.loklak.server.FileHandler;
@@ -47,19 +45,21 @@ public class DumpDownloadServlet extends HttpServlet {
     private static final long serialVersionUID = 2839106194602799989L;
 
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    protected void doPost(HttpServletRequest request,
+        HttpServletResponse response) throws ServletException, IOException {
         doGet(request, response);
     }
-    
+
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Query post = RemoteAccess.evaluate(request);
+    protected void doGet(HttpServletRequest request,
+        HttpServletResponse response) throws ServletException, IOException {
+        final Query post = RemoteAccess.evaluate(request);
         String path = request.getPathInfo();
-        long now = System.currentTimeMillis();
-        
-        int limited_count = (int) DAO.getConfig("download.limited.count", (long) Integer.MAX_VALUE);
-        String limited_message = DAO.getConfig("download.limited.message", "");
-        
+        final long now = System.currentTimeMillis();
+
+        int limitedCount = (int) DAO.getConfig("download.limited.count", (long) Integer.MAX_VALUE);
+        String limitedMessage = DAO.getConfig("download.limited.message", "");
+
         if (path.length() <= 1) {
             // send directory as html
 
@@ -67,7 +67,7 @@ public class DumpDownloadServlet extends HttpServlet {
             response.setContentType("text/html");
             response.setCharacterEncoding("UTF-8");
             response.setStatus(HttpServletResponse.SC_OK);
-            
+
             OutputStreamWriter osw = new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8);
             BufferedWriter writer = new BufferedWriter(osw);
             writer.write("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\">\n");
@@ -78,26 +78,41 @@ public class DumpDownloadServlet extends HttpServlet {
             writer.write(" <body>\n");
             writer.write("<h1>Index of /dump</h1>\n");
             writer.write("<pre>      Name \n");
-            
-            for (File dump: DAO.getTweetOwnDumps(limited_count)) {
+
+            for (File dump: DAO.getTweetOwnDumps(limitedCount)) {
                 String name = dump.getName();
                 String space = "";
-                for (int i = name.length(); i < 36; i++) space += " ";
+                for (int i = name.length(); i < 36; i++) {
+                    space += " ";
+                }
                 long length = dump.length();
-                String size = length < 1024 ? Long.toString(length) : length < 1024 * 1024 ? Long.toString(length / 1024) + "K" : Long.toString(length / 1024 / 1024) + "M";
-                while (size.length() < 5) size = " " + size;
+                String size = length < 1024
+                    ? Long.toString(length) : length < 1024 * 1024
+                        ? Long.toString(length / 1024) + "K"
+                            : Long.toString(length / 1024 / 1024) + "M";
+                while (size.length() < 5) {
+                    size = " " + size;
+                }
                 int d = name.lastIndexOf('.');
-                if (d < 0) writer.write("[   ]"); else {
+                if (d < 0) {
+                    writer.write("[   ]");
+                } else {
                     String ext = name.substring(d + 1);
-                    if (ext.length() > 3) ext = ext.substring(0, 3);
+                    if (ext.length() > 3) {
+                        ext = ext.substring(0, 3);
+                    }
                     writer.write('[');
                     writer.write(ext);
-                    for (int i = 0; i < 3 - ext.length(); i++) writer.write(' ');
+                    for (int i = 0; i < 3 - ext.length(); i++) {
+                        writer.write(' ');
+                    }
                     writer.write(']');
                 }
-                writer.write(" <a href=\"" + name + "\">"+ name +"</a>" + space + new Date(dump.lastModified()).toString() + "  " + size + "\n");
+                writer.write(" <a href=\"" + name + "\">" + name + "</a>" + space + new Date(dump.lastModified()).toString() + "  " + size + "\n");
             }
-            if (limited_count != Integer.MAX_VALUE) writer.write(limited_message + "\n");
+            if (limitedCount != Integer.MAX_VALUE) {
+                writer.write(limitedMessage + "\n");
+            }
             writer.write("<hr></pre>\n");
             writer.write("<address>this is the download directory for dumps of the message index</address>\n");
             writer.write("<address>- import these dumps by placing them into your data/dump/import/ directory</address>\n");
@@ -107,14 +122,16 @@ public class DumpDownloadServlet extends HttpServlet {
             DAO.log(path);
             return;
         }
-        
-        if (limited_count == 0) {
-            response.sendError(404, request.getContextPath() + " " + limited_message);
+
+        if (limitedCount == 0) {
+            response.sendError(404, request.getContextPath() + " " + limitedMessage);
             return;
         }
-        
+
         // download a dump file
-        if (path.startsWith("/")) path = path.substring(1);
+        if (path.startsWith("/")) {
+            path = path.substring(1);
+        }
         Collection<File> ownDumps = DAO.getTweetOwnDumps(Integer.MAX_VALUE);
         File dump = ownDumps.size() == 0 ? null : new File(ownDumps.iterator().next().getParentFile(), path);
         if (dump == null || !dump.exists()) {
@@ -131,10 +148,12 @@ public class DumpDownloadServlet extends HttpServlet {
             InputStream fis = new BufferedInputStream(new FileInputStream(dump));
             byte[] buffer = new byte[65536];
             int c;
-            while ((c = fis.read(buffer)) > 0) response.getOutputStream().write(buffer, 0, c);
+            while ((c = fis.read(buffer)) > 0) {
+                response.getOutputStream().write(buffer, 0, c);
+            }
             fis.close();
         } catch (Throwable e) {
-        	Log.getLog().warn(e);
+            DAO.severe(e);
         }
         post.finalize();
     }

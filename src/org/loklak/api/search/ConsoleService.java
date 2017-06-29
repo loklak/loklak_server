@@ -40,7 +40,7 @@ import org.loklak.server.BaseUserRole;
 import org.loklak.server.AbstractAPIHandler;
 import org.loklak.server.Authorization;
 import org.loklak.server.Query;
-import org.loklak.susi.SusiSkills;
+import org.loklak.susi.SusiProcedures;
 import org.loklak.susi.SusiThought;
 import org.loklak.susi.SusiTransfer;
 
@@ -76,7 +76,7 @@ import javax.servlet.http.HttpServletResponse;
 public class ConsoleService extends AbstractAPIHandler implements APIHandler {
 
     private static final long serialVersionUID = 8578478303032749879L;
-    public final static SusiSkills dbAccess = new SusiSkills();
+    public final static SusiProcedures dbAccess = new SusiProcedures();
 
     @Override
     public BaseUserRole getMinimalBaseUserRole() { return BaseUserRole.ANONYMOUS; }
@@ -89,7 +89,6 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
     public String getAPIPath() {
         return "/api/console.json";
     }
-
 
     static {
         dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?\\( ??SELECT +?(.*?) ??\\) +?WHERE +?(.*?) ?+IN ?+\\((.*?)\\) ??;"), matcher -> {
@@ -234,12 +233,14 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
             json.setData(transfer.conclude(json.getData()));
             return json;
-        });dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?quoraprofile +?WHERE +?profile ??= ??'(.*?)' ??;"), matcher -> {
-            SusiThought json = QuoraProfileScraper.scrapeQuora(matcher.group(2));
-            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            json.setData(transfer.conclude(json.getData()));
-            return json;
         });
+        /*
+        dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?quoraprofile +?WHERE +?profile ??= ??'(.*?)' ??;"), matcher -> {
+            BaseScraper quoraScrape = new QuoraProfileScraper(matcher.group(2));
+            SusiTransfer transfer = new SusiTransfer(matcher.group(1));
+            return quoraScrape.getData().toJSON(transfer.conclude(json.getData()));
+        });
+        */
 		dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?wikigeodata +?WHERE +?place ??= ??'(.*?)' ??;"), matcher -> {
             SusiThought json = WikiGeoData.wikiGeoData(matcher.group(2));
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));

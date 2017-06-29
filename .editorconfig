@@ -1,0 +1,18 @@
+root = true
+
+# Global settings
+[*]
+indent_style = space
+end_of_line = lf
+charset = utf-8
+
+# Specially for java
+[*.java]
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+
+# Batch files use tabs for indentation
+[*.bat]
+indent_style = tab

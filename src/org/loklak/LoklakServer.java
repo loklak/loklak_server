@@ -6,12 +6,12 @@
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
- *  
+ *
  *  This library is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
@@ -83,6 +83,7 @@ import org.loklak.api.admin.CrawlerServlet;
 import org.loklak.api.admin.SettingsServlet;
 import org.loklak.api.admin.StatusService;
 import org.loklak.api.admin.ThreaddumpServlet;
+import org.loklak.api.aggregation.ClassifierServlet;
 import org.loklak.api.amazon.AmazonProductService;
 import org.loklak.api.cms.*;
 import org.loklak.api.geo.GeocodeServlet;
@@ -131,6 +132,7 @@ import org.loklak.harvester.TwitterScraper;
 import org.loklak.harvester.strategy.ClassicHarvester;
 import org.loklak.harvester.strategy.Harvester;
 import org.loklak.harvester.strategy.KaizenHarvester;
+import org.loklak.harvester.strategy.PriorityKaizenHarvester;
 import org.loklak.http.RemoteAccess;
 import org.loklak.server.APIHandler;
 import org.loklak.server.FileHandler;
@@ -144,7 +146,7 @@ public class LoklakServer {
     private final static String[] FOLDER_TO_EXTRACT = { "conf", "html", "installation", "ssi"};
 
     public final static Set<String> blacklistedHosts = new ConcurrentHashSet<>();
-    
+
     private static Server server = null;
     private static Caretaker caretaker = null;
     public  static IncomingMessageBuffer queuedIndexing = null;
@@ -190,32 +192,32 @@ public class LoklakServer {
         w.close();
     }
     */
-    
+
     public static int getServerThreads() {
         return server.getThreadPool().getThreads() - server.getThreadPool().getIdleThreads();
     }
-    
+
     public static String getServerURI() {
         return server.getURI().toASCIIString();
     }
-    
+
     public static void main(String[] args) throws Exception {
     	System.setProperty("java.awt.headless", "true"); // no awt used here so we can switch off that stuff
 
         // extract contents
         extractContents();
-        
+
         // init config, log and elasticsearch
         Path data = FileSystems.getDefault().getPath("data");
         File dataFile = data.toFile();
         if (!dataFile.exists()) dataFile.mkdirs(); // should already be there since the start.sh script creates it
-        
+
         Log.getLog().info("Starting loklak initialization");
 
         // prepare shutdown signal
         File pid = new File(dataFile, "loklak.pid");
         if (pid.exists()) pid.deleteOnExit(); // thats a signal for the stop.sh script that loklak has terminated
-        
+
         // prepare signal for startup script
         File startup = new File(dataFile, "startup.tmp");
         if (startup.exists()){
@@ -224,17 +226,17 @@ public class LoklakServer {
 			writer.write("startup");
 			writer.close();
         }
-        
-		
+
+
         // load the config file(s);
         Map<String, String> config = readConfig(data);
-        
+
         // set localhost server names (for special rights)
         String server_localhost = config.get("server.localhost");
         if (server_localhost != null && server_localhost.length() > 0) {
             for (String h: server_localhost.split(",")) RemoteAccess.addLocalhost(h);
         }
-        
+
         // set localhost referrer pattern (for special rights)
         String referrer_localhost = config.get("referrer.localhost");
         if (referrer_localhost != null && referrer_localhost.length() > 0) {
@@ -248,7 +250,7 @@ public class LoklakServer {
         	case "only": httpsMode = HttpsMode.ONLY; break;
         	default: httpsMode = HttpsMode.OFF;
         }
-        
+
         // get server ports
         Map<String, String> env = System.getenv();
         String httpPortS = config.get("port.http");
@@ -261,7 +263,7 @@ public class LoklakServer {
         if(env.containsKey("PORTSSL")) {
             httpsPort = Integer.parseInt(env.get("PORTSSL"));
         }
-        
+
         // check if a loklak service is already running on configured port
         try{
         	checkServerPorts(httpPort, httpsPort);
@@ -270,8 +272,8 @@ public class LoklakServer {
         	Log.getLog().warn(e.getMessage());
 			System.exit(-1);
         }
-        
-        // initialize all data        
+
+        // initialize all data
         try{
         	DAO.init(config, data);
         } catch(Exception e){
@@ -279,7 +281,7 @@ public class LoklakServer {
         	Log.getLog().warn("Could not initialize DAO. Exiting.");
         	System.exit(-1);
         }
-        
+
         // init the http server
         try {
 			setupHttpServer(httpPort, httpsPort);
@@ -291,7 +293,7 @@ public class LoklakServer {
 
         // init the harvester
         initializeHarvester();
-        
+
         LoklakServer.server.start();
         LoklakServer.caretaker = new Caretaker();
         LoklakServer.caretaker.start();
@@ -299,25 +301,25 @@ public class LoklakServer {
         LoklakServer.queuedIndexing.start();
         LoklakServer.dumpImporter = new DumpImporter(Integer.MAX_VALUE);
         LoklakServer.dumpImporter.start();
-        
-        
+
+
         // read upgrade interval
         Caretaker.upgradeTime = Caretaker.startupTime + DAO.getConfig("upgradeInterval", 86400000);
-        
+
         // if this is not headless, we can open a browser automatically
         Browser.openBrowser("http://127.0.0.1:" + httpPort + "/");
-        
+
         Log.getLog().info("finished startup!");
-        
+
         // signal to startup script
         if (startup.exists()){
         	FileWriter writer = new FileWriter(startup);
 			writer.write("done");
 			writer.close();
         }
-        
+
         // ** services are now running **
-        
+
         // start a shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
@@ -344,10 +346,10 @@ public class LoklakServer {
         });
 
         // ** wait for shutdown signal, do this with a kill HUP (default level 1, 'kill -1') signal **
-        
+
         LoklakServer.server.join();
         Log.getLog().info("server terminated");
-        
+
         // After this, the jvm processes all shutdown hooks and terminates then.
         // The main termination line is therefore inside the shutdown hook.
     }
@@ -404,6 +406,9 @@ public class LoklakServer {
             case "kaizen":
                 harvester = new KaizenHarvester();
                 break;
+            case "priority_kaizen":
+                harvester = new PriorityKaizenHarvester();
+                break;
         }
     }
 
@@ -413,7 +418,7 @@ public class LoklakServer {
         pool.setMaxThreads(500);
         LoklakServer.server = new Server(pool);
         LoklakServer.server.setStopAtShutdown(true);
-        
+
         //http
         if(!httpsMode.equals(HttpsMode.ONLY)){
 	        HttpConfiguration http_config = new HttpConfiguration();
@@ -422,7 +427,7 @@ public class LoklakServer {
 	        	http_config.setSecureScheme("https");
 	        	http_config.setSecurePort(httpsPort);
 	        }
-	        
+
 	        ServerConnector connector = new ServerConnector(LoklakServer.server);
 	        connector.addConnectionFactory(new HttpConnectionFactory(http_config));
 	        connector.setPort(httpPort);
@@ -430,23 +435,23 @@ public class LoklakServer {
 	        connector.setIdleTimeout(20000); // timout in ms when no bytes send / received
 	        LoklakServer.server.addConnector(connector);
         }
-        
+
         //https
-        //uncommented lines for http2 (jetty 9.3 / java 8)        
+        //uncommented lines for http2 (jetty 9.3 / java 8)
         if(httpsMode.isGreaterOrEqualTo(HttpsMode.ON)){
 
             Log.getLog().info("HTTPS activated");
-        	
+
         	String keySource = DAO.getConfig("https.keysource", "keystore");
             KeyStore keyStore;
         	String keystoreManagerPass;
-        	
+
         	//check for key source. Can be a java keystore or in pem format (gets converted automatically)
         	if("keystore".equals(keySource)){
                 Log.getLog().info("Loading keystore from disk");
 
         		//use native keystore format
-        		
+
         		File keystoreFile = new File(DAO.conf_dir, DAO.getConfig("keystore.name", "keystore.jks"));
         		if(!keystoreFile.exists() || !keystoreFile.isFile() || !keystoreFile.canRead()){
         			throw new Exception("Could not find keystore");
@@ -502,14 +507,14 @@ public class LoklakServer {
         	else{
         		throw new Exception("Invalid option for https.keysource");
         	}
-        	        	
-        	
+
+
         	HttpConfiguration https_config = new HttpConfiguration();
 	        https_config.addCustomizer(new SecureRequestCustomizer());
-	        
+
 	        HttpConnectionFactory http1 = new HttpConnectionFactory(https_config);
 	        //HTTP2ServerConnectionFactory http2 = new HTTP2ServerConnectionFactory(https_config);
-	        
+
 	        //NegotiatingServerConnectionFactory.checkProtocolNegotiationAvailable();
 	        //ALPNServerConnectionFactory alpn = new ALPNServerConnectionFactory();
 	        //alpn.setDefaultProtocol(http1.getProtocol());
@@ -520,11 +525,11 @@ public class LoklakServer {
 	        sslContextFactory.setKeyManagerPassword(keystoreManagerPass);
 	        //sslContextFactory.setCipherComparator(HTTP2Cipher.COMPARATOR);
 	        //sslContextFactory.setUseCipherSuitesOrder(true);
-	        
-	        
+
+
 	        //SslConnectionFactory ssl = new SslConnectionFactory(sslContextFactory, alpn.getProtocol());
 	        SslConnectionFactory ssl = new SslConnectionFactory(sslContextFactory, "http/1.1");
-	        
+
 	        //ServerConnector sslConnector = new ServerConnector(LoklakServer.server, ssl, alpn, http2, http1);
 	        ServerConnector sslConnector = new ServerConnector(LoklakServer.server, ssl, http1);
 	        sslConnector.setPort(httpsPort);
@@ -536,43 +541,43 @@ public class LoklakServer {
 
     @SuppressWarnings("unchecked")
     private static void setServerHandler(File dataFile){
-    	
-    	
+
+
     	// create security handler for http auth and http-to-https redirects
         ConstraintSecurityHandler securityHandler = new ConstraintSecurityHandler();
-        
+
         boolean redirect = httpsMode.equals(HttpsMode.REDIRECT);
         boolean auth = "true".equals(DAO.getConfig("http.auth", "false"));
-        
+
         if(redirect || auth){
-        	
+
             org.eclipse.jetty.security.LoginService loginService = new org.eclipse.jetty.security.HashLoginService("LoklakRealm", DAO.conf_dir.getAbsolutePath() + "/http_auth");
         	if(auth) LoklakServer.server.addBean(loginService);
-        	
+
         	Constraint constraint = new Constraint();
         	if(redirect) constraint.setDataConstraint(Constraint.DC_CONFIDENTIAL);
         	if(auth){
 	        	constraint.setAuthenticate(true);
 	            constraint.setRoles(new String[] { "user", "admin" });
         	}
-        	
-        	
-        	//makes the constraint apply to all uri paths        
+
+
+        	//makes the constraint apply to all uri paths
         	ConstraintMapping mapping = new ConstraintMapping();
         	mapping.setPathSpec( "/*" );
         	mapping.setConstraint(constraint);
 
         	securityHandler.addConstraintMapping(mapping);
-        	
+
         	if(auth){
 	        	securityHandler.setAuthenticator(new BasicAuthenticator());
 	            securityHandler.setLoginService(loginService);
         	}
-        	
+
         	if(redirect) Log.getLog().info("Activated http-to-https redirect");
         	if(auth) Log.getLog().info("Activated basic http auth");
         }
-        
+
         // Setup IPAccessHandler for blacklists
         IPAccessHandler ipaccess = new IPAccessHandler();
         String blacklist = DAO.getConfig("server.blacklist", "");
@@ -587,7 +592,7 @@ public class LoklakServer {
         } catch (IllegalArgumentException e) {
             Log.getLog().warn("bad blacklist:" + blacklist, e);
         }
-        
+
         WebAppContext htrootContext = new WebAppContext();
         htrootContext.setContextPath("/");
 
@@ -600,7 +605,7 @@ public class LoklakServer {
         services = new Class[]{
                 // admin
                 StatusService.class,
-                
+
                 // cms
                 AppsService.class,
                 AuthorizationDemoService.class,
@@ -617,12 +622,12 @@ public class LoklakServer {
                 SettingsManagementService.class,
 
                 // geo
-                
+
                 // iot
-                
+
                 // p2p
                 HelloService.class,
-                
+
                 // search
                 ConsoleService.class,
                 EventBriteCrawlerService.class,
@@ -635,11 +640,11 @@ public class LoklakServer {
                 TimeAndDateService.class,
                 WikiGeoData.class,
                 QuoraProfileScraper.class
-                
+
                 // tools
-                
+
                 // vis
-                
+
         };
         for (Class<? extends Servlet> service: services)
             try {
@@ -648,13 +653,14 @@ public class LoklakServer {
                 Log.getLog().warn(service.getName() + " instantiation error", e);
                 e.printStackTrace();
             }
-        
-        // add servlets        
+
+        // add servlets
         servletHandler.addServlet(DumpDownloadServlet.class, "/dump/*");
         servletHandler.addServlet(ShortlinkFromTweetServlet.class, "/x");
         servletHandler.addServlet(AccessServlet.class, "/api/access.json");
         servletHandler.addServlet(AccessServlet.class, "/api/access.html");
         servletHandler.addServlet(AccessServlet.class, "/api/access.txt");
+        servletHandler.addServlet(ClassifierServlet.class, "/api/classifier.json");
         servletHandler.addServlet(PeersServlet.class, "/api/peers.json");
         servletHandler.addServlet(PeersServlet.class, "/api/peers.csv");
         servletHandler.addServlet(CrawlerServlet.class, "/api/crawler.json");
@@ -718,12 +724,12 @@ public class LoklakServer {
         ErrorHandler errorHandler = new ErrorHandler();
         errorHandler.setShowStacks(true);
         servletHandler.setErrorHandler(errorHandler);
-        
+
         FileHandler fileHandler = new FileHandler(Integer.parseInt(DAO.getConfig("www.expires","600")));
         fileHandler.setDirectoriesListed(true);
         fileHandler.setWelcomeFiles(new String[]{ "index.html" });
         fileHandler.setResourceBase(DAO.getConfig("www.path","html"));
-        
+
         RewriteHandler rewriteHandler = new RewriteHandler();
         rewriteHandler.setRewriteRequestURI(true);
         rewriteHandler.setRewritePathInfo(false);
@@ -733,27 +739,27 @@ public class LoklakServer {
         rssSearchRule.setReplacement("/search.rss?q=$1");
         rewriteHandler.addRule(rssSearchRule);
         rewriteHandler.setHandler(servletHandler);
-        
+
         HandlerList handlerlist2 = new HandlerList();
         handlerlist2.setHandlers(new Handler[]{fileHandler, rewriteHandler, new DefaultHandler()});
         GzipHandler gzipHandler = new GzipHandler();
         gzipHandler.setIncludedMimeTypes("text/html,text/plain,text/xml,text/css,application/javascript,text/javascript,application/json");
         gzipHandler.setHandler(handlerlist2);
-        
+
         HashSessionIdManager idmanager = new HashSessionIdManager();
         LoklakServer.server.setSessionIdManager(idmanager);
         SessionHandler sessions = new SessionHandler(new HashSessionManager());
         sessions.setHandler(gzipHandler);
         securityHandler.setHandler(sessions);
         ipaccess.setHandler(securityHandler);
-        
+
         LoklakServer.server.setHandler(ipaccess);
-        
-        
+
+
     }
-    
+
     private static void checkServerPorts(int httpPort, int httpsPort) throws IOException{
-    	
+
     	// check http port
         if(!httpsMode.equals(HttpsMode.ONLY)){
 	        ServerSocket ss = null;
@@ -769,7 +775,7 @@ public class LoklakServer {
 	            if (ss != null) ss.close();
 	        }
         }
-        
+
         // check https port
         if(httpsMode.isGreaterOrEqualTo(HttpsMode.ON)){
 	        ServerSocket sss = null;

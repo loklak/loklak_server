@@ -31,20 +31,13 @@ before_deploy:
 - chmod 600 .utility/loklakserver.2
 - ssh-add .utility/loklakserver.1
 - ssh-add .utility/loklakserver.2
+- sudo add-apt-repository -y ppa:git-core/ppa
+- sudo apt-get update
+- sudo apt-get install git
 deploy:
   - provider: script
     skip_cleanup: true
     script: ssh loklak@104.155.231.103 'bash -s' < .utility/deploy-loklak.sh
-    on:
-      branch: master
-  - provider: script
-    skip_cleanup: true
-    script: .utility/push-docs-to-gh-pages.sh
-    on:
-      branch: development
-  - provider: script
-    skip_cleanup: true
-    script: .utility/push-docs-to-gh-pages.sh
     on:
       branch: master
   - provider: script

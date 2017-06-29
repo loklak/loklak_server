@@ -72,7 +72,7 @@ public class InstagramProfileScraper extends AbstractAPIHandler implements APIHa
 			e.printStackTrace();
 		}
 		
-		String script = htmlPage.getElementsByTag("script").get(6).html().substring(21);
+		String script = htmlPage.getElementsByTag("script").get(3).html().substring(21);
 		JSONObject obj = new JSONObject(script);
 		
 		JSONArray instaProfile = new JSONArray();

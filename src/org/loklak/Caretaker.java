@@ -28,7 +28,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.eclipse.jetty.util.log.Log;
 import org.elasticsearch.search.sort.SortOrder;
 import org.loklak.api.p2p.HelloService;
 import org.loklak.api.p2p.PushServlet;
@@ -69,7 +68,7 @@ public class Caretaker extends Thread {
     public void shutdown() {
         this.shallRun = false;
         this.interrupt();
-        Log.getLog().info("catched caretaker termination signal");
+        DAO.log("catched caretaker termination signal");
     }
     
     @Override
@@ -190,10 +189,28 @@ public class Caretaker extends Thread {
                         DAO.deleteQuery(qe.getQuery(), qe.getSourceType());
                         continue;
                     }
-                    Timeline t = DAO.scrapeTwitter(null, qe.getQuery(), Timeline.Order.CREATED_AT, qe.getTimezoneOffset(), false, 10000, true);
+                    Timeline t;
+                    try {
+                        t = DAO.scrapeTwitter(
+                                null,
+                                qe.getQuery(),
+                                Timeline.Order.CREATED_AT,
+                                qe.getTimezoneOffset(),
+                                false,
+                                10000,
+                                true
+                        );
+                        DAO.announceNewUserId(t);
+                    } catch (NullPointerException e) {
+                        DAO.severe("TwitterScraper.search() returns null (no twitter results)"
+                                + " or any other issue in DAO.scrapeTwitter() method", e);
+                        t = new Timeline(Timeline.Order.CREATED_AT);
+                    }
                     DAO.log("retrieval of " + t.size() + " new messages for q = \"" + qe.getQuery() + "\"");
-                    DAO.announceNewUserId(t);
-                    try {Thread.sleep(random.nextInt(200));} catch (InterruptedException e) {}
+
+                    try {
+                        Thread.sleep(random.nextInt(200));
+                    } catch (InterruptedException e) {}
                     busy = true;
                 }
             }
@@ -225,10 +242,10 @@ public class Caretaker extends Thread {
                 if (d > 0) DAO.log("Deleted " + d + " outdated(month) messages");
             }
         } catch (Throwable e) {
-            Log.getLog().warn("CARETAKER THREAD", e);
+            DAO.severe("CARETAKER THREAD", e);
         }
 
-        Log.getLog().info("caretaker terminated");
+        DAO.log("caretaker terminated");
     }
 
     public static boolean acceptQuery4Retrieval(String q) {
@@ -245,7 +262,7 @@ public class Caretaker extends Thread {
             List<String> rsp = OS.execSynchronous(upgradeScript.getAbsolutePath());
             for (String s: rsp) DAO.log("UPGRADE: " + s);
         } catch (IOException e) {
-        	Log.getLog().warn("UPGRADE failed: " + e.getMessage(), e);
+        	DAO.severe("UPGRADE failed: " + e.getMessage(), e);
         }
     }
     

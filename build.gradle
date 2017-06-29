@@ -11,6 +11,7 @@ buildscript {
 apply plugin: 'java'
 apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'eclipse'
+apply plugin: 'checkstyle'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
@@ -18,6 +19,12 @@ targetCompatibility = 1.8
 sourceSets.main.java.srcDirs = ['src']
 sourceSets.main.resources.srcDirs = ['res']
 sourceSets.test.java.srcDirs = ['test']
+
+checkstyle {
+    configFile = file("${project.rootDir}/conf/checkstyle.xml")
+    toolVersion = '7.7'
+    showViolations = false
+}
 
 jar {
   manifest {
@@ -125,6 +132,7 @@ dependencies {
   compile group: 'org.twitter4j', name: 'twitter4j-core', version: '4.0.2'
   compile group: 'org.twitter4j', name: 'twitter4j-stream', version: '4.0.2'
   compile group: 'xerces', name: 'xerces', version: '2.4.0'
+  compile group: 'org.unbescape', name: 'unbescape', version: '1.0'
 }
 
 tasks.withType(Javadoc) {
