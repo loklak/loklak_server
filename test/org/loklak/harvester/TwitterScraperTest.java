@@ -19,7 +19,6 @@ import org.loklak.objects.Timeline;
 import org.loklak.harvester.TwitterScraper;
 import org.loklak.objects.MessageEntry;
 import org.loklak.http.ClientConnection;
-import org.loklak.objects.MessageEntry;
 
 /*
     These unit-tests test org.loklak.harvester.TwitterScraper.java
