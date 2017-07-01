@@ -949,217 +949,114 @@ public class ElasticsearchClient {
         return list;
     }
 
-    public HashMap<String, HashMap<String, Double>> classifierScore(String index, String classifierName, ArrayList<String> classes) {
-        SearchRequestBuilder request = elasticsearchClient.prepareSearch(index)
-            .setSearchType(SearchType.QUERY_THEN_FETCH)
-            .setQuery(QueryBuilders.matchAllQuery())
-            .setFrom(0)
-            .setSize(0)
-            .addAggregation(getClassifierAggregation(classifierName));
-
-        SearchResponse response = request.execute().actionGet();
-
+    /**
+     * Get all time aggregations without any geographical constraints.
+     * @param index Name of ES index
+     * @param classifierName Classifier for aggregation
+     * @param classes Classes to consider
+     * @return HashMap with required aggregations
+     */
+    public HashMap<String, HashMap<String, Double>> classifierScore(String index, String classifierName, List<String> classes) {
+        SearchResponse response = getAggregationResponse(index, getClassifierAggregationBuilder(classifierName));
         Terms aggrs = response.getAggregations().get("by_class");
-
-        HashMap<String, HashMap<String, Double>> aggregatedMap = new HashMap<>();
-
-        for (Bucket bucket : aggrs.getBuckets()) {
-            String key = bucket.getKeyAsString();
-            if (!classes.contains(key)) {
-                continue;
-            }
-            long docCount = bucket.getDocCount();
-            Sum sum = bucket.getAggregations().get("sum_probability");
-            Avg avg = bucket.getAggregations().get("avg_probability");
-            HashMap<String, Double> map = new HashMap<>();
-            map.put("count", (double) docCount);
-            map.put("sum", sum.getValue());
-            map.put("avg", avg.getValue());
-            aggregatedMap.put(key,  map);
-        }
-        return aggregatedMap;
+        return getAggregationByClass(aggrs, classes);
     }
 
-    public AggregationBuilder getClassifierAggregation(String classifierName) {
-        String probabilityField = classifierName + "_probability";
-        return AggregationBuilders.terms("by_class").field(classifierName)
-            .subAggregation(
-                AggregationBuilders.avg("avg_probability").field(probabilityField)
-            )
-            .subAggregation(
-                AggregationBuilders.sum("sum_probability").field(probabilityField)
-            );
-    }
-
-    public HashMap<String, HashMap<String, Double>> classifierScore(String index, String classifierName, ArrayList<String> classes, String startDate, String endDate) {
+    /**
+     * Get limited time aggregations without any geographical constraints.
+     * @param index Name of ES index
+     * @param classifierName Classifier for aggregation
+     * @param classes Classes to consider
+     * @param startDate Start date for creation of row
+     * @param endDate End date for creation of row
+     * @return HashMap with required aggregations
+     */
+    public HashMap<String, HashMap<String, Double>> classifierScore(
+        String index, String classifierName, List<String> classes, String startDate, String endDate) {
         if (startDate == null && endDate == null) {
             return classifierScore(index, classifierName, classes);
         }
-
-        SearchRequestBuilder request = elasticsearchClient.prepareSearch(index)
-            .setSearchType(SearchType.QUERY_THEN_FETCH)
-            .setQuery(QueryBuilders.matchAllQuery())
-            .setFrom(0)
-            .setSize(0)
-            .addAggregation(getClassifierAggregation(classifierName, startDate, endDate));
-
-        SearchResponse response = request.execute().actionGet();
+        SearchResponse response = getAggregationResponse(index, getClassifierAggregationBuilder(classifierName, startDate, endDate));
         Range aggrs = response.getAggregations().get("by_date");
-
-        HashMap<String, HashMap<String, Double>> aggregatedMap = new HashMap<>();
-
-        for (Range.Bucket bkt : aggrs.getBuckets()) {
-            Terms termAggrs = bkt.getAggregations().get("by_class");
-            for (Terms.Bucket bucket: termAggrs.getBuckets()) {
-                String key = bucket.getKeyAsString();
-                if (!classes.contains(key)) {
-                    continue;
-                }
-                long docCount = bucket.getDocCount();
-                Sum sum = bucket.getAggregations().get("sum_probability");
-                Avg avg = bucket.getAggregations().get("avg_probability");
-                HashMap<String, Double> map = new HashMap<>();
-                map.put("count", (double) docCount);
-                map.put("sum", sum.getValue());
-                map.put("avg", avg.getValue());
-                aggregatedMap.put(key,  map);
-            }
-        }
-        return aggregatedMap;
+        return getAggregationByTime(aggrs, classes);
     }
 
-    public AggregationBuilder getClassifierAggregation(String classifierName, String fromDate, String toDate) {
-        String probabilityField = classifierName + "_probability";
-        DateRangeBuilder dateRangeAggregation = AggregationBuilders.dateRange("by_date").field("created_at");
-        if (fromDate == null && toDate != null) {
-            dateRangeAggregation = dateRangeAggregation.addUnboundedTo(toDate);
-        } else if (toDate == null && fromDate != null) {
-            dateRangeAggregation = dateRangeAggregation.addUnboundedFrom(fromDate);
-        } else {
-            dateRangeAggregation = dateRangeAggregation.addRange(fromDate, toDate);
-        }
-
-        dateRangeAggregation = dateRangeAggregation.subAggregation(
-            AggregationBuilders.terms("by_class").field(classifierName)
-                .subAggregation(
-                    AggregationBuilders.avg("avg_probability").field(probabilityField)
-                )
-                .subAggregation(
-                    AggregationBuilders.sum("sum_probability").field(probabilityField)
-                )
-        );
-        return dateRangeAggregation;
-    }
-
-    public HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(String index, String classifierName, ArrayList<String> classes, String startDate, String endDate) {
+    /**
+     * Get limited time aggregation by country code for all available countries.
+     * @param index Name of ES index
+     * @param classifierName Name of classifier
+     * @param classes Classes to consider
+     * @param startDate Start date for creation of row
+     * @param endDate End date for creation of row
+     * @return HashMap with required aggregations
+     */
+    public HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(
+        String index, String classifierName, List<String> classes, String startDate, String endDate) {
         // No time restrictions
         if (startDate == null && endDate == null) {
             return classifierScoreForCountry(index, classifierName, classes);
         }
-
-        SearchRequestBuilder request = this.elasticsearchClient.prepareSearch(index)
-            .setSearchType(SearchType.QUERY_THEN_FETCH)
-            .setQuery(QueryBuilders.matchAllQuery())
-            .setFrom(0)
-            .setSize(0)
-            .addAggregation(getClassifierAggregationByCountry("place_country_code", classifierName, startDate, endDate));
-
-        SearchResponse response = request.execute().actionGet();
-
-        Terms countriesAggregations = response.getAggregations().get("by_country");
-        HashMap<String, HashMap<String, HashMap<String,Double>>> retMap = new HashMap<>();
-
-        for (Terms.Bucket countryBucket: countriesAggregations.getBuckets()) {
-            Range timeAggregations = countryBucket.getAggregations().get("by_date");
-            HashMap<String, HashMap<String, Double>> countryMap = new HashMap<>();
-            for (Range.Bucket timeAggregation: timeAggregations.getBuckets()) {
-                Terms countryAggregation = timeAggregation.getAggregations().get("by_class");
-                for (Terms.Bucket bucket : countryAggregation.getBuckets()) {
-                    String key = bucket.getKeyAsString();
-                    if (!classes.contains(key)) {
-                        continue;
-                    }
-                    long docCount = bucket.getDocCount();
-                    Sum sum = bucket.getAggregations().get("sum_probability");
-                    Avg avg = bucket.getAggregations().get("avg_probability");
-                    HashMap<String, Double> map = new HashMap<>();
-                    map.put("count", (double) docCount);
-                    map.put("sum", sum.getValue());
-                    map.put("avg", avg.getValue());
-                    countryMap.put(key,  map);
-                }
-            }
-            retMap.put(countryBucket.getKeyAsString(), countryMap);
-        }
-
+        SearchResponse response = getAggregationResponse(index, getClassifierAggregationBuilderByCountry(
+            "place_country_code", classifierName, startDate, endDate));
+        Range aggr = response.getAggregations().get("by_time");
+        HashMap<String, HashMap<String, HashMap<String,Double>>> retMap = getAggregationByTimeWithCountries(aggr, classes);
+        // Put global aggregation
         retMap.put("GLOBAL", classifierScore(index, classifierName, classes, startDate, endDate));
         return retMap;
     }
 
-    public AggregationBuilder getClassifierAggregationByCountry(String fieldName, String classifierName) {
-        return AggregationBuilders.terms("by_country").field(fieldName)
-            .subAggregation(getClassifierAggregation(classifierName));
-    }
-
-    public AggregationBuilder getClassifierAggregationByCountry(String fieldName, String classifierName, String startDate, String endDate) {
-        return AggregationBuilders.terms("by_country").field(fieldName)
-            .subAggregation(getClassifierAggregation(classifierName, startDate, endDate));
-    }
-
-    public HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(String index, String classifierName, ArrayList<String> classes) {
-        SearchRequestBuilder request = this.elasticsearchClient.prepareSearch(index)
-            .setSearchType(SearchType.QUERY_THEN_FETCH)
-            .setQuery(QueryBuilders.matchAllQuery())
-            .setFrom(0)
-            .setSize(0)
-            .addAggregation(getClassifierAggregationByCountry("place_country_code", classifierName));
-
-        SearchResponse response = request.execute().actionGet();
-
-        Terms countriesAggregations = response.getAggregations().get("by_country");
-
-        HashMap<String, HashMap<String, HashMap<String,Double>>> retMap = new HashMap<>();
-
-        for (Terms.Bucket countryBucket: countriesAggregations.getBuckets()) {
-            HashMap<String, HashMap<String, Double>> countryMap = new HashMap<>();
-            Terms countryAggregation = countryBucket.getAggregations().get("by_class");
-            for (Terms.Bucket bucket : countryAggregation.getBuckets()) {
-                String key = bucket.getKeyAsString();
-                if (!classes.contains(key)) {
-                    continue;
-                }
-                long docCount = bucket.getDocCount();
-                Sum sum = bucket.getAggregations().get("sum_probability");
-                Avg avg = bucket.getAggregations().get("avg_probability");
-                HashMap<String, Double> map = new HashMap<>();
-                map.put("count", (double) docCount);
-                map.put("sum", sum.getValue());
-                map.put("avg", avg.getValue());
-                countryMap.put(key,  map);
-            }
-            retMap.put(countryBucket.getKeyAsString(), countryMap);
+    /**
+     * Get limited time aggregation by country code for required countries.
+     * @param index Name of ES index
+     * @param classifierName Name of classifier
+     * @param classes Classes to consider
+     * @param startDate Start date for creation of row
+     * @param endDate End date for creation of row
+     * @param countries Country codes to consider
+     * @return HashMap with required aggregations
+     */
+    public HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(
+        String index, String classifierName, List<String> classes, String startDate, String endDate, List<String> countries) {
+        if (startDate == null && endDate == null) {
+            return classifierScoreForCountry(index, classifierName, classes, countries);
         }
-
-        // Put global score
-        retMap.put("GLOBAL", classifierScore(index, classifierName, classes));
-        return retMap;
-    }
-
-    public HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(String index, String classifierName, ArrayList<String> classes, String startDate, String endDate, ArrayList<String> countries) {
         HashMap<String, HashMap<String, HashMap<String,Double>>> retMap = new HashMap<>();
-
         HashMap<String, HashMap<String, HashMap<String,Double>>> copy = classifierScoreForCountry(index, classifierName, classes, startDate, endDate);
-
         for (String key: copy.keySet()) {
             if (!countries.contains(key) && !"GLOBAL".equals(key)) {
                 continue;
             }
             retMap.put(key, copy.get(key));
         }
+        return copy;
+    }
+
+    /**
+     * Get all time aggregation by country for all available countries.
+     * @param index Name of ES index
+     * @param classifierName Name of classifier
+     * @param classes Classes to consider
+     * @return HashMap with required aggregations
+     */
+    public HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(String index, String classifierName, List<String> classes) {
+        SearchResponse response = getAggregationResponse(index, getClassifierAggregationBuilderByCountry("place_country_code", classifierName));
+        Terms aggr = response.getAggregations().get("by_country");
+        HashMap<String, HashMap<String, HashMap<String,Double>>> retMap = getAggregationByCountry(aggr, classes);
+        // Put global score
+        retMap.put("GLOBAL", classifierScore(index, classifierName, classes));
         return retMap;
     }
 
-    public HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(String index, String classifierName, ArrayList<String> classes, ArrayList<String> countries) {
+    /**
+     * Get all time aggregation by country for required countries.
+     * @param index Name of ES index
+     * @param classifierName Name of classifier
+     * @param classes Classes to consider
+     * @param countries Countiries to consider
+     * @return HashMap with required aggregations
+     */
+    public HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(
+        String index, String classifierName, List<String> classes, List<String> countries) {
         HashMap<String, HashMap<String, HashMap<String,Double>>> retMap = new HashMap<>();
 
         HashMap<String, HashMap<String, HashMap<String,Double>>> copy = classifierScoreForCountry(index, classifierName, classes);
@@ -1172,4 +1069,159 @@ public class ElasticsearchClient {
         }
         return retMap;
     }
+
+    /**
+     * Get a search response for predefined aggregation task on a specific index.
+     * @param index Name of ES index
+     * @param aggr Pre-configured AggregationBuilder object
+     * @return HashMap with parsed aggregations
+     */
+    private SearchResponse getAggregationResponse(String index, AggregationBuilder aggr) {
+        return this.elasticsearchClient.prepareSearch(index)
+            .setSearchType(SearchType.QUERY_THEN_FETCH)
+            .setQuery(QueryBuilders.matchAllQuery())
+            .setFrom(0)
+            .setSize(0)
+            .addAggregation(aggr)
+            .execute().actionGet();
+    }
+
+    /**
+     * Get aggregation results for each class as sum, avg and doc count.
+     * @param aggr Terms aggregation object
+     * @param classes Classes to be taken into account
+     * @return HashMap with required aggregations
+     */
+    private static HashMap<String, HashMap<String, Double>> getAggregationByClass(Terms aggr, List<String> classes) {
+        HashMap<String, HashMap<String, Double>> retMap = new HashMap<>();
+        for (Terms.Bucket bucket : aggr.getBuckets()) {
+            String key = bucket.getKeyAsString();
+            if (!classes.contains(key)) {
+                continue;
+            }
+            long docCount = bucket.getDocCount();
+            Sum sum = bucket.getAggregations().get("sum_probability");
+            Avg avg = bucket.getAggregations().get("avg_probability");
+            HashMap<String, Double> map = new HashMap<>();
+            map.put("count", (double) docCount);
+            map.put("sum", sum.getValue());
+            map.put("avg", avg.getValue());
+            retMap.put(key,  map);
+        }
+        return retMap;
+    }
+
+    /**
+     * Get aggregation result for all countries.
+     * @param aggr Terms aggregation object
+     * @param classes Classes to consider
+     * @return HashMap with parsed aggregations
+     */
+    private static HashMap<String, HashMap<String, HashMap<String, Double>>> getAggregationByCountry(Terms aggr, List<String> classes) {
+        HashMap<String, HashMap<String, HashMap<String, Double>>> retMap = new HashMap<>();
+        for (Terms.Bucket bucket : aggr.getBuckets()) {
+            retMap.put(bucket.getKeyAsString(), getAggregationByClass(bucket.getAggregations().get("by_class"), classes));
+        }
+        return retMap;
+    }
+
+    /**
+     * Get result for time limited aggregation for all available classes.
+     * @param aggr Range aggregation object
+     * @param classes Classes to consider
+     * @return HashMap with parsed aggregations
+     */
+    private static HashMap<String, HashMap<String, Double>> getAggregationByTime(Range aggr, List<String> classes) {
+        HashMap<String, HashMap<String, Double>> retMap = new HashMap<>();
+        for (Range.Bucket bucket : aggr.getBuckets()) {
+            retMap = getAggregationByClass(bucket.getAggregations().get("by_class"), classes);
+        }
+        return retMap;
+    }
+
+    /**
+     * Get result for time limited aggregation for all countries and required classes.
+     * @param aggr Range aggregation object
+     * @param classes Classes to consider
+     * @return HashMap with parsed results
+     */
+    private static HashMap<String, HashMap<String, HashMap<String, Double>>> getAggregationByTimeWithCountries(Range aggr, List<String> classes) {
+        HashMap<String, HashMap<String, HashMap<String, Double>>> retMap = new HashMap<>();
+        for (Range.Bucket bucket : aggr.getBuckets()) {
+            retMap = getAggregationByCountry(bucket.getAggregations().get("by_country"), classes);
+        }
+        return retMap;
+    }
+
+    /**
+     * Get AggregationBuilder to calculate sum, avg and doc count for given classifier.
+     * @param classifierName Name of classifier
+     * @return AggregationBuilder with required configuration
+     */
+    private static AggregationBuilder getClassifierAggregationBuilder(String classifierName) {
+        String probabilityField = classifierName + "_probability";
+        return AggregationBuilders.terms("by_class").field(classifierName)
+            .subAggregation(
+                AggregationBuilders.avg("avg_probability").field(probabilityField)
+            )
+            .subAggregation(
+                AggregationBuilders.sum("sum_probability").field(probabilityField)
+            );
+    }
+
+    /**
+     * Get AggregationBuilder for specific time range.
+     * @param classifierName Name of classifier
+     * @param fromDate Start date for creation of row
+     * @param toDate End date for creation of row
+     * @return AggregationBuilder with required configuration
+     */
+    private static AggregationBuilder getClassifierAggregationBuilder(String classifierName, String fromDate, String toDate) {
+        return getDateRangeAggregationBuilder("created_at", fromDate, toDate)
+            .subAggregation(getClassifierAggregationBuilder(classifierName));
+    }
+
+    /**
+     * Get AggregationBuilder by country without time constraints.
+     * @param fieldName Name of field containing country code
+     * @param classifierName Name of field containing country code
+     * @return AggregationBuilder with required configuration
+     */
+    private static AggregationBuilder getClassifierAggregationBuilderByCountry(String fieldName, String classifierName) {
+        return AggregationBuilders.terms("by_country").field(fieldName)
+            .subAggregation(getClassifierAggregationBuilder(classifierName));
+    }
+
+    /**
+     * Get AggregationBuilder by country for limited time range.
+     * @param fieldName Name of field containing country code.
+     * @param classifierName Name of classifier
+     * @param startDate Start date for creation of row
+     * @param endDate End date for creation of row
+     * @return AggregationBuilder with required configuration
+     */
+    private static AggregationBuilder getClassifierAggregationBuilderByCountry(String fieldName, String classifierName, String startDate, String endDate) {
+        return getDateRangeAggregationBuilder("created_at", startDate, endDate)
+            .subAggregation(getClassifierAggregationBuilderByCountry(fieldName, classifierName));
+    }
+
+    /**
+     * Get AggregationBuilder using dateRange with proper limits from parameters.
+     * @param fieldName Name of field to time restrict
+     * @param fromDate Start date for restriction
+     * @param toDate End date for restriction
+     * @return AggregationBuilder with required configuration
+     */
+    private static AggregationBuilder getDateRangeAggregationBuilder(String fieldName, String fromDate, String toDate) {
+        DateRangeBuilder dateRangeAggregation = AggregationBuilders.dateRange("by_date").field(fieldName);
+        if (fromDate == null && toDate != null) {
+            dateRangeAggregation = dateRangeAggregation.addUnboundedTo(toDate);
+        } else if (toDate == null && fromDate != null) {
+            dateRangeAggregation = dateRangeAggregation.addUnboundedFrom(fromDate);
+        } else {
+            dateRangeAggregation = dateRangeAggregation.addRange(fromDate, toDate);
+        }
+        return dateRangeAggregation;
+    }
+
 }
