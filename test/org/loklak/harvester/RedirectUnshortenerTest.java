@@ -13,17 +13,17 @@ public class RedirectUnshortenerTest {
     @Test
     public void testRedirectUnshortener() {
         HashMap<String, String> shortlinkMap = new HashMap<>();
-        shortlinkMap.put("http://tmblr.co/Z6YPNx1jL1hHK", "http://myjourneymyway.tumblr.com/post/117390619732/first-time-making-loklak-my-grandma-would-be#_=_");
-        shortlinkMap.put("http://dlvr.it/8kTDbJ", "http://islamtimes.org/en/doc/news/442892/?utm_source=dlvr.it&utm_medium=twitter");
-        shortlinkMap.put("http://j.mp/1vfXKr0", "http://yacy.net/en/index.html?utm_content=buffera7e9f&utm_medium=social&utm_source=twitter.com&utm_campaign=buffer");
-        shortlinkMap.put("http://goo.gl/R9CVuz", "http://www.savingsgator.com/coupon/ebay-new-authentic-gucci-crystal-gg-canvasleather-joy-boston-bag-handbag/");
-        shortlinkMap.put("http://tinyurl.com/pcp7fu4", "http://www.giladiskon.com/deals/blitzmegaplex.com/Blitzmegaplex-Special-Member-Card-Promo-Diskon-50");
-        shortlinkMap.put("http://t.co/E3w7s2qdBT", "https://www.mostviralfeed.com/what-lady-gaga-actually-looks-like");
-        shortlinkMap.put("http://bit.ly/1h9gTTT", "https://www.ebay.com/sch/i.html?_from=R40&_nkw=Pontiac+Catalina+1963&_in_kw=1&_ex_kw=&_sacat=0&_okw=&_oexkw=&_adv=1&_udlo=&_udhi=&LH_BIN=1&LH_PayPal=1&LH_Time=1&_ftrt=901&_ftrv=1&_sabdlo=&_sabdhi=&_samilow=&_samihi=&_sadis=200&_fpos=&_fsct=&LH_SALE_CURRENCY=0&_fss=1&_saslop=1&_sasl=&_fsradio=LH_SellerWithStore%3D1&_sop=12&_dmd=1&_ipg=50&rmvSB=true");
-        shortlinkMap.put("http://ow.ly/JtOPA", "http://yacy.net/en/index.html");
-        shortlinkMap.put("http://bit.do/ZwrT", "http://yacy.net/en/index.html");
+
+        shortlinkMap.put("https://goo.gl/r4pNHk", "https://www.youtube.com/watch?v=RRlOCHD-p8Q");
+        shortlinkMap.put("http://tinyurl.com/loklak-server", "https://github.com/loklak/loklak_server/wiki");
+        shortlinkMap.put("https://t.co/raRRie3ado", "https://medium.com/javascript-scene/angular-2-vs-react-the-ultimate-dance-off-60e7dfbc379c");
+        shortlinkMap.put("http://bit.ly/2tvkGa1", "https://medium.com/@keekri17/my-adventures-at-foss-asia-d1a5d462b792");
+        shortlinkMap.put("http://ow.ly/P9SX30ddSTI", "https://github.com/loklak/loklak_server/issues/1284");
+        shortlinkMap.put("http://bit.do/blog-fossasia", "http://blog.fossasia.org/");
         shortlinkMap.put("http://fb.me/4lcXZsyyO", "https://www.facebook.com/permalink.php?story_fbid=1550262581900846&id=1381813572079082");
-        shortlinkMap.put("http://wp.me/p4yQu6-za0", "https://www.oklahomafoodandmusic.com/?p=135160");
+        shortlinkMap.put("http://wp.me/sf2B5-shorten", "https://en.blog.wordpress.com/2009/08/14/shorten/");
+        shortlinkMap.put("https://is.gd/gyk3VT", "https://github.com/fossasia/");
+        shortlinkMap.put("https://is.gd/Lros16", "https://twitter.com/lklknt");
 
         for (HashMap.Entry<String, String> entry: shortlinkMap.entrySet()) {
             String unshortenedURL = RedirectUnshortener.unShorten(entry.getKey());
