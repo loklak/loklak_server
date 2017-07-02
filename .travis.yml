@@ -17,12 +17,13 @@ script:
 - docker build -t loklak_server .
 - docker images
 - docker run loklak_server bash /loklak_server/bin/start.sh -I
+- gradle jacocoTestReport
 before_script:
 - pip install --user codecov
 after_success:
 - bash <(curl -s https://codecov.io/bash)
-- mvn clean cobertura:cobertura coveralls:report
 - codecov
+- gradle clean
 before_deploy:
 - openssl aes-256-cbc -K $encrypted_e0d8735ecce8_key -iv $encrypted_e0d8735ecce8_iv -in .utility/loklakserver.1.enc -out .utility/loklakserver.1 -d
 - openssl aes-256-cbc -K $encrypted_630b2151c459_key -iv $encrypted_630b2151c459_iv -in .utility/loklakserver.2.enc -out .utility/loklakserver.2 -d
