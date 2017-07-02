@@ -162,7 +162,7 @@ public class Classifier {
         if (DAO.countLocalMessages(-1, true) > 0) {
             DAO.log("Classifier: loading test set for " + initsize + " messages...");
             DAO.SearchLocalMessages testset = new DAO.SearchLocalMessages("", Timeline.Order.CREATED_AT, 0, initsize, 0);
-            Timeline tl = testset.timeline;
+            Timeline2 tl = testset.timeline;
             DAO.log("Classifier: awaiting " + tl.size() * Context.values().length + " learn steps...");
             int count = 0;
             for (Context c: Context.values()) {

@@ -72,7 +72,7 @@ import org.loklak.objects.Peers;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.ResultList;
 import org.loklak.objects.SourceType;
-import org.loklak.objects.Timeline;
+import org.loklak.objects.Timeline2;
 import org.loklak.objects.TimelineCache;
 import org.loklak.objects.UserEntry;
 import org.loklak.server.*;
@@ -919,7 +919,7 @@ public class DAO {
     }
 
     public static class SearchLocalMessages {
-        public Timeline timeline;
+        public Timeline2 timeline;
         public Map<String, List<Map.Entry<String, Long>>> aggregations;
         public ElasticsearchClient.Query query;
 
@@ -935,14 +935,14 @@ public class DAO {
          */
         public SearchLocalMessages (
                 final String q,
-                final Timeline.Order orderField,
+                final Timeline2.Order orderField,
                 final int timezoneOffset,
                 final int resultCount,
                 final int aggregationLimit,
                 final ArrayList<String> filterList,
                 final String... aggregationFields
         ) {
-            this.timeline = new Timeline(orderField);
+            this.timeline = new Timeline2(orderField);
             QueryEntry.ElasticsearchQuery sq = new QueryEntry.ElasticsearchQuery(q, timezoneOffset, filterList);
             long interval = sq.until.getTime() - sq.since.getTime();
             IndexName resultIndex;
@@ -972,12 +972,14 @@ public class DAO {
 
             // evaluate search result
             for (Map<String, Object> map: query.result) {
-                MessageEntry tweet = new MessageEntry(new JSONObject(map));
+                Post post = new Post(new JSONObject(map));
                 try {
                     UserEntry user = users.read(tweet.getScreenName());
                     assert user != null;
                     if (user != null) {
-                        timeline.add(tweet, user);
+                        timeline.add(post, user);
+                    } else {
+                        timeline.add(post);
                     }
                 } catch (IOException e) {
                 	Log.getLog().warn(e);
@@ -988,7 +990,7 @@ public class DAO {
 
         public SearchLocalMessages (
                 final String q,
-                final Timeline.Order orderField,
+                final Timeline2.Order orderField,
                 final int timezoneOffset,
                 final int resultCount,
                 final int aggregationLimit,
@@ -1125,10 +1127,10 @@ public class DAO {
         return latests.values();
     }
 
-    public static Timeline scrapeTwitter(
+    public static Timeline2 scrapeTwitter(
             final Query post,
             final String q,
-            final Timeline.Order order,
+            final Timeline2.Order order,
             final int timezoneOffset,
             boolean byUserQuery,
             long timeout,
@@ -1137,11 +1139,11 @@ public class DAO {
         return scrapeTwitter(post, new ArrayList<>(), q, order, timezoneOffset, byUserQuery, timeout, recordQuery);
     }
 
-    public static Timeline scrapeTwitter(
+    public static Timeline2 scrapeTwitter(
             final Query post,
             final ArrayList<String> filterList,
             final String q,
-            final Timeline.Order order,
+            final Timeline2.Order order,
             final int timezoneOffset,
             boolean byUserQuery,
             long timeout,
@@ -1149,7 +1151,7 @@ public class DAO {
         // retrieve messages from remote server
 
         ArrayList<String> remote = DAO.getFrontPeers();
-        Timeline tl;
+        Timeline2 tl;
         if (remote.size() > 0 && (peerLatency.get(remote.get(0)) == null || peerLatency.get(remote.get(0)).longValue() < 3000)) {
             long start = System.currentTimeMillis();
             tl = searchOnOtherPeers(remote, q, order, 100, timezoneOffset, "all", SearchServlet.frontpeer_hash, timeout); // all must be selected here to catch up missing tweets between intervals
@@ -1202,6 +1204,79 @@ public class DAO {
         //log("SCRAPER: TIME LEFT after recording = " + (termination - System.currentTimeMillis()));
 
         return tl;
+    }
+
+    public static Timeline2 scrapePosts(
+            final Query post,
+            final ArrayList<String> filterList,
+            final String query,
+            final Timeline2.Order order,
+            final int timezoneOffset,
+            boolean byUserQuery,
+            long timeout,
+            boolean recordQuery) {
+        // retrieve messages from remote server
+        ArrayList<String> remote = DAO.getFrontPeers();
+        Timeline2 dataList = null;
+        if (remote.size() > 0 && (peerLatency.get(remote.get(0)) == null || peerLatency.get(remote.get(0)).longValue() < 3000)) {
+            long start = System.currentTimeMillis();
+            // all is selected here to catch up missing tweets between intervals
+            dataList = searchOnOtherPeers(remote, q, order, 100, timezoneOffset, "all", SearchServlet.frontpeer_hash, timeout);
+            // at this point the remote list can be empty as a side-effect of the remote search attempt
+            if (post != null && remote.size() > 0 && dataList != null) {
+                post.recordEvent("remote_scraper_on_" + remote.get(0), System.currentTimeMillis() - start);
+            }
+            if (dataList == null || dataList.size() == 0) {
+                // maybe the remote server died, we try then ourself
+                start = System.currentTimeMillis();
+
+                dataList = ScrapeData(post, filterList, query);
+                if (post != null) post.recordEvent("local_scraper_after_unsuccessful_remote", System.currentTimeMillis() - start);
+            } else {
+                dataList.writeToIndex();
+            }
+        } else {
+            if (post != null && remote.size() > 0) {
+                post.recordEvent("omitted_scraper_latency_" + remote.get(0), peerLatency.get(remote.get(0)));
+            }
+            long start = System.currentTimeMillis();
+
+            dataList = TwitterScraper.search(q, filterList, order, true, true, 400);
+            if (post != null) post.recordEvent("local_scraper", System.currentTimeMillis() - start);
+        }
+
+        // record the query
+        long start2 = System.currentTimeMillis();
+        QueryEntry qe = null;
+        try {
+            qe = queries.read(q);
+        } catch (IOException | JSONException e) {
+        	DAO.severe(e);
+        }
+
+        if (recordQuery && Caretaker.acceptQuery4Retrieval(q)) {
+            if (qe == null) {
+                // a new query occurred
+                qe = new QueryEntry(q, timezoneOffset, dataList.period(), SourceType.TWITTER, byUserQuery);
+            } else {
+                // existing queries are updated
+                qe.update(dataList.period(), byUserQuery);
+            }
+            try {
+                queries.writeEntry(new IndexEntry<QueryEntry>(q, qe.source_type == null ? SourceType.TWITTER : qe.source_type, qe));
+            } catch (IOException e) {
+            	Log.getLog().warn(e);
+            }
+        } else {
+            // accept rules may change, we want to delete the query then in the index
+            if (qe != null) queries.delete(q, qe.source_type);
+        }
+        if (post != null) {
+            post.recordEvent("query_recorder", System.currentTimeMillis() - start2);
+        }
+        //log("SCRAPER: TIME LEFT after recording = " + (termination - System.currentTimeMillis()));
+
+        return dataList;
     }
 
     public static final Random random = new Random(System.currentTimeMillis());
@@ -1271,11 +1346,11 @@ public class DAO {
         return getBestPeers(testpeers);
     }
 
-    public static Timeline searchBackend(final String q, final Timeline.Order order, final int count, final int timezoneOffset, final String where, final long timeout) {
+    public static Timeline2 searchBackend(final String q, final Timeline2.Order order, final int count, final int timezoneOffset, final String where, final long timeout) {
         List<String> remote = getBackendPeers();
 
         if (remote.size() > 0 /*&& (peerLatency.get(remote.get(0)) == null || peerLatency.get(remote.get(0)) < 3000)*/) { // condition deactivated because we need always at least one peer
-            Timeline tt = searchOnOtherPeers(remote, q, order, count, timezoneOffset, where, SearchServlet.backend_hash, timeout);
+            Timeline2 tt = searchOnOtherPeers(remote, q, order, count, timezoneOffset, where, SearchServlet.backend_hash, timeout);
             if (tt != null) tt.writeToIndex();
             return tt;
         }
@@ -1284,19 +1359,19 @@ public class DAO {
 
     private final static Random randomPicker = new Random(System.currentTimeMillis());
 
-    public static Timeline searchOnOtherPeers(final List<String> remote, final String q, final Timeline.Order order, final int count, final int timezoneOffset, final String source, final String provider_hash, final long timeout) {
+    public static Timeline2 searchOnOtherPeers(final List<String> remote, final String q, final Timeline2.Order order, final int count, final int timezoneOffset, final String source, final String provider_hash, final long timeout) {
         // select remote peer
         while (remote.size() > 0) {
             int pick = randomPicker.nextInt(remote.size());
             String peer = remote.get(pick);
             long start = System.currentTimeMillis();
             try {
-                Timeline tl = SearchServlet.search(peer, q, order, source, count, timezoneOffset, provider_hash, timeout);
+                Timeline2 peerDataList = SearchServlet.search(peer, q, order, source, count, timezoneOffset, provider_hash, timeout);
                 peerLatency.put(peer, System.currentTimeMillis() - start);
                 // to show which peer was used for the retrieval, we move the picked peer to the front of the list
                 if (pick != 0) remote.add(0, remote.remove(pick));
-                tl.setScraperInfo(tl.getScraperInfo().length() > 0 ? peer + "," + tl.getScraperInfo() : peer);
-                return tl;
+                peerDataList.setScraperInfo(peerDataList.getScraperInfo().length() > 0 ? peer + "," + peerDataList.getScraperInfo() : peer);
+                return peerDataList;
             } catch (IOException e) {
                 DAO.log("searchOnOtherPeers: no IO to scraping target: " + e.getMessage());
                 // the remote peer seems to be unresponsive, remove it (temporary) from the remote peer list
@@ -1311,8 +1386,8 @@ public class DAO {
 
     public final static Set<Number> newUserIds = new ConcurrentHashSet<>();
 
-    public static void announceNewUserId(Timeline tl) {
-        for (MessageEntry message: tl) {
+    public static void announceNewUserId(Timeline2 tl) {
+        for (Post message: tl) {
             UserEntry user = tl.getUser(message);
             assert user != null;
             if (user == null) continue;
