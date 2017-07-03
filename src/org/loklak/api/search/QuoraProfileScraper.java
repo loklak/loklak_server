@@ -47,6 +47,7 @@ public class QuoraProfileScraper extends BaseScraper {
         super();
         this.baseUrl = "https://www.quora.com/";
         String scraperName = "Quora";
+        this.extra = new HashMap<String, String>();
     }
 
     public QuoraProfileScraper(String _query) {
@@ -54,10 +55,17 @@ public class QuoraProfileScraper extends BaseScraper {
         this.query = _query;
     }
 
-    public QuoraProfileScraper(String _query, String _extra) {
+    public QuoraProfileScraper(String _query, Map<String, String> _extra) {
         this();
-        this.query = _query;
         this.extra = _extra;
+        this.query = _query;
+        this.extra.put("query", this.query);    
+    }
+
+    public QuoraProfileScraper(Map<String, String> _extra) {
+        this();
+        this.getExtra(_extra);
+        this.query = this.extra.get("query");        
     }
 
     @Override
@@ -75,15 +83,10 @@ public class QuoraProfileScraper extends BaseScraper {
         return null;
     }
 
-    protected Map<?, ?> getExtra(String _extra) {
-        return new HashMap<String, String>();
-    }
-
     @Override
     public Timeline2 getData() {
-        //TODO: 1) to get this 2) convert to array
-        //String type = this.extra.get("type");
-        String type = "all";
+        //TODO: 2) convert type to array of types
+        String type = this.extra.get("type") == null ? "all": this.extra.get("type");
         String midUrl;
         String url;
         Thread[] dataThreads = new Thread[3];

@@ -13,6 +13,7 @@ import org.json.JSONObject;
 import org.loklak.objects.ProviderType;
 import org.loklak.objects.SourceType;
 import org.loklak.objects.Timeline2;
+import org.loklak.server.Query;
 import javax.servlet.http.HttpServletResponse;
 import org.loklak.tools.storage.JSONObjectWithDefault;
 import org.json.JSONObject;
@@ -34,31 +35,34 @@ public abstract class BaseScraper extends AbstractAPIHandler {
     protected String scraperName;
     protected String html;
     protected String baseUrl;
-    protected String midUrl;
+    protected String midUrl; 
     protected String query;
     // where did the message come from
     protected SourceType source_type;
     // who created the message
     protected ProviderType provider_type;
-    //TODO: dummy variable, add datastructure for filter, type_of_posts, location, etc
-    protected String extra = "";
-    //TODO: setup Timeline for Post
+    protected Map<String, String> extra;
     protected final Timeline2.Order order = Timeline2.parseOrder("timestamp");
 
     @Override
     public JSONObject serviceImpl(Query call, HttpServletResponse response, Authorization rights,
             JSONObjectWithDefault permissions) throws APIException {
-        this.query = call.get("query", "");
+        this.getExtra(call);
+        // get-parameter query shall reserved for the main string token to be used
+        this.query = this.extra.put("query", "fossasia");
 
-        //TODO: add different extra paramenters. this is dummy variable
-        this.extra = call.get("extra", "");
-        //TODO: to be implemented to use Timeline
         return this.getData().toJSON(false, "metadata", "statuses");
-        //return this.getData();
     }
 
-    protected abstract Map<?, ?> getExtra(String _extra);
+    protected void getExtra(Query call) {
+        this.extra = call.getMap();
+    }
 
+    protected void getExtra(Map<String, String> _extra) {
+        this.extra.putAll(_extra);
+    }
+
+    // Override this method if you don't agree, this method is for simple web-scraper
     public Timeline2 getData() {
         String url = null;
 
@@ -78,7 +82,7 @@ public abstract class BaseScraper extends AbstractAPIHandler {
         BufferedReader br;
         Timeline2 tl = null;
         try {
-            // get instance of bufferReader
+            // Get instance of bufferReader
             br = getHtml(connection);
             tl = scrape(br, type, url);
         } catch (Exception e) {
@@ -88,7 +92,6 @@ public abstract class BaseScraper extends AbstractAPIHandler {
             connection.close();
         }
         return tl;
-
     }
 
     public Timeline2 getDataFromConnection(String url) throws IOException {
