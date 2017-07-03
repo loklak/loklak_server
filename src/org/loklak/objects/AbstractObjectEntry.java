@@ -27,13 +27,15 @@ import java.util.LinkedHashSet;
 
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
+import org.loklak.harvester.Post;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.loklak.harvester.Post;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 
-public abstract class AbstractObjectEntry implements ObjectEntry {
+public abstract class AbstractObjectEntry extends Post implements ObjectEntry {
 
     public  final static String TIMESTAMP_FIELDNAME = "timestamp";
     public  final static String CREATED_AT_FIELDNAME = "created_at";
