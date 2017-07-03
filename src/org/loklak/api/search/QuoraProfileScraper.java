@@ -20,9 +20,11 @@
 package org.loklak.api.search;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.io.BufferedReader;
 import java.util.HashMap;
 import java.util.Map;
-import java.io.BufferedReader;
+import org.apache.http.client.utils.URIBuilder;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jsoup.Jsoup;
@@ -88,7 +90,7 @@ public class QuoraProfileScraper extends BaseScraper {
         //TODO: 2) convert type to array of types
         String type = this.extra.get("type") == null ? "all": this.extra.get("type");
         String midUrl;
-        String url;
+        URIBuilder url = null;
         Thread[] dataThreads = new Thread[3];
         this.postList = new Timeline2(this.order);
 
@@ -96,23 +98,37 @@ public class QuoraProfileScraper extends BaseScraper {
             case "all":
             case "profile":
                 midUrl = "profile/";
-                url = this.baseUrl + midUrl + this.query;
-                dataThreads[0] = new ConcurrentScrape(url, "profile");
-                dataThreads[0].start();
+                try {
+                    url = new URIBuilder(this.baseUrl + midUrl + this.query);
+                    dataThreads[0] = new ConcurrentScrape(url.toString(), "profile");
+                    dataThreads[0].start();
+                } catch (URISyntaxException e) {
+                    DAO.severe("Invalid Url: " + this.baseUrl + midUrl + this.query);
+                }
                 if("profile".equals(type)) break;
             case "question":
-                midUrl = "search/?q=";
-                //TODO: use request body instead
-                url = this.baseUrl + midUrl + this.query + "&type=question";
-                dataThreads[1] = new ConcurrentScrape(url, "question");
-                dataThreads[1].start();
+                midUrl = "search/";
+                try {
+                    url = new URIBuilder(this.baseUrl + midUrl);
+                    url.addParameter("q", this.query);
+                    url.addParameter("type", "question");
+                    dataThreads[1] = new ConcurrentScrape(url.toString(), "question");
+                    dataThreads[1].start();
+                } catch (URISyntaxException e) {
+                    DAO.severe("Invalid Url: " + this.baseUrl + midUrl + this.query);
+                }
                 if("question".equals(type)) break;
             case "answer":
-                midUrl = "search/?q=";
-                //TODO: use request body instead
-                url = this.baseUrl + midUrl + this.query + "&type=answer";
-                dataThreads[2] = new ConcurrentScrape(url, "answer");
-                dataThreads[2].start();
+                midUrl = "search/";
+                try {
+                    url = new URIBuilder(this.baseUrl + midUrl);
+                    url.addParameter("q", this.query);
+                    url.addParameter("type", "answer");
+                    dataThreads[2] = new ConcurrentScrape(url.toString(), "answer");
+                    dataThreads[2].start();
+                } catch (URISyntaxException e) {
+                    DAO.severe("Invalid Url: " + this.baseUrl + midUrl + this.query);
+                }
                 if("answer".equals(type)) break;
             default:
                 break;
