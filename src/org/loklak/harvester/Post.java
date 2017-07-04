@@ -1,6 +1,7 @@
 package org.loklak.harvester;
 
 import org.json.JSONObject;
+import java.util.Date;
 
 /**
  * @author vibhcool (Vibhor Verma)
@@ -13,6 +14,7 @@ public abstract class Post extends JSONObject {
 
     protected long timestamp = 0;
     protected String postId;
+
     protected Post() {
         this.setTimestamp();
     }
@@ -35,8 +37,16 @@ public abstract class Post extends JSONObject {
         this.setTimestamp(timestamp);
     }
 
-    //public abstract void getPostId();
+    public Date getTimestampDate() {
+        return new Date(this.timestamp);
+    }
 
-    //public abstract String setPostId();
+    //TODO: Set up TwitterTweet before setting this as abstract    
+    private void setPostId() { }
+
+    //TODO: Set up TwitterTweet before setting this as abstract
+    public String getPostId() {
+        return "";
+    }
 }
 

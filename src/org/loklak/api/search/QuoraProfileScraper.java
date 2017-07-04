@@ -6,12 +6,12 @@
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
- *  
+ *
  *  This library is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
@@ -30,8 +30,9 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.loklak.data.DAO;
-import org.loklak.harvester.Post;
 import org.loklak.harvester.BaseScraper;
+import org.loklak.harvester.Post;
+import org.loklak.objects.Timeline2;
 import org.loklak.server.BaseUserRole;
 
 public class QuoraProfileScraper extends BaseScraper {
@@ -79,7 +80,7 @@ public class QuoraProfileScraper extends BaseScraper {
 
         Post quoraProfile = new QuoraPost(this.query, 0);
         Document userHTML = Jsoup.parse(this.html);
-        
+
         String bio = userHTML.getElementsByAttributeValueContaining("class", "ProfileDescription").text();
         quoraProfile.put("bio", bio);
 
@@ -97,27 +98,27 @@ public class QuoraProfileScraper extends BaseScraper {
             String infoText = info.text();
             if (infoText.startsWith("Studi")) {
                 quoraProfile.put(infoText.split(" ")[0].toLowerCase().trim() + "_at", infoText);
-	        } else if (infoText.startsWith("Lives")) {
-		        quoraProfile.put("lives_in", infoText);
-	        } else {
-		        quoraProfile.put("works_at", infoText);
-	        }
+            } else if (infoText.startsWith("Lives")) {
+                quoraProfile.put("lives_in", infoText);
+            } else {
+                quoraProfile.put("works_at", infoText);
+            }
         }
 
         Elements knowsAbout = userHTML.getElementsByAttributeValueContaining("class",  "TopicNameSpan TopicName");
         JSONArray topics = new JSONArray();
         for (Element topic: knowsAbout) {
-	        topics.put(topic.text());
+            topics.put(topic.text());
         }
         quoraProfile.put("knows_about", topics);
 
         JSONObject feeds = new JSONObject();
         Elements counts = userHTML.getElementsByAttributeValueContaining("class", "list_count");
         for (Element count: counts) {
-	        String topic = count.parent().text();
-	        topic = topic.substring(0, topic.indexOf(count.text())).trim();
-	        feeds.put(topic.toLowerCase() + "_url", baseUrl + count.parent().attr("href"));
-	        feeds.put(topic.toLowerCase(), count.text());
+            String topic = count.parent().text();
+            topic = topic.substring(0, topic.indexOf(count.text())).trim();
+            feeds.put(topic.toLowerCase() + "_url", baseUrl + count.parent().attr("href"));
+            feeds.put(topic.toLowerCase(), count.text());
         }
         quoraProfile.put("feeds", feeds);
 
@@ -127,9 +128,9 @@ public class QuoraProfileScraper extends BaseScraper {
 
     //TODO: this method shall return Timeline object
     @Override
-//    protected Timeline scrape(BufferedReader br) {
-    protected Post scrape(BufferedReader br) {
-//        Timeline dataSet = new Timeline(order);
+    protected Timeline2 scrape(BufferedReader br) {
+//    protected Post scrape(BufferedReader br) {
+        Timeline2 dataSet = new Timeline2(order);
         //for profile
         Post qPost;
         try {
@@ -139,8 +140,8 @@ public class QuoraProfileScraper extends BaseScraper {
         }
         qPost = scrapeProfile();
 
-//        return dataSet.add(qPost);
-        return qPost;
+        return dataSet.add(qPost);
+//        return qPost;
     }
 
 
@@ -156,6 +157,7 @@ public class QuoraProfileScraper extends BaseScraper {
             super();
             this.quoraId = _quoraId;
             this.quoraPostNo = _quoraPostNo;
+            this.setPostId();
         }
 
         public void getQuoraId(String _quoraId) {
@@ -166,12 +168,11 @@ public class QuoraProfileScraper extends BaseScraper {
             this.quoraPostNo = _quoraPostNo;
         }
 
-        public void getPostId() {
+        private void setPostId() {
             this.postId = this.timestamp + this.quoraPostNo + this.quoraId;
         }
 
-        public String setPostId() {
-            this.postId = this.timestamp + this.quoraPostNo + this.quoraId;
+        public String getPostId() {
             return String.valueOf(this.postId);
         }
         //clean data
