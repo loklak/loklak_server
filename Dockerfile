@@ -34,5 +34,8 @@ RUN apk update && apk add openjdk8 git bash && \
 # set current working directory to loklak_server
 WORKDIR /loklak_server
 
+# Create Volume for persistence
+VOLUME ["/loklak_server/data"]
+
 # start loklak
 CMD ["/loklak_server/bin/start.sh", "-Idn"]

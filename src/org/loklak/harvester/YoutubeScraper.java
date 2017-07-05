@@ -31,10 +31,12 @@ import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.base.CharMatcher;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.loklak.tools.CharacterCoding;
+import org.loklak.data.DAO;
 
 public class YoutubeScraper {
 
@@ -133,17 +135,17 @@ public class YoutubeScraper {
                 if ((p = input.indexOf("yt-subscriber-count")) >= 0) {
                     String subscriber_string = parseProp(input, p, "title");
                     if (subscriber_string == null) continue;
-                    json.put("youtube_subscriber", parseNumber(subscriber_string));
+                    json.put("youtube_subscriber", parseValue(subscriber_string));
                     continue;
                 }
                 if (input.indexOf("\"like this") > 0 && (p = input.indexOf("yt-uix-button-content")) >= 0) {
                     String likes_string = parseTag(input, p);
-                    json.put("youtube_likes", parseNumber(likes_string));
+                    json.put("youtube_likes", parseValue(likes_string));
                     continue;
                 }
                 if (input.indexOf("\"dislike this") > 0 && (p = input.indexOf("yt-uix-button-content")) >= 0) {
                     String dislikes_string = parseTag(input, p);
-                    json.put("youtube_dislikes", parseNumber(dislikes_string));
+                    json.put("youtube_dislikes", parseValue(dislikes_string));
                     continue;
                 }
                 if ((p = input.indexOf("watch-view-count")) >= 0) {
@@ -151,10 +153,7 @@ public class YoutubeScraper {
                     if (viewcount_string == null) continue;
                     viewcount_string = viewcount_string.replace(" views", "");
                     if (viewcount_string.length() == 0) continue;
-                    long viewcount = 0;
-                    // if there are no views, there may be a string saying "No". But this is done in all languages, so we just catch a NumberFormatException
-                    try {viewcount = parseNumber(viewcount_string);} catch (NumberFormatException e) {}
-                    json.put("youtube_viewcount", viewcount);
+                    json.put("youtube_viewcount", viewcount_string);
                     continue;
                 }
                 if ((p = input.indexOf("watch?v=")) >= 0) {
@@ -204,8 +203,14 @@ public class YoutubeScraper {
         return json;
     }
     
-    private static long parseNumber(String n) throws NumberFormatException {
-        return Long.parseLong(numberfix.matcher(n).replaceAll(""));
+    private static String parseValue(String n) {
+        String number_value = CharMatcher.WHITESPACE.removeFrom(n);
+        Pattern number_format = Pattern.compile("^(\\d{1,3})(((,\\d{3})*)|((\\.\\d+)?[MBK]))?$");
+        Matcher m = number_format.matcher(number_value);
+        if (!m.find()) {
+            DAO.severe("This is outputing wrong value. Need to be fixed");
+        }
+        return number_value;
     }
     
     private final static Pattern numberfix = Pattern.compile(",|\\.");

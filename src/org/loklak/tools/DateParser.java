@@ -35,6 +35,7 @@ public class DateParser {
     public final static long HOUR_MILLIS = 60 * 60 * 1000;
     public final static long DAY_MILLIS = HOUR_MILLIS * 24;
     public final static long WEEK_MILLIS = DAY_MILLIS * 7;
+    public final static long MONTH_MILLIS = DAY_MILLIS * 30;
 
     public final static String PATTERN_ISO8601 = "yyyy-MM-dd'T'HH:mm:ss'Z'"; // pattern for a W3C datetime variant of a non-localized ISO8601 date
     public final static String PATTERN_ISO8601MILLIS = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"; // same with milliseconds
@@ -106,6 +107,10 @@ public class DateParser {
 
     public static Date oneWeekAgo() {
         return new Date(System.currentTimeMillis() - WEEK_MILLIS);
+    }
+
+    public static Date oneMonthAgo() {
+        return new Date(System.currentTimeMillis() - MONTH_MILLIS);
     }
     
     public static void main(String[] args) {

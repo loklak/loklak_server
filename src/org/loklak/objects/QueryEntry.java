@@ -495,33 +495,45 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
         public Date since;
         public Date until;
 
-        public ElasticsearchQuery(String q, int timezoneOffset) {
+        public ElasticsearchQuery(String q, int timezoneOffset, ArrayList<String> filterList) {
             // default values for since and util
             this.since = new Date(0);
             this.until = new Date(Long.MAX_VALUE);
+
             // parse the query
-            this.queryBuilder = preparse(q, timezoneOffset);
+            this.queryBuilder = preparse(q, timezoneOffset, filterList);
         }
 
-        private QueryBuilder preparse(String q, int timezoneOffset) {
+        public ElasticsearchQuery(String q, int timezoneOffset) {
+            this(q, timezoneOffset, new ArrayList<>());
+        }
+
+        private QueryBuilder preparse(String q, int timezoneOffset, ArrayList<String> filterList) {
             // detect usage of OR connector usage.
             q = QueryEntry.fixQueryMistakes(q);
             List<String> terms = splitIntoORGroups(q); // OR binds stronger than AND
             if (terms.size() == 0) return QueryBuilders.constantScoreQuery(QueryBuilders.matchAllQuery());
-            
             // special handling
-            if (terms.size() == 1) return parse(terms.get(0), timezoneOffset);
+            if (terms.size() == 1) return parse(terms.get(0), timezoneOffset, filterList);
 
             // generic handling
             BoolQueryBuilder aquery = QueryBuilders.boolQuery();
             for (String t: terms) {
-                QueryBuilder partial = parse(t, timezoneOffset);
+                QueryBuilder partial = parse(t, timezoneOffset, filterList);
                 aquery.filter(partial);
             }
             return aquery;
         }
+
+        private QueryBuilder preparse(String q, int timezoneOffset) {
+            return preparse(q, timezoneOffset, new ArrayList<>());
+        }
         
-        private QueryBuilder parse(String q, int timezoneOffset) {
+        private QueryBuilder parse (
+                String q,
+                int timezoneOffset, 
+                ArrayList<String> filterList
+        ) {
             // detect usage of OR ORconnective usage. Because of the preparse step we will have only OR or only AND here.
             q = q.replaceAll(" AND ", " "); // AND is default
             boolean ORconnective = q.indexOf(" OR ") >= 0;
@@ -777,6 +789,24 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
                 filters.add(QueryBuilders.constantScoreQuery(QueryBuilders.termsQuery("place_context", (constraint_about ? PlaceContext.ABOUT : PlaceContext.FROM).name())));
             }
 
+            if (filterList.size() > 0) {
+                
+                for (String filter: filterList) {
+                    switch(filter) {
+                        case "image":
+                        case "video":
+                            // filter result if images_count (or video_count) is 0
+                            filters.add(QueryBuilders.boolQuery().mustNot(
+                                    QueryBuilders.constantScoreQuery(QueryBuilders.termQuery(filter + "s_count", "0"))
+                            ));
+                            break;
+                        // TODO: Add more filters here
+
+                        default:
+                            break;
+                    } 
+                }
+            }
             // special treatment of location constraints of the form /location=lon-west,lat-south,lon-east,lat-north i.e. /location=8.58,50.178,8.59,50.181
             //                      source_type constraint of the form /source_type=FOSSASIA_API -> search exact term (source_type must exists in SourceType enum)
             for (String cs: constraints_positive) {
@@ -835,8 +865,14 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
             QueryBuilder cquery = filters.size() == 0 ? bquery : QueryBuilders.boolQuery().filter(bquery).filter(queryFilter);
             return cquery;
         }
+
+        private QueryBuilder parse (String q, int timezoneOffset) {        
+            return parse(q, timezoneOffset, new ArrayList<>());
+        }
+
+
     }
-    
+
     public static enum PlaceContext {
         
         FROM,  // the message was made at that place

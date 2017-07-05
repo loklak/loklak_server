@@ -64,12 +64,12 @@ object profile extends App{
   val main_dic_r(main_dic) = util.getCurrentDirectory
   val test_dic = main_dic + "/test/queries"
   //get the absolute path of all query files
-  val file_list = new java.io.File(test_dic).listFiles.map{
+  val file_list = new java.io.File(test_dic).listFiles.flatMap{
     file => file.getName match{
-      case queries_r(name) => test_dic + "/" + name
-      case _ => null
+      case queries_r(name) => Some(test_dic + "/" + name)
+      case _ => None
     }
-  }.filterNot(_==null)
+  }
   //
   val all_queries = file_list.map(fileName => Source.fromFile(fileName).getLines().toList).flatten
   println("Total queries count:" + all_queries.length)

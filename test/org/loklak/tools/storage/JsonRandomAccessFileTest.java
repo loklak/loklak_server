@@ -30,7 +30,7 @@ public class JsonRandomAccessFileTest  extends TestCase {
     }
 
     public void testRead() throws IOException {
-        File f = new File("data/accounts/own/users_201508_74114447.txt");
+        File f = new File("test/org/loklak/tools/storage/messages_20170411_17092725.txt");
 
         final int concurrency = 8;
         final JsonRandomAccessFile reader = new JsonRandomAccessFile(f, concurrency);

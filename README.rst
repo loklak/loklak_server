@@ -8,8 +8,14 @@ loklak
 |Twitter|
 |Twitter Follow|
 
+Development:
 |Build Status|
-|Build Status|
+|Docker Build Status|
+Master:
+|Build Status Master|
+
+Dependencies:
+|Gemnasium|
 
 loklak is a server application which is able to collect messages from
 various sources, including twitter. The server contains a search index
@@ -27,7 +33,7 @@ Communication
 -------------
 
 Please join our mailing list to discuss questions regarding the project:
-https://groups.google.com/forum/#!forum/loklak
+https://groups.google.com/forum/#!forum/opntec-dev
 
 Our chat channel is on gitter here: https://gitter.im/loklak/loklak
 
@@ -157,6 +163,9 @@ change this if you want to. This is how connected peers work:
   back-end. You can create your own message-sharing network easily.
 
 How do I install loklak: Download, Build, Run
+
+.. note:: You must be logged in to Docker Cloud for the button to work correctly. If you are not logged in, you’ll see a 404 error  instead.
+
 ---------------------------------------------
 
 |Deploy|
@@ -209,26 +218,31 @@ How do I install loklak with Docker?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To install loklak with Docker please refer to the `loklak Docker
-installation readme <https://dev.loklak.org/installation/installation_docker.html>`__.
+installation readme <https://dev.loklak.org/server/installation/installation_docker.html>`__.
 
 How do I deploy loklak with Heroku?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can easily deploy to Heroku by clicking the Deploy to Heroku button
 above. To install loklak using Heroku Toolbelt, please refer to the
-`loklak Heroku installation readme <https://dev.loklak.org/installation/installation_heroku.html>`__.
+`loklak Heroku installation readme <https://dev.loklak.org/server/installation/installation_heroku.html>`__.
 
 How do I deploy loklak with cloud9?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To install loklak with cloud9 please refer to the `loklak cloud9
-installation readme <https://dev.loklak.org/installation/installation_cloud9.html>`__.
+installation readme <https://dev.loklak.org/server/installation/installation_cloud9.html>`__.
+
+How do I deploy loklak on Google Cloud with Kubernetes?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To install loklak on Google Cloud with Kubernetes, please refer to the `loklak Google Cloud with Kubernetes installation <https://dev.loklak.org/server/installation/installation_google_cloud_kubernetes.html>`__.
 
 How do I setup loklak on Eclipse?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To install loklak on Eclipes, please refer to the `loklak Eclipse
-readme <https://dev.loklak.org/development/eclipseSetup.html>`__.
+To install loklak on Eclipse, please refer to the `loklak Eclipse
+readme <https://dev.loklak.org/server/development/eclipseSetup.html>`__.
 
 How do I run loklak?
 ~~~~~~~~~~~~~~~~~~~~
@@ -346,6 +360,13 @@ here <https://github.com/loklak/loklak_server/issues>`__.
    :target: https://twitter.com/lklknt
 .. |Build Status| image:: https://travis-ci.org/loklak/loklak_server.svg?branch=development
    :target: https://travis-ci.org/loklak/loklak_server
+.. |Docker Build Status| image:: https://img.shields.io/docker/build/jrottenberg/ffmpeg.svg?
+   :target: https://hub.docker.com/r/mariobehling/loklak/builds/
+.. |Build Status Master| image:: https://travis-ci.org/loklak/loklak_server.svg?branch=master
+   :target: https://travis-ci.org/loklak/loklak_server
+.. |Gemnasium| image:: https://img.shields.io/gemnasium/mathiasbynens/he.svg?
+   :target: https://gemnasium.com/loklak
+
 .. |Deploy| image:: https://www.herokucdn.com/deploy/button.svg
    :target: https://heroku.com/deploy
 .. |Deploy on Scalingo| image:: https://cdn.scalingo.com/deploy/button.svg

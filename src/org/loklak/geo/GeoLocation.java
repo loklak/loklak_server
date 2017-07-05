@@ -40,7 +40,7 @@ public class GeoLocation extends IntegerGeoPoint implements Comparable<GeoLocati
     public Collection<String> getNames() {
         return this.names;
     }
-    
+
     public String getISO3166cc() {
         return this.iso3166cc;
     }
@@ -60,10 +60,16 @@ public class GeoLocation extends IntegerGeoPoint implements Comparable<GeoLocati
 
     @Override
     public boolean equals(Object loc) {
-        if (!(loc instanceof GeoLocation)) return false;
-        if (!super.equals(loc)) return false;
+        if (!(loc instanceof GeoLocation)) {
+            return false;
+        }
+        if (!super.equals(loc)) {
+            return false;
+        }
         for (String name: this.names) {
-            if (((GeoLocation) loc).names.contains(name)) return true;
+            if (((GeoLocation) loc).names.contains(name)) {
+                return true;
+            }
         }
         return false;
     }
@@ -79,13 +85,19 @@ public class GeoLocation extends IntegerGeoPoint implements Comparable<GeoLocati
         if (this.equals(o)) return 0;
         long s = (ph(this.getPopulation()) << 30) + this.hashCode();
         long t = (ph(o.getPopulation()) << 30) + o.hashCode();
-        if (s > t) return -1;
-        if (s < t) return  1;
+        if (s > t) {
+            return -1;
+        }
+        if (s < t) {
+            return  1;
+        }
         return 0;
     }
 
     private static long ph(long population) {
-        if (population > 10000) population -= 10000;
+        if (population > 10000) {
+            population -= 10000;
+        }
         return population;
     }
 

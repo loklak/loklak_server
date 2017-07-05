@@ -1,6 +1,5 @@
 package org.loklak.harvester.strategy;
 
-import org.eclipse.jetty.util.log.Log;
 import org.loklak.api.search.SearchServlet;
 import org.loklak.api.search.SuggestServlet;
 import org.loklak.data.DAO;
@@ -15,9 +14,12 @@ import twitter4j.Location;
 import twitter4j.Trend;
 import twitter4j.Twitter;
 import twitter4j.TwitterException;
+import twitter4j.TwitterFactory;
 
 import java.io.IOException;
-import java.util.HashSet;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -37,27 +39,30 @@ public class KaizenHarvester implements Harvester {
     private final int SUGGESTIONS_COUNT;
     private final int SUGGESTIONS_RANDOM;
     private final int PLACE_RADIUS;
-    private final int QUERIES_LIMIT;
     private final boolean VERBOSE;
+    private final DateFormat dateToString = new SimpleDateFormat("yyyy-MM-dd");
 
     private Random random;
 
-    private HashSet<String> queries = new HashSet<>();
+    private KaizenQueries queries = null;
     private ExecutorService executorService = Executors.newFixedThreadPool(1);
 
     private Twitter twitter = null;
 
-    public KaizenHarvester() {
+    public KaizenHarvester(KaizenQueries queries) {
         BACKEND = DAO.getConfig("backend", "http://loklak.org");
         SUGGESTIONS_COUNT = DAO.getConfig("harvester.kaizen.suggestions_count", 1000);
         SUGGESTIONS_RANDOM = DAO.getConfig("harvester.kaizen.suggestions_random", 5);
         PLACE_RADIUS = DAO.getConfig("harvester.kaizen.place_radius", 5);
-        QUERIES_LIMIT = DAO.getConfig("harvester.kaizen.queries_limit", 500);
         VERBOSE = DAO.getConfig("harvester.kaizen.verbose", true);
 
         random = new Random();
+        this.queries = queries;
 
-        twitter = TwitterAPI.getAppTwitterFactory().getInstance();
+        TwitterFactory twitterFactory = TwitterAPI.getAppTwitterFactory();
+
+        if (twitterFactory != null)
+            twitter = twitterFactory.getInstance();
 
         if (twitter == null)
             DAO.log("Kaizen can utilize Twitter API to get more queries, If you want to use it, " +
@@ -65,34 +70,53 @@ public class KaizenHarvester implements Harvester {
                     "client.twitterConsumerKey, client.twitterConsumerSecret)");
     }
 
-    private void addQuery(String query) {
-        if (QUERIES_LIMIT > 0 && queries.size() > QUERIES_LIMIT)
-            return;
-
-        if (queries.contains(query))
-            return;
-
-        if (VERBOSE)
-            DAO.log("Adding '" + query + "' to queries");
-
-        queries.add(query);
+    public KaizenHarvester() {
+        this(KaizenQueries.getDefaultKaizenQueries(DAO.getConfig("harvester.kaizen.queries_limit", 500)));
     }
 
     private void grabInformation(Timeline timeline) {
-        if (VERBOSE)
+        String query = timeline.getQuery();
+        if (VERBOSE) {
             DAO.log("Kaizen is going to grab more information" +
-                    (timeline.getQuery() != null ? " from results of '" + timeline.getQuery() + "'" : ""));
+                    (query != null ? " from results of '" + query + "'" : ""));
+        }
+
+        Date oldestTweetDate = null;
 
         for (MessageEntry message : timeline) {
-            for (String user : message.getMentions())
-                addQuery("from:" + user);
 
-            for (String hashtag : message.getHashtags())
-                addQuery(hashtag);
+            double score = this.getScore(message);
+
+            // Calculate date for oldest Tweet
+            if (oldestTweetDate == null) {
+                oldestTweetDate = message.getCreatedAt();
+            } else if (oldestTweetDate.compareTo(message.getCreatedAt()) > 0) {
+                oldestTweetDate = message.getCreatedAt();
+            }
+
+            for (String user : message.getMentions()) {
+                this.queries.addQuery("from:" + user, score);
+            }
+
+            for (String hashtag : message.getHashtags()) {
+                this.queries.addQuery(hashtag, score);
+            }
 
             String place = message.getPlaceName();
-            if (!place.isEmpty())
-               addQuery("near:\"" + message.getPlaceName() + "\" within:" + PLACE_RADIUS + "mi");
+            if (!place.isEmpty()) {
+                this.queries.addQuery("near:\"" + message.getPlaceName() + "\" within:" + PLACE_RADIUS + "mi", score);
+            }
+        }
+
+        if (query != null && oldestTweetDate != null) {
+            String oldestTweetDateStr = dateToString.format(oldestTweetDate);
+            int startIndex = query.indexOf("until:");
+            if (startIndex == -1) {
+                this.queries.addQuery(query + " until:" + oldestTweetDateStr);
+            } else {
+                int endIndex = startIndex + 16;  // until:yyyy-MM-dd = 16
+                this.queries.addQuery(query.replace(query.substring(startIndex + 6, endIndex), oldestTweetDateStr));
+            }
         }
     }
 
@@ -102,11 +126,11 @@ public class KaizenHarvester implements Harvester {
     }
 
     private int harvestMessages() {
-        if (VERBOSE)
-            DAO.log(queries.size() + " available queries, Harvest season!");
+        if (VERBOSE) {
+            DAO.log(this.queries.getSize() + " available queries, Harvest season!");
+        }
 
-        String query = queries.iterator().next();
-        queries.remove(query);
+        String query = this.queries.getQuery();
 
         if (VERBOSE)
             DAO.log("Kaizen is going to harvest messages with query '" + query + "'");
@@ -137,15 +161,19 @@ public class KaizenHarvester implements Harvester {
 
     private void grabTrending() {
         try {
-            if (VERBOSE)
+            if (VERBOSE) {
                 DAO.log("Kaizen is going to get trending topics ...");
+            }
 
-            for (Location location : twitter.trends().getAvailableTrends())
-                for (Trend trend : twitter.trends().getPlaceTrends(location.getWoeid()).getTrends())
-                    addQuery(trend.getQuery());
+            for (Location location : twitter.trends().getAvailableTrends()) {
+                for (Trend trend : twitter.trends().getPlaceTrends(location.getWoeid()).getTrends()) {
+                    this.queries.addQuery(trend.getQuery());
+                }
+            }
         } catch (TwitterException e) {
-            if (e.getErrorCode() != 88)
-                Log.getLog().warn(e);
+            if (e.getErrorCode() != 88) {
+                DAO.severe(e);
+            }
         }
     }
 
@@ -159,17 +187,19 @@ public class KaizenHarvester implements Harvester {
                             "desc", "retrieval_next", 0, null, "now",
                             "retrieval_next", SUGGESTIONS_RANDOM);
 
-            if (VERBOSE)
+            if (VERBOSE) {
                 DAO.log("Backend gave us " + suggestedQueries.size() + " suggested queries");
+            }
 
             for (QueryEntry query : suggestedQueries) {
-                addQuery(query.getQuery());
+                this.queries.addQuery(query.getQuery());
             }
 
             if (suggestedQueries.size() == 0) {
-                if (VERBOSE)
-                    DAO.log("It looks like backend doesn't have any suggested queries. "+
+                if (VERBOSE) {
+                    DAO.log("It looks like backend doesn't have any suggested queries. " +
                             "Grabbing relevant context from backend collected messages ...");
+                }
 
                 Timeline timeline = SearchServlet.search(BACKEND, "", Timeline.Order.CREATED_AT, "cache",
                         SUGGESTIONS_RANDOM, 0, SearchServlet.backend_hash, 60000);
@@ -177,17 +207,32 @@ public class KaizenHarvester implements Harvester {
                 grabInformation(timeline);
             }
         } catch (IOException e) {
-            Log.getLog().warn(e);
+            DAO.severe(e);
         }
 
         if (twitter != null)
             grabTrending();
     }
 
+    protected boolean shallHarvest() {
+        float targetProb = random.nextFloat();
+        float prob = 0.5F;
+        if (this.queries.getMaxSize() > 0) {
+            prob = queries.getSize() / (float)queries.getMaxSize();
+        }
+        return !this.queries.isEmpty() && targetProb < prob;
+    }
+
+    protected double getScore(MessageEntry message) {
+        long score = message.getFavouritesCount() + message.getRetweetCount() * 5;
+        return score / (score + 10 * Math.exp(-0.1 * score));
+    }
+
     @Override
     public int harvest() {
-        if (!queries.isEmpty() && random.nextBoolean())
+        if (this.shallHarvest()) {
             return harvestMessages();
+        }
 
         grabSuggestions();
 

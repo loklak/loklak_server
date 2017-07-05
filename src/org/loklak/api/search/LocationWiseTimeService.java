@@ -21,15 +21,14 @@
 package org.loklak.api.search;
 
 import java.io.IOException;
-
 import javax.servlet.http.HttpServletResponse;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.loklak.data.DAO;
 import org.loklak.server.APIException;
 import org.loklak.server.APIHandler;
 import org.loklak.server.AbstractAPIHandler;
@@ -75,7 +74,7 @@ public class LocationWiseTimeService extends AbstractAPIHandler implements APIHa
 		try {
 			html = Jsoup.connect("http://www.timeanddate.com/worldclock/results.html?query=" + query).get();
 		} catch (IOException e) {
-			e.printStackTrace();
+			DAO.severe(e);
 		}
 
 		Elements locations = html.select("td");

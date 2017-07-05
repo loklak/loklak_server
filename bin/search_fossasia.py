@@ -1,7 +1,5 @@
 # Returns all tweet text lines related to fossasia
 import urllib
-from urllib import request
-import html
 import json
 import sys
 
