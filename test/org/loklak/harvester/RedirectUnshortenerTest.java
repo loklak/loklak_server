@@ -21,7 +21,7 @@ public class RedirectUnshortenerTest {
         shortlinkMap.put("http://ow.ly/P9SX30ddSTI", "https://github.com/loklak/loklak_server/issues/1284");
         shortlinkMap.put("http://bit.do/blog-fossasia", "http://blog.fossasia.org/");
         shortlinkMap.put("http://fb.me/4lcXZsyyO", "https://www.facebook.com/permalink.php?story_fbid=1550262581900846&id=1381813572079082");
-        shortlinkMap.put("http://wp.me/sf2B5-shorten", "https://en.blog.wordpress.com/2009/08/14/shorten/");
+        shortlinkMap.put("http://wp.me/sf2B5-shorten", "http://en.blog.wordpress.com/2009/08/14/shorten/");
         shortlinkMap.put("https://is.gd/gyk3VT", "https://github.com/fossasia/");
         shortlinkMap.put("https://is.gd/Lros16", "https://twitter.com/lklknt");
 
