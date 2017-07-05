@@ -80,6 +80,7 @@ public class ClassifierServlet extends AbstractAPIHandler implements APIHandler 
         // Classifier and classes
         String classifier = call.get("classifier", "").toLowerCase();
         String[] classes = call.get("classes", "").toLowerCase().split(",");
+        String[] countries = call.get("countries", "").toLowerCase().split(",");
         boolean fetchAllClasses = call.get("all", false);
         if (fetchAllClasses) {
             List<String> allClasses = classInformation.getOrDefault(classifier, new ArrayList<>());
@@ -103,13 +104,17 @@ public class ClassifierServlet extends AbstractAPIHandler implements APIHandler 
         retMessage.put("metadata", getMetadata(classifier, classes, fetchAllClasses, call));
 
         try {
-            HashMap<String, HashMap<String, Double>> result = DAO.elasticsearch_client.classifierScore(
-                "messages", "classifier_" + classifier, new ArrayList<>(Arrays.asList(classes)),
-                sinceDate, untilDate
-            );
+            List<String> countryList = Arrays.asList(countries);
+            HashMap<String, HashMap<String, HashMap<String, Double>>> result;
+            if (countryList.contains("all")) {
+                result = DAO.elasticsearch_client.classifierScoreForCountry("messages", "classifier_" + classifier, Arrays.asList(classes), sinceDate, untilDate);
+            } else {
+                result = DAO.elasticsearch_client.classifierScoreForCountry("messages", "classifier_" + classifier, Arrays.asList(classes), sinceDate, untilDate, countryList);
+            }
             // Put aggregation data
-            retMessage.put("aggregations", getAggregationsJson(result));
+            retMessage.put("aggregations", getAggregationsJsonByCountry(result));
         } catch (Exception e) {
+            DAO.severe("Unable to handle aggregation request", e);
             throw new APIException(400, "Unable to parse the provided date");
         }
 
@@ -148,6 +153,16 @@ public class ClassifierServlet extends AbstractAPIHandler implements APIHandler 
         metadata.put("time", System.currentTimeMillis() - post.getAccessTime());
         metadata.put("servicereduction", post.isDoS_servicereduction() ? "true" : "false");
         return metadata;
+    }
+
+    private JSONArray getAggregationsJsonByCountry(HashMap<String, HashMap<String, HashMap<String, Double>>> result) {
+        JSONArray aggregations = new JSONArray();
+        for (HashMap.Entry<String, HashMap<String, HashMap<String, Double>>> entry : result.entrySet()) {
+            JSONObject obj = new JSONObject();
+            obj.put(entry.getKey(), getAggregationsJson(entry.getValue()));
+            aggregations.put(obj);
+        }
+        return aggregations;
     }
 
     private JSONArray getAggregationsJson(HashMap<String, HashMap<String, Double>> result) {
