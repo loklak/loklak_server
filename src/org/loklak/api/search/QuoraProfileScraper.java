@@ -122,14 +122,11 @@ public class QuoraProfileScraper extends BaseScraper {
         }
         quoraProfile.put("feeds", feeds);
 
-        //dataSet.add(quoraProfile);
         return quoraProfile;
     }
 
-    //TODO: this method shall return Timeline object
     @Override
     protected Timeline2 scrape(BufferedReader br) {
-//    protected Post scrape(BufferedReader br) {
         Timeline2 dataSet = new Timeline2(order);
         //for profile
         Post qPost;
@@ -141,7 +138,6 @@ public class QuoraProfileScraper extends BaseScraper {
         qPost = scrapeProfile();
 
         return dataSet.add(qPost);
-//        return qPost;
     }
 
 

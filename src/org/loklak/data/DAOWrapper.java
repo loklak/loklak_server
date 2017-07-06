@@ -178,7 +178,7 @@ public class DAOWrapper {
                 if(id_str == null)
                     id_str = String.valueOf(text.hashCode());
 
-                message.setIdStr(id_str);
+                message.setPostId(id_str);
 
                 /**
                  * Get current time if not set

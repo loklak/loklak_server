@@ -429,7 +429,7 @@ public class TwitterScraper {
                         imgs, vids, place_name, place_id,
                         user, writeToIndex,  writeToBackend
                 );
-                if (DAO.messages == null || !DAO.messages.existsCache(tweet.getIdStr())) {
+                if (DAO.messages == null || !DAO.messages.existsCache(tweet.getPostId())) {
                     // checking against the exist cache is incomplete. A false negative would just cause that a tweet is
                     // indexed again.
                     if (tweet.willBeTimeConsuming()) {
@@ -682,7 +682,7 @@ public class TwitterScraper {
             this.created_at = new Date(created_at_raw);
             this.status_id_url = new URL("https://twitter.com" + status_id_url_raw);
             int p = status_id_url_raw.lastIndexOf('/');
-            this.id_str = p >= 0 ? status_id_url_raw.substring(p + 1) : "-1";
+            this.postId = p >= 0 ? status_id_url_raw.substring(p + 1) : "-1";
             this.retweet_count = retweets;
             this.favourites_count = favourites;
             this.place_name = place_name;
@@ -725,17 +725,17 @@ public class TwitterScraper {
         public void run() {
             //long start = System.currentTimeMillis();
             try {
-                //DAO.log("TwitterTweet [" + this.id_str + "] start");
+                //DAO.log("TwitterTweet [" + this.postId + "] start");
                 this.text = unshorten(this.text);
                 this.user.setName(unshorten(this.user.getName()));
-                //DAO.log("TwitterTweet [" + this.id_str + "] unshorten after " + (System.currentTimeMillis() - start) + "ms");
+                //DAO.log("TwitterTweet [" + this.postId + "] unshorten after " + (System.currentTimeMillis() - start) + "ms");
                 this.enrich();
 
-                //DAO.log("TwitterTweet [" + this.id_str + "] enrich    after " + (System.currentTimeMillis() - start) + "ms");
+                //DAO.log("TwitterTweet [" + this.postId + "] enrich    after " + (System.currentTimeMillis() - start) + "ms");
                 if (this.writeToIndex) IncomingMessageBuffer.addScheduler(this, this.user, true);
-                //DAO.log("TwitterTweet [" + this.id_str + "] write     after " + (System.currentTimeMillis() - start) + "ms");
+                //DAO.log("TwitterTweet [" + this.postId + "] write     after " + (System.currentTimeMillis() - start) + "ms");
                 if (this.writeToBackend) DAO.outgoingMessages.transmitMessage(this, this.user);
-                //DAO.log("TwitterTweet [" + this.id_str + "] transmit  after " + (System.currentTimeMillis() - start) + "ms");
+                //DAO.log("TwitterTweet [" + this.postId + "] transmit  after " + (System.currentTimeMillis() - start) + "ms");
             } catch (Throwable e) {
                 DAO.severe(e);
             } finally {

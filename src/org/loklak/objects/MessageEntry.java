@@ -39,6 +39,7 @@ import org.loklak.data.Classifier.Category;
 import org.loklak.data.Classifier.Context;
 import org.loklak.geo.GeoMark;
 import org.loklak.geo.LocationSource;
+import org.loklak.harvester.Post;
 import org.loklak.objects.QueryEntry.PlaceContext;
 import org.loklak.tools.bayes.Classification;
 
@@ -54,7 +55,7 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
     protected Date to;         // 'to' means 'valid_until' and may not be set
     protected SourceType source_type; // where did the message come from
     protected ProviderType provider_type;  // who created the message
-    protected String provider_hash, screen_name, retweet_from, id_str, canonical_id, parent, text;
+    protected String provider_hash, screen_name, retweet_from, postId, canonical_id, parent, text;
     protected URL status_id_url;
     protected long retweet_count, favourites_count;
     protected LinkedHashSet<String> images, audio, videos;
@@ -84,7 +85,7 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
         this.provider_hash = "";
         this.screen_name = "";
         this.retweet_from = "";
-        this.id_str = "";
+        this.postId = "";
         this.canonical_id = "";
         this.parent = "";
         this.text = "";
@@ -135,7 +136,7 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
         this.provider_hash = (String) lazyGet(json, "provider_hash");
         this.screen_name = (String) lazyGet(json, "screen_name");
         this.retweet_from = (String) lazyGet(json, "retweet_from");
-        this.id_str = (String) lazyGet(json, "id_str");
+        this.postId = (String) lazyGet(json, "post_id");
         this.text = (String) lazyGet(json, "text");
         try {
             this.status_id_url = new URL((String) lazyGet(json, "link"));
@@ -244,14 +245,6 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
         this.retweet_from = retweet_from;
     }
 
-    public String getIdStr() {
-        return id_str;
-    }
-
-    public void setIdStr(String id_str) {
-        this.id_str = id_str;
-    }
-
     public URL getStatusIdUrl() {
         return this.status_id_url;
     }
@@ -312,6 +305,7 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
         this.location_point = location_point;
     }
 
+    //TODO: to implement this method
     private void setPostId() {
         this.postId = String.valueOf(this.timestamp) + String.valueOf(this.created_at.getTime());
     }
@@ -372,7 +366,7 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
     }
 
     public long getId() {
-        return Long.parseLong(this.id_str);
+        return Long.parseLong(this.postId);
     }
 
     public String[] getHosts() {
@@ -392,8 +386,8 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
             for (int nth = 0; nth < links.length; nth++) {
                 String link = links[nth];
                 if (link.length() > iflinkexceedslength) {
-                    //if (!DAO.existMessage(this.getIdStr())) break linkloop;
-                    String shortlink = urlstub + "/x?id=" + this.getIdStr() +
+                    //if (!DAO.existMessage(this.getPostId())) break linkloop;
+                    String shortlink = urlstub + "/x?id=" + this.getPostId() +
                         (nth == 0 ? "" : ShortlinkFromTweetServlet.SHORTLINK_COUNTER_SEPERATOR + Integer.toString(nth));
                     if (shortlink.length() < link.length()) {
                         tlm.text = tlm.text.replace(link, shortlink);
@@ -567,90 +561,89 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
         return toJSON(null, true, Integer.MAX_VALUE, ""); // very important to include calculated data here because that is written into the index using the abstract index factory
     }
 
-    public JSONObject toJSON(final UserEntry user, final boolean calculatedData, final int iflinkexceedslength, final String urlstub) {
-        JSONObject m = new JSONObject(true);
+    public Post toJSON(final UserEntry user, final boolean calculatedData, final int iflinkexceedslength, final String urlstub) {
 
         // tweet data
-        m.put(AbstractObjectEntry.TIMESTAMP_FIELDNAME, utcFormatter.print(getTimestampDate().getTime()));
-        m.put(AbstractObjectEntry.CREATED_AT_FIELDNAME, utcFormatter.print(getCreatedAt().getTime()));
-        if (this.on != null) m.put("on", utcFormatter.print(this.on.getTime()));
-        if (this.to != null) m.put("to", utcFormatter.print(this.to.getTime()));
-        m.put("screen_name", this.screen_name);
-        if (this.retweet_from != null && this.retweet_from.length() > 0) m.put("retweet_from", this.retweet_from);
+        this.put(AbstractObjectEntry.TIMESTAMP_FIELDNAME, utcFormatter.print(getTimestampDate().getTime()));
+        this.put(AbstractObjectEntry.CREATED_AT_FIELDNAME, utcFormatter.print(getCreatedAt().getTime()));
+        if (this.on != null) this.put("on", utcFormatter.print(this.on.getTime()));
+        if (this.to != null) this.put("to", utcFormatter.print(this.to.getTime()));
+        this.put("screen_name", this.screen_name);
+        if (this.retweet_from != null && this.retweet_from.length() > 0) this.put("retweet_from", this.retweet_from);
         TextLinkMap tlm = this.getText(iflinkexceedslength, urlstub);
-        m.put("text", tlm); // the tweet; the cleanup is a helper function which cleans mistakes from the past in scraping
-        if (this.status_id_url != null) m.put("link", this.status_id_url.toExternalForm());
-        m.put("id_str", this.id_str);
-        if (this.canonical_id != null) m.put("canonical_id", this.canonical_id);
-        if (this.parent != null) m.put("parent", this.parent);
-        m.put("source_type", this.source_type.toString());
-        m.put("provider_type", this.provider_type.name());
-        if (this.provider_hash != null && this.provider_hash.length() > 0) m.put("provider_hash", this.provider_hash);
-        m.put("retweet_count", this.retweet_count);
-        m.put("favourites_count", this.favourites_count); // there is a slight inconsistency here in the plural naming but thats how it is noted in the twitter api
-        m.put("place_name", this.place_name);
-        m.put("place_id", this.place_id);
+        this.put("text", tlm); // the tweet; the cleanup is a helper function which cleans mistakes from the past in scraping
+        if (this.status_id_url != null) this.put("link", this.status_id_url.toExternalForm());
+        this.put("PostId", this.postId);
+        if (this.canonical_id != null) this.put("canonical_id", this.canonical_id);
+        if (this.parent != null) this.put("parent", this.parent);
+        this.put("source_type", this.source_type.toString());
+        this.put("provider_type", this.provider_type.name());
+        if (this.provider_hash != null && this.provider_hash.length() > 0) this.put("provider_hash", this.provider_hash);
+        this.put("retweet_count", this.retweet_count);
+        this.put("favourites_count", this.favourites_count); // there is a slight inconsistency here in the plural naming but thats how it is noted in the twitter api
+        this.put("place_name", this.place_name);
+        this.put("place_id", this.place_id);
 
         // add statistic/calculated data
         if (calculatedData) {
 
             // text length
-            m.put("text_length", this.text.length());
+            this.put("text_length", this.text.length());
 
             // location data
-            if (this.place_context != null) m.put("place_context", this.place_context.name());
+            if (this.place_context != null) this.put("place_context", this.place_context.name());
             if (this.place_country != null && this.place_country.length() == 2) {
-                m.put("place_country", DAO.geoNames.getCountryName(this.place_country));
-                m.put("place_country_code", this.place_country);
-                m.put("place_country_center", DAO.geoNames.getCountryCenter(this.place_country));
+                this.put("place_country", DAO.geoNames.getCountryName(this.place_country));
+                this.put("place_country_code", this.place_country);
+                this.put("place_country_center", DAO.geoNames.getCountryCenter(this.place_country));
             }
 
             // add optional location data. This is written even if calculatedData == false if the source is from REPORT to prevent that it is lost
             if (this.location_point != null && this.location_point.length == 2 && this.location_mark != null && this.location_mark.length == 2) {
                 // reference for this format: https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-geo-point-type.html#_lat_lon_as_array_5
-                m.put("location_point", this.location_point); // [longitude, latitude]
-                m.put("location_radius", this.location_radius);
-                m.put("location_mark", this.location_mark);
-                m.put("location_source", this.location_source.name());
+                this.put("location_point", this.location_point); // [longitude, latitude]
+                this.put("location_radius", this.location_radius);
+                this.put("location_mark", this.location_mark);
+                this.put("location_source", this.location_source.name());
             }
 
             // redundant data for enhanced navigation with aggregations
-            m.put("hosts", this.hosts);
-            m.put("hosts_count", this.hosts.length);
-            m.put("links", this.links);
-            m.put("links_count", this.links.length);
-            m.put("unshorten", tlm.short2long);
-            m.put("images", this.images);
-            m.put("images_count", this.images.size());
-            m.put("audio", this.audio);
-            m.put("audio_count", this.audio.size());
-            m.put("videos", this.videos);
-            m.put("videos_count", this.videos.size());
-            m.put("mentions", this.mentions);
-            m.put("mentions_count", this.mentions.length);
-            m.put("hashtags", this.hashtags);
-            m.put("hashtags_count", this.hashtags.length);
+            this.put("hosts", this.hosts);
+            this.put("hosts_count", this.hosts.length);
+            this.put("links", this.links);
+            this.put("links_count", this.links.length);
+            this.put("unshorten", tlm.short2long);
+            this.put("images", this.images);
+            this.put("images_count", this.images.size());
+            this.put("audio", this.audio);
+            this.put("audio_count", this.audio.size());
+            this.put("videos", this.videos);
+            this.put("videos_count", this.videos.size());
+            this.put("mentions", this.mentions);
+            this.put("mentions_count", this.mentions.length);
+            this.put("hashtags", this.hashtags);
+            this.put("hashtags_count", this.hashtags.length);
 
             // text classifier
             if (this.classifier != null) {
                 for (Map.Entry<Context, Classification<String, Category>> c: this.classifier.entrySet()) {
                     assert c.getValue() != null;
                     if (c.getValue().getCategory() == Classifier.Category.NONE) continue; // we don't store non-existing classifications
-                    m.put("classifier_" + c.getKey().name(), c.getValue().getCategory());
-                    m.put("classifier_" + c.getKey().name() + "_probability",
+                    this.put("classifier_" + c.getKey().name(), c.getValue().getCategory());
+                    this.put("classifier_" + c.getKey().name() + "_probability",
                         c.getValue().getProbability() == Float.POSITIVE_INFINITY ? Float.MAX_VALUE : c.getValue().getProbability());
                 }
             }
 
             // experimental, for ranking
-            m.put("without_l_len", this.without_l_len);
-            m.put("without_lu_len", this.without_lu_len);
-            m.put("without_luh_len", this.without_luh_len);
+            this.put("without_l_len", this.without_l_len);
+            this.put("without_lu_len", this.without_lu_len);
+            this.put("without_luh_len", this.without_luh_len);
         }
 
         // add user
-        if (user != null) m.put("user", user.toJSON());
-        return m;
+        if (user != null) this.put("user", user.toJSON());
+        return this;
     }
 
     public static String html2utf8(String s) {

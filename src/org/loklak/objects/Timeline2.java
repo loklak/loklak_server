@@ -34,6 +34,7 @@ import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.data.DAO.IndexName;
 import org.loklak.harvester.Post;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.susi.SusiThought;
 
 /**
@@ -72,17 +73,7 @@ public class Timeline2 implements Iterable<Post> {
     private int cursor; // used for pagination, set this to the number of tweets returned so far to the user; they should be considered as unchangable
     private long accessTime;
     private final Map<Integer, Post> precursorPostCache = new ConcurrentHashMap<>();
-/*    
-    public Timeline2(Order order) {
-        this.tweets = new ConcurrentSkipListMap<String, MessageEntry>();
-        this.users = new ConcurrentHashMap<String, UserEntry>();
-        this.order = order;
-        this.query = null;
-        this.indexName = null;
-        this.cursor = 0;
-        this.accessTime = System.currentTimeMillis();
-    }
-*/
+
     public Timeline2(Order order) {
         this.posts = new ConcurrentSkipListMap<String, Post>();
         this.users = new ConcurrentHashMap<String, UserEntry>();
@@ -209,13 +200,13 @@ public class Timeline2 implements Iterable<Post> {
                
         return t;
     }
-/*  //TODO: remove this
-    public Timeline2 add(MessageEntry tweet, UserEntry user) {
+
+    public Timeline2 add(Post post, UserEntry user) {
         this.addUser(user);
-        this.addTweet(tweet);
+        this.addPost(post);
         return this;
     }
-    */
+
     public Timeline2 add(Post post) {
         this.addPost(post);
         return this;
@@ -223,7 +214,9 @@ public class Timeline2 implements Iterable<Post> {
 
     private Timeline2 addUser(UserEntry user) {
         assert user != null;
-        if (user != null) this.users.put(user.getScreenName(), user);
+        if (user != null) {
+            this.users.put(user.getScreenName(), user);
+        }
         return this;
     }
 
@@ -233,13 +226,13 @@ public class Timeline2 implements Iterable<Post> {
         if (this.order == Order.RETWEET_COUNT) {
             key = Long.toHexString(tweet.getRetweetCount());
             while (key.length() < 16) key = "0" + key;
-            key = key + "_" + tweet.getIdStr();
+            key = key + "_" + tweet.getPostId();
         } else if (this.order == Order.FAVOURITES_COUNT) {
             key = Long.toHexString(tweet.getFavouritesCount());
             while (key.length() < 16) key = "0" + key;
-            key = key + "_" + tweet.getIdStr();
+            key = key + "_" + tweet.getPostId();
         } else {
-            key = Long.toHexString(tweet.getCreatedAt().getTime()) + "_" + tweet.getIdStr();
+            key = Long.toHexString(tweet.getCreatedAt().getTime()) + "_" + tweet.getPostId();
         }
         synchronized (tweets) {
             MessageEntry precursorTweet = getPrecursorTweet();
@@ -454,4 +447,16 @@ public class Timeline2 implements Iterable<Post> {
     public int getHits() {
         return this.hits == -1 ? this.size() : this.hits;
     }
+
+    public Timeline toTimeline() {
+
+        Timeline postList = new Timeline(Timeline.Order.CREATED_AT);
+        for (Post post : this) {
+            assert post instanceof TwitterTweet;
+            TwitterTweet tweet = (TwitterTweet)post;
+            postList.add(tweet, tweet.getUser());
+        }
+        return postList;
+    }
+
 }

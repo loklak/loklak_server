@@ -174,7 +174,7 @@ public class PushServletHelper {
         while (it.hasNext()) {
             MessageEntry messageEntry = it.next();
             if (compareMessage(messageEntry.toJSON(), message)) {
-                return messageEntry.getIdStr();
+                return messageEntry.getPostId();
             }
         }
         return null;

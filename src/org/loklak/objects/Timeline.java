@@ -35,6 +35,8 @@ import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.data.DAO.IndexName;
+import org.loklak.harvester.Post;
+import org.loklak.objects.Timeline2;
 import org.loklak.susi.SusiThought;
 
 /**
@@ -45,6 +47,7 @@ public class Timeline implements Iterable<MessageEntry> {
 
     public static enum Order {
         CREATED_AT("date"),
+        TIMESTAMP("date"),
         RETWEET_COUNT("long"),
         FAVOURITES_COUNT("long");
         String field_type;
@@ -208,13 +211,13 @@ public class Timeline implements Iterable<MessageEntry> {
         if (this.order == Order.RETWEET_COUNT) {
             key = Long.toHexString(tweet.getRetweetCount());
             while (key.length() < 16) key = "0" + key;
-            key = key + "_" + tweet.getIdStr();
+            key = key + "_" + tweet.getPostId();
         } else if (this.order == Order.FAVOURITES_COUNT) {
             key = Long.toHexString(tweet.getFavouritesCount());
             while (key.length() < 16) key = "0" + key;
-            key = key + "_" + tweet.getIdStr();
+            key = key + "_" + tweet.getPostId();
         } else {
-            key = Long.toHexString(tweet.getCreatedAt().getTime()) + "_" + tweet.getIdStr();
+            key = Long.toHexString(tweet.getCreatedAt().getTime()) + "_" + tweet.getPostId();
         }
         synchronized (tweets) {
             MessageEntry precursorTweet = getPrecursorTweet();
@@ -369,4 +372,15 @@ public class Timeline implements Iterable<MessageEntry> {
     public int getHits() {
         return this.hits == -1 ? this.size() : this.hits;
     }
+
+    //TODO: temporary method to prevent issues related to Timeline class popping-up till next PR
+    public Timeline2 toPostTimeline() {
+        Timeline2 postList = new Timeline2(Timeline2.Order.TIMESTAMP);
+        for (MessageEntry me : this) {
+            assert me instanceof Post;
+            postList.add(me);
+        }
+        return postList;
+    }
+
 }
