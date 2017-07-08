@@ -956,7 +956,7 @@ public class ElasticsearchClient {
      * @param classes Classes to consider
      * @return HashMap with required aggregations
      */
-    public HashMap<String, HashMap<String, Double>> classifierScore(String index, String classifierName, List<String> classes) {
+    public final HashMap<String, HashMap<String, Double>> classifierScore(String index, String classifierName, List<String> classes) {
         SearchResponse response = getAggregationResponse(index, getClassifierAggregationBuilder(classifierName));
         Terms aggrs = response.getAggregations().get("by_class");
         return getAggregationByClass(aggrs, classes);
@@ -971,7 +971,7 @@ public class ElasticsearchClient {
      * @param endDate End date for creation of row
      * @return HashMap with required aggregations
      */
-    public HashMap<String, HashMap<String, Double>> classifierScore(
+    public final HashMap<String, HashMap<String, Double>> classifierScore(
         String index, String classifierName, List<String> classes, String startDate, String endDate) {
         if (startDate == null && endDate == null) {
             return classifierScore(index, classifierName, classes);
@@ -990,7 +990,7 @@ public class ElasticsearchClient {
      * @param endDate End date for creation of row
      * @return HashMap with required aggregations
      */
-    public HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(
+    public final HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(
         String index, String classifierName, List<String> classes, String startDate, String endDate) {
         // No time restrictions
         if (startDate == null && endDate == null) {
@@ -998,7 +998,7 @@ public class ElasticsearchClient {
         }
         SearchResponse response = getAggregationResponse(index, getClassifierAggregationBuilderByCountry(
             "place_country_code", classifierName, startDate, endDate));
-        Range aggr = response.getAggregations().get("by_time");
+        Range aggr = response.getAggregations().get("by_date");
         HashMap<String, HashMap<String, HashMap<String,Double>>> retMap = getAggregationByTimeWithCountries(aggr, classes);
         // Put global aggregation
         retMap.put("GLOBAL", classifierScore(index, classifierName, classes, startDate, endDate));
@@ -1015,7 +1015,7 @@ public class ElasticsearchClient {
      * @param countries Country codes to consider
      * @return HashMap with required aggregations
      */
-    public HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(
+    public final HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(
         String index, String classifierName, List<String> classes, String startDate, String endDate, List<String> countries) {
         if (startDate == null && endDate == null) {
             return classifierScoreForCountry(index, classifierName, classes, countries);
@@ -1028,7 +1028,7 @@ public class ElasticsearchClient {
             }
             retMap.put(key, copy.get(key));
         }
-        return copy;
+        return retMap;
     }
 
     /**
@@ -1038,7 +1038,7 @@ public class ElasticsearchClient {
      * @param classes Classes to consider
      * @return HashMap with required aggregations
      */
-    public HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(String index, String classifierName, List<String> classes) {
+    public final HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(String index, String classifierName, List<String> classes) {
         SearchResponse response = getAggregationResponse(index, getClassifierAggregationBuilderByCountry("place_country_code", classifierName));
         Terms aggr = response.getAggregations().get("by_country");
         HashMap<String, HashMap<String, HashMap<String,Double>>> retMap = getAggregationByCountry(aggr, classes);
@@ -1055,7 +1055,7 @@ public class ElasticsearchClient {
      * @param countries Countiries to consider
      * @return HashMap with required aggregations
      */
-    public HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(
+    public final HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(
         String index, String classifierName, List<String> classes, List<String> countries) {
         HashMap<String, HashMap<String, HashMap<String,Double>>> retMap = new HashMap<>();
 
