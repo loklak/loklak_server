@@ -6,12 +6,12 @@
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
- *  
+ *
  *  This library is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
@@ -57,7 +57,7 @@ public class RedirectUnshortener {
         "flip.it",
         "lnkd.in"
     };
-    
+
     private final static String[] untestedHosts = new String[] {
         "is.gd",
         "ta.gd",
@@ -72,15 +72,12 @@ public class RedirectUnshortener {
         "igg.me",
         "twiza.ru"
     };
-    
+
     public static String unShorten(String urlstring) {
         //long start = System.currentTimeMillis();
-        if (!isApplicable(urlstring)) {
-            return urlstring;
-        }
         try {
             int termination = 10; // loop for recursively shortened urls
-            while (termination-- > 0) {
+            while (termination-- > 0 && isApplicable(urlstring)) {
                 String unshortened = ClientConnection.getRedirect(urlstring);
                 if (unshortened.equals(urlstring)) {
                     return urlstring;
@@ -94,7 +91,7 @@ public class RedirectUnshortener {
             return urlstring;
         }
     }
-    
+
     private static boolean isApplicable(String urlstring) {
         String s = urlstring.toLowerCase();
         if (!s.startsWith("http://") && !s.startsWith("https://")) return false;
@@ -113,7 +110,7 @@ public class RedirectUnshortener {
         }
         return false;
     }
-    
+
     /**
      * this is the raw implementation if ClientConnection.getRedirect.
      * Surprisingly it's much slower, but some redirects cannot be discovered with the other
@@ -158,7 +155,7 @@ public class RedirectUnshortener {
         socket.close();
         return urlstring;
     }
-    
+
     public static void main(String[] args) {
         String[] test = new String[] {
                 "http://tmblr.co/Z6YPNx1jL1hHK",
@@ -193,11 +190,11 @@ public class RedirectUnshortener {
             }
         }
     }
-    
+
     /**
      * does not work:
      * https://tr.im/v31Rf
      * http://dlvr.it/8htd6W  // works on terminal but not here
      */
-    
+
 }
