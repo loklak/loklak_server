@@ -155,12 +155,10 @@ public class ClassifierServlet extends AbstractAPIHandler implements APIHandler 
         return metadata;
     }
 
-    private JSONArray getAggregationsJsonByCountry(HashMap<String, HashMap<String, HashMap<String, Double>>> result) {
-        JSONArray aggregations = new JSONArray();
+    private JSONObject getAggregationsJsonByCountry(HashMap<String, HashMap<String, HashMap<String, Double>>> result) {
+        JSONObject aggregations = new JSONObject();
         for (HashMap.Entry<String, HashMap<String, HashMap<String, Double>>> entry : result.entrySet()) {
-            JSONObject obj = new JSONObject();
-            obj.put(entry.getKey(), getAggregationsJson(entry.getValue()));
-            aggregations.put(obj);
+            aggregations.put(entry.getKey(), getAggregationsJson(entry.getValue()));
         }
         return aggregations;
     }
