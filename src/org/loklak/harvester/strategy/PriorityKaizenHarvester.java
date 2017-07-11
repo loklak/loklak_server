@@ -8,9 +8,9 @@ import java.util.Queue;
 
 public class PriorityKaizenHarvester extends KaizenHarvester {
 
-    private static class PriorityKaizenQueries extends KaizenQueries {
+    public static class PriorityKaizenQueries extends KaizenQueries {
 
-        private Comparator<ScoreWrapper> scoreComparator = (scoreWrapper, t1) -> (int) (scoreWrapper.score - t1.score);
+        private Comparator<ScoreWrapper> scoreComparator = (scoreWrapper, t1) -> (int) (1000 * (t1.score - scoreWrapper.score));
 
         private Queue<ScoreWrapper> queue;
         private int maxSize;
@@ -25,6 +25,10 @@ public class PriorityKaizenHarvester extends KaizenHarvester {
                 this.score = score;
             }
 
+            @Override
+            public boolean equals(Object obj) {
+                return obj instanceof ScoreWrapper && this.query.equals(((ScoreWrapper)obj).query);
+            }
         }
 
         public PriorityKaizenQueries(int size) {
