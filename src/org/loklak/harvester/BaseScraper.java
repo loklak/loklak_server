@@ -35,26 +35,44 @@ public abstract class BaseScraper extends AbstractAPIHandler {
     protected String html;
     protected String baseUrl;
     protected String midUrl;
-    protected String query;
+    protected String query = null;
     // where did the message come from
     protected SourceType source_type;
     // who created the message
     protected ProviderType provider_type;
-    //TODO: dummy variable, add datastructure for filter, type_of_posts, location, etc
-    protected String extra = "";
+    protected Map<String, String> extra =null;
     protected final Timeline2.Order order = Timeline2.parseOrder("timestamp");
 
     @Override
     public JSONObject serviceImpl(Query call, HttpServletResponse response, Authorization rights,
             JSONObjectWithDefault permissions) throws APIException {
-        this.query = call.get("query", "");
-
-        //TODO: add different extra paramenters. this is dummy variable
-        this.extra = call.get("extra", "");
+        this.setExtra(call);
         return this.getData().toJSON(false, "metadata", "posts");
     }
 
-    protected abstract Map<?, ?> getExtra(String _extra);
+    protected void setExtra(Query call) {
+        this.extra = call.getMap();
+        this.query = call.get("query", "");
+        this.setParam();
+    }
+
+    protected void setExtra(Map<String, String> _extra) {
+        this.extra.putAll(_extra);
+    }
+
+    public String getExtraValue(String key) {
+        String value = "";
+        if(this.extra.get(key) != null) {
+            value = this.extra.get(key).trim();
+        }
+        return value;
+    }
+
+    protected void setExtraValue(String key, String value) {
+        this.extra.put(key, value);
+    }
+
+    protected abstract void setParam();
 
     public Timeline2 getData() {
         String url = null;
