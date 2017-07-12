@@ -22,6 +22,9 @@ package org.loklak.api.search;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.Arrays;
+import java.util.ArrayList;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.regex.Matcher;
@@ -42,11 +45,13 @@ public class QuoraProfileScraper extends BaseScraper {
 
     private final long serialVersionUID = -3398701925784347312L;
     private Timeline2 postList = new Timeline2(this.order);
+    private List<String> typeList = null;
 
     public QuoraProfileScraper() {
         super();
         this.baseUrl = "https://www.quora.com/";
         this.scraperName = "Quora";
+        
     }
 
     public QuoraProfileScraper(String _query) {
@@ -54,10 +59,25 @@ public class QuoraProfileScraper extends BaseScraper {
         this.query = _query;
     }
 
-    public QuoraProfileScraper(String _query, String _extra) {
+    public QuoraProfileScraper(String _query, Map<String, String> _extra) {
         this();
+        this.setExtra(_extra);
         this.query = _query;
-        this.extra = _extra;
+    }
+
+    public QuoraProfileScraper(Map<String, String> _extra) {
+        this();
+        this.setExtra(_extra);
+    }
+
+    protected void setParam() {
+        if(!"".equals(this.getExtraValue("type"))) {
+            this.typeList = Arrays.asList(this.getExtraValue("type").trim().split("\\s*,\\s*"));
+        } else {
+            this.typeList = new ArrayList<String>();
+            this.typeList.add("all");
+            this.setExtraValue("type", String.join(",", this.typeList));
+        }
     }
 
     @Override
@@ -81,33 +101,29 @@ public class QuoraProfileScraper extends BaseScraper {
 
     @Override
     public Timeline2 getData() {
-        //TODO: 1) to get this 2) convert to array
-        //String type = this.extra.get("type");
-        String type = "all";
         String midUrl;
         String url;
         Thread[] dataThreads = new Thread[2];
         this.postList = new Timeline2(this.order);
 
-        switch(type) {
-            case "all":
-            case "user":
-                midUrl = "profile/";
-                url = this.baseUrl + midUrl + this.query;
-                dataThreads[0] = new ConcurrentScrape(url, "users");
-                dataThreads[0].start();
-                if("user".equals(type)) break;
-            case "question":
-                midUrl = "search/?q=";
-                //TODO: use request body instead
-                url = this.baseUrl + midUrl + this.query + "&type=question";
-                dataThreads[1] = new ConcurrentScrape(url, "question");
-                dataThreads[1].start();
-                if("question".equals(type)) break;
-            //TODO: add more types
-            default:
-                break;
+        if(this.typeList.contains("user") || this.typeList.contains("all")) {
+            midUrl = "profile/";
+            url = this.baseUrl + midUrl + this.query;
+            dataThreads[0] = new ConcurrentScrape(url, "users");
+            dataThreads[0].start();
+        } else {
+            dataThreads[0] = new Thread();
         }
+        if(this.typeList.contains("question") || this.typeList.contains("all")) {
+            midUrl = "search/?q=";
+            //TODO: use request body instead
+            url = this.baseUrl + midUrl + this.query + "&type=question";
+            dataThreads[1] = new ConcurrentScrape(url, "question");
+            dataThreads[1].start();
+        } else {
+            dataThreads[1] = new Thread();
+        }
+        //TODO: add more types
 
         int i = 0;
         try {
