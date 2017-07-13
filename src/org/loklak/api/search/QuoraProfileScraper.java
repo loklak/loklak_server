@@ -20,15 +20,17 @@
 package org.loklak.api.search;
 
 import java.io.IOException;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.Arrays;
 import java.util.ArrayList;
-import java.io.BufferedReader;
-import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.http.client.utils.URIBuilder;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jsoup.Jsoup;
@@ -99,6 +101,36 @@ public class QuoraProfileScraper extends BaseScraper {
         return new HashMap<String, String>();
     }
 
+    protected String prepareSearchUrl(String type) {
+        URIBuilder url = null;
+        String midUrl = "search/";
+        try {
+            switch(type) {
+                case "user":
+                    midUrl = "profile/";
+                    url = new URIBuilder(this.baseUrl + midUrl + this.query);
+                    break;
+                case "question":
+                    url = new URIBuilder(this.baseUrl + midUrl);
+                    url.addParameter("q", this.query);
+                    url.addParameter("type", "question");
+                    break;
+                case "answer":
+                    url = new URIBuilder(this.baseUrl + midUrl);
+                    url.addParameter("q", this.query);
+                    url.addParameter("type", "answer");
+                    break;
+                default:
+                    url = new URIBuilder("");
+                    break;
+            }
+        } catch (URISyntaxException e) {
+            DAO.log("Invalid Url: baseUrl = " + this.baseUrl + ", mid-URL = " + midUrl + "query = " + this.query + "type = " + type);
+        }
+
+        return url.toString();
+    }
+
     @Override
     public Timeline2 getData() {
         String midUrl;
@@ -108,7 +140,7 @@ public class QuoraProfileScraper extends BaseScraper {
 
         if(this.typeList.contains("user") || this.typeList.contains("all")) {
             midUrl = "profile/";
-            url = this.baseUrl + midUrl + this.query;
+            url = prepareSearchUrl("user");
             dataThreads[0] = new ConcurrentScrape(url, "users");
             dataThreads[0].start();
         } else {
@@ -116,8 +148,7 @@ public class QuoraProfileScraper extends BaseScraper {
         }
         if(this.typeList.contains("question") || this.typeList.contains("all")) {
             midUrl = "search/?q=";
-            //TODO: use request body instead
-            url = this.baseUrl + midUrl + this.query + "&type=question";
+            url = prepareSearchUrl("question");
             dataThreads[1] = new ConcurrentScrape(url, "question");
             dataThreads[1].start();
         } else {
@@ -166,7 +197,7 @@ public class QuoraProfileScraper extends BaseScraper {
             try {
                 QuoraProfileScraper.this.postList.addPost(QuoraProfileScraper.this.getDataFromConnection(this.url, this.type));
             } catch (IOException e) {
-                DAO.severe("check internet connection");
+                DAO.severe("check internet connection for url: " + this.url + " type: " + this.type);
             }
         }
     }
