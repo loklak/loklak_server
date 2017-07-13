@@ -34,12 +34,9 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -360,9 +357,14 @@ public class TwitterScraper {
                 continue;
             }
             if (input.indexOf("AdaptiveMedia-videoContainer") > 0) {
-                String tweetUrl = props.get("tweetstatusurl").value;
-                String[] videoUrls = fetchTwitterVideos(tweetUrl);
-                Collections.addAll(videos, videoUrls);
+                /* String tweetUrl = props.get("tweetstatusurl").value;
+                 * String[] videoUrls = fetchTwitterVideos(tweetUrl);
+                 * Collections.addAll(videos, videoUrls);
+                 *
+                 * Not a good idea to fetch video right now. Need to add another endpoint which
+                 * lets end users fetch complete videos from here.
+                 * See https://github.com/loklak/loklak_server/issues/1298
+                 **/
             }
             if ((p = input.indexOf("class=\"Tweet-geo")) > 0) {
                 prop place_name_prop = new prop(input, p, "title");
@@ -459,7 +461,7 @@ public class TwitterScraper {
         return new Timeline[]{timelineReady, timelineWorking};
     }
 
-    private static String[] fetchTwitterVideos(String tweetUrl) {
+    public static String[] fetchTwitterVideos(String tweetUrl) {
         // Extract BEARER_TOKEN holding js and Guest token
         String mobileUrl = "https://mobile.twitter.com" + tweetUrl;
         String bearerJsUrl = null;
