@@ -264,4 +264,21 @@ public class TwitterScraperTest {
         return getPrivateField(clazz, fieldName, null);
     }
 
+    @Test
+    public void testVideoFetch() {
+        String[] urls = TwitterScraper.fetchTwitterVideos("/loklak_test/status/870536303569289216");
+        assertEquals(4, urls.length);
+        int mp4 = 0;
+        int m3u8 = 0;
+        for (String url : urls) {
+            if (url.endsWith(".mp4")) {
+                mp4++;
+            } else if (url.endsWith(".m3u8")) {
+                m3u8++;
+            }
+        }
+        assertEquals(1, m3u8);
+        assertEquals(3, mp4);
+    }
+
 }
