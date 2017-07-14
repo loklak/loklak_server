@@ -107,10 +107,6 @@ public class TwitterScraperTest {
         tweet_check.put("text", "Tweet with a video https://pic.twitter.com/1R9ICL6icm");
         tweet_check.put("writeToIndex", "true");
         tweet_check.put("writeToBackend", "true");
-        tweet_check.put("videoString", "[https://video.twimg.com/ext_tw_video/870534269676003328/pu/pl/tewnT5aKMmfZpC5R.m3u8,"
-            + " https://video.twimg.com/ext_tw_video/870534269676003328/pu/vid/640x360/Q_Ls6AMZRpctNokb.mp4,"
-            + " https://video.twimg.com/ext_tw_video/870534269676003328/pu/vid/320x180/IwQGl8OfwtxZ5Ftd.mp4,"
-            + " https://video.twimg.com/ext_tw_video/870534269676003328/pu/vid/1280x720/HxgbfmPFi7yY2gd3.mp4]");
 
         try {
             // Scrap all html from the https_url link
@@ -151,7 +147,6 @@ public class TwitterScraperTest {
         assertEquals(tweet.getText(), tweet_check.get("text"));
         assertEquals(tweet.getPlaceId(), tweet_check.get("place_name"));
         assertEquals(tweet.getPlaceName(), tweet_check.get("place_id"));
-        assertEquals(tweet.getVideos().toString(), tweet_check.get("videoString"));
 
         try {
             // Other parameters of twittertweet(used )
