@@ -22,7 +22,6 @@ package org.loklak.api.search;
 import java.util.Date;
 import java.util.Set;
 import java.util.regex.Pattern;
-
 import org.elasticsearch.search.sort.SortOrder;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -33,6 +32,7 @@ import org.loklak.objects.AccountEntry;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.ResultList;
 import org.loklak.objects.Timeline;
+import org.loklak.objects.Timeline2;
 import org.loklak.objects.UserEntry;
 import org.loklak.server.APIException;
 import org.loklak.server.APIHandler;
@@ -43,7 +43,7 @@ import org.loklak.server.Query;
 import org.loklak.susi.SusiProcedures;
 import org.loklak.susi.SusiThought;
 import org.loklak.susi.SusiTransfer;
-
+import org.loklak.harvester.BaseScraper;
 import org.loklak.tools.storage.JSONObjectWithDefault;
 
 import javax.servlet.http.HttpServletResponse;
@@ -234,14 +234,17 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
             json.setData(transfer.conclude(json.getData()));
             return json;
         });
-        /*
+
         dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?quoraprofile +?WHERE +?profile ??= ??'(.*?)' ??;"), matcher -> {
             BaseScraper quoraScrape = new QuoraProfileScraper(matcher.group(2));
+            Timeline2 dataList = quoraScrape.getData();
+            SusiThought json = new SusiThought(dataList.toJSON());
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
-            return quoraScrape.getData().toJSON(transfer.conclude(json.getData()));
+            json.setData(transfer.conclude(json.getData()));
+            return json;
         });
-        */
-		dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?wikigeodata +?WHERE +?place ??= ??'(.*?)' ??;"), matcher -> {
+
+        dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?wikigeodata +?WHERE +?place ??= ??'(.*?)' ??;"), matcher -> {
             SusiThought json = WikiGeoData.wikiGeoData(matcher.group(2));
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
             json.setData(transfer.conclude(json.getData()));

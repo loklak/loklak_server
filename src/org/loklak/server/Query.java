@@ -66,63 +66,80 @@ public class Query {
         this.track.setDoSServicereduction(!this.track.isLocalhostAccess() && (this.track.getTimeSinceLastAccess() < DAO.getConfig("DoS.servicereduction", 1000)));
         this.track.setQuery(qm);
     }
+
     public void finalize() {
         this.track.finalize();
     }
+
     public void initGET(final Map<String, String> q) {
         q.keySet().forEach(k -> this.qm.put(k, q.get(k)));
     }
+
     // initPOST is deprecated because the purpose of it has been replaced by the constructor
     @Deprecated
     public void initPOST(final Map<String, byte[]> map) {
         // This method does nothing, removing it is a bad idea because it can break
         // other servlets / services
     }
+
     public String getClientHost() {
         return this.track.getClientHost();
     }
+
     public boolean isLocalhostAccess() {
         return this.track.isLocalhostAccess();
     }
+
     public long getAccessTime() {
         return this.track.getDate().getTime();
     }
+
     public long getTimeSinceLastAccess() {
         return this.track.getTimeSinceLastAccess();
     }
+
     public boolean isDoS_blackout() {
         return this.track.isDoSBlackout();
     }
+
     public boolean isDoS_servicereduction() {
         return this.track.isDoSServicereduction();
     }
+
     public void recordEvent(String eventName, Object eventValue) {
         this.track.put(AccessTracker.EVENT_PREFIX + eventName, eventValue);
     }
+
     public String get(String key, String dflt) {
         String val = qm == null ? request.getParameter(key) : qm.get(key);
         return val == null ? dflt : val;
     }
+
     public String[] get(String key, String[] dflt, String delim) {
         String val = qm == null ? request.getParameter(key) : qm.get(key);
         return val == null || val.length() == 0 ? dflt : val.split(delim);
     }
+
     public int get(String key, int dflt) {
         String val = qm == null ? request.getParameter(key) : qm.get(key);
         return val == null || val.length() == 0 ? dflt : Integer.parseInt(val);
     }
+
     public long get(String key, long dflt) {
         String val = qm == null ? request.getParameter(key) : qm.get(key);
         return val == null || val.length() == 0 ? dflt : Long.parseLong(val);
     }
+
     public double get(String key, double dflt) {
         String val = qm == null ? request.getParameter(key) : qm.get(key);
         return val == null || val.length() == 0 ? dflt : Double.parseDouble(val);
     }
+
     public boolean get(String key, boolean dflt) {
         String val = qm == null ? request.getParameter(key) : qm.get(key);
         return val == null ? dflt : "true".equals(val) || "1".equals(val);
     }
+
     public Date get(String key, Date dflt, int timezoneOffset) {
         String val = qm == null ? request.getParameter(key) : qm.get(key);
         try {
@@ -131,9 +148,15 @@ public class Query {
             return dflt;
         }
     }
+
+    public Map<String, String> getMap() {
+        return this.qm;
+    }
+
     public Set<String> getKeys() {
         return request.getParameterMap().keySet();
     }
+
     public void setResponse(final HttpServletResponse response, final String mime) {
         long access_time = this.getAccessTime();
         response.setDateHeader("Last-Modified", access_time);
@@ -147,5 +170,7 @@ public class Query {
         return qm.hashCode();
     }
 
-    public HttpServletRequest getRequest(){ return this.request; }
+    public HttpServletRequest getRequest() {
+        return this.request;
+    }
 }

@@ -6,17 +6,19 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import javax.servlet.http.HttpServletResponse;
+import org.loklak.tools.storage.JSONObjectWithDefault;
+import org.loklak.server.AbstractAPIHandler;
+import org.loklak.data.DAO;
+import org.loklak.http.ClientConnection;
+import org.json.JSONObject;
+import org.loklak.objects.ProviderType;
+import org.loklak.objects.SourceType;
+import org.loklak.objects.Timeline2;
+import org.loklak.tools.storage.JSONObjectWithDefault;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.http.ClientConnection;
-import org.loklak.objects.ProviderType;
-import org.loklak.objects.SourceType;
-import org.loklak.objects.Timeline;
-import org.loklak.server.AbstractAPIHandler;
-import org.loklak.server.APIException;
-import org.loklak.server.Authorization;
-import org.loklak.server.Query;
-import org.loklak.tools.storage.JSONObjectWithDefault;
+import org.loklak.server.*;
 
 /**
  * @author vibhcool (Vibhor Verma)
@@ -31,58 +33,85 @@ public abstract class BaseScraper extends AbstractAPIHandler {
     //TODO: check if UTC time needed
     protected String scraperName;
     protected String html;
-    protected String url;
     protected String baseUrl;
-    protected String midUrl = "";
-    protected String query;
-    protected SourceType source_type; // where did the message come from
-    protected ProviderType provider_type;  // who created the message
-    //TODO: dummy variable, add datastructure for filter, type_of_posts, location, etc
-    protected String extra = "";
-    //TODO: setup Timeline for Post
-    protected final Timeline.Order order = Timeline.parseOrder("timestamp");
+    protected String midUrl;
+    protected String query = null;
+    // where did the message come from
+    protected SourceType source_type;
+    // who created the message
+    protected ProviderType provider_type;
+    protected Map<String, String> extra =null;
+    protected final Timeline2.Order order = Timeline2.parseOrder("timestamp");
 
     @Override
     public JSONObject serviceImpl(Query call, HttpServletResponse response, Authorization rights,
             JSONObjectWithDefault permissions) throws APIException {
-        this.query = call.get("query", "");
-        
-        //TODO: add different extra paramenters. this is dummy variable
-        this.extra = call.get("extra", "");
-        //TODO: to be implemented to use Timeline
-        //return getData().toJSON;
-        return this.getData();
+        this.setExtra(call);
+        return this.getData().toJSON(false, "metadata", "posts");
     }
 
-    protected abstract Map<?, ?> getExtra(String _extra);
+    protected void setExtra(Query call) {
+        this.extra = call.getMap();
+        this.query = call.get("query", "");
+        this.setParam();
+    }
 
-//    public Timeline getData() {
-    public Post getData() {
-        ClientConnection connection;
-        BufferedReader br;
+    protected void setExtra(Map<String, String> _extra) {
+        this.extra.putAll(_extra);
+    }
 
-//        Timeline tl = new Timeline(order);
-        Post tl = null;
-        this.url = this.baseUrl + this.midUrl + this.query;
+    public String getExtraValue(String key) {
+        String value = "";
+        if(this.extra.get(key) != null) {
+            value = this.extra.get(key).trim();
+        }
+        return value;
+    }
+
+    protected void setExtraValue(String key, String value) {
+        this.extra.put(key, value);
+    }
+
+    protected abstract void setParam();
+
+    public Timeline2 getData() {
+        String url = null;
+        Post postArray = null;
+        Timeline2 tl = new Timeline2(order);
+        url = this.baseUrl + this.midUrl + this.query;
 
         try {
-            connection = new ClientConnection(this.url);
-        
-            try {
-                // get instance of bufferReader
-                br = getHtml(connection);
-                tl = scrape(br);
-            } catch (Exception e) {
-                DAO.trace(e);
-            } finally {
-                connection.close();
-            }
-        } catch (IOException e) {
+            postArray = getDataFromConnection(url, "all");
+        } catch (Exception e) {
             DAO.severe("check internet connection");
+            postArray = new Post();
         }
+        tl.addPost(postArray);
         return tl;
     }
 
+    public Post getDataFromConnection(String url, String type) throws IOException {
+        ClientConnection connection = new ClientConnection(url);
+        BufferedReader br;
+        Post postArray = null;
+        try {
+            // get instance of bufferReader
+            br = getHtml(connection);
+            postArray = this.scrape(br, type, url);
+        } catch (Exception e) {
+            DAO.trace(e);
+            postArray = new Post(true);
+        } finally {
+            connection.close();
+        }
+        return postArray;
+
+    }
+/*
+    public Post getDataFromConnection(String url) throws IOException {
+        return getDataFromConnection(url, "all");
+    }
+*/
     public BufferedReader getHtml(ClientConnection connection) {
         if (connection.inputStream == null) {
             return null;
@@ -92,8 +121,7 @@ public abstract class BaseScraper extends AbstractAPIHandler {
         return br;
     }
 
-    //protected abstract Timeline scrape(BufferedReader br);
-    protected abstract Post scrape(BufferedReader br);
+    protected abstract Post scrape(BufferedReader br, String type, String url);
 
     public String bufferedReaderToString(BufferedReader br) throws IOException {
     StringBuilder everything = new StringBuilder();
