@@ -104,7 +104,7 @@ public class TwitterScraperTest {
         tweet_check.put("status_id_url", "https://twitter.com/loklak_test/status/870536303569289216");
         tweet_check.put("place_name", "");
         tweet_check.put("place_id", "");
-        tweet_check.put("text", "Tweet with a video https://pic.twitter.com/1R9ICL6icm");
+        tweet_check.put("text", "Tweet with a video");
         tweet_check.put("writeToIndex", "true");
         tweet_check.put("writeToBackend", "true");
 
