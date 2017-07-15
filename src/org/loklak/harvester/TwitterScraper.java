@@ -720,7 +720,7 @@ public class TwitterScraper {
         }
 
         public boolean willBeTimeConsuming() {
-            return timeline_link_pattern.matcher(this.text).find() || timeline_embed_pattern.matcher(this.text).find();
+            return timeline_link_pattern.matcher(this.text).find();
         }
 
         @Override
@@ -810,8 +810,7 @@ public class TwitterScraper {
             try {
                 Matcher m = timeline_embed_pattern.matcher(text);
                 if (m.find()) {
-                    String shorturl = RedirectUnshortener.unShorten(m.group(2));
-                    text = m.replaceFirst(" https://pic.twitter.com/" + shorturl + " ");
+                    text = m.replaceFirst("");
                     continue;
                 }
             } catch (Throwable e) {
