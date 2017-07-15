@@ -19,15 +19,17 @@
 
 package org.loklak.api.search;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;    
-import javax.servlet.http.HttpServletResponse;
+import org.apache.http.client.utils.URIBuilder;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -35,19 +37,40 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.loklak.server.APIException;
-import org.loklak.server.APIHandler;
-import org.loklak.server.AbstractAPIHandler;
-import org.loklak.server.Authorization;
+import org.loklak.data.DAO;
+import org.loklak.harvester.BaseScraper;
+import org.loklak.harvester.Post;
 import org.loklak.server.BaseUserRole;
-import org.loklak.server.Query;
-import org.loklak.susi.SusiThought;
-import org.loklak.tools.storage.JSONObjectWithDefault;
 
-public class GithubProfileScraper extends AbstractAPIHandler implements APIHandler {
+public class GithubProfileScraper extends BaseScraper {
 
-    private static final long serialVersionUID = -4166800345379685201L;
+    private final long serialVersionUID = -4166800345379685202L;
     private static final String GITHUB_API_BASE = "https://api.github.com/users/";
+    public List<String> termsList = null;
+
+    public GithubProfileScraper() {
+        super();
+        this.baseUrl = "https://github.com/";
+        this.scraperName = "Github";
+    }
+
+    public GithubProfileScraper(String _query, Map<String, String> _extra) {
+        this();
+        this.setExtra(_extra);
+        this.query = _query;
+    }
+
+    public GithubProfileScraper(Map<String, String> _extra) {
+        this();
+        this.setExtra(_extra);
+        this.query = this.getExtraValue("query");
+    }
+
+    public GithubProfileScraper(String _query) {
+        this();
+        this.query = _query;
+        this.setExtraValue("query", this.query);
+    }
 
     @Override
     public String getAPIPath() {
@@ -65,19 +88,40 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
         return null;
     }
 
-    public JSONObject serviceImpl(Query call, HttpServletResponse response, Authorization rights, JSONObjectWithDefault permissions)
-            throws APIException {
-        String profile = call.get("profile", "");
-        String termsParam = call.get("terms", "");
-        Set terms = null;
-        if  (!"".equals(termsParam)) {
-            terms = new HashSet(Arrays.asList(termsParam.split(",")));
-            return scrapeGithub(profile, terms);
+    protected String prepareSearchUrl(String type) {
+        URIBuilder url = null;
+        String midUrl = "search/";
+        try {
+            switch(type) {
+                case "all":
+                case "user":
+                    midUrl = "";
+                    url = new URIBuilder(this.baseUrl + midUrl + this.query);
+                    break;
+                // Add more types
+                default:
+                    url = new URIBuilder("");
+                    break;
+            }
+        } catch (URISyntaxException e) {
+            DAO.log("Invalid Url: baseUrl = " + this.baseUrl + ", mid-URL = " + midUrl + "query = " + this.query + "type = " + type);
+            return "";
         }
-        return scrapeGithub(profile);
+
+        return url.toString();
     }
-    
-    private static JSONArray getDataFromApi(String url) {
+
+    protected void setParam() {
+        if(!"".equals(this.getExtraValue("terms"))) {
+            this.termsList = Arrays.asList(this.getExtraValue("terms").trim().split("\\s*,\\s*"));
+        } else {
+            this.termsList = new ArrayList<String>();
+            this.termsList.add("all");
+            this.setExtraValue("terms", String.join(",", this.termsList));
+        }
+    }
+
+    private JSONArray getDataFromApi(String url) {
         URI uri = null;
         try {
             uri = new URI(url);
@@ -95,9 +139,21 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
         return arr;
     }
 
-    private static void scrapeGithubUser(
-        JSONObject githubProfile,
-        Set terms,
+    protected Post scrape(BufferedReader br, String type, String url) {
+        Post typeArray = new Post(true);
+
+        if ("all".equals(type) || "user".equals(type)) {
+            JSONArray statuses = new JSONArray();
+            typeArray.put("user", statuses.put(scrapeGithub(this.query, br)));
+            return typeArray;
+        } else {
+            return typeArray;
+        }
+        //TODO: add search scrapers
+    }
+
+    private void scrapeGithubUser(
+        Post githubProfile,
         String profile,
         Document html) {
 
@@ -123,7 +179,7 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
         String homeLocation = html.getElementsByAttributeValueContaining("itemprop", "homeLocation").attr("title");
         githubProfile.put("home_location", homeLocation);
 
-        if (terms.contains("starred") || terms.contains("all")) {
+        if (this.termsList.contains("starred") || this.termsList.contains("all")) {
             String starredUrl = GITHUB_API_BASE + profile + StarredEndpoint;
             JSONArray starredData = getDataFromApi(starredUrl);
             githubProfile.put("starred_data", starredData);
@@ -132,7 +188,7 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
             githubProfile.put("starred", starred);
         }
 
-        if (terms.contains("follows") || terms.contains("all")) {
+        if (this.termsList.contains("follows") || this.termsList.contains("all")) {
             String followersUrl = GITHUB_API_BASE + profile + FollowersEndpoint;
             JSONArray followersData = getDataFromApi(followersUrl);
             githubProfile.put("followers_data", followersData);
@@ -141,7 +197,7 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
             githubProfile.put("followers", followers);
         }
 
-        if (terms.contains("following") || terms.contains("all")) {
+        if (this.termsList.contains("following") || this.termsList.contains("all")) {
             String followingUrl = GITHUB_API_BASE + profile + FollowingEndpoint;
             JSONArray followingData = getDataFromApi(followingUrl);
             githubProfile.put("following_data", followingData);
@@ -150,7 +206,7 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
             githubProfile.put("following", following);
         }
 
-        if (terms.contains("organizations") || terms.contains("all")) {
+        if (this.termsList.contains("organizations") || this.termsList.contains("all")) {
             JSONArray organizations = new JSONArray();
             Elements orgs = html.getElementsByAttributeValue("itemprop", "follows");
             for (Element e : orgs) {
@@ -174,9 +230,9 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
         }
     }
     
-    private static void scrapeGithubOrg(
+    private void scrapeGithubOrg(
         String profile,
-        JSONObject githubProfile,
+        Post githubProfile,
         Document html) {
 
         githubProfile.put("user_name", profile);
@@ -200,34 +256,21 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
         }
     }
     
+    public Post scrapeGithub(String profile, BufferedReader br) {
 
-    public static SusiThought scrapeGithub(String profile) {
-        Set terms = new HashSet();
-        terms.add("all");
-        return scrapeGithub(profile, terms);
-    }
-    
-    public static SusiThought scrapeGithub(String profile, Set terms) {
-
-        final String GistsEndpoint = "/gists";
-        final String SubscriptionsEndpoint = "/subscriptions";
-        final String ReposEndpoint = "/repos";
-        final String EventsEndpoint = "/events";
-        final String ReceivedEventsEndpoint = "/received_events";
         Document html = null;
         String userId;
-
+        Post githubProfile = new GithubPost(profile, 0);
         try {
-            html = Jsoup.connect("https://github.com/" + profile).get();
+            html = Jsoup.parse(bufferedReaderToString(br));
         } catch (IOException e) {
+            DAO.trace(e);
             JSONArray arr = getDataFromApi("https://api.github.com/search/users?q=" + profile);
-            SusiThought json = new SusiThought();
-            json.setData(arr);
-            return json;
+            githubProfile.put("user_profiles", arr);
+            return githubProfile;
         }
 
         String avatarUrl = html.getElementsByAttributeValueContaining("class", "avatar").attr("src");
-        JSONObject githubProfile = new JSONObject();
         Pattern avatarUrlToUserId = Pattern.compile(".com\\/u\\/([0-9]+)\\?");
         Matcher m = avatarUrlToUserId.matcher(avatarUrl);
         m.find();
@@ -253,45 +296,83 @@ public class GithubProfileScraper extends AbstractAPIHandler implements APIHandl
                 githubProfile.put("joining_date", joinDate);
             }
         }
-        /* If Individual User */
+        // If Individual User
         if (html.getElementsByAttributeValueContaining("class", "user-profile-nav").size() != 0) {
-            scrapeGithubUser(githubProfile, terms, profile, html);
+            this.scrapeGithubUser(githubProfile, profile, html);
         }
-        if (terms.contains("gists") || terms.contains("all")) {
+        
+        /* If Organization */
+        else if (html.getElementsByAttributeValue("class", "orgnav").size() != 0) {
+            this.scrapeGithubOrg(profile, githubProfile, html);
+        }
+
+        this.scrapeTerms(githubProfile);
+        
+        return githubProfile;
+    }
+
+    private void scrapeTerms(Post githubProfile) {
+
+        final String GistsEndpoint = "/gists";
+        final String SubscriptionsEndpoint = "/subscriptions";
+        final String ReposEndpoint = "/repos";
+        final String EventsEndpoint = "/events";
+        final String ReceivedEventsEndpoint = "/received_events";
+        final String profile = this.query;
+
+        if (this.termsList.contains("gists") || this.termsList.contains("all")) {
             String gistsUrl = GITHUB_API_BASE + profile + GistsEndpoint;
             JSONArray gists = getDataFromApi(gistsUrl);
             githubProfile.put("gists", gists);
         }
-        if (terms.contains("subscriptions") || terms.contains("all")) {
+        if (this.termsList.contains("subscriptions") || this.termsList.contains("all")) {
             String subscriptionsUrl = GITHUB_API_BASE + profile + SubscriptionsEndpoint;
             JSONArray subscriptions = getDataFromApi(subscriptionsUrl);
             githubProfile.put("subscriptions", subscriptions);
         }
-        if (terms.contains("repos") || terms.contains("all")) {
+        if (this.termsList.contains("repos") || this.termsList.contains("all")) {
             String reposUrl = GITHUB_API_BASE + profile + ReposEndpoint;
             JSONArray repos = getDataFromApi(reposUrl);
             githubProfile.put("repos", repos);
         }
-        if (terms.contains("events") || terms.contains("all")) {
+        if (this.termsList.contains("events") || this.termsList.contains("all")) {
             String eventsUrl = GITHUB_API_BASE + profile + EventsEndpoint;
             JSONArray events = getDataFromApi(eventsUrl);
             githubProfile.put("events", events);
         }
-        if (terms.contains("received_events") || terms.contains("all")) {
+        if (this.termsList.contains("received_events") || this.termsList.contains("all")) {
             String receivedEventsUrl = GITHUB_API_BASE + profile + ReceivedEventsEndpoint;
             JSONArray receivedEvents = getDataFromApi(receivedEventsUrl);
             githubProfile.put("received_events", receivedEvents);
         }
-        /* If Organization */
-        if (html.getElementsByAttributeValue("class", "orgnav").size() != 0) {
-            scrapeGithubOrg(profile, githubProfile, html);
-        }
-        JSONArray jsonArray = new JSONArray();
-        jsonArray.put(githubProfile);
+    }
 
-        SusiThought json = new SusiThought();
-        json.setData(jsonArray);
-        return json;
+    public static class GithubPost extends Post {
+
+        //github post-id, for profile it will be username
+        private String githubId;
+        private int githubPostNo;
+
+        public GithubPost(String _githubId, int _githubPostNo) {
+            //not UTC, may be error prone
+            super();
+            this.githubId = _githubId;
+            this.githubPostNo = _githubPostNo;
+            this.postId = this.timestamp + this.githubPostNo + this.githubId;
+        }
+
+        public void setGithubId(String _githubId) {
+            this.githubId = _githubId;
+        }
+
+        public void setGithubPostNo(int _githubPostNo) {
+            this.githubPostNo = _githubPostNo;
+        }
+
+        public String getPostId() {
+            return String.valueOf(this.postId);
+        }
+        //clean data
     }
 
 }

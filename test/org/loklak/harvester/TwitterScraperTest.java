@@ -12,28 +12,28 @@ import java.time.ZonedDateTime;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.ZoneId;
+import java.lang.reflect.Method;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import org.junit.Test;
+import org.loklak.objects.Timeline;
+import org.loklak.objects.MessageEntry;
+import org.loklak.http.ClientConnection;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.StringContains.containsString;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertEquals;
-import java.lang.reflect.Method;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 
-import org.loklak.objects.Timeline;
-import org.loklak.objects.MessageEntry;
-import org.loklak.http.ClientConnection;
 
-/*
-    These unit-tests test org.loklak.harvester.TwitterScraper.java
-    Twitter profile @loklak_test has been used for testing search method of TwitterScraper
-*/
+/**
+ * These unit-tests test org.loklak.harvester.TwitterScraper.java
+ * Twitter profile @loklak_test has been used for testing search method of TwitterScraper
+ */
 public class TwitterScraperTest {
 
-    /*
-        This unit-test tests twitter url creation
-    */
+    /**
+     * This unit-test tests twitter url creation
+     */
     @Test
     public void testPrepareSearchUrl() {
         String url;
@@ -82,10 +82,10 @@ public class TwitterScraperTest {
 
     }
 
-    /*
-        This unit-test tests data fetched in TwitterScraper.search() method.
-        This test uses TwitterTweet object to get and check tweets
-    */
+    /**
+     * This unit-test tests data fetched in TwitterScraper.search() method.
+     * This test uses TwitterTweet object to get and check tweets
+     */
     @Test
     public void testSimpleSearch() {
         Timeline ftweet_list;
@@ -157,9 +157,9 @@ public class TwitterScraperTest {
         }
     }
 
-    /*
-        This method merges 2 arrays of Timeline Objects(containing array of TwitterTweet objects) into one Timeline object
-    */
+    /**
+     * This method merges 2 arrays of Timeline Objects(containing array of TwitterTweet objects) into one Timeline object
+     */
     public Timeline processTweetList(Timeline[] tweet_list) {
 
         for (MessageEntry me: tweet_list[1]) {
@@ -173,9 +173,9 @@ public class TwitterScraperTest {
 
     }
 
-    /*
-        Change Date format to compare with other dates
-    */
+    /**
+     * Change Date format to compare with other dates
+     */
     public String dateFormatChange(String time) {
 
         String k;

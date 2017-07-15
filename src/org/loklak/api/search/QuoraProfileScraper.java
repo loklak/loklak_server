@@ -53,18 +53,20 @@ public class QuoraProfileScraper extends BaseScraper {
         super();
         this.baseUrl = "https://www.quora.com/";
         this.scraperName = "Quora";
-        
+
     }
 
     public QuoraProfileScraper(String _query) {
         this();
         this.query = _query;
+        this.setExtraValue("query", this.query);
     }
 
     public QuoraProfileScraper(String _query, Map<String, String> _extra) {
         this();
         this.setExtra(_extra);
         this.query = _query;
+        this.setExtraValue("query", this.query);
     }
 
     public QuoraProfileScraper(Map<String, String> _extra) {
@@ -362,10 +364,10 @@ public class QuoraProfileScraper extends BaseScraper {
 
         switch(type) {
             case "users":
-                typeArray.put("users", scrapeProfile(br, url).toArray());
+                typeArray.put("users", this.scrapeProfile(br, url).toArray());
                 break;
             case "question":
-                typeArray.put("question", scrapeQues(br, url).toArray());
+                typeArray.put("question", this.scrapeQues(br, url).toArray());
                 break;
             default:
                 break;
