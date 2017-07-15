@@ -26,6 +26,8 @@ package org.loklak.objects;
 public enum SourceType {
 
     TWITTER(true),        // generated at twitter and scraped from there
+    QUORA(true),
+    GITHUB(true),
     FOSSASIA_API(false),  // imported from FOSSASIA API data,
     OPENWIFIMAP(false),   // imported from OpenWifiMap API data
     NODELIST(false),      // imported from Freifunk Nodelist

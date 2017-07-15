@@ -52,8 +52,7 @@ public class QuoraProfileScraper extends BaseScraper {
     public QuoraProfileScraper() {
         super();
         this.baseUrl = "https://www.quora.com/";
-        this.scraperName = "Quora";
-
+        this.scraperName = "quora";
     }
 
     public QuoraProfileScraper(String _query) {
@@ -82,6 +81,7 @@ public class QuoraProfileScraper extends BaseScraper {
             this.typeList.add("all");
             this.setExtraValue("type", String.join(",", this.typeList));
         }
+        this.query = this.getExtraValue("query");
     }
 
     @Override
@@ -138,12 +138,12 @@ public class QuoraProfileScraper extends BaseScraper {
         String midUrl;
         String url;
         Thread[] dataThreads = new Thread[2];
-        this.postList = new Timeline2(this.order);
+        Timeline2 postList = new Timeline2(this.order);
 
         if(this.typeList.contains("user") || this.typeList.contains("all")) {
             midUrl = "profile/";
             url = prepareSearchUrl("user");
-            dataThreads[0] = new ConcurrentScrape(url, "users");
+            dataThreads[0] = new ConcurrentScrape(url, "users", postList);
             dataThreads[0].start();
         } else {
             dataThreads[0] = new Thread();
@@ -151,7 +151,7 @@ public class QuoraProfileScraper extends BaseScraper {
         if(this.typeList.contains("question") || this.typeList.contains("all")) {
             midUrl = "search/?q=";
             url = prepareSearchUrl("question");
-            dataThreads[1] = new ConcurrentScrape(url, "question");
+            dataThreads[1] = new ConcurrentScrape(url, "question", postList);
             dataThreads[1].start();
         } else {
             dataThreads[1] = new Thread();
@@ -164,23 +164,13 @@ public class QuoraProfileScraper extends BaseScraper {
                 dataThreads[i].join();
             }
         } catch(InterruptedException e) {
-            String stuck_at = "";
-            switch(i) {
-                case 0:
-                    stuck_at = "users";
-                    break;
-                case 1:
-                    stuck_at = "question";
-                    break;
-                case 2:
-                    stuck_at = "answer";
-                    break;
-                default:
-                    stuck_at = "unknown, check the code";
-            }
-
-            DAO.severe("Couldn't complete all threads, stuck at scraper: " + this.scraperName + " dataThread: " + stuck_at);
+            exceptionOutputGetData(i);
         }
+
+        // Add scraper name
+        Post postArray = new Post();
+        postArray.put(this.scraperName, postList.toArray());
+        this.postList.addPost(postArray);
 
         return this.postList;
     }
@@ -189,21 +179,40 @@ public class QuoraProfileScraper extends BaseScraper {
 
         private String url = "";
         private String type = "all";
+        private Timeline2 postList = null;
 
-        public ConcurrentScrape(String url, String type) {
+        public ConcurrentScrape(String url, String type, Timeline2 postList) {
             this.url = url;
             this.type = type;
+            this.postList = postList;
         }
 
         public void run() {
             try {
-                QuoraProfileScraper.this.postList.addPost(QuoraProfileScraper.this.getDataFromConnection(this.url, this.type));
+                this.postList.addPost(QuoraProfileScraper.this.getDataFromConnection(this.url, this.type));
             } catch (IOException e) {
                 DAO.severe("check internet connection for url: " + this.url + " type: " + this.type);
             }
         }
     }
 
+    private void exceptionOutputGetData(int i) {
+        String stuck_at = "";
+        switch(i) {
+            case 0:
+                stuck_at = "users";
+                break;
+            case 1:
+                stuck_at = "question";
+                break;
+            case 2:
+                stuck_at = "answer";
+                break;
+            default:
+                stuck_at = "unknown, check the code";
+        }
+        DAO.severe("Couldn't complete all threads, stuck at scraper: " + this.scraperName + " dataThread: " + stuck_at);
+    }
 
     private Timeline2 scrapeQues(BufferedReader br, String url) {
         Pattern resultBlock = Pattern.compile("<div[^>]*[^>\\s]*[^>]*class=['\"][^>'\"]*(results_list)");

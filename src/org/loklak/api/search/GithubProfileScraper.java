@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.List;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;    
+import java.util.regex.Pattern;
 import org.apache.http.client.utils.URIBuilder;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -40,19 +40,21 @@ import org.jsoup.select.Elements;
 import org.loklak.data.DAO;
 import org.loklak.harvester.BaseScraper;
 import org.loklak.harvester.Post;
+import org.loklak.objects.Timeline2;
 import org.loklak.server.BaseUserRole;
 
 public class GithubProfileScraper extends BaseScraper {
 
     private final long serialVersionUID = -4166800345379685202L;
     private static final String GITHUB_API_BASE = "https://api.github.com/users/";
+    private Timeline2 postList = new Timeline2(this.order);
     public List<String> termsList = null;
 
     public GithubProfileScraper() {
         super();
         this.baseUrl = "https://github.com/";
-        this.scraperName = "Github";
-    }
+        this.scraperName = "github";
+   }
 
     public GithubProfileScraper(String _query, Map<String, String> _extra) {
         this();
@@ -229,7 +231,7 @@ public class GithubProfileScraper extends BaseScraper {
             githubProfile.put("organizations", organizations);
         }
     }
-    
+
     private void scrapeGithubOrg(
         String profile,
         Post githubProfile,
@@ -255,7 +257,7 @@ public class GithubProfileScraper extends BaseScraper {
             githubProfile.put("organization_people_number", orgPeopleNumber);
         }
     }
-    
+
     public Post scrapeGithub(String profile, BufferedReader br) {
 
         Document html = null;
@@ -278,7 +280,7 @@ public class GithubProfileScraper extends BaseScraper {
         githubProfile.put("user_id", userId);
 
         githubProfile.put("avatar_url", "https://avatars0.githubusercontent.com/u/" + userId);
-    
+
         String email = html.getElementsByAttributeValueContaining("itemprop", "email").text();
         if (!email.contains("@")) {
             email = "";
@@ -300,14 +302,14 @@ public class GithubProfileScraper extends BaseScraper {
         if (html.getElementsByAttributeValueContaining("class", "user-profile-nav").size() != 0) {
             this.scrapeGithubUser(githubProfile, profile, html);
         }
-        
+
         /* If Organization */
         else if (html.getElementsByAttributeValue("class", "orgnav").size() != 0) {
             this.scrapeGithubOrg(profile, githubProfile, html);
         }
 
         this.scrapeTerms(githubProfile);
-        
+
         return githubProfile;
     }
 

@@ -24,6 +24,7 @@ import java.io.PrintWriter;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -118,8 +119,9 @@ public class SearchServlet extends HttpServlet {
     protected void doGet(final HttpServletRequest request, final HttpServletResponse response) throws ServletException, IOException {
         final long start = System.currentTimeMillis();
         final Query post = RemoteAccess.evaluate(request);
+        Map<String, String> inputMap = post.getMap();
         final ClientIdentity identity = AbstractAPIHandler.getIdentity(request, response, post);
-
+        JSONArray dataArray = null;
         try {
 
             // manage DoS
@@ -131,6 +133,7 @@ public class SearchServlet extends HttpServlet {
             boolean txtExt = request.getServletPath().endsWith(".txt");
 
             // evaluate get parameter
+            String scraper = post.get("scraper", "");
             String callback = post.get("callback", "");
             boolean jsonp = callback != null && callback.length() > 0;
             boolean minified = post.get("minified", false);
@@ -161,7 +164,14 @@ public class SearchServlet extends HttpServlet {
             Timeline tl = DAO.timelineCache.getOrCreate(identity, query, startRecord <= 1, order);
             JSONObject hits = new JSONObject(true);
             final JSONObject[] aggregations = new JSONObject[]{null};
-            if (tl.size() > 0) {
+
+            if ("".equals(scraper)) {
+                // start a scraper
+                inputMap.put("query", query);
+                DAO.log(request.getServletPath() + " scraping with query: "
+                        + query + " scraper: " + scraper);
+                dataArray = DAO.scrapeLoklak(inputMap, true, true);
+            } else if (tl.size() > 0) {
                 // return the timeline from a cached search result
                 // in case that the number of available records in the cache is too low, try to get more
                 // otherwise there might be nothing to do here
@@ -318,7 +328,7 @@ public class SearchServlet extends HttpServlet {
                     }
                     post.recordEvent("backend_time", System.currentTimeMillis() - start);
 
-                }
+                } 
 
                 // check the latest user_ids
                 DAO.announceNewUserId(tl);
@@ -367,8 +377,12 @@ public class SearchServlet extends HttpServlet {
                     // late incoming messages from concurrent peer retrieval may cause this
                     // we silently do nothing here and return what we listed so far
                 }
-                m.put("statuses", statuses);
 
+                if (dataArray == null) {
+                    m.put("statuses", statuses);
+                } else {
+                    m.put("results", dataArray);
+                }
                 // aggregations
                 m.put("aggregations", aggregations[0]);
 
