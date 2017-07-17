@@ -5,6 +5,7 @@ import java.io.InputStreamReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.HashMap;
 import javax.servlet.http.HttpServletResponse;
 import org.loklak.tools.storage.JSONObjectWithDefault;
 import org.loklak.server.AbstractAPIHandler;
@@ -69,19 +70,22 @@ public abstract class BaseScraper extends AbstractAPIHandler {
     }
 
     protected void setExtraValue(String key, String value) {
+        if(this.extra == null) {
+            this.extra = new HashMap<String, String>();
+        }
         this.extra.put(key, value);
     }
 
     protected abstract void setParam();
 
+    protected abstract String prepareSearchUrl(String type);
+
     public Timeline2 getData() {
-        String url = null;
         Post postArray = null;
         Timeline2 tl = new Timeline2(order);
-        url = this.baseUrl + this.midUrl + this.query;
-
+            
         try {
-            postArray = getDataFromConnection(url, "all");
+            postArray = getDataFromConnection();
         } catch (Exception e) {
             DAO.severe("check internet connection");
             postArray = new Post();
@@ -96,8 +100,11 @@ public abstract class BaseScraper extends AbstractAPIHandler {
         Post postArray = null;
         try {
             // get instance of bufferReader
+        
             br = getHtml(connection);
+
             postArray = this.scrape(br, type, url);
+
         } catch (Exception e) {
             DAO.trace(e);
             postArray = new Post(true);
@@ -107,11 +114,16 @@ public abstract class BaseScraper extends AbstractAPIHandler {
         return postArray;
 
     }
-/*
+
     public Post getDataFromConnection(String url) throws IOException {
         return getDataFromConnection(url, "all");
     }
-*/
+
+    public Post getDataFromConnection() throws IOException {
+        String url = this.prepareSearchUrl("all");
+        return getDataFromConnection(url, "all");
+    }
+
     public BufferedReader getHtml(ClientConnection connection) {
         if (connection.inputStream == null) {
             return null;

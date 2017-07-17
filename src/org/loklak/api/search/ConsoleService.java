@@ -22,6 +22,7 @@ package org.loklak.api.search;
 import java.util.Date;
 import java.util.Set;
 import java.util.regex.Pattern;
+
 import org.elasticsearch.search.sort.SortOrder;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -44,6 +45,7 @@ import org.loklak.susi.SusiProcedures;
 import org.loklak.susi.SusiThought;
 import org.loklak.susi.SusiTransfer;
 import org.loklak.harvester.BaseScraper;
+
 import org.loklak.tools.storage.JSONObjectWithDefault;
 
 import javax.servlet.http.HttpServletResponse;
@@ -211,7 +213,9 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
             return json;
         });
         dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?githubProfile +?WHERE +?profile ??= ??'(.*?)' ??;"), matcher -> {
-            SusiThought json = GithubProfileScraper.scrapeGithub(matcher.group(2));
+            BaseScraper githubScrape = new GithubProfileScraper(matcher.group(2));
+            Timeline2 dataList = githubScrape.getData();
+            SusiThought json = new SusiThought(dataList.toJSON());
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
             json.setData(transfer.conclude(json.getData()));
             return json;
