@@ -455,6 +455,10 @@ public class ClientConnection {
         }
     }
 
+    public int getStatusCode() {
+        return this.httpResponse.getStatusLine().getStatusCode();
+    }
+
     public static byte[] download(String source_url) throws IOException {
     	return download(source_url, true);
     }

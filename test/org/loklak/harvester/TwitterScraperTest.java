@@ -111,6 +111,10 @@ public class TwitterScraperTest {
         try {
             // Scrap all html from the https_url link
             connection = new ClientConnection(https_url);
+
+            // Check Network
+            assertThat(connection.getStatusCode(), is(200));
+
             if (connection.inputStream == null) return;
             try {
                 // Read all scraped html data
