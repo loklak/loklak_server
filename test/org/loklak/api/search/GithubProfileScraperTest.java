@@ -9,7 +9,9 @@ import org.loklak.data.DAO;
 import org.loklak.harvester.Post;
 import org.loklak.http.ClientConnection;
 
+import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
 /**
  * These unit-tests test org.loklak.api.search.GithubProfileScraper.java
@@ -34,6 +36,9 @@ public class GithubProfileScraperTest {
 
         try {
             ClientConnection connection = new ClientConnection(url);
+            //Check Network issue
+            assertThat(connection.getStatusCode(), is(200));
+
             br = githubScraper.getHtml(connection);
         } catch (IOException e) {
             DAO.log("GithubProfileScraperTest.githubProfileScraperUserTest() failed to connect to network. url:" + url);
@@ -66,6 +71,9 @@ public class GithubProfileScraperTest {
         
         try {
             ClientConnection connection = new ClientConnection(url);
+            //Check Network issue
+            assertThat(connection.getStatusCode(), is(200));
+
             br = githubScraper.getHtml(connection);
            } catch (IOException e) {
                 DAO.log("GithubProfileScraperTest.githubProfileScraperUserTest() failed to connect to network. url:" + url);
