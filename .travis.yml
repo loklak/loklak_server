@@ -11,18 +11,14 @@ addons:
 install:
 - pip install --user flake8
 script:
-- gradle build
+- gradle build -x checkstyleTest -x checkstyleMain
 - bin/start.sh
 - flake8 bin
 - docker build -t loklak_server .
 - docker images
 - docker run loklak_server bash /loklak_server/bin/start.sh -I
-- gradle jacocoTestReport
-before_script:
-- pip install --user codecov
 after_success:
 - bash <(curl -s https://codecov.io/bash)
-- codecov
 - gradle clean
 before_deploy:
 - openssl aes-256-cbc -K $encrypted_e0d8735ecce8_key -iv $encrypted_e0d8735ecce8_iv -in .utility/loklakserver.1.enc -out .utility/loklakserver.1 -d
@@ -32,9 +28,6 @@ before_deploy:
 - chmod 600 .utility/loklakserver.2
 - ssh-add .utility/loklakserver.1
 - ssh-add .utility/loklakserver.2
-- sudo add-apt-repository -y ppa:git-core/ppa
-- sudo apt-get update
-- sudo apt-get install git
 deploy:
   - provider: script
     skip_cleanup: true
