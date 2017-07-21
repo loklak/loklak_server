@@ -201,7 +201,9 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
             return json;
         });
         dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?wordpress +?WHERE +?url ??= ??'(.*?)' ??;"), matcher -> {
-            SusiThought json = WordpressCrawlerService.crawlWordpress(matcher.group(2));
+            BaseScraper wordpressScrape = new WordpressCrawlerService(matcher.group(2));
+            Timeline2 dataList = wordpressScrape.getData();
+            SusiThought json = new SusiThought(dataList.toJSON());
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
             json.setData(transfer.conclude(json.getData()));
             return json;
