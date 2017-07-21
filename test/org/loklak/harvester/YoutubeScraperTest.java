@@ -6,8 +6,10 @@ import org.junit.Test;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.net.URL;
+import org.loklak.data.DAO;
+import org.loklak.http.ClientConnection;
 
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
@@ -26,8 +28,19 @@ public class YoutubeScraperTest {
      * @throws IOException if some problem with open stream for reading data.
      */
     @Test
-    public void whenTryParseVideoFromInputStreamShouldCheckThatJSONObjectGood() throws IOException {
-        JSONObject video = YoutubeScraper.parseVideo(new URL("https://www.youtube.com/watch?v=KVGRN7Z7T1A").openStream());
+    public void parseFromInputStreamTest() throws IOException {
+        YoutubeScraper ytubeScrape = new YoutubeScraper();
+        String url = "https://www.youtube.com/watch?v=KVGRN7Z7T1A";
+        InputStream fis = null;
+
+        try {
+            fis = new URL(url).openStream();
+
+        } catch (IOException e) {
+            DAO.log("YoutubeScraperTest.parseFromInputStreamTest() failed to connect to network. url:" + url);
+        }
+
+        JSONObject video = ytubeScrape.parseVideo(fis, "url", url);
         assertThat(video.get("html_title").toString(), is("[\"Iggy Azalea - Team (Explicit) - YouTube\"]"));
     }
 
@@ -36,8 +49,23 @@ public class YoutubeScraperTest {
      * @throws IOException if some error happened with open stream for reading data.
      */
     @Test
-    public void whneTryParseVideoFromBufferedReaderShouldCheckThatIsGoodJsonObjectReturn() throws IOException {
-        JSONObject video = YoutubeScraper.parseVideo(new BufferedReader(new InputStreamReader(new URL("https://www.youtube.com/watch?v=KVGRN7Z7T1A").openStream())));
+    public void parseFromBufferedReaderTest() throws IOException {
+        YoutubeScraper ytubeScrape = new YoutubeScraper();
+        String url = "https://www.youtube.com/watch?v=KVGRN7Z7T1A";
+        BufferedReader br = null;
+
+        try {
+            ClientConnection connection = new ClientConnection(url);
+            //Check Network issue
+            assertThat(connection.getStatusCode(), is(200));
+
+            br = ytubeScrape.getHtml(connection);
+        } catch (IOException e) {
+            DAO.log("YoutubeScraperTest.parseFromBufferedReaderTest()() failed to connect to network. url:" + url);
+        }
+
+        JSONObject video = ytubeScrape.parseVideo(br, "url", "https://www.youtube.com/watch?v=KVGRN7Z7T1A");
         assertThat(video.get("html_title").toString(), is("[\"Iggy Azalea - Team (Explicit) - YouTube\"]"));
     }
+
 }
