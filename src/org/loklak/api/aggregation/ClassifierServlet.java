@@ -21,7 +21,7 @@ import org.loklak.tools.storage.JSONObjectWithDefault;
 
 public class ClassifierServlet extends AbstractAPIHandler implements APIHandler {
 
-    public Map<String, List<String>> getAllowedClassifiers() {
+    public static Map<String, List<String>> getAllowedClassifiers() {
 
         // Emotion classifier
         List<String> emotionClasses = new ArrayList<>();
@@ -107,12 +107,10 @@ public class ClassifierServlet extends AbstractAPIHandler implements APIHandler 
             List<String> countryList = Arrays.asList(countries);
             HashMap<String, HashMap<String, HashMap<String, Double>>> result;
             if (countryList.contains("all")) {
-                result = DAO.elasticsearch_client.classifierScoreForCountry("messages", "classifier_" + classifier, Arrays.asList(classes), sinceDate, untilDate);
+                retMessage.put("aggregations", ClassifierServletCache.getOrCreate("messages", classifier, sinceDate, untilDate, Arrays.asList(classes)));
             } else {
-                result = DAO.elasticsearch_client.classifierScoreForCountry("messages", "classifier_" + classifier, Arrays.asList(classes), sinceDate, untilDate, countryList);
+                retMessage.put("aggregations", ClassifierServletCache.getOrCreate("messages", classifier, sinceDate, untilDate, Arrays.asList(classes), countryList));
             }
-            // Put aggregation data
-            retMessage.put("aggregations", getAggregationsJsonByCountry(result));
         } catch (Exception e) {
             DAO.severe("Unable to handle aggregation request", e);
             throw new APIException(400, "Unable to parse the provided date");
@@ -121,7 +119,7 @@ public class ClassifierServlet extends AbstractAPIHandler implements APIHandler 
         return retMessage;
     }
 
-    private JSONObject getCompleteInfo(HashMap<String, List<String>> classInformation) {
+    private static JSONObject getCompleteInfo(HashMap<String, List<String>> classInformation) {
         JSONObject info = new JSONObject(true);
         info.put("README_0", "This is the aggregation result for your request.");
         info.put("README_1",
@@ -142,7 +140,7 @@ public class ClassifierServlet extends AbstractAPIHandler implements APIHandler 
         return info;
     }
 
-    private JSONObject getMetadata(String classifier, String[] classes, boolean fetchAllClasses, Query post) {
+    private static JSONObject getMetadata(String classifier, String[] classes, boolean fetchAllClasses, Query post) {
         JSONObject metadata = new JSONObject(true);
         metadata.put("classifier", classifier);
         metadata.put("classes", Arrays.toString(classes).substring(1, Arrays.toString(classes).length() - 1));
@@ -155,7 +153,7 @@ public class ClassifierServlet extends AbstractAPIHandler implements APIHandler 
         return metadata;
     }
 
-    private JSONObject getAggregationsJsonByCountry(HashMap<String, HashMap<String, HashMap<String, Double>>> result) {
+    public static JSONObject getAggregationsJsonByCountry(HashMap<String, HashMap<String, HashMap<String, Double>>> result) {
         JSONObject aggregations = new JSONObject();
         for (HashMap.Entry<String, HashMap<String, HashMap<String, Double>>> entry : result.entrySet()) {
             aggregations.put(entry.getKey(), getAggregationsJson(entry.getValue()));
@@ -163,7 +161,7 @@ public class ClassifierServlet extends AbstractAPIHandler implements APIHandler 
         return aggregations;
     }
 
-    private JSONArray getAggregationsJson(HashMap<String, HashMap<String, Double>> result) {
+    private static JSONArray getAggregationsJson(HashMap<String, HashMap<String, Double>> result) {
         JSONArray aggregations = new JSONArray();
         for (HashMap.Entry<String, HashMap<String, Double>> entry: result.entrySet()) {
             JSONObject obj = new JSONObject(true);
