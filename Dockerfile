@@ -22,7 +22,7 @@ ADD settings.gradle /loklak_server/
 # install OpenJDK 8 JDK, Ant, and Bash
 RUN apk update && apk add openjdk8 git bash && \
     # compile loklak
-    cd /loklak_server && ./gradlew build && \
+    cd /loklak_server && ./gradlew build -x checkstyleMain -x checkstyleTest -x jacocoTestReport && \
     # change config file
     sed -i 's/^\(port.http=\).*/\180/;s/^\(port.https=\).*/\1443/;s/^\(upgradeInterval=\).*/\186400000000/' \
         conf/config.properties && \
