@@ -1,0 +1,14 @@
+# Expose port 80 using load balancer
+kind: Service
+apiVersion: v1
+metadata:
+  name: server
+  namespace: web
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: server
+  type: LoadBalancer

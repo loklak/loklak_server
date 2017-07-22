@@ -1,0 +1,34 @@
+# Main deployment for API server
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: server
+  namespace: web
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: server
+    spec:
+      nodeSelector:
+        server: primary
+      containers:
+      - name: server
+        image: loklak/loklak_server:development
+        volumeMounts:
+          - mountPath: /loklak_server/data
+            name: data-index
+        livenessProbe:
+          httpGet:
+            path: /api/status.json
+            port: 80
+          initialDelaySeconds: 30
+          timeoutSeconds: 3
+        ports:
+        - containerPort: 80
+          protocol: TCP
+      volumes:
+      - name: data-index
+        persistentVolumeClaim:
+          claimName: server-data-claim
