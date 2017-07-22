@@ -573,7 +573,7 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
         TextLinkMap tlm = this.getText(iflinkexceedslength, urlstub);
         this.put("text", tlm); // the tweet; the cleanup is a helper function which cleans mistakes from the past in scraping
         if (this.status_id_url != null) this.put("link", this.status_id_url.toExternalForm());
-        this.put("PostId", this.postId);
+        this.put("id_str", this.postId);
         if (this.canonical_id != null) this.put("canonical_id", this.canonical_id);
         if (this.parent != null) this.put("parent", this.parent);
         this.put("source_type", this.source_type.toString());
