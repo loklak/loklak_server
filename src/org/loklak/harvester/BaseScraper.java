@@ -58,7 +58,8 @@ public abstract class BaseScraper extends AbstractAPIHandler {
     }
 
     protected void setExtra(Map<String, String> _extra) {
-        this.extra.putAll(_extra);
+        this.extra = _extra;
+        this.setParam();
     }
 
     public String getExtraValue(String key) {
@@ -81,14 +82,13 @@ public abstract class BaseScraper extends AbstractAPIHandler {
     protected abstract String prepareSearchUrl(String type);
 
     public Timeline2 getData() {
-        Post postArray = null;
+        Post postArray = new Post();
         Timeline2 tl = new Timeline2(order);
-            
+
         try {
-            postArray = getDataFromConnection();
+            postArray.put(this.scraperName, getDataFromConnection());
         } catch (Exception e) {
             DAO.severe("check internet connection");
-            postArray = new Post();
         }
         tl.addPost(postArray);
         return tl;
@@ -100,7 +100,7 @@ public abstract class BaseScraper extends AbstractAPIHandler {
         Post postArray = null;
         try {
             // get instance of bufferReader
-        
+
             br = getHtml(connection);
 
             postArray = this.scrape(br, type, url);
@@ -112,7 +112,6 @@ public abstract class BaseScraper extends AbstractAPIHandler {
             connection.close();
         }
         return postArray;
-
     }
 
     public Post getDataFromConnection(String url) throws IOException {

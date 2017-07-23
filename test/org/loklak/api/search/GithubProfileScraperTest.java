@@ -44,17 +44,17 @@ public class GithubProfileScraperTest {
             DAO.log("GithubProfileScraperTest.githubProfileScraperUserTest() failed to connect to network. url:" + url);
         }
 
-	    Post fetchedProfile = githubScraper.scrapeGithub(profile, br);
+        Post fetchedProfile = githubScraper.scrapeGithub(profile, br);
 
         assertEquals(fetchedProfile.getString("short_description"), shortDescription);
         assertEquals(fetchedProfile.getString("user_name"), userName);
         assertEquals(fetchedProfile.getString("user_id"), userId);
         assertEquals(fetchedProfile.getString("location"), location);
         assertEquals(fetchedProfile.getString("special_link"), specialLink);
-        
+
     }
 
-	@Test
+    @Test
     public void githubProfileScraperUserTest() {
 
         GithubProfileScraper githubScraper = new GithubProfileScraper();
@@ -68,16 +68,16 @@ public class GithubProfileScraperTest {
         String fullName = "Deepjyoti Mondal";
         String specialLink = "http://djmgit.github.io";
         String userId = "16368427";
-        
+
         try {
             ClientConnection connection = new ClientConnection(url);
             //Check Network issue
             assertThat(connection.getStatusCode(), is(200));
 
             br = githubScraper.getHtml(connection);
-           } catch (IOException e) {
+        } catch (IOException e) {
                 DAO.log("GithubProfileScraperTest.githubProfileScraperUserTest() failed to connect to network. url:" + url);
-           }
+        }
 
             Post fetchedProfile = githubScraper.scrapeGithub(profile, br);
 

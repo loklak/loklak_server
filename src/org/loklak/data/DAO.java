@@ -22,18 +22,19 @@ package org.loklak.data;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.fge.jackson.JsonLoader;
 import com.google.common.base.Charsets;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.concurrent.TimeUnit;
 import java.nio.file.Path;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -46,6 +47,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.eclipse.jetty.util.log.Log;
@@ -57,10 +60,14 @@ import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import org.loklak.Caretaker;
 import org.loklak.api.search.SearchServlet;
 import org.loklak.geo.GeoNames;
 import org.loklak.harvester.TwitterScraper;
+import org.loklak.api.search.GithubProfileScraper;
+import org.loklak.api.search.QuoraProfileScraper;
+import org.loklak.harvester.BaseScraper;
 import org.loklak.http.AccessTracker;
 import org.loklak.http.ClientConnection;
 import org.loklak.http.RemoteAccess;
@@ -73,6 +80,7 @@ import org.loklak.objects.QueryEntry;
 import org.loklak.objects.ResultList;
 import org.loklak.objects.SourceType;
 import org.loklak.objects.Timeline;
+import org.loklak.objects.Timeline2;
 import org.loklak.objects.TimelineCache;
 import org.loklak.objects.UserEntry;
 import org.loklak.server.*;
@@ -1202,6 +1210,69 @@ public class DAO {
         //log("SCRAPER: TIME LEFT after recording = " + (termination - System.currentTimeMillis()));
 
         return tl;
+    }
+
+
+    public static JSONArray scrapeLoklak(
+            Map<String, String> inputMap,
+            boolean byUserQuery,
+            boolean recordQuery) {
+        Timeline2.Order order= getOrder(inputMap.get("order"));
+        Timeline2 dataSet = new Timeline2(order);
+        List<String> scraperList = Arrays.asList(inputMap.get("scraper").trim().split("\\s*,\\s*"));
+        List<BaseScraper> scraperObjList = getScraperObjects(scraperList, inputMap);
+        ExecutorService scraperRunner = Executors.newFixedThreadPool(2);
+
+        try{
+            for (BaseScraper scraper : scraperObjList) {
+                scraperRunner.execute(() -> {
+                    dataSet.mergePost(scraper.getData());
+                });
+            }
+        } finally {
+            scraperRunner.shutdown();
+            try {
+                scraperRunner.awaitTermination(24L, TimeUnit.HOURS);
+            } catch (InterruptedException e) { }
+        }
+        return dataSet.toArray();
+    }
+
+    public static List<BaseScraper> getScraperObjects(List<String> scraperList, Map<String, String> inputMap) {
+        //TODO: use SourceType to get this job done
+        List<BaseScraper> scraperObjList = new ArrayList<BaseScraper>();
+        BaseScraper scraperObj = null;
+
+        if (scraperList.contains("github") || scraperList.contains("all")) {
+            scraperObj = new GithubProfileScraper(inputMap);
+            scraperObjList.add(scraperObj);
+        }
+        if (scraperList.contains("quora") || scraperList.contains("all")) {
+            scraperObj = new QuoraProfileScraper(inputMap);
+            scraperObjList.add(scraperObj);
+        }
+        //TODO: add more scrapers
+        return scraperObjList;
+    }
+
+    public static Timeline2.Order getOrder(String orderString) {
+        //TODO: order set according to input
+        return Timeline2.parseOrder("timestamp");
+    }
+
+    protected class parallelScrape extends Thread {
+
+        private Timeline2 dataSet = null;
+        private BaseScraper scraper = null;
+
+        public parallelScrape(Timeline2 _dataSet, BaseScraper _scraper) {
+            this.dataSet = _dataSet;
+            this.scraper = _scraper;
+        }
+
+        public void run() {
+            dataSet.mergePost(scraper.getData());
+        }
     }
 
     public static final Random random = new Random(System.currentTimeMillis());
