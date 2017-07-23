@@ -20,27 +20,40 @@
 package org.loklak.api.search;
 
 import java.io.IOException;
-
-import org.json.JSONArray;
+import java.io.BufferedReader;
+import java.util.Map;
 import org.json.JSONObject;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.loklak.server.APIException;
-import org.loklak.server.APIHandler;
-import org.loklak.server.AbstractAPIHandler;
-import org.loklak.server.Authorization;
+import org.loklak.data.DAO;
+import org.loklak.harvester.BaseScraper;
+import org.loklak.harvester.Post;
+import org.loklak.objects.Timeline2;
 import org.loklak.server.BaseUserRole;
-import org.loklak.server.Query;
-import org.loklak.susi.SusiThought;
-import org.loklak.tools.storage.JSONObjectWithDefault;
 
-import javax.servlet.http.HttpServletResponse;
-
-public class WordpressCrawlerService extends AbstractAPIHandler implements APIHandler {
+public class WordpressCrawlerService extends BaseScraper {
 
 	private static final long serialVersionUID = -5357182691897402354L;
+
+    public WordpressCrawlerService() {
+        super();
+        this.baseUrl = "";
+        this.scraperName = "wordpress";
+    }
+
+    public WordpressCrawlerService(Map<String, String> _extra) {
+        this();
+        this.setExtra(_extra);
+        this.query = this.getExtraValue("query");
+    }
+
+    public WordpressCrawlerService(String _query) {
+        this();
+        this.query = _query;
+        this.setExtraValue("query", this.query);
+    }
 
 	@Override
 	public String getAPIPath() {
@@ -57,87 +70,68 @@ public class WordpressCrawlerService extends AbstractAPIHandler implements APIHa
 		return null;
 	}
 
-	@Override
-	public JSONObject serviceImpl(Query call, HttpServletResponse response, Authorization rights, JSONObjectWithDefault permissions)
-			throws APIException {
-		String url = call.get("url", "");
-		return crawlWordpress(url);
-	}
-	
-	public static SusiThought crawlWordpress(String blogURL) {
-		Document blogHTML = null;
+    protected String prepareSearchUrl(String type) {
+        return this.query;
+    }
 
-		Elements articles = null;
-		Elements articleList_title = null;
-		Elements articleList_content = null;
-		Elements articleList_dateTime = null;
-		Elements articleList_author = null;
+    protected void setParam() {
+        if ("".equals(this.getExtraValue("url"))) {
+            this.setExtraValue("url", this.query);
+        } else {
+            this.query  = this.getExtraValue("url");
+        }
+    }
 
-		String[][] blogPosts = new String[100][4];
+   protected Post scrape(BufferedReader br, String type, String url) {
+        Post typeArray = new Post(true);
+        typeArray.put(this.scraperName, this.crawlWordpress(this.query, br).toArray());
+        return typeArray;
+    }
 
-		// blogPosts[][0] = Blog Title
-		// blogPosts[][1] = Posted On
-		// blogPosts[][2] = Author
-		// blogPosts[][3] = Blog Content
+    public Timeline2 crawlWordpress(String blogURL, BufferedReader br) {
+        Post blogPost = null;
+        Timeline2 blogList = new Timeline2(this.order);
 
-		Integer numberOfBlogs = 0;
-		Integer iterator = 0;
+        Document blogHTML = null;
+        Elements articles = null;
+        Elements articleList_title = null;
+        Elements articleList_content = null;
+        Elements articleList_dateTime = null;
+        Elements articleList_author = null;
+        try {
+	        blogHTML = Jsoup.parse(bufferedReaderToString(br));
+        } catch (IOException e) {
+	        DAO.trace(e);
+        }
 
-		try {
-			blogHTML = Jsoup.connect(blogURL).userAgent("Mozilla").get();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		articles = blogHTML.getElementsByTag("article");
-
-		iterator = 0;
-		for (Element article : articles) {
-
-			articleList_title = article.getElementsByClass("entry-title");
-			for (Element blogs : articleList_title) {
-				blogPosts[iterator][0] = blogs.text().toString();
-			}
-
-			articleList_dateTime = article.getElementsByClass("posted-on");
-			for (Element blogs : articleList_dateTime) {
-				blogPosts[iterator][1] = blogs.text().toString();
-			}
-
-			articleList_author = article.getElementsByClass("byline");
-			for (Element blogs : articleList_author) {
-				String author = blogs.text().toString();
-				author = author.substring(author.indexOf(' ') + 1);
-				blogPosts[iterator][2] = author;
-			}
-
-			articleList_content = article.getElementsByClass("entry-content");
-			for (Element blogs : articleList_content) {
-				blogPosts[iterator][3] = blogs.text().toString();
-			}
-
-			iterator++;
-
-		}
-
-		numberOfBlogs = iterator;
-
-		JSONArray blog = new JSONArray();
-
-		for (int k = 0; k < numberOfBlogs; k++) {
-			JSONObject blogpost = new JSONObject();
-			blogpost.put("blog_url", blogURL);
-			blogpost.put("title", blogPosts[k][0]);
-			blogpost.put("posted_on", blogPosts[k][1]);
-			blogpost.put("author", blogPosts[k][2]);
-			blogpost.put("content", blogPosts[k][3]);
-			blog.put(blogpost);
-		}
-		
-		SusiThought json = new SusiThought();
-		json.setData(blog);
-		return json;
-	
-	}
-
+        articles = blogHTML.getElementsByTag("article");
+        for (Element article : articles) {
+            blogPost = new Post();
+            blogPost.put("blog_url", blogURL);
+            // Blog title
+	        articleList_title = article.getElementsByClass("entry-title");
+	        for (Element blogs : articleList_title) {
+		        blogPost.put("title", blogs.text().toString());
+	        }
+            // Posted On
+	        articleList_dateTime = article.getElementsByClass("posted-on");
+	        for (Element blogs : articleList_dateTime) {
+		        blogPost.put("posted_on", blogs.text().toString());
+	        }
+            // Author
+	        articleList_author = article.getElementsByClass("byline");
+	        for (Element blogs : articleList_author) {
+		        String author = blogs.text().toString();
+		        author = author.substring(author.indexOf(' ') + 1);
+		        blogPost.put("author", author);
+	        }
+            // Content of article
+	        articleList_content = article.getElementsByClass("entry-content");
+	        for (Element blogs : articleList_content) {
+		        blogPost.put("content", blogs.text().toString());
+	        }
+	        blogList.addPost(blogPost);
+        }
+        return blogList;
+    }
 }

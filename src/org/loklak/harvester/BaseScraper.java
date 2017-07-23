@@ -100,7 +100,6 @@ public abstract class BaseScraper extends AbstractAPIHandler {
         Post postArray = null;
         try {
             // get instance of bufferReader
-
             br = getHtml(connection);
 
             postArray = this.scrape(br, type, url);
