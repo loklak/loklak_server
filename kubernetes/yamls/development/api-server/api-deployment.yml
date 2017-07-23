@@ -15,7 +15,7 @@ spec:
         server: primary
       containers:
       - name: server
-        image: loklak/loklak_server:development
+        image: singhpratyush/loklak_server:latest-kubernetes-dev
         volumeMounts:
           - mountPath: /loklak_server/data
             name: data-index
