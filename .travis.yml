@@ -20,6 +20,7 @@ script:
 after_success:
 - bash <(curl -s https://codecov.io/bash)
 - gradle clean
+- bash .utility/push-docker.sh
 before_deploy:
 - openssl aes-256-cbc -K $encrypted_e0d8735ecce8_key -iv $encrypted_e0d8735ecce8_iv -in .utility/loklakserver.1.enc -out .utility/loklakserver.1 -d
 - openssl aes-256-cbc -K $encrypted_630b2151c459_key -iv $encrypted_630b2151c459_iv -in .utility/loklakserver.2.enc -out .utility/loklakserver.2 -d
