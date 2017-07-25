@@ -6,12 +6,12 @@
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
- *  
+ *
  *  This library is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
@@ -31,29 +31,29 @@ import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
 
 public class IncomingMessageBuffer extends Thread {
-    
+
     private final static int MESSAGE_QUEUE_MAXSIZE = 100000;
     //private final static int bufferLimit = MESSAGE_QUEUE_MAXSIZE * 3 / 4;
     private static BlockingQueue<DAO.MessageWrapper> messageQueue = new ArrayBlockingQueue<DAO.MessageWrapper>(MESSAGE_QUEUE_MAXSIZE);
     private static AtomicInteger queueClients = new AtomicInteger(0);
 
     private boolean shallRun = true, isBusy = false;
-    
+
     public static int getMessageQueueSize() {
         return messageQueue.size();
     }
-    
+
     public static int getMessageQueueMaxSize() {
         return MESSAGE_QUEUE_MAXSIZE;
     }
-    
+
     public static int getMessageQueueClients() {
         return queueClients.get();
     }
-    
+
     public IncomingMessageBuffer() {
     }
-    
+
     public TwitterTweet readMessage(String id) {
         if (id == null || id.length() == 0) return null;
         for (DAO.MessageWrapper mw: messageQueue) {
@@ -61,7 +61,7 @@ public class IncomingMessageBuffer extends Thread {
         }
         return null;
     }
-    
+
     /**
      * ask the thread to shut down
      */
@@ -70,24 +70,24 @@ public class IncomingMessageBuffer extends Thread {
         this.interrupt();
         Log.getLog().info("catched QueuedIndexing termination signal");
     }
-    
+
     public boolean isBusy() {
         return this.isBusy;
     }
-    
+
     @Override
     public void run() {
-        
+
         // work loop
         loop: while (this.shallRun) try {
             this.isBusy = false;
-            
+
             if (messageQueue.isEmpty() || !DAO.wait_ready(1000)) {
                 // in case that the queue is empty, try to fill it with previously pushed content
                 //List<Map<String, Object>> shard = this.jsonBufferHandler.getBufferShard();
                 // if the shard has content, turn this into messages again
-                
-                
+
+
                 // if such content does not exist, simply sleep a while
                 try {Thread.sleep(10000);} catch (InterruptedException e) {}
                 continue loop;
@@ -134,7 +134,7 @@ public class IncomingMessageBuffer extends Thread {
 
         Log.getLog().info("QueuedIndexing terminated");
     }
-    
+
     private void dumpbulk(List<DAO.MessageWrapper> bulk, AtomicInteger candMessages, AtomicInteger knownMessagesCache) {
         long dumpstart = System.currentTimeMillis();
         int notWrittenDouble = DAO.writeMessageBulk(bulk).size();
@@ -145,13 +145,13 @@ public class IncomingMessageBuffer extends Thread {
         candMessages.set(0);
         knownMessagesCache.set(0);
     }
-    
+
     public static void addScheduler(Timeline tl, final boolean dump) {
         queueClients.incrementAndGet();
         for (TwitterTweet me: tl) addScheduler(me, tl.getUser(me), dump);
         queueClients.decrementAndGet();
     }
-    
+
     public static void addScheduler(final TwitterTweet t, final UserEntry u, final boolean dump) {
         try {
             messageQueue.put(new DAO.MessageWrapper(t, u, dump));
@@ -163,5 +163,5 @@ public class IncomingMessageBuffer extends Thread {
     public static boolean addSchedulerAvailable() {
         return messageQueue.remainingCapacity() > 0;
     }
-    
+
 }

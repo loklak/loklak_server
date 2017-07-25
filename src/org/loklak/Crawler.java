@@ -112,7 +112,7 @@ public class Crawler {
         // return the number of new terms on the crawl stack
         return count;
     }
-    
+
     public static JSONObject toJSON() {
         ArrayList<String> pendingQueries = new ArrayList<String>();
         Set<String> processedQueries = new HashSet<String>(); processedQueries.addAll(stacked.keySet());
@@ -123,7 +123,7 @@ public class Crawler {
         m.put("pending_size", pending.size());
         m.put("stacked_size", stacked.size());
         m.put("processed_size", processedQueries.size());
-        
+
         m.put("pending", pendingQueries.toArray(new String[pendingQueries.size()]));
         m.put("processed", processedQueries.toArray(new String[processedQueries.size()]));
         return m;

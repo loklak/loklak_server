@@ -19,6 +19,7 @@
 
 package org.loklak.data;
 
+import org.loklak.harvester.Post;
 import org.loklak.objects.ObjectEntry;
 import org.loklak.objects.SourceType;
 

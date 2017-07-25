@@ -6,12 +6,12 @@
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
- *  
+ *
  *  This library is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; wo even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
@@ -50,11 +50,11 @@ public class ClassicHarvester implements Harvester {
     private final int MAX_HARVESTED = 10000; // just to prevent a memory leak with possible OOM after a long time we flush that cache after a while
     private final Random random = new Random(System.currentTimeMillis());
     public final ExecutorService executor = Executors.newFixedThreadPool(1);
-    
+
     private LinkedHashSet<String> pendingQueries = new LinkedHashSet<>();
     private ArrayList<String> pendingContext = new ArrayList<>();
     private Set<String> harvestedContext = new HashSet<>();
-    
+
     private int hitsOnBackend = 1000;
 
     public void checkContext(Timeline tl, boolean front) {
@@ -72,10 +72,10 @@ public class ClassicHarvester implements Harvester {
         while (pendingContext.size() > MAX_PENDING) pendingContext.remove(pendingContext.size() - 1);
         if (harvestedContext.size() > MAX_HARVESTED) harvestedContext.clear();
     }
-    
+
     public int harvest() {
         String backend = DAO.getConfig("backend","http://api.loklak.org");
-        
+
         if (random.nextInt(100) != 0 && hitsOnBackend < HITS_LIMIT_4_QUERIES && pendingQueries.size() == 0 && pendingContext.size() > 0) {
             // harvest using the collected keys instead using the queries
             int r = random.nextInt((pendingContext.size() / 2) + 1);
@@ -83,13 +83,13 @@ public class ClassicHarvester implements Harvester {
             harvestedContext.add(q);
             Timeline tl = TwitterScraper.search(q, Timeline.Order.CREATED_AT, true, true, 400);
             if (tl == null || tl.size() == 0) return -1;
-            
+
             // find content query strings and store them in the context cache
             checkContext(tl, false);
             DAO.log("retrieval of " + tl.size() + " new messages for q = " + q + ", scheduled push; pendingQueries = " + pendingQueries.size() + ", pendingContext = " + pendingContext.size() + ", harvestedContext = " + harvestedContext.size());
             return tl.size();
         }
-        
+
         // load more queries if pendingQueries is empty
         if (pendingQueries.size() == 0) {
             try {
@@ -116,9 +116,9 @@ public class ClassicHarvester implements Harvester {
                 try {Thread.sleep(10000);} catch (InterruptedException e1) {} // if the remote peer is down, throttle down
             }
         }
-        
+
         if (pendingQueries.size() == 0) return -1;
-        
+
         // take one of the pending queries or pending context and load the tweets
         String q = "";
         try {
@@ -127,7 +127,7 @@ public class ClassicHarvester implements Harvester {
             pendingContext.remove(q);
             harvestedContext.add(q);
             Timeline tl = TwitterScraper.search(q, Timeline.Order.CREATED_AT, true, false, 400);
-            
+
             if (tl == null || tl.size() == 0) {
                 // even if the result is empty, we must push this to the backend to make it possible that the query gets an update
                 if (tl == null) tl = new Timeline(Order.CREATED_AT);
@@ -138,10 +138,10 @@ public class ClassicHarvester implements Harvester {
                 executor.execute(pushThread);
                 return -1;
             }
-            
+
             // find content query strings and store them in the context cache
             checkContext(tl, true);
-            
+
             // if we loaded a pending query, push results to backpeer right now
             tl.setQuery(q);
             PushThread pushThread = new PushThread(backend, tl);
