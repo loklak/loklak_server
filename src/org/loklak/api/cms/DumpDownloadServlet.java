@@ -53,6 +53,9 @@ public class DumpDownloadServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request,
         HttpServletResponse response) throws ServletException, IOException {
+        if (!DAO.writeDump) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Dump generation is disabled on this peer");
+        }
         final Query post = RemoteAccess.evaluate(request);
         String path = request.getPathInfo();
         final long now = System.currentTimeMillis();
