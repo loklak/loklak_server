@@ -15,10 +15,7 @@ spec:
         server: primary
       containers:
       - name: server
-        image: singhpratyush/loklak_server:latest-kubernetes-dev
-        volumeMounts:
-          - mountPath: /loklak_server/data
-            name: data-index
+        image: singhpratyush/loklak_server:latest-ext-es-kubernetes-dev
         livenessProbe:
           httpGet:
             path: /api/status.json
@@ -28,7 +25,3 @@ spec:
         ports:
         - containerPort: 80
           protocol: TCP
-      volumes:
-      - name: data-index
-        persistentVolumeClaim:
-          claimName: server-data-claim
