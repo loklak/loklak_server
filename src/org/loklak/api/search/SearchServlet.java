@@ -165,7 +165,7 @@ public class SearchServlet extends HttpServlet {
             JSONObject hits = new JSONObject(true);
             final JSONObject[] aggregations = new JSONObject[]{null};
 
-            if ("".equals(scraper)) {
+            if (!"".equals(scraper)) {
                 // start a scraper
                 inputMap.put("query", query);
                 DAO.log(request.getServletPath() + " scraping with query: "
