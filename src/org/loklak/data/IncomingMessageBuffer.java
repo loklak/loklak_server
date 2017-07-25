@@ -26,7 +26,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.jetty.util.log.Log;
-import org.loklak.objects.MessageEntry;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
+//import org.loklak.objects.MessageEntry;
 import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
 
@@ -54,7 +55,7 @@ public class IncomingMessageBuffer extends Thread {
     public IncomingMessageBuffer() {
     }
     
-    public MessageEntry readMessage(String id) {
+    public TwitterTweet readMessage(String id) {
         if (id == null || id.length() == 0) return null;
         for (DAO.MessageWrapper mw: messageQueue) {
             if (id.equals(mw.t.getPostId())) return mw.t;
@@ -148,11 +149,11 @@ public class IncomingMessageBuffer extends Thread {
     
     public static void addScheduler(Timeline tl, final boolean dump) {
         queueClients.incrementAndGet();
-        for (MessageEntry me: tl) addScheduler(me, tl.getUser(me), dump);
+        for (TwitterTweet me: tl) addScheduler(me, tl.getUser(me), dump);
         queueClients.decrementAndGet();
     }
     
-    public static void addScheduler(final MessageEntry t, final UserEntry u, final boolean dump) {
+    public static void addScheduler(final TwitterTweet t, final UserEntry u, final boolean dump) {
         try {
             messageQueue.put(new DAO.MessageWrapper(t, u, dump));
         } catch (InterruptedException e) {

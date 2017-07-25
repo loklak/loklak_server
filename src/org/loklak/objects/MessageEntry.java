@@ -45,7 +45,7 @@ import org.loklak.tools.bayes.Classification;
 
 import org.unbescape.html.HtmlEscape;
 
-public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
+public class MessageEntry extends AbstractObjectEntry {
 
     public static final String RICH_TEXT_SEPARATOR = "\n***\n";
 
@@ -115,11 +115,15 @@ public class MessageEntry extends AbstractObjectEntry implements ObjectEntry {
     }
 
     public MessageEntry(JSONObject json) {
-        Object timestamp_obj = lazyGet(json, AbstractObjectEntry.TIMESTAMP_FIELDNAME); this.timestampDate = parseDate(timestamp_obj);
+        Object timestamp_obj = lazyGet(json, AbstractObjectEntry.TIMESTAMP_FIELDNAME);
+        this.timestampDate = parseDate(timestamp_obj);
         this.timestamp = this.timestampDate.getTime();
-        Object created_at_obj = lazyGet(json, AbstractObjectEntry.CREATED_AT_FIELDNAME); this.created_at = parseDate(created_at_obj);
-        Object on_obj = lazyGet(json, "on"); this.on = on_obj == null ? null : parseDate(on);
-        Object to_obj = lazyGet(json, "to"); this.to = to_obj == null ? null : parseDate(to);
+        Object created_at_obj = lazyGet(json, AbstractObjectEntry.CREATED_AT_FIELDNAME);
+        this.created_at = parseDate(created_at_obj);
+        Object on_obj = lazyGet(json, "on");
+        this.on = on_obj == null ? null : parseDate(on);
+        Object to_obj = lazyGet(json, "to");
+        this.to = to_obj == null ? null : parseDate(to);
         String source_type_string = (String) lazyGet(json, "source_type");
         try {
             this.source_type = source_type_string == null ? SourceType.GENERIC : SourceType.byName(source_type_string);

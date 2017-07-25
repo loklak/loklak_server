@@ -65,6 +65,7 @@ import org.loklak.Caretaker;
 import org.loklak.api.search.SearchServlet;
 import org.loklak.geo.GeoNames;
 import org.loklak.harvester.TwitterScraper;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.api.search.GithubProfileScraper;
 import org.loklak.api.search.QuoraProfileScraper;
 import org.loklak.harvester.BaseScraper;
@@ -74,7 +75,7 @@ import org.loklak.http.RemoteAccess;
 import org.loklak.objects.AbstractObjectEntry;
 import org.loklak.objects.AccountEntry;
 import org.loklak.objects.ImportProfileEntry;
-import org.loklak.objects.MessageEntry;
+//import org.loklak.objects.TwitterTweet;
 import org.loklak.objects.Peers;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.ResultList;
@@ -642,10 +643,10 @@ public class DAO {
     }
 
     public static class MessageWrapper {
-        public MessageEntry t;
+        public TwitterTweet t;
         public UserEntry u;
         public boolean dump;
-        public MessageWrapper(MessageEntry t, UserEntry u, boolean dump) {
+        public MessageWrapper(TwitterTweet t, UserEntry u, boolean dump) {
             this.t = t;
             this.u = u;
             this.dump = dump;
@@ -665,18 +666,18 @@ public class DAO {
                 // and check if the message exists
                 boolean exists = false;
                 if (mw.t.getCreatedAt().after(DateParser.oneHourAgo())) {
-                    exists = messages_hour.writeEntry(new IndexEntry<MessageEntry>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
+                    exists = messages_hour.writeEntry(new IndexEntry<TwitterTweet>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
                     if (exists) return false;
                 }
                 if (mw.t.getCreatedAt().after(DateParser.oneDayAgo())) {
-                    exists = messages_day.writeEntry(new IndexEntry<MessageEntry>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
+                    exists = messages_day.writeEntry(new IndexEntry<TwitterTweet>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
                     if (exists) return false;
                 }
                 if (mw.t.getCreatedAt().after(DateParser.oneWeekAgo())) {
-                    exists = messages_week.writeEntry(new IndexEntry<MessageEntry>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
+                    exists = messages_week.writeEntry(new IndexEntry<TwitterTweet>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
                     if (exists) return false;
                 }
-                exists = messages.writeEntry(new IndexEntry<MessageEntry>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
+                exists = messages.writeEntry(new IndexEntry<TwitterTweet>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
                 if (exists) return false;
 
                 // write the user into the index
@@ -717,7 +718,7 @@ public class DAO {
     private static Set<String> writeMessageBulkNoDump(Collection<MessageWrapper> mws) {
         if (mws.size() == 0) return new HashSet<>();
         List<IndexEntry<UserEntry>> userBulk = new ArrayList<>();
-        List<IndexEntry<MessageEntry>> messageBulk = new ArrayList<>();
+        List<IndexEntry<TwitterTweet>> messageBulk = new ArrayList<>();
         for (MessageWrapper mw: mws) {
             if (messages.existsCache(mw.t.getPostId())) continue; // we omit writing this again
             synchronized (DAO.class) {
@@ -725,7 +726,7 @@ public class DAO {
                 userBulk.add(new IndexEntry<UserEntry>(mw.u.getScreenName(), mw.t.getSourceType(), mw.u));
 
                 // record tweet into search index
-                messageBulk.add(new IndexEntry<MessageEntry>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
+                messageBulk.add(new IndexEntry<TwitterTweet>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
              }
 
             // teach the classifier
@@ -734,7 +735,7 @@ public class DAO {
         ElasticsearchClient.BulkWriteResult result = null;
         try {
             final Date limitDate = new Date();
-            List<IndexEntry<MessageEntry>> macc;
+            List<IndexEntry<TwitterTweet>> macc;
             final Set<String> existed = new HashSet<>();
 
             //DAO.log("***DEBUG messages     INIT: " + messageBulk.size());
@@ -744,7 +745,7 @@ public class DAO {
             //DAO.log("***DEBUG messages for HOUR: " + macc.size());
             result = messages_hour.writeEntries(macc);
             //DAO.log("***DEBUG messages for HOUR: " + result.getCreated().size() + "  created");
-            for (IndexEntry<MessageEntry> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
+            for (IndexEntry<TwitterTweet> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for HOUR: " + existed.size() + "  existed");
 
             limitDate.setTime(DateParser.oneDayAgo().getTime());
@@ -752,7 +753,7 @@ public class DAO {
             //DAO.log("***DEBUG messages for  DAY : " + macc.size());
             result = messages_day.writeEntries(macc);
             //DAO.log("***DEBUG messages for  DAY: " + result.getCreated().size() + " created");
-            for (IndexEntry<MessageEntry> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
+            for (IndexEntry<TwitterTweet> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for  DAY: " + existed.size()  + "  existed");
 
             limitDate.setTime(DateParser.oneWeekAgo().getTime());
@@ -760,14 +761,14 @@ public class DAO {
             //DAO.log("***DEBUG messages for WEEK: " + macc.size());
             result = messages_week.writeEntries(macc);
             //DAO.log("***DEBUG messages for WEEK: " + result.getCreated().size() + "  created");
-            for (IndexEntry<MessageEntry> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
+            for (IndexEntry<TwitterTweet> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for WEEK: " + existed.size()  + "  existed");
 
             macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getPostId()))).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for  ALL : " + macc.size());
             result = messages.writeEntries(macc);
             //DAO.log("***DEBUG messages for  ALL: " + result.getCreated().size() + "  created");
-            for (IndexEntry<MessageEntry> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
+            for (IndexEntry<TwitterTweet> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for  ALL: " + existed.size()  + "  existed");
 
             users.writeEntries(userBulk);
@@ -902,8 +903,8 @@ public class DAO {
         return elasticsearch_client.count(IndexName.accounts.name(), AbstractObjectEntry.TIMESTAMP_FIELDNAME, -1);
     }
 
-    public static MessageEntry readMessage(String id) throws IOException {
-        MessageEntry m = null;
+    public static TwitterTweet readMessage(String id) throws IOException {
+        TwitterTweet m = null;
         return messages_hour != null && ((m = messages_hour.read(id)) != null) ? m :
                messages_day  != null && ((m = messages_day.read(id))  != null) ? m :
                messages_week != null && ((m = messages_week.read(id)) != null) ? m :
@@ -992,7 +993,7 @@ public class DAO {
 
             // evaluate search result
             for (Map<String, Object> map: query.result) {
-                MessageEntry tweet = new MessageEntry(new JSONObject(map));
+                TwitterTweet tweet = new TwitterTweet(new JSONObject(map));
                 try {
                     UserEntry user = users.read(tweet.getScreenName());
                     assert user != null;
@@ -1395,7 +1396,7 @@ public class DAO {
     public final static Set<Number> newUserIds = new ConcurrentHashSet<>();
 
     public static void announceNewUserId(Timeline tl) {
-        for (MessageEntry message: tl) {
+        for (TwitterTweet message: tl) {
             UserEntry user = tl.getUser(message);
             assert user != null;
             if (user == null) continue;

@@ -81,7 +81,7 @@ public class TwitterScraper {
 
         Timeline[] tl = search(query, filterList, order, writeToIndex, writeToBackend);
         long timeout = System.currentTimeMillis() + jointime;
-        for (MessageEntry me: tl[1]) {
+        for (TwitterTweet me: tl[1]) {
             assert me instanceof TwitterTweet;
             TwitterTweet tt = (TwitterTweet) me;
             long remainingWait = Math.max(10, timeout - System.currentTimeMillis());
@@ -715,6 +715,26 @@ public class TwitterScraper {
             this.ready = new Semaphore(0);
         }
 
+        public TwitterTweet(JSONObject json) {
+            super(json);
+
+            // may lead to error!!
+            this.ready = new Semaphore(0);
+            //this.user = null;
+            //this.writeToIndex = false;
+            //this.writeToBackend = false;
+        }
+
+        public TwitterTweet() throws MalformedURLException {
+            super();
+
+            // may lead to error!!
+            this.ready = new Semaphore(0);
+            //this.user = null;
+            //this.writeToIndex = false;
+            //this.writeToBackend = false;
+        }
+
         public UserEntry getUser() {
             return this.user;
         }
@@ -845,10 +865,8 @@ public class TwitterScraper {
             if (x == 0) System.out.println("Timeline[0] - finished to be used:");
             if (x == 1) System.out.println("Timeline[1] - messages which are in postprocessing");
             all += result[x].size();
-            for (MessageEntry tweet : result[x]) {
-                if (tweet instanceof TwitterTweet) {
-                    ((TwitterTweet) tweet).waitReady(10000);
-                }
+            for (TwitterTweet tweet : result[x]) {
+                    tweet.waitReady(10000);
                 System.out.println(tweet.getCreatedAt().toString() + " from @" + tweet.getScreenName() + " - " + tweet.getText());
             }
         }

@@ -41,7 +41,8 @@ import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.data.IndexEntry;
 import org.loklak.http.ClientConnection;
 import org.loklak.http.RemoteAccess;
-import org.loklak.objects.MessageEntry;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
+//import org.loklak.objects.MessageEntry;
 import org.loklak.objects.ProviderType;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.Timeline;
@@ -201,7 +202,7 @@ public class PushServlet extends HttpServlet {
                 tweet.put("provider_hash", remoteHash);
                 if (!user.has("screen_name") && tweet.has("screen_name")) user.put("screen_name", tweet.getString("screen_name"));
                 UserEntry u = new UserEntry(user);
-                MessageEntry t = new MessageEntry(tweet);
+                TwitterTweet t = new TwitterTweet(tweet);
                 tl.add(t, u);
                 //boolean newtweet = DAO.writeMessage(t, u, true, true, true);
                 //if (newtweet) newCount++; else knownCount++;

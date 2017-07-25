@@ -11,7 +11,8 @@ import java.util.concurrent.LinkedBlockingDeque;
 
 import org.json.JSONObject;
 import org.loklak.data.DAO;
-import org.loklak.objects.MessageEntry;
+//import org.loklak.objects.MessageEntry;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.objects.Timeline;
 import org.loklak.tools.DateParser;
 
@@ -81,7 +82,7 @@ public class Crawler {
 
         // take hashtags and users from result
         Set<String> newqueries = new HashSet<String>();
-        for (MessageEntry t: tl) {
+        for (TwitterTweet t: tl) {
             // follow users and hashtags which appear in the tweet
             if (term.followUsers) {
                 for (String user: t.getMentions()) {
