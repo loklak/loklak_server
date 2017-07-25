@@ -20,17 +20,17 @@
 package org.loklak.data;
 
 import org.json.JSONObject;
-import org.loklak.objects.MessageEntry;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
 
-public class MessageFactory extends AbstractIndexFactory<MessageEntry> implements IndexFactory<MessageEntry> {
+public class MessageFactory extends AbstractIndexFactory<TwitterTweet> implements IndexFactory<TwitterTweet> {
 
     public MessageFactory(final ElasticsearchClient elasticsearch_client, final String index_name, final int cacheSize, final int existSize) {
         super(elasticsearch_client, index_name, cacheSize, existSize);
     }
 
     @Override
-    public MessageEntry init(JSONObject json) {
-        return new MessageEntry(json);
+    public TwitterTweet init(JSONObject json) {
+        return new TwitterTweet(json);
     }
     
 }

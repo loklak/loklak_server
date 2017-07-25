@@ -35,7 +35,7 @@ import org.loklak.api.search.SuggestServlet;
 import org.loklak.data.DAO;
 import org.loklak.harvester.PushThread;
 import org.loklak.harvester.TwitterScraper;
-import org.loklak.objects.MessageEntry;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.ResultList;
 import org.loklak.objects.Timeline;
@@ -58,7 +58,7 @@ public class ClassicHarvester implements Harvester {
     private int hitsOnBackend = 1000;
 
     public void checkContext(Timeline tl, boolean front) {
-        for (MessageEntry tweet: tl) {
+        for (TwitterTweet tweet: tl) {
             for (String user: tweet.getMentions()) checkContext("from:" + user, front);
             for (String hashtag: tweet.getHashtags()) checkContext(hashtag, front);
         }
