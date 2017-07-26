@@ -72,12 +72,19 @@ public class SearchServlet extends HttpServlet {
     public final static String frontpeer_hash = Integer.toHexString(Integer.MAX_VALUE - 1);
 
     // possible values: cache, twitter, all
-    public static Timeline search(final String protocolhostportstub, final String query, final Timeline.Order order, final String source, final int count, final int timezoneOffset, final String provider_hash, final long timeout) throws IOException {
+    public static Timeline search(final String protocolhostportstub, final String query, final ArrayList<String> filterList, final Timeline.Order order, final String source, final int count, final int timezoneOffset, final String provider_hash, final long timeout) throws IOException {
         Timeline tl = new Timeline(order);
         if ("".equals(query)) return tl;
         String urlstring = "";
+        String filterString = "";
+
         try {
             urlstring = protocolhostportstub + "/api/search.json?q=" + URLEncoder.encode(query.replace(' ', '+'), "UTF-8") + "&timezoneOffset=" + timezoneOffset + "&maximumRecords=" + count + "&source=" + (source == null ? "all" : source) + "&minified=true&shortlink=false&timeout=" + timeout;
+
+            if(!"".equals(filterString = String.join(", ", filterList))) {
+                urlstring = urlstring + "&filter=" + filterString;
+            }
+
             byte[] jsonb = ClientConnection.downloadPeer(urlstring);
             if (jsonb == null || jsonb.length == 0) throw new IOException("empty content from " + protocolhostportstub);
             String jsons = UTF8.String(jsonb);
@@ -108,6 +115,13 @@ public class SearchServlet extends HttpServlet {
         }
         //System.out.println(parser.text());
         return tl;
+    }
+
+    public static Timeline search(
+            final String protocolhostportstub, final String query, final Timeline.Order order,
+            final String source, final int count, final int timezoneOffset,
+            final String provider_hash, final long timeout) throws IOException {
+        return search(protocolhostportstub, query, new ArrayList<>(), order, source, count, timezoneOffset, provider_hash, timeout);
     }
 
     @Override
@@ -256,7 +270,7 @@ public class SearchServlet extends HttpServlet {
                     }
                     Thread backendThread = tokens.original.length() == 0 || !start_backend_thread ? null : new Thread() {
                         public void run() {
-                            Timeline backendTl = DAO.searchBackend(tokens.original, order, maximumRecords, timezoneOffsetf, "cache", timeout);
+                            Timeline backendTl = DAO.searchBackend(tokens.original, filterList, order, maximumRecords, timezoneOffsetf, "cache", timeout);
                             if (backendTl != null) {
                                 tl.putAll(QueryEntry.applyConstraint(backendTl, tokens, true));
                                 count_backend.set(tl.size());
@@ -319,7 +333,7 @@ public class SearchServlet extends HttpServlet {
                     post.recordEvent("cache_time", time);
 
                 } else if ("backend".equals(source) && query.length() > 0) {
-                    Timeline backendTl = DAO.searchBackend(query, order, maximumRecords, timezoneOffset, "cache", timeout);
+                    Timeline backendTl = DAO.searchBackend(query, filterList, order, maximumRecords, timezoneOffset, "cache", timeout);
                     if (backendTl != null) {
                         tl.putAll(QueryEntry.applyConstraint(backendTl, tokens, true));
                         tl.setScraperInfo(backendTl.getScraperInfo());
