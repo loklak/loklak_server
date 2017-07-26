@@ -384,9 +384,10 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
                 }
             }
             if (applyLocationConstraint && tokens.bbox != null) {
-                if (message.location_point == null || message.location_point.length < 2) continue messageloop; //longitude, latitude
-                if (message.location_point[0] < tokens.bbox[0] || message.location_point[0] > tokens.bbox[2] ||  // double[]{lon_west,lat_south,lon_east,lat_north}
-                    message.location_point[1] > tokens.bbox[1] || message.location_point[1] < tokens.bbox[3]) continue messageloop;
+                double[] location_point = message.getLocationPoint();
+                if (location_point == null || location_point.length < 2) continue messageloop; //longitude, latitude
+                if (location_point[0] < tokens.bbox[0] || location_point[0] > tokens.bbox[2] ||  // double[]{lon_west,lat_south,lon_east,lat_north}
+                    location_point[1] > tokens.bbox[1] || location_point[1] < tokens.bbox[3]) continue messageloop;
             }
             
             // check constraints
