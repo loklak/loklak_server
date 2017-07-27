@@ -130,6 +130,7 @@ import org.loklak.api.vis.PieChartServlet;
 import org.loklak.data.DAO;
 import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.harvester.TwitterScraper;
+import org.loklak.harvester.YoutubeScraper;
 import org.loklak.harvester.strategy.ClassicHarvester;
 import org.loklak.harvester.strategy.Harvester;
 import org.loklak.harvester.strategy.KaizenHarvester;
@@ -640,8 +641,8 @@ public class LoklakServer {
                 LocationWiseTimeService.class,
                 TimeAndDateService.class,
                 WikiGeoData.class,
-                QuoraProfileScraper.class
-
+                QuoraProfileScraper.class,
+                YoutubeScraper.class
                 // tools
 
                 // vis

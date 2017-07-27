@@ -22,51 +22,188 @@ package org.loklak.harvester;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import com.google.common.base.CharMatcher;
+import org.apache.http.client.utils.URIBuilder;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.loklak.tools.CharacterCoding;
 import org.loklak.data.DAO;
+import org.loklak.harvester.BaseScraper;
+import org.loklak.harvester.Post;
+import org.loklak.objects.Timeline2;
+import org.loklak.server.BaseUserRole;
 
-public class YoutubeScraper {
+public class YoutubeScraper extends BaseScraper{
 
-    public final static ExecutorService executor = Executors.newFixedThreadPool(40);
+    //TODO: Not used right now, commenting temporarily, to work on this
+    //public final static ExecutorService executor = Executors.newFixedThreadPool(40);
 
     private final static String[] html_tags = new String[]{"title"};
     private final static String[] microformat_vocabularies = new String[]{"og", "twitter"};
+    private String type = null;
 
-    public static JSONObject parseVideo(File file) throws IOException {
-        FileInputStream fis = new FileInputStream(file);
-        JSONObject json = parseVideo(fis);
-        fis.close();
+    public YoutubeScraper() {
+        super();
+        this.baseUrl = "https://www.youtube.com/";
+        this.scraperName = "youtube";
+    }
+
+    public YoutubeScraper(Map<String, String> _extra) {
+        this();
+        this.setExtra(_extra);
+        this.query = this.getExtraValue("query");
+    }
+
+    public YoutubeScraper(String _query) {
+        this();
+        this.query = _query;
+        this.setExtraValue("query", this.query);
+    }
+
+    @Override
+    public String getAPIPath() {
+        return "/api/youtubescraper";
+    }
+
+    @Override
+    public BaseUserRole getMinimalBaseUserRole() {
+        return BaseUserRole.ANONYMOUS;
+    }
+
+    @Override
+    public JSONObject getDefaultPermissions(BaseUserRole baseUserRole) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    protected String prepareSearchUrl(String type) {
+        URIBuilder url = null;
+        String midUrl = "search/";
+        try {
+            switch(type) {
+                case "search":
+                    midUrl = "search/";
+                    url = new URIBuilder(this.baseUrl + midUrl);
+                    url.addParameter("search_query", this.query);
+                    break;
+                case "video":
+                    midUrl = "watch/";
+                    url = new URIBuilder(this.baseUrl + midUrl);
+                    url.addParameter("v", this.query);
+                    break;
+                case "user":
+                    midUrl = "channel/";
+                    url = new URIBuilder(this.baseUrl + midUrl + this.query);
+                    break;
+                default:
+                    url = new URIBuilder("");
+                    break;
+            }
+        } catch (URISyntaxException e) {
+            DAO.log("Invalid Url: baseUrl = " + this.baseUrl + ", mid-URL = " + midUrl + "query = " + this.query + "type = " + type);
+            return "";
+        }
+        return url.toString();
+    }
+
+    @Override
+     public Post getDataFromConnection() throws IOException {
+        String url = this.prepareSearchUrl(this.type);
+        return getDataFromConnection(url, this.type);
+    }
+
+    protected void setParam() {
+        String type = this.getExtraValue("type");
+        this.query = this.getExtraValue("query");
+        //TODO: Add scraper for search and user
+        type = "url";
+        if("".equals(type)) {
+            type = "search";
+        } else if("url".equals(type)) {
+            if(this.query.contains("youtube.com/results")) {
+                this.type = "search";
+            } else if(this.query.contains("youtube.com/watch")) {
+                this.type = "video";
+                this.query = this.query.substring(this.query.length() - 11);
+            } else if(this.query.contains("youtube.com/channel")) {
+                this.type = "user";
+                this.query = this.query.substring(this.query.length() - 24);
+            } else if(this.query.contains("youtu.be")) {
+                this.query = this.query.substring(this.query.length() - 11);
+            }
+        }
+    }
+
+    @Override
+    protected Post scrape(BufferedReader br, String type, String url) {
+        Post out = new Post(true);
+        Timeline2 postList = new Timeline2(this.order);
+        url = prepareSearchUrl(type);
+        switch(type) {
+            case "user":
+                //TODO: Add scraper
+                break;
+            case "video":
+                postList.addPost(this.parseVideo(br, type, url));
+                break;
+            case "search":
+                //TODO: Add scraper
+                break;
+            default:
+                break;
+        }
+
+        out.put(this.scraperName, postList.toArray());
+        return out;
+    }
+
+    public Post parseVideo(File file, String type, String url) {
+        Post json = new Post();
+        try {
+            FileInputStream fis = new FileInputStream(file);
+            json = this.parseVideo(fis, type, url);
+            fis.close();
+        } catch(FileNotFoundException e) {
+            DAO.severe(e);
+        } catch(IOException e) { 
+            DAO.severe("Connection error for query = " + this.query);
+        }
         return json;
     }
     
-    public static JSONObject parseVideo(InputStream is) throws IOException {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
-        JSONObject json = parseVideo(reader);
-        reader.close();
+    public Post parseVideo(InputStream is, String type, String url) {
+        Post json = new Post();
+        try {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+            json = this.parseVideo(reader, type, url);
+            reader.close();
+        } catch(IOException e) { 
+            DAO.severe("Connection error for query = " + this.query);
+        }
+
         return json;
     }
-    
-    public static JSONObject parseVideo(final BufferedReader br) throws IOException {
-        String input;
-        JSONObject json = new JSONObject(true);
+
+    public Post parseVideo(final BufferedReader br, String type, String url){
+        String input = "";
+        Post json = new Post(true);
         boolean parse_span = false, parse_license = false;
-        String itemprop= "", itemtype = ""; // values for span
-        while ((input = br.readLine()) != null) try {
+        // values for span
+        String itemprop= "";
+        String itemtype = "";
+        try {
+        while ((input = br.readLine()) != null) {
             input = input.trim();
-            //System.out.println(input); // uncomment temporary to debug or add new fields
             int p;
 
             if (parse_license) {
@@ -193,17 +330,21 @@ public class YoutubeScraper {
                     continue;
                 }
             }
-        } catch (Throwable e) {
-            e.printStackTrace();
-            System.err.println("error in video " + json.toString(2));
-            System.err.println("current line: " + input);
-            System.exit(0);
         }
-        br.close();
+            br.close();
+        } catch(IOException e) {
+            json.put("error", "Connection error while fetching");
+            json.put("search_url", url);
+        } catch (Throwable e) {
+            json.put("error", "Connection error while fetching");
+            json.put("search_url", url);
+            DAO.trace(e);
+        }
+
         return json;
     }
     
-    private static String parseValue(String n) {
+    private String parseValue(String n) {
         String number_value = CharMatcher.WHITESPACE.removeFrom(n);
         Pattern number_format = Pattern.compile("^(\\d{1,3})(((,\\d{3})*)|((\\.\\d+)?[MBK]))?$");
         Matcher m = number_format.matcher(number_value);
@@ -218,7 +359,7 @@ public class YoutubeScraper {
     private final static Pattern brend = Pattern.compile("<br />");
     private final static Pattern anchor_pattern = Pattern.compile("<a .*?>(.*?)</a>");
     
-    private static String[] parseMicroformat(String line, String key, int start) {
+    private String[] parseMicroformat(String line, String key, int start) {
         int p  = line.indexOf(key + "=\"", start); if (p < 0) return null; p += key.length() + 2;
         int c  = line.indexOf(":", p); if (c < 0) return null;
         int q  = line.indexOf("\"", c); if (q < 0) return null;
@@ -231,7 +372,7 @@ public class YoutubeScraper {
         return new String[]{subject, predicate, object};
     }
 
-    private static String[] parseItemprop(String line, int start, String[] objectnames, String subject) {
+    private String[] parseItemprop(String line, int start, String[] objectnames, String subject) {
         int p  = line.indexOf("itemprop=\"", start); if (p < 0) return null; p += 10;
         int q  = line.indexOf("\"", p); if (q < 0) return null;
         int r = -1;
@@ -249,7 +390,7 @@ public class YoutubeScraper {
         return new String[]{subject, predicate, object};
     }
     
-    private static void addRDF(String[] spo, JSONObject json) {
+    private void addRDF(String[] spo, Post post) {
         if (spo == null) return;
         String subject = spo[0];
         String predicate = spo[1];
@@ -258,10 +399,10 @@ public class YoutubeScraper {
         String key = subject + "_" + predicate;
         JSONArray objects = null;
         try {
-            objects = json.getJSONArray(key);
+            objects = post.getJSONArray(key);
         } catch (JSONException e) {
             objects = new JSONArray();
-            json.put(key, objects);
+            post.put(key, objects);
         }
         // double-check (wtf why is ths that complex?)
         for (Object o: objects) {
@@ -271,7 +412,7 @@ public class YoutubeScraper {
         objects.put(object);
     }
     
-    private static String parseProp(String line, int start, String key) {
+    private String parseProp(String line, int start, String key) {
         int p  = line.indexOf(key + "=\"", start);
         if (p > 0) {
             int q = line.indexOf('"', p + key.length() + 2);
@@ -282,7 +423,7 @@ public class YoutubeScraper {
         return null;
     }
     
-    private static String parseTag(String line, int start) {
+    private String parseTag(String line, int start) {
         int p = line.indexOf('>', start);
         if (p < 0) return null;
         int c = 1; // we count the number of open tags and stop if the number is zero. We already passed the first tag which is c = 1
