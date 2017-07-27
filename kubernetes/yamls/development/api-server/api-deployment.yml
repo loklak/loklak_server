@@ -15,7 +15,7 @@ spec:
         server: primary
       containers:
       - name: server
-        image: singhpratyush/loklak_server:latest-ext-es-kubernetes-dev
+        image: loklak/loklak_server:latest-kubernetes-development
         livenessProbe:
           httpGet:
             path: /api/status.json

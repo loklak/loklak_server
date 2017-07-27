@@ -39,26 +39,6 @@ gcloud compute disks create --size=100GB --zone=<same as cluster zone> data-inde
 ./kubernetes/bin/deploy-development.sh create
 ```
 
-### 2.5. Label the Node
-
-The persistent disk is attached to the node running `api-server`. But in case of rolling update, new container may get created on a different node.
-
-This would result in issues as the new instance would now try to mount a HDD which is already in use by another (older) instance.
-
-To avoid this, we enforce the new containers get created on same instance by labeling them. A selector for this is already present in the `api-server` deployment configuration.
-
-You can get the node name by running
-
-```bash
-kubectl get nodes --namespace=web
-```
-
-Choose one of the nodes and label it as `server=primary`.
-
-```bash
-kubectl label nodes <node-name> server=primary
-```
-
 ## 3. Modifying deployment
 
 ### 3.1. Setting a new Docker image
@@ -66,7 +46,7 @@ kubectl label nodes <node-name> server=primary
 To update deployment image, we can use the following command -
 
 ```bash
-./kubernetes/bin/update-development-image.sh <image name>  # Defaults to loklak/loklak_server:development
+./kubernetes/bin/update-development-image.sh <image name>  # Defaults to loklak/loklak_server:latest-kubernetes-development
 ```
 
 ### 3.2. Updating configurations
