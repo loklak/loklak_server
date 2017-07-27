@@ -19,26 +19,48 @@
 
 package org.loklak.api.search;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-
-import javax.servlet.http.HttpServletResponse;
-
-import org.json.JSONArray;
+import java.net.URISyntaxException;
+import java.util.Map;
+import org.apache.http.client.utils.URIBuilder;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.loklak.server.APIException;
-import org.loklak.server.APIHandler;
-import org.loklak.server.AbstractAPIHandler;
-import org.loklak.server.Authorization;
+import org.loklak.data.DAO;
+import org.loklak.harvester.BaseScraper;
+import org.loklak.harvester.Post;
 import org.loklak.server.BaseUserRole;
-import org.loklak.server.Query;
-import org.loklak.susi.SusiThought;
-import org.loklak.tools.storage.JSONObjectWithDefault;
 
-public class InstagramProfileScraper extends AbstractAPIHandler implements APIHandler{
+public class InstagramProfileScraper extends BaseScraper {
 
-	private static final long serialVersionUID = -3360416757176406602L;
+	private static final long serialVersionUID = -3360416757176406604L;
+    private Pattern instaJsonData = Pattern.compile("(\\{\"activity_counts\").*(\\});");
+
+    public InstagramProfileScraper() {
+        super();
+        this.baseUrl = "https://www.instagram.com/";
+        this.scraperName = "instagram";
+   }
+
+    public InstagramProfileScraper(String _query, Map<String, String> _extra) {
+        this();
+        this.setExtra(_extra);
+        this.query = _query;
+    }
+
+    public InstagramProfileScraper(Map<String, String> _extra) {
+        this();
+        this.setExtra(_extra);
+    }
+
+    public InstagramProfileScraper(String _query) {
+        this();
+        this.query = _query;
+    }
 
 	@Override
 	public String getAPIPath() {
@@ -55,33 +77,53 @@ public class InstagramProfileScraper extends AbstractAPIHandler implements APIHa
 		return null;
 	}
 
-	@Override
-	public JSONObject serviceImpl(Query call, HttpServletResponse response, Authorization rights,
-			JSONObjectWithDefault permissions) throws APIException {
-		String profile = call.get("profile", "");
-		return scrapeInstagram(profile);
-	}
+    protected String prepareSearchUrl(String type) {
+        URIBuilder url = null;
+        try {
+            url = new URIBuilder(this.baseUrl + this.query);
+        } catch (URISyntaxException e) {
+            DAO.log("Invalid Url: baseUrl = " + this.baseUrl + ", mid-URL = " + midUrl + "query = " + this.query + "type = " + type);
+            return "";
+        }
 
-	public static SusiThought scrapeInstagram(String profile) {
-		
+        return url.toString();
+    }
+
+    protected void setParam() {
+        if("".equals(this.getExtraValue("profile"))) {
+            this.setExtraValue("profile", this.query);
+        }
+        this.setExtraValue("query", this.query);
+    }
+
+    protected Post scrape(BufferedReader br, String type, String url) {
+        return scrapeInstagram(br, url);
+    }
+
+	public Post scrapeInstagram(BufferedReader br, String url) {
 		Document htmlPage = null;
-
-		try {
-			htmlPage = Jsoup.connect("https://www.instagram.com/" + profile).get();
-		} catch (IOException e) {
-			e.printStackTrace();
+        Post instaObj = null;
+        JSONArray instaProfile = new JSONArray();
+        try {
+            htmlPage = Jsoup.parse(this.bufferedReaderToString(br));
+        } catch (IOException e) {
+            DAO.trace(e);
 		}
-		
-		String script = htmlPage.getElementsByTag("script").get(3).html().substring(21);
-		JSONObject obj = new JSONObject(script);
-		
-		JSONArray instaProfile = new JSONArray();
-		instaProfile.put(obj.get("entry_data"));
-		
-		SusiThought json = new SusiThought();
-		json.setData(instaProfile);
-		return json;
-		
+
+		String script = htmlPage.getElementsByTag("script").html();
+        Matcher m = instaJsonData.matcher(script);
+        m.find();
+        int start = m.start(1);
+        int end = m.start(2) + 1;
+        script = script.substring(start, end);
+
+        //TODO: pre-process the posts captured. At present, complete array of posts are output.
+        //Only useful data shall be outputted.
+		instaObj = new Post(script, this.query);
+        instaProfile.put(instaObj);
+		instaObj = new Post(true);
+        instaObj.put("profile_posts", instaProfile);
+        return instaObj;
 	}
 
 }

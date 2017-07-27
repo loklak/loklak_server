@@ -235,7 +235,9 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
             return json;
         });
         dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?instagramprofile +?WHERE +?profile ??= ??'(.*?)' ??;"), matcher -> {
-            SusiThought json = InstagramProfileScraper.scrapeInstagram(matcher.group(2));
+            BaseScraper instaScrape = new InstagramProfileScraper(matcher.group(2));
+            Timeline2 dataList = instaScrape.getData();
+            SusiThought json = new SusiThought(dataList.toJSON());
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
             json.setData(transfer.conclude(json.getData()));
             return json;

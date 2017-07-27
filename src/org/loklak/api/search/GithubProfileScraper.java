@@ -65,7 +65,6 @@ public class GithubProfileScraper extends BaseScraper {
     public GithubProfileScraper(Map<String, String> _extra) {
         this();
         this.setExtra(_extra);
-        this.query = this.getExtraValue("query");
     }
 
     public GithubProfileScraper(String _query) {
@@ -114,6 +113,7 @@ public class GithubProfileScraper extends BaseScraper {
     }
 
     protected void setParam() {
+        this.query = this.getExtraValue("query");
         if(!"".equals(this.getExtraValue("terms"))) {
             this.termsList = Arrays.asList(this.getExtraValue("terms").trim().split("\\s*,\\s*"));
         } else {

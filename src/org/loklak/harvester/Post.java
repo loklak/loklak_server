@@ -37,6 +37,12 @@ public class Post extends JSONObject {
         this();
     }
 
+    public Post(String data, String query) {
+        super(data);
+        this.setTimestamp();
+        this.setPostId(query);
+    }
+
     protected Post(long timestamp) {
         this.setTimestamp(timestamp);
     }
