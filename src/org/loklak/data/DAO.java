@@ -121,6 +121,8 @@ public class DAO {
     public final static String FOLLOWING_DUMP_FILE_PREFIX = "following_";
     private static final String IMPORT_PROFILE_FILE_PREFIX = "profile_";
 
+    public static boolean writeDump;
+
     public final static int CACHE_MAXSIZE =   10000;
     public final static int EXIST_MAXSIZE = 4000000;
 
@@ -188,6 +190,8 @@ public class DAO {
         conf_dir = new File("conf");
         bin_dir = new File("bin");
         html_dir = new File("html");
+
+        writeDump = DAO.getConfig("dump.write_enabled", true);
 
         // initialize public and private keys
 		public_settings = new Settings(new File("data/settings/public.settings.json"));
@@ -679,7 +683,9 @@ public class DAO {
                 users.writeEntry(new IndexEntry<UserEntry>(mw.u.getScreenName(), mw.t.getSourceType(), mw.u));
 
                 // record tweet into text file
-                if (mw.dump) message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
+                if (mw.dump && writeDump) {
+                    message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
+                }
              }
 
             // teach the classifier
@@ -780,7 +786,9 @@ public class DAO {
             if (!created.contains(mw.t.getPostId())) continue;
             synchronized (DAO.class) {
                 // record tweet into text file
-                message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
+                if (writeDump) {
+                    message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
+                }
              }
 
             // teach the classifier
@@ -802,7 +810,9 @@ public class DAO {
     public static boolean writeAccount(AccountEntry a, boolean dump) {
         try {
             // record account into text file
-            if (dump) account_dump.write(a.toJSON(null));
+            if (dump && writeDump) {
+                account_dump.write(a.toJSON(null));
+            }
 
             // record account into search index
             accounts.writeEntry(new IndexEntry<AccountEntry>(a.getScreenName(), a.getSourceType(), a));
@@ -821,7 +831,9 @@ public class DAO {
     public static boolean writeImportProfile(ImportProfileEntry i, boolean dump) {
         try {
             // record import profile into text file
-            if (dump) import_profile_dump.write(i.toJSON());
+            if (dump && writeDump) {
+                import_profile_dump.write(i.toJSON());
+            }
             // record import profile into search index
             importProfiles.writeEntry(new IndexEntry<ImportProfileEntry>(i.getId(), i.getSourceType(), i));
         } catch (IOException e) {
