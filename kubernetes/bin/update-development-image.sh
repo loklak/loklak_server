@@ -1,3 +1,4 @@
+#!/bin/bash
 IMAGE=$1
 if [ -z $1 ]; then
     IMAGE=loklak/loklak_server:latest-kubernetes-development
