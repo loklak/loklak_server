@@ -1,0 +1,33 @@
+# Main deployment for API server
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: server
+  namespace: web
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: server
+    spec:
+      nodeSelector:
+        server: primary
+      containers:
+      - name: server
+        image: loklak/loklak_server:latest-kubernetes-development
+        livenessProbe:
+          httpGet:
+            path: /api/status.json
+            port: 80
+          initialDelaySeconds: 30
+          timeoutSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /api/status.json
+            port: 80
+          initialDelaySeconds: 30
+          timeoutSeconds: 3
+        ports:
+        - containerPort: 80
+          protocol: TCP
