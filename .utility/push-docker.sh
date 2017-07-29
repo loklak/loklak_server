@@ -38,13 +38,15 @@ KUBERNETES_BRANCH=loklak/loklak_server:latest-kubernetes-$TRAVIS_BRANCH
 KUBERNETES_COMMIT=loklak/loklak_server:kubernetes-$TRAVIS_COMMIT
 
 if [ "$TRAVIS_BRANCH" == "development" ]; then
-    docker build -t loklak_server_kubernetes kubernetes/images/development
-    docker tag loklak_server_kubernetes $KUBERNETES_BRANCH
+    docker build -t $KUBERNETES_BRANCH kubernetes/images/development
     docker push $KUBERNETES_BRANCH
     docker tag $KUBERNETES_BRANCH $KUBERNETES_COMMIT
     docker push $KUBERNETES_COMMIT
 elif [ "$TRAVIS_BRANCH" == "master" ]; then
-    # Build and push master
+    docker build -t $KUBERNETES_BRANCH kubernetes/images/master
+    docker push $KUBERNETES_BRANCH
+    docker tag $KUBERNETES_BRANCH $KUBERNETES_COMMIT
+    docker push $KUBERNETES_COMMIT
 else
     echo "Skipping Kubenetes image push for branch $TRAVIS_BRANCH"
 fi
