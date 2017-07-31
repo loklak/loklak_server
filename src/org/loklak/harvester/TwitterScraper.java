@@ -102,13 +102,11 @@ public class TwitterScraper {
             final boolean writeToIndex,
             final boolean writeToBackend,
             int jointime) {
-
         Timeline[] tl = search(query, filterList, order, writeToIndex, writeToBackend);
         long timeout = System.currentTimeMillis() + jointime;
-        for (TwitterTweet me: tl[1]) {
-            assert me instanceof TwitterTweet;
-            TwitterTweet tt = (TwitterTweet) me;
-            long remainingWait = Math.max(10, timeout - System.currentTimeMillis());
+        long remainingWait = 0;
+        for (TwitterTweet tt: tl[1]) {
+            remainingWait = Math.max(10, timeout - System.currentTimeMillis());
             if (tt.waitReady(remainingWait)) {
                  // double additions are detected
                 tl[0].add(tt, tt.getUser());
@@ -269,8 +267,8 @@ public class TwitterScraper {
         Timeline timelineWorking = new Timeline(order);
         String input;
         Map<String, prop> props = new HashMap<String, prop>();
-        Set<String> images = new HashSet<>();
-        Set<String> videos = new HashSet<>();
+        Set<String> images = null;
+        Set<String> videos = null;
         String place_id = "";
         String place_name = "";
         boolean parsing_favourite = false, parsing_retweet = false;
@@ -344,6 +342,7 @@ public class TwitterScraper {
                 continue;
             }
             // get images
+            if(images == null) images = new HashSet<>();
             if ((p = input.indexOf("data-image-url=")) >= 0) {
                 String image_url = new prop(input, p, "data-image-url").value;
                 if (!image_url.endsWith(".jpg") && !image_url.endsWith(".png")) {
@@ -365,6 +364,7 @@ public class TwitterScraper {
                 continue;
             }
             // we have two opportunities to get video thumbnails == more images; images in the presence of video content should be treated as thumbnail for the video
+            if(videos == null) videos = new HashSet<>();
             if ((p = input.indexOf("class=\"animated-gif-thumbnail\"")) > 0) {
                 String image_url = new prop(input, 0, "src").value;
                 images.add(image_url);
@@ -424,10 +424,7 @@ public class TwitterScraper {
                         useravatarurl.value,
                         MessageEntry.html2utf8(userfullname.value)
                 );
-                ArrayList<String> imgs = new ArrayList<String>(images.size()); imgs.addAll(images);
-                ArrayList<String> vids = new ArrayList<String>(videos.size()); vids.addAll(videos);
-                videos.clear();
-
+                
                 prop tweettimems = props.get("tweettimems");
                 if (tweettimems == null) {
                     if (debuglog) DAO.log("*** line " + line + " MISSING value tweettimems");
@@ -452,7 +449,7 @@ public class TwitterScraper {
                         props.get("tweettext").value,
                         Long.parseLong(tweetretweetcount.value),
                         Long.parseLong(tweetfavouritecount.value),
-                        imgs, vids, place_name, place_id,
+                        images, videos, place_name, place_id,
                         user, writeToIndex,  writeToBackend
                 );
                 if (DAO.messages == null || !DAO.messages.existsCache(tweet.getPostId())) {
@@ -463,6 +460,7 @@ public class TwitterScraper {
                         //new Thread(tweet).start();
                         // because the executor may run the thread in the current thread it could be possible that the result is here already
                         if (tweet.isReady()) {
+        
                             timelineReady.add(tweet, user);
                             //DAO.log("SCRAPERTEST: messageINIT is ready");
                         } else {
@@ -475,13 +473,15 @@ public class TwitterScraper {
                         timelineReady.add(tweet, user);
                     }
                 }
-                images.clear();
+                videos = null;
+                images = null;
                 props.clear();
                 continue;
             }
         }
         //for (prop p: props.values()) System.out.println(p);
         br.close();
+
         return new Timeline[]{timelineReady, timelineWorking};
     }
 
@@ -576,11 +576,11 @@ public class TwitterScraper {
         throw new IOException("Couldn't get BEARER_TOKEN");
     }
 
-    /*
+    /**
      * Filter Posts(here tweets) according to values.
-        image: filter tweets with images, neglect 'tweets without images'
-        video: filter tweets also having video and other values like image. For only value as video,
-               tweets with videos are filtered in prepareUrl() method
+     *   image: filter tweets with images, neglect 'tweets without images'
+     *   video: filter tweets also having video and other values like image. For only value as video,
+     *          tweets with videos are filtered in prepareUrl() method
      */
     private static boolean filterPosts(
             ArrayList<String> filterList,
@@ -595,7 +595,7 @@ public class TwitterScraper {
                 Pattern.compile("youtube.com\\/watch?v=[0-9A-z]+")
         };
 
-        // filter tweets with videos and others
+        // Filter tweets with videos and others
         if (filterList.contains("video") && filterList.size() > 1) {
             matchVideo1 = videoUrlPatterns[0].matcher(props.get("tweettext").value);
             matchVideo2 = videoUrlPatterns[1].matcher(props.get("tweettext").value);
@@ -605,7 +605,7 @@ public class TwitterScraper {
             }
         }
 
-        // filter tweets with images
+        // Filter tweets with images
         if (filterList.contains("image") && images.size() < 1) {
             return false;
         }
@@ -679,9 +679,10 @@ public class TwitterScraper {
                     "<span.*?span>"
     );
 
-    public static class TwitterTweet extends MessageEntry implements Runnable {
+    public static class TwitterTweet extends Post implements Runnable {
 
         public final Semaphore ready;
+        public MessageEntry moreData = new MessageEntry();
         public UserEntry user;
         public boolean writeToIndex;
         public boolean writeToBackend;
@@ -701,10 +702,10 @@ public class TwitterScraper {
         // who created the message
         protected ProviderType provider_type;
 
-        protected String provider_hash, screen_name, retweet_from, postId, canonical_id, parent, text;
+        public String provider_hash, screen_name, retweet_from, postId, canonical_id, parent, text;
         protected URL status_id_url;
         protected long retweet_count, favourites_count;
-        protected Set<String> images, audios, videos;
+        public Set<String> images, audios, videos;
         protected String place_name, place_id;
 
         // the following fields are either set as a common field or generated by extraction from field 'text' or from field 'place_name'
@@ -735,8 +736,8 @@ public class TwitterScraper {
                 final String text_raw,
                 final long retweets,
                 final long favourites,
-                final Collection<String> images,
-                final Collection<String> videos,
+                final Set<String> images,
+                final Set<String> videos,
                 final String place_name,
                 final String place_id,
                 final UserEntry user,
@@ -754,12 +755,13 @@ public class TwitterScraper {
             this.favourites_count = favourites;
             this.place_name = place_name;
             this.place_id = place_id;
-            this.images = new HashSet<>(); for (String image: images) this.images.add(image);
-            this.videos = new HashSet<>(); for (String video: videos) this.videos.add(video);
+            this.images = images;
+            this.videos = videos;
             this.text = text_raw;
             this.user = user;
             this.writeToIndex = writeToIndex;
             this.writeToBackend = writeToBackend;
+                
             //Date d = new Date(timemsraw);
             //System.out.println(d);
 
@@ -781,15 +783,16 @@ public class TwitterScraper {
         }
 
         public TwitterTweet(JSONObject json) {
+            this.moreData = new MessageEntry();
             Object timestamp_obj = lazyGet(json, AbstractObjectEntry.TIMESTAMP_FIELDNAME);
-            this.timestampDate = parseDate(timestamp_obj);
+            this.timestampDate = MessageEntry.parseDate(timestamp_obj);
             this.timestamp = this.timestampDate.getTime();
             Object created_at_obj = lazyGet(json, AbstractObjectEntry.CREATED_AT_FIELDNAME);
-            this.created_at = parseDate(created_at_obj);
+            this.created_at = MessageEntry.parseDate(created_at_obj);
             Object on_obj = lazyGet(json, "on");
-            this.on = on_obj == null ? null : parseDate(on);
+            this.on = on_obj == null ? null : MessageEntry.parseDate(on);
             Object to_obj = lazyGet(json, "to");
-            this.to = to_obj == null ? null : parseDate(to);
+            this.to = to_obj == null ? null : MessageEntry.parseDate(to);
             String source_type_string = (String) lazyGet(json, "source_type");
             try {
                 this.source_type = source_type_string == null ? SourceType.GENERIC : SourceType.byName(source_type_string);
@@ -806,21 +809,21 @@ public class TwitterScraper {
             this.provider_hash = (String) lazyGet(json, "provider_hash");
             this.screen_name = (String) lazyGet(json, "screen_name");
             this.retweet_from = (String) lazyGet(json, "retweet_from");
-            this.postId = (String) lazyGet(json, "post_id");
+            this.postId = (String) lazyGet(json, "id_str");
             this.text = (String) lazyGet(json, "text");
             try {
                 this.status_id_url = new URL((String) lazyGet(json, "link"));
             } catch (MalformedURLException e) {
                 this.status_id_url = null;
             }
-            this.retweet_count = parseLong((Number) lazyGet(json, "retweet_count"));
-            this.favourites_count = parseLong((Number) lazyGet(json, "favourites_count"));
-            this.images = parseArrayList(lazyGet(json, "images"));
-            this.audios = parseArrayList(lazyGet(json, "audio"));
-            this.videos = parseArrayList(lazyGet(json, "videos"));
-            this.place_id = parseString((String) lazyGet(json, "place_id"));
-            this.place_name = parseString((String) lazyGet(json, "place_name"));
-            this.place_country = parseString((String) lazyGet(json, "place_country"));
+            this.retweet_count = MessageEntry.parseLong((Number) lazyGet(json, "retweet_count"));
+            this.favourites_count = MessageEntry.parseLong((Number) lazyGet(json, "favourites_count"));
+            this.images = (HashSet<String>)lazyGet(json, "images");
+            this.audios = (HashSet<String>)lazyGet(json, "audio");
+            this.videos = (HashSet<String>)lazyGet(json, "videos");
+            this.place_id = MessageEntry.parseString((String) lazyGet(json, "place_id"));
+            this.place_name = MessageEntry.parseString((String) lazyGet(json, "place_name"));
+            this.place_country = MessageEntry.parseString((String) lazyGet(json, "place_country"));
             if (this.place_country != null && this.place_country.length() != 2) this.place_country = null;
 
             // optional location
@@ -837,7 +840,7 @@ public class TwitterScraper {
                 this.location_source = null;
             } else {
                 this.location_point = new double[]{(Double) ((List<?>) location_point_obj).get(0), (Double) ((List<?>) location_point_obj).get(1)};
-                this.location_radius = (int) parseLong((Number) location_radius_obj);
+                this.location_radius = (int) MessageEntry.parseLong((Number) location_radius_obj);
                 this.location_mark = new double[]{(Double) ((List<?>) location_mark_obj).get(0), (Double) ((List<?>) location_mark_obj).get(1)};
                 this.location_source = LocationSource.valueOf((String) location_source_obj);
             }
@@ -854,6 +857,7 @@ public class TwitterScraper {
         }
 
         public TwitterTweet() throws MalformedURLException {
+            this.moreData = new MessageEntry();
             this.timestamp = new Date().getTime();
             this.timestampDate = new Date(this.timestamp);
             this.created_at = new Date();
@@ -889,7 +893,7 @@ public class TwitterScraper {
             this.links = new ArrayList<String>();
             this.mentions = new ArrayList<String>();
             this.hashtags = new ArrayList<String>();
-            this.classifier = null;
+            this.moreData.classifier = null;
             this.enriched = false;
 
             // may lead to error!!
@@ -899,77 +903,77 @@ public class TwitterScraper {
             //this.writeToBackend = false;
         }
 
-    //TODO: fix the location issue and shift to MessageEntry class
-    public void getLocation() {
-        if ((this.location_point == null || this.location_point.length == 0) && DAO.geoNames != null) {
-            GeoMark loc = null;
-            if (place_name != null && this.place_name.length() > 0 &&
-                (this.location_source == null || this.location_source == LocationSource.ANNOTATION || this.location_source == LocationSource.PLACE)) {
-                loc = DAO.geoNames.analyse(this.place_name, null, 5, Integer.toString(this.text.hashCode()));
-                this.place_context = PlaceContext.FROM;
-                this.location_source = LocationSource.PLACE;
-            }
-            if (loc == null) {
-                loc = DAO.geoNames.analyse(this.text, this.hashtags.toArray(new String[0]), 5, Integer.toString(this.text.hashCode()));
-                this.place_context = PlaceContext.ABOUT;
-                this.location_source = LocationSource.ANNOTATION;
-            }
-            if (loc != null) {
-                if (this.place_name == null || this.place_name.length() == 0) this.place_name = loc.getNames().iterator().next();
-                this.location_radius = 0;
-                this.location_point = new double[]{loc.lon(), loc.lat()}; //[longitude, latitude]
-                this.location_mark = new double[]{loc.mlon(), loc.mlat()}; //[longitude, latitude]
-                this.place_country = loc.getISO3166cc();
+        //TODO: fix the location issue and shift to MessageEntry class
+        public void getLocation() {
+            if ((this.location_point == null || this.location_point.length == 0) && DAO.geoNames != null) {
+                GeoMark loc = null;
+                if (place_name != null && this.place_name.length() > 0 &&
+                    (this.location_source == null || this.location_source == LocationSource.ANNOTATION || this.location_source == LocationSource.PLACE)) {
+                    loc = DAO.geoNames.analyse(this.place_name, null, 5, Integer.toString(this.text.hashCode()));
+                    this.place_context = PlaceContext.FROM;
+                    this.location_source = LocationSource.PLACE;
+                }
+                if (loc == null) {
+                    loc = DAO.geoNames.analyse(this.text, this.hashtags.toArray(new String[0]), 5, Integer.toString(this.text.hashCode()));
+                    this.place_context = PlaceContext.ABOUT;
+                    this.location_source = LocationSource.ANNOTATION;
+                }
+                if (loc != null) {
+                    if (this.place_name == null || this.place_name.length() == 0) this.place_name = loc.getNames().iterator().next();
+                    this.location_radius = 0;
+                    this.location_point = new double[]{loc.lon(), loc.lat()}; //[longitude, latitude]
+                    this.location_mark = new double[]{loc.mlon(), loc.mlat()}; //[longitude, latitude]
+                    this.place_country = loc.getISO3166cc();
+                }
             }
         }
-    }
 
-    /**
-     * create enriched data, useful for analytics and ranking:
-     * - identify all mentioned users, hashtags and links
-     * - count message size without links
-     * - count message size without links and without users
-     */
-    public void enrich() {
-        if (this.enriched) return;
+        /**
+         * create enriched data, useful for analytics and ranking:
+         * - identify all mentioned users, hashtags and links
+         * - count message size without links
+         * - count message size without links and without users
+         */
+        public void enrich() {
+            if (this.enriched) return;
+            
+            this.moreData.classifier = Classifier.classify(this.text);
+enrichData(this.text);
+            getLocation();
 
-        enrichData(this.text);
-        
-        this.classifier = Classifier.classify(this.text);
-        getLocation();
-
-        this.enriched = true;
-    }
-
-    public void enrichData(String inputText) {
-        StringBuilder text = new StringBuilder(inputText);
-
-        this.links = extractLinks(text.toString());
-        text = new StringBuilder(SPACEX_PATTERN.matcher(text).replaceAll(" ").trim());
-        // Text's length without link
-        this.without_l_len = text.length();
-
-        this.hosts = extractHosts(links);
-
-        this.videos = getLinksVideo(this.links);
-        this.images = getLinksImage(this.links);
-        this.audios = getLinksAudio(this.links);
-
-        this.users = extractUsers(text.toString());
-        text = new StringBuilder(SPACEX_PATTERN.matcher(text).replaceAll(" ").trim());
-        // Text's length without link and users
-        this.without_lu_len = text.length();
-
-        this.mentions = new ArrayList<String>();
-        for (int i = 0; i < this.users.size(); i++) {
-            this.mentions.add(this.users.get(i).substring(1));
+            this.enriched = true;
         }
 
-        this.hashtags = extractHashtags(text.toString());
-        text = new StringBuilder(SPACEX_PATTERN.matcher(text).replaceAll(" ").trim());
-        // Text's length without link, users and hashtags
-        this.without_luh_len = text.length();
-    }
+        public void enrichData(String inputText) {
+            StringBuilder text = new StringBuilder(inputText);
+            
+            this.links = this.moreData.extractLinks(text.toString());
+            text = new StringBuilder(MessageEntry.SPACEX_PATTERN.matcher(text).replaceAll(" ").trim());
+            // Text's length without link
+            this.without_l_len = text.length();
+
+            this.hosts = this.moreData.extractHosts(links);
+
+            this.videos = this.moreData.getLinksVideo(this.links, this.videos);
+            this.images = this.moreData.getLinksImage(this.links, this.images);
+            this.audios = this.moreData.getLinksAudio(this.links, this.audios);
+
+            this.users = this.moreData.extractUsers(text.toString());
+            text = new StringBuilder(MessageEntry.SPACEX_PATTERN.matcher(text).replaceAll(" ").trim());
+            // Text's length without link and users
+            this.without_lu_len = text.length();
+
+            this.mentions = new ArrayList<String>();
+            for (int i = 0; i < this.users.size(); i++) {
+                this.mentions.add(this.users.get(i).substring(1));
+            }
+
+            this.hashtags = this.moreData.extractHashtags(text.toString());
+            text = new StringBuilder(MessageEntry.SPACEX_PATTERN.matcher(text).replaceAll(" ").trim());
+            // Text's length without link, users and hashtags
+            this.without_luh_len = text.length();
+
+        }
 
         @Override
         public void run() {
@@ -1017,14 +1021,15 @@ public class TwitterScraper {
         public Post toJSON(final UserEntry user, final boolean calculatedData, final int iflinkexceedslength, final String urlstub) {
 
             // tweet data
-            this.put(AbstractObjectEntry.TIMESTAMP_FIELDNAME, utcFormatter.print(getTimestampDate().getTime()));
-            this.put(AbstractObjectEntry.CREATED_AT_FIELDNAME, utcFormatter.print(getCreatedAt().getTime()));
-            if (this.on != null) this.put("on", utcFormatter.print(this.on.getTime()));
-            if (this.to != null) this.put("to", utcFormatter.print(this.to.getTime()));
+            this.put(AbstractObjectEntry.TIMESTAMP_FIELDNAME, AbstractObjectEntry.utcFormatter.print(getTimestampDate().getTime()));
+            this.put(AbstractObjectEntry.CREATED_AT_FIELDNAME, AbstractObjectEntry.utcFormatter.print(getCreatedAt().getTime()));
+            if (this.on != null) this.put("on", AbstractObjectEntry.utcFormatter.print(this.on.getTime()));
+            if (this.to != null) this.put("to", AbstractObjectEntry.utcFormatter.print(this.to.getTime()));
             this.put("screen_name", this.screen_name);
             if (this.retweet_from != null && this.retweet_from.length() > 0) this.put("retweet_from", this.retweet_from);
-            TextLinkMap tlm = this.getText(iflinkexceedslength, urlstub, this.text, this.getLinks(), this.getPostId());
-            this.put("text", tlm); // the tweet; the cleanup is a helper function which cleans mistakes from the past in scraping
+            // the tweet; the cleanup is a helper function which cleans mistakes from the past in scraping
+            MessageEntry.TextLinkMap tlm = this.moreData.getText(iflinkexceedslength, urlstub, this.text, this.getLinks(), this.getPostId());
+            this.put("text", tlm);
             if (this.status_id_url != null) this.put("link", this.status_id_url.toExternalForm());
             this.put("id_str", this.postId);
             if (this.canonical_id != null) this.put("canonical_id", this.canonical_id);
@@ -1081,21 +1086,22 @@ public class TwitterScraper {
                 this.put("hashtags", this.hashtags);
                 this.put("hashtags_count", this.hashtags.size());
 
-                // text classifier
-                if (this.classifier != null) {
-                    for (Map.Entry<Context, Classification<String, Category>> c: this.classifier.entrySet()) {
-                        assert c.getValue() != null;
-                        if (c.getValue().getCategory() == Classifier.Category.NONE) continue; // we don't store non-existing classifications
-                        this.put("classifier_" + c.getKey().name(), c.getValue().getCategory());
-                        this.put("classifier_" + c.getKey().name() + "_probability",
-                            c.getValue().getProbability() == Float.POSITIVE_INFINITY ? Float.MAX_VALUE : c.getValue().getProbability());
-                    }
-                }
-
                 // experimental, for ranking
                 this.put("without_l_len", this.without_l_len);
                 this.put("without_lu_len", this.without_lu_len);
                 this.put("without_luh_len", this.without_luh_len);
+
+                            // text classifier
+            if (this.moreData.classifier != null) {
+                for (Map.Entry<Context, Classification<String, Category>> c: this.moreData.classifier.entrySet()) {
+                    assert c.getValue() != null;
+                    // we don't store non-existing classifications
+                    if (c.getValue().getCategory() == Classifier.Category.NONE) continue;
+                    this.put("classifier_" + c.getKey().name(), c.getValue().getCategory());
+                    this.put("classifier_" + c.getKey().name() + "_probability",
+                        c.getValue().getProbability() == Float.POSITIVE_INFINITY ? Float.MAX_VALUE : c.getValue().getProbability());
+                }
+            }
             }
 
             // add user
@@ -1103,12 +1109,21 @@ public class TwitterScraper {
             return this;
         }
 
-        public UserEntry getUser() {
-            return this.user;
-        }
-
         public boolean willBeTimeConsuming() {
             return timeline_link_pattern.matcher(this.text).find();
+        }
+
+        public Object lazyGet(JSONObject json, String key) {
+            try {
+                Object o = json.get(key);
+                return o;
+            } catch (JSONException e) {
+                return null;
+            }
+        }
+
+        public UserEntry getUser() {
+            return this.user;
         }
 
         public Date getTimestampDate() {
@@ -1303,15 +1318,15 @@ public class TwitterScraper {
             return this.hosts;
         }
 
-        public Collection<String> getVideos() {
+        public Set<String> getVideos() {
             return this.videos;
         }
 
-        public Collection<String> getAudio() {
+        public Set<String> getAudio() {
             return this.audios;
         }
 
-        public Collection<String> getImages() {
+        public Set<String> getImages() {
             return this.images;
         }
 
@@ -1323,6 +1338,9 @@ public class TwitterScraper {
         }
 
         public String[] getMentions() {
+            if(this.mentions == null) {
+                return new String[0];
+            }
             return this.mentions.toArray(new String[0]);
         }
 
@@ -1332,6 +1350,10 @@ public class TwitterScraper {
 
         public String[] getLinks() {
             return this.links.toArray(new String[0]);
+        }
+
+        public Classifier.Category getClassifier(Classifier.Context context) {
+            return this.moreData.getClassifier(context);
         }
 
     }

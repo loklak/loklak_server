@@ -2,6 +2,7 @@ package org.loklak.harvester;
 
 import java.util.Date;
 import org.json.JSONObject;
+import org.loklak.objects.ObjectEntry;
 
 /**
  * @author vibhcool (Vibhor Verma)
@@ -10,7 +11,7 @@ import org.json.JSONObject;
  *
  * Post abstract class for data objects.
  */
-public class Post extends JSONObject {
+public class Post extends JSONObject implements ObjectEntry {
 
     protected long timestamp = 0;
     protected String postId;
@@ -83,6 +84,14 @@ public class Post extends JSONObject {
 
     public boolean isWrapper() {
         return this.wrapper;
+    }
+
+    public String toString(){
+        return super.toString();
+    }
+
+    public JSONObject toJSON() {
+        return this;
     }
 }
 

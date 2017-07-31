@@ -53,7 +53,7 @@ public class MessageEntry extends AbstractObjectEntry {
     // two or more
     public final static Pattern SPACEX_PATTERN = Pattern.compile("  +");
     // right boundary must be space or ) since others may appear in urls
-    public final static Pattern URL_PATTERN = Pattern.compile("(?:\\b|^)(https?://[-A-Za-z0-9+&@#/%?=~_()|!:,.;]*[-A-Za-z0-9+&@#/%=~_()|])");
+    public final static Pattern URL_PATTERN = Pattern.compile("(?:\\b|^)?(https?:\\/\\/[-A-Za-z0-9+&@#\\/%\\?=~_\\(\\)\\|\\!:,.;]*[-A-Za-z0-9+&@#\\/%=~_\\(\\)|])");
     // left boundary must be space since the @ is itself a boundary
     public final static Pattern USER_PATTERN = Pattern.compile("(?:[ (]|^)(@..*?)(?:\\b|$)"); 
     // left boundary must be a space since the # is itself a boundary
@@ -84,7 +84,7 @@ public class MessageEntry extends AbstractObjectEntry {
             dataList.add(m.group(regexGroup));
         }
         for (String r: dataList) {
-            text.replaceAll(r, "");
+            text.replace(r, "");
         }
         return dataList;
     }
@@ -164,11 +164,14 @@ public class MessageEntry extends AbstractObjectEntry {
         return clean.toString().trim().replaceAll(" +", " ");
     }
 
-    public Set<String> getLinksVideo(List<String> links) {
-        Set<String> videoList = new HashSet<String>();
+    public Set<String> getLinksVideo(List<String> links, Set<String> videoList) {
+        
         boolean endLink = false;
         boolean withLinkTerm = false;
 
+        if(videoList == null) {
+            videoList = new HashSet<String>();
+        }
         for (String link: links) {
             endLink = link.endsWith(".mp4") || link.endsWith(".m4v");
             withLinkTerm = link.indexOf("vimeo.com") > 0
@@ -184,11 +187,17 @@ public class MessageEntry extends AbstractObjectEntry {
         return videoList;
     }
 
-    public Set<String> getLinksAudio(List<String> links) {
-        Set<String> audioLinks = new HashSet<String>();
+    public Set<String> getLinksVideo(List<String> links) {
+        return this.getLinksVideo(links, null);
+    }
+
+    public Set<String> getLinksAudio(List<String> links, Set<String> audioLinks) {
         boolean endLink = false;
         boolean withLinkTerm = false;
 
+        if(audioLinks == null) {
+            audioLinks = new HashSet<String>();
+        }
         for (String link: links) {
             endLink = link.endsWith(".mp3");
             withLinkTerm = link.indexOf("soundcloud.com") > 0;
@@ -198,27 +207,36 @@ public class MessageEntry extends AbstractObjectEntry {
         return audioLinks;
     }
 
-    public Set<String> getLinksImage(List<String> links ) {
-        Set<String> imageLinks = new HashSet<String>();
+    public Set<String> getLinksAudio(List<String> links) {
+        return this.getLinksAudio(links, null);
+    }
+
+    public Set<String> getLinksImage(List<String> links, Set<String> imageLinks) {
         boolean endLink = false;
         boolean withLinkTerm = false;
-        
+
+        if(imageLinks == null) {
+            imageLinks = new HashSet<String>();
+        }
         for (String link: links) {
             endLink = link.endsWith(".jpg")
                     || link.endsWith(".jpeg")
                     || link.endsWith(".png")
                     || link.endsWith(".gif");
-            /*
-             * TODO: Commented this as not all links are of image. Need to fix this.
+            //TODO: need to fix this
             withLinkTerm = link.indexOf("flickr.com") > 0
                     || link.indexOf("instagram.com") > 0
                     || link.indexOf("imgur.com") > 0
                     || link.indexOf("giphy.com") > 0
                     || link.indexOf("pic.twitter.com") > 0;
-            */
+            
             if (endLink || withLinkTerm) imageLinks.add(link);
         }
         return imageLinks;
+    }
+
+    public Set<String> getLinksImage(List<String> links) {
+        return this.getLinksImage(links, null);
     }
 
     public TextLinkMap getText(final int iflinkexceedslength, final String urlstub, String text, String[] linksArray, String postId) {

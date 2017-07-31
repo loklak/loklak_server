@@ -425,7 +425,7 @@ public class SearchServlet extends HttpServlet {
                         m.setLink(t.getStatusIdUrl().toExternalForm());
                         m.setAuthor(u.getName() + " @" + u.getScreenName());
                         m.setTitle(u.getName() + " @" + u.getScreenName());
-                        m.setDescription(t.getText(shortlink_iflinkexceedslength, shortlink_urlstub, t.getText(), t.getLinks(), t.getPostId()).text);
+                        m.setDescription(t.moreData.getText(shortlink_iflinkexceedslength, shortlink_urlstub, t.getText(), t.getLinks(), t.getPostId()).text);
                         m.setPubDate(t.getCreatedAt());
                         m.setGuid(t.getPostId());
                         feed.addMessage(m);
@@ -448,7 +448,7 @@ public class SearchServlet extends HttpServlet {
                         buffer.append(t.getCreatedAt()).append(" ")
                                 .append(u.getScreenName())
                                 .append(": ")
-                                .append(t.getText(shortlink_iflinkexceedslength, shortlink_urlstub, t.getText(), t.getLinks(), t.getPostId()).text)
+                                .append(t.moreData.getText(shortlink_iflinkexceedslength, shortlink_urlstub, t.getText(), t.getLinks(), t.getPostId()).text)
                                 .append('\n');
                     }
                 } catch (ConcurrentModificationException e) {

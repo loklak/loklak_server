@@ -17,7 +17,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import org.junit.Test;
 import org.loklak.objects.Timeline;
-import org.loklak.objects.MessageEntry;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.http.ClientConnection;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.StringContains.containsString;
@@ -137,7 +137,7 @@ public class TwitterScraperTest {
         assertThat(ftweet_list.size(), is(6));
 
         // Test tweets data with TwitterTweet object
-        TwitterScraper.TwitterTweet tweet = (TwitterScraper.TwitterTweet) ftweet_list.iterator().next();
+        TwitterTweet tweet = (TwitterTweet) ftweet_list.iterator().next();
 
         assertThat(String.valueOf(tweet.getUser()), containsString(tweet_check.get("user")));
         assertEquals(String.valueOf(tweet.getStatusIdUrl()), tweet_check.get("status_id_url"));
@@ -154,8 +154,8 @@ public class TwitterScraperTest {
 
         try {
             // Other parameters of twittertweet(used )
-            assertThat(getPrivateField(TwitterScraper.TwitterTweet.class, "writeToIndex", tweet), is(Boolean.parseBoolean(tweet_check.get("writeToIndex"))));
-            assertThat(getPrivateField(TwitterScraper.TwitterTweet.class, "writeToBackend", tweet), is(Boolean.parseBoolean(tweet_check.get("writeToBackend"))));
+            assertThat(getPrivateField(TwitterTweet.class, "writeToIndex", tweet), is(Boolean.parseBoolean(tweet_check.get("writeToIndex"))));
+            assertThat(getPrivateField(TwitterTweet.class, "writeToBackend", tweet), is(Boolean.parseBoolean(tweet_check.get("writeToBackend"))));
         } catch(Exception e) {
             System.out.println(e.getMessage());
         }
@@ -166,9 +166,9 @@ public class TwitterScraperTest {
      */
     public Timeline processTweetList(Timeline[] tweet_list) {
 
-        for (MessageEntry me: tweet_list[1]) {
-            assert me instanceof TwitterScraper.TwitterTweet;
-            TwitterScraper.TwitterTweet tweet = (TwitterScraper.TwitterTweet) me;
+        for (TwitterTweet me: tweet_list[1]) {
+            assert me instanceof TwitterTweet;
+            TwitterTweet tweet = (TwitterTweet) me;
             if (tweet.waitReady(400)) {
                 tweet_list[0].add(tweet, tweet.getUser());
             }
