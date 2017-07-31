@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import org.loklak.objects.MessageEntry;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.objects.Timeline;
 import org.loklak.tools.bayes.BayesClassifier;
 import org.loklak.tools.bayes.Classification;
@@ -167,7 +167,7 @@ public class Classifier {
             int count = 0;
             for (Context c: Context.values()) {
                 //Set<String> voc = c.vocabulary();
-                for (MessageEntry m: tl) {
+                for (TwitterTweet m: tl) {
                     c.learnPhrase(m.getText());
                     count++;
                     if (count % 100 == 0) DAO.log("Classifier: performed " + count + " learn steps");
@@ -175,7 +175,7 @@ public class Classifier {
             }
         }
         /*
-        for (MessageEntry m: tl) {
+        for (TwitterTweet m: tl) {
             System.out.println(m.getText());
             System.out.print("  -> ");
             Map<Context, Classification<String, Category>> classification = classify(m.getText());

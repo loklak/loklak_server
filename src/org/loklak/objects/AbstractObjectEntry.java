@@ -145,12 +145,4 @@ public abstract class AbstractObjectEntry extends Post implements ObjectEntry {
         return a;
     }
 
-    public Object lazyGet(JSONObject json, String key) {
-        try {
-            Object o = json.get(key);
-            return o;
-        } catch (JSONException e) {
-            return null;
-        }
-    }
 }

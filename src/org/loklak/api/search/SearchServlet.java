@@ -40,7 +40,7 @@ import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.http.ClientConnection;
 import org.loklak.http.RemoteAccess;
-import org.loklak.objects.MessageEntry;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
@@ -98,7 +98,7 @@ public class SearchServlet extends HttpServlet {
                     if (user == null) continue;
                     tweet.remove("user");
                     UserEntry u = new UserEntry(user);
-                    MessageEntry t = new MessageEntry(tweet);
+                    TwitterTweet t = new TwitterTweet(tweet);
                     tl.add(t, u);
                 }
             }
@@ -383,7 +383,7 @@ public class SearchServlet extends HttpServlet {
                 m.put("search_metadata", metadata);
                 JSONArray statuses = new JSONArray();
                 try {
-                    for (MessageEntry t : tl.getNextTweets(startRecord - 1, maximumRecords)) {
+                    for (TwitterTweet t : tl.getNextTweets(startRecord - 1, maximumRecords)) {
                         UserEntry u = tl.getUser(t);
                         statuses.put(t.toJSON(u, true, shortlink_iflinkexceedslength, shortlink_urlstub));
                     }
@@ -419,13 +419,13 @@ public class SearchServlet extends HttpServlet {
                 RSSFeed feed = new RSSFeed(tl.size());
                 feed.setChannel(channel);
                 try {
-                    for (MessageEntry t : tl.getNextTweets(startRecord - 1, maximumRecords)) {
+                    for (TwitterTweet t : tl.getNextTweets(startRecord - 1, maximumRecords)) {
                         UserEntry u = tl.getUser(t);
                         RSSMessage m = new RSSMessage();
                         m.setLink(t.getStatusIdUrl().toExternalForm());
                         m.setAuthor(u.getName() + " @" + u.getScreenName());
                         m.setTitle(u.getName() + " @" + u.getScreenName());
-                        m.setDescription(t.getText(shortlink_iflinkexceedslength, shortlink_urlstub).text);
+                        m.setDescription(t.moreData.getText(shortlink_iflinkexceedslength, shortlink_urlstub, t.getText(), t.getLinks(), t.getPostId()).text);
                         m.setPubDate(t.getCreatedAt());
                         m.setGuid(t.getPostId());
                         feed.addMessage(m);
@@ -443,9 +443,13 @@ public class SearchServlet extends HttpServlet {
                 post.setResponse(response, "text/plain");
                 final StringBuilder buffer = new StringBuilder(1000);
                 try {
-                    for (MessageEntry t : tl) {
+                    for (TwitterTweet t : tl) {
                         UserEntry u = tl.getUser(t);
-                        buffer.append(t.getCreatedAt()).append(" ").append(u.getScreenName()).append(": ").append(t.getText(shortlink_iflinkexceedslength, shortlink_urlstub).text).append('\n');
+                        buffer.append(t.getCreatedAt()).append(" ")
+                                .append(u.getScreenName())
+                                .append(": ")
+                                .append(t.moreData.getText(shortlink_iflinkexceedslength, shortlink_urlstub, t.getText(), t.getLinks(), t.getPostId()).text)
+                                .append('\n');
                     }
                 } catch (ConcurrentModificationException e) {
                     // late incoming messages from concurrent peer retrieval may cause this

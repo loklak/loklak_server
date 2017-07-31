@@ -35,7 +35,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.loklak.http.ClientConnection;
 import org.loklak.http.RemoteAccess;
-import org.loklak.objects.MessageEntry;
+//import org.loklak.objects.MessageEntry;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.objects.ProviderType;
 import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
@@ -61,7 +62,7 @@ public class PeersServlet extends HttpServlet {
                 tweet.put("provider_type", (Object) ProviderType.REMOTE.name());
                 tweet.put("provider_hash", provider_hash);
                 UserEntry u = new UserEntry(user);
-                MessageEntry t = new MessageEntry(tweet);
+                TwitterTweet t = new TwitterTweet(tweet);
                 tl.add(t, u);
             }
         }

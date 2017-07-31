@@ -40,6 +40,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.loklak.data.Classifier;
 import org.loklak.data.DAO;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.geo.GeoLocation;
 import org.loklak.geo.GeoMark;
 import org.loklak.tools.DateParser;
@@ -369,7 +370,7 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
     public static Timeline applyConstraint(Timeline tl0, Tokens tokens, boolean applyLocationConstraint) {
          if (tokens.constraints_positive.size() == 0 && tokens.constraints_negative.size() == 0 && tokens.modifier.size() == 0) return tl0;
         Timeline tl1 = new Timeline(tl0.getOrder());
-        messageloop: for (MessageEntry message: tl0) {
+        messageloop: for (TwitterTweet message: tl0) {
 
             // check modifier
             if (tokens.modifier.containsKey("from")) {
@@ -383,9 +384,10 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
                 }
             }
             if (applyLocationConstraint && tokens.bbox != null) {
-                if (message.location_point == null || message.location_point.length < 2) continue messageloop; //longitude, latitude
-                if (message.location_point[0] < tokens.bbox[0] || message.location_point[0] > tokens.bbox[2] ||  // double[]{lon_west,lat_south,lon_east,lat_north}
-                    message.location_point[1] > tokens.bbox[1] || message.location_point[1] < tokens.bbox[3]) continue messageloop;
+                double[] location_point = message.getLocationPoint();
+                if (location_point == null || location_point.length < 2) continue messageloop; //longitude, latitude
+                if (location_point[0] < tokens.bbox[0] || location_point[0] > tokens.bbox[2] ||  // double[]{lon_west,lat_south,lon_east,lat_north}
+                    location_point[1] > tokens.bbox[1] || location_point[1] < tokens.bbox[3]) continue messageloop;
             }
             
             // check constraints

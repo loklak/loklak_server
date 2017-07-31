@@ -5,8 +5,9 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.harvester.HarvestingFrequency;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.objects.ImportProfileEntry;
-import org.loklak.objects.MessageEntry;
+//import org.loklak.objects.MessageEntry;
 import org.loklak.objects.SourceType;
 import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
@@ -37,7 +38,7 @@ public class PushServletHelper {
             message.put("screen_name", screenName);
             JSONObject user = (JSONObject) message.remove("user");
             if (user != null) user.put("screen_name", screenName);
-            MessageEntry messageEntry = new MessageEntry(message);
+            TwitterTweet messageEntry = new TwitterTweet(message);
             UserEntry userEntry = new UserEntry(user != null ? user : new JSONObject());
             boolean successful;
             report.incrementRecordCount();
@@ -170,9 +171,9 @@ public class PushServletHelper {
         String query = "/source_type=" + source_type + " /location=" + latitude + "," + longitude;
         // search only latest message
         DAO.SearchLocalMessages search = new DAO.SearchLocalMessages(query, Timeline.Order.CREATED_AT, 0, 1, 0);
-        Iterator<MessageEntry> it = search.timeline.iterator();
+        Iterator<TwitterTweet> it = search.timeline.iterator();
         while (it.hasNext()) {
-            MessageEntry messageEntry = it.next();
+            TwitterTweet messageEntry = it.next();
             if (compareMessage(messageEntry.toJSON(), message)) {
                 return messageEntry.getPostId();
             }

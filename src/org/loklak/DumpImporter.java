@@ -30,7 +30,9 @@ import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.data.IndexEntry;
-import org.loklak.objects.MessageEntry;
+//import org.loklak.objects.MessageEntry;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
+
 import org.loklak.objects.UserEntry;
 import org.loklak.tools.storage.JsonFactory;
 import org.loklak.tools.storage.JsonReader;
@@ -90,17 +92,17 @@ public class DumpImporter extends Thread {
                         JsonFactory tweet;
                         try {
                             List<IndexEntry<UserEntry>> userBulk = new ArrayList<>();
-                            List<IndexEntry<MessageEntry>> messageBulk = new ArrayList<>();
+                            List<IndexEntry<TwitterTweet>> messageBulk = new ArrayList<>();
                             while ((tweet = dumpReader.take()) != JsonStreamReader.POISON_JSON_MAP) {
                                 try {
                                     JSONObject json = tweet.getJSON();
                                     JSONObject user = (JSONObject) json.remove("user");
                                     if (user == null) continue;
                                     UserEntry u = new UserEntry(user);
-                                    MessageEntry t = new MessageEntry(json);
+                                    TwitterTweet t = new TwitterTweet(json);
                                     // record user into search index
                                     userBulk.add(new IndexEntry<UserEntry>(u.getScreenName(), t.getSourceType(), u));
-                                    messageBulk.add(new IndexEntry<MessageEntry>(t.getPostId(), t.getSourceType(), t));
+                                    messageBulk.add(new IndexEntry<TwitterTweet>(t.getPostId(), t.getSourceType(), t));
                                     if (userBulk.size() > 1500 || messageBulk.size() > 1500) {
                                         DAO.users.writeEntries(userBulk);
                                         DAO.messages.writeEntries(messageBulk);
