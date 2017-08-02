@@ -46,7 +46,6 @@ import org.loklak.server.BaseUserRole;
 public class QuoraProfileScraper extends BaseScraper {
 
     private final long serialVersionUID = -3398701925784347312L;
-    private Timeline2 postList = new Timeline2(this.order);
     private List<String> typeList = null;
 
     public QuoraProfileScraper() {
@@ -170,9 +169,11 @@ public class QuoraProfileScraper extends BaseScraper {
         // Add scraper name
         Post postArray = new Post();
         postArray.put(this.scraperName, postList.toArray());
-        this.postList.addPost(postArray);
 
-        return this.postList;
+        postList = new Timeline2(this.order);
+        postList.addPost(postArray);
+
+        return postList;
     }
 
     protected class ConcurrentScrape extends Thread {
