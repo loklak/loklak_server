@@ -21,8 +21,8 @@ package org.loklak.data;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
 
-import org.loklak.objects.MessageEntry;
 import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
 
@@ -40,12 +40,12 @@ public class OutgoingMessageBuffer {
     public void transmitTimelineToBackend(Timeline tl) {
         if (DAO.getConfig("backend", new String[0], ",").length > 0) {
             boolean clone = false;
-            for (MessageEntry message: tl) {
+            for (TwitterTweet message: tl) {
                 if (!message.getSourceType().propagate()) {clone = true; break;}
             }
             if (clone) {
                 Timeline tlc = new Timeline(tl.getOrder(), tl.getScraperInfo());
-                for (MessageEntry message: tl) {
+                for (TwitterTweet message: tl) {
                     if (message.getSourceType().propagate()) tlc.add(message, tl.getUser(message));
                 }
                 if (tlc.size() > 0) this.pushToBackendTimeline.add(tlc);
@@ -55,7 +55,7 @@ public class OutgoingMessageBuffer {
         }
     }
     
-    public void transmitMessage(final MessageEntry tweet, final UserEntry user) {
+    public void transmitMessage(final TwitterTweet tweet, final UserEntry user) {
         if (!tweet.getSourceType().propagate()) return;
         if (DAO.getConfig("backend", new String[0], ",").length <= 0) return;
         if (!DAO.getConfig("backend.push.enabled", false)) return;

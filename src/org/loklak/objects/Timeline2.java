@@ -41,7 +41,7 @@ import org.loklak.susi.SusiThought;
  * A timeline2 is a structure which holds tweet for the purpose of presentation
  * There is no tweet retrieval method here, just an iterator which returns the tweets in reverse appearing order
  */
-//TODO: remove MessageEntry
+//TODO: remove TwitterTweet
 public class Timeline2 implements Iterable<Post> {
 
     public static enum Order {
@@ -222,7 +222,7 @@ public class Timeline2 implements Iterable<Post> {
     }
 
 /*  //TODO: remove this
-    private Timeline2 addTweet(MessageEntry tweet) {
+    private Timeline2 addTweet(TwitterTweet tweet) {
         String key = "";
         if (this.order == Order.RETWEET_COUNT) {
             key = Long.toHexString(tweet.getRetweetCount());
@@ -236,7 +236,7 @@ public class Timeline2 implements Iterable<Post> {
             key = Long.toHexString(tweet.getCreatedAt().getTime()) + "_" + tweet.getPostId();
         }
         synchronized (tweets) {
-            MessageEntry precursorTweet = getPrecursorTweet();
+            TwitterTweet precursorTweet = getPrecursorTweet();
             if (precursorTweet != null && tweet.getCreatedAt().before(precursorTweet.getCreatedAt())) return this; // ignore this tweet in case it would change the list of shown tweets
             this.tweets.put(key, tweet);
         }
@@ -318,16 +318,16 @@ public class Timeline2 implements Iterable<Post> {
      * @return the last tweet that a user has seen. It is also the oldest tweet that the user has seen.
      */
 /*
-    private MessageEntry getPrecursorTweet() {
+    private TwitterTweet getPrecursorTweet() {
         if (this.cursor == 0) return null;
-        MessageEntry m = this.precursorTweetCache.get(this.cursor);
+        TwitterTweet m = this.precursorTweetCache.get(this.cursor);
         if (m != null) return m;
-        synchronized (messageEntry) {
+        synchronized (TwitterTweet) {
             int count = 0;
-            for (MessageEntry messageEntry: this) {
+            for (TwitterTweet TwitterTweet: this) {
                 if (++count == this.cursor) {
-                    this.precursorTweetCache.put(this.cursor, messageEntry);
-                    return messageEntry;
+                    this.precursorTweetCache.put(this.cursor, TwitterTweet);
+                    return TwitterTweet;
                 }
             }
         }

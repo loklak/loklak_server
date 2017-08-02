@@ -6,7 +6,7 @@ import org.loklak.data.DAO;
 import org.loklak.harvester.PushThread;
 import org.loklak.harvester.TwitterAPI;
 import org.loklak.harvester.TwitterScraper;
-import org.loklak.objects.MessageEntry;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.ResultList;
 import org.loklak.objects.Timeline;
@@ -83,7 +83,7 @@ public class KaizenHarvester implements Harvester {
 
         Date oldestTweetDate = null;
 
-        for (MessageEntry message : timeline) {
+        for (TwitterTweet message : timeline) {
 
             double score = this.getScore(message);
 
@@ -223,7 +223,7 @@ public class KaizenHarvester implements Harvester {
         return !this.queries.isEmpty() && targetProb < prob;
     }
 
-    protected double getScore(MessageEntry message) {
+    protected double getScore(TwitterTweet message) {
         long score = message.getFavouritesCount() + message.getRetweetCount() * 5;
         return score / (score + 10 * Math.exp(-0.1 * score));
     }

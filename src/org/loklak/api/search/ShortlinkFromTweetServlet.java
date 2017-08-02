@@ -29,7 +29,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.loklak.LoklakServer;
 import org.loklak.data.DAO;
 import org.loklak.http.RemoteAccess;
-import org.loklak.objects.MessageEntry;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.server.Query;
 
 public class ShortlinkFromTweetServlet extends HttpServlet {
@@ -58,7 +58,7 @@ public class ShortlinkFromTweetServlet extends HttpServlet {
             id = id.substring(0, p);
         }
         
-        MessageEntry message = DAO.readMessage(id);
+        TwitterTweet message = DAO.readMessage(id);
         if (message == null) {
             // try to get that from the incoming message buffer
             message = LoklakServer.queuedIndexing.readMessage(id);

@@ -5,7 +5,7 @@ package org.loklak.data;
  */
 
 
-import org.loklak.objects.MessageEntry;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.SourceType;
 import org.loklak.objects.UserEntry;
@@ -170,7 +170,7 @@ public class DAOWrapper {
         public void persist(){
             try{
                 //building message entry
-                MessageEntry message = new MessageEntry();
+                TwitterTweet message = new TwitterTweet();
 
                 /**
                  * Use hash of text if id of message is not set
