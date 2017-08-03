@@ -24,7 +24,7 @@
             class="icon-bar"></span> <span class="icon-bar"></span> <span
             class="icon-bar"></span>
         </button>
-        <a class="navbar-brand" href="http://loklak.org"><img src="/images/loklak_org.png" height="24" style="float: left;" alt="loklak.org" title="loklak.org message server">: API</a>
+        <a class="navbar-brand" href="http://api.loklak.org"><img src="/images/loklak_org.png" height="24" style="float: left;" alt="api.loklak.org" title="loklak.org message server">: API</a>
       </div>
       <div id="navbar" class="navbar-collapse collapse">
         <ul class="nav navbar-nav navbar-right">
@@ -356,8 +356,8 @@
 <pre>
 {
   "readme_0": "THIS JSON IS THE RESULT OF YOUR SEARCH QUERY - THERE IS NO WEB PAGE WHICH SHOWS THE RESULT!",
-  "readme_1": "loklak.org is the framework for a message search system, not the portal, read: http://loklak.org/about.html#notasearchportal",
-  "readme_2": "This is supposed to be the back-end of a search portal. For the api, see http://loklak.org/api.html",
+  "readme_1": "loklak.org is the framework for a message search system, not the portal, read: http://api.loklak.org/about.html#notasearchportal",
+  "readme_2": "This is supposed to be the back-end of a search portal. For the api, see http://api.loklak.org/api.html",
   "readme_3": "Parameters q=(query), source=(cache|backend|twitter|all), callback=p for jsonp, maximumRecords=(message count), minified=(true|false)",
   "search_metadata": {
     "startRecord": "1",
@@ -489,8 +489,8 @@
 </ul><br/>
 <pre>{
   "readme_0": "THIS JSON IS THE RESULT OF YOUR SEARCH QUERY - THERE IS NO WEB PAGE WHICH SHOWS THE RESULT!",
-  "readme_1": "loklak.org is the framework for a message search system, not the portal, read: http://loklak.org/about.html#notasearchportal",
-  "readme_2": "This is supposed to be the back-end of a search portal. For the api, see http://loklak.org/api.html",
+  "readme_1": "loklak.org is the framework for a message search system, not the portal, read: http://api.loklak.org/about.html#notasearchportal",
+  "readme_2": "This is supposed to be the back-end of a search portal. For the api, see http://api.loklak.org/api.html",
   "readme_3": "Parameters q=(query), source=(cache|backend|twitter|all), callback=p for jsonp, maximumRecords=(message count), minified=(true|false)",
   "search_metadata": {
     "itemsPerPage": "0",
@@ -528,13 +528,13 @@
 }</pre>
 <p>Loklak can also suggest what's trending and can give you the list of trending hashtags using the same search aggregations method. To find out the most trending hashtags on loklak since a particular date. Other filters like <code>until</code> can also be applied, here is a sample request</p>
 <ul class="request">
-  <li>url&nbsp;&nbsp;: <a href="http://loklak.org/api/search.json?q=since:2016-06-01&source=cache&count=0&fields=hashtags" target="_blank">http://loklak.org/api/search.json?q=since:2016-06-01&source=cache&count=0&fields=hashtags</a>
+  <li>url&nbsp;&nbsp;: <a href="http://api.loklak.org/api/search.json?q=since:2016-06-01&source=cache&count=0&fields=hashtags" target="_blank">http://api.loklak.org/api/search.json?q=since:2016-06-01&source=cache&count=0&fields=hashtags</a>
   </li>
 </ul><br>
 <pre>{
   "readme_0": "THIS JSON IS THE RESULT OF YOUR SEARCH QUERY - THERE IS NO WEB PAGE WHICH SHOWS THE RESULT!",
-  "readme_1": "loklak.org is the framework for a message search system, not the portal, read: http://loklak.org/about.html#notasearchportal",
-  "readme_2": "This is supposed to be the back-end of a search portal. For the api, see http://loklak.org/api.html",
+  "readme_1": "loklak.org is the framework for a message search system, not the portal, read: http://api.loklak.org/about.html#notasearchportal",
+  "readme_2": "This is supposed to be the back-end of a search portal. For the api, see http://api.loklak.org/api.html",
   "readme_3": "Parameters q=(query), source=(cache|backend|twitter|all), callback=p for jsonp, maximumRecords=(message count), minified=(true|false)",
   "search_metadata": {
     "itemsPerPage": "0",
@@ -573,12 +573,12 @@
   the time frame is below three hours, hours if the time frame is
   below seven days and days otherwise. Example:
 <ul class="request">
-  <li>url&nbsp;:&nbsp;<a href="http://loklak.org/api/search.json?q=spacex%20since:2015-04-05_23:10%20until:2015-04-06_23:20&source=cache&count=0&fields=created_at&timezoneOffset=-120" target="_blank">http://localhost:9000/api/search.json?q=spacex%20since:2015-04-05_23:10%20until:2015-04-05_23:20&source=cache&count=0&fields=created_at&timezoneOffset=-120</a></li>
+  <li>url&nbsp;:&nbsp;<a href="http://api.loklak.org/api/search.json?q=spacex%20since:2015-04-05_23:10%20until:2015-04-06_23:20&source=cache&count=0&fields=created_at&timezoneOffset=-120" target="_blank">http://localhost:9000/api/search.json?q=spacex%20since:2015-04-05_23:10%20until:2015-04-05_23:20&source=cache&count=0&fields=created_at&timezoneOffset=-120</a></li>
 </ul><br/>
 <pre>{
   "readme_0": "THIS JSON IS THE RESULT OF YOUR SEARCH QUERY - THERE IS NO WEB PAGE WHICH SHOWS THE RESULT!",
-  "readme_1": "loklak.org is the framework for a message search system, not the portal, read: http://loklak.org/about.html#notasearchportal",
-  "readme_2": "This is supposed to be the back-end of a search portal. For the api, see http://loklak.org/api.html",
+  "readme_1": "loklak.org is the framework for a message search system, not the portal, read: http://api.loklak.org/about.html#notasearchportal",
+  "readme_2": "This is supposed to be the back-end of a search portal. For the api, see http://api.loklak.org/api.html",
   "readme_3": "Parameters q=(query), source=(cache|backend|twitter|all), callback=p for jsonp, maximumRecords=(message count), minified=(true|false)",
   "search_metadata": {
     "itemsPerPage": "0",
@@ -616,14 +616,14 @@
 </pre>
 <p>It is also possible to specify the order in descending order for the following filter options <code>favourites_count</code>, <code>retweet_count</code> and the default being <code>created_at</code>. Here are the examples of the different queries which make this happen.</p>
 <ul class="request">
-  <li>retweet count: &nbsp;&nbsp;: <a href="http://loklak.org/api/search.json?timezoneOffset=-120&q=fossasia&order=retweet_count&source=cache" target="_blank">http://loklak.org/api/search.json?timezoneOffset=-120&q=fossasia&order=retweet_count&source=cache</a></li>
-  <li>favorites count: &nbsp;&nbsp;: <a href="http://loklak.org/api/search.json?timezoneOffset=-120&q=fossasia&order=favourites_count&source=cache" target="_blank">http://localhost:9000/api/search.json?timezoneOffset=-120&q=fossasia&order=favourites_count&source=cache</a></li>
+  <li>retweet count: &nbsp;&nbsp;: <a href="http://api.loklak.org/api/search.json?timezoneOffset=-120&q=fossasia&order=retweet_count&source=cache" target="_blank">http://api.loklak.org/api/search.json?timezoneOffset=-120&q=fossasia&order=retweet_count&source=cache</a></li>
+  <li>favorites count: &nbsp;&nbsp;: <a href="http://api.loklak.org/api/search.json?timezoneOffset=-120&q=fossasia&order=favourites_count&source=cache" target="_blank">http://localhost:9000/api/search.json?timezoneOffset=-120&q=fossasia&order=favourites_count&source=cache</a></li>
 </ul>
 <pre>
   {
   "readme_0": "THIS JSON IS THE RESULT OF YOUR SEARCH QUERY - THERE IS NO WEB PAGE WHICH SHOWS THE RESULT!",
-  "readme_1": "loklak.org is the framework for a message search system, not the portal, read: http://loklak.org/about.html#notasearchportal",
-  "readme_2": "This is supposed to be the back-end of a search portal. For the api, see http://loklak.org/api.html",
+  "readme_1": "loklak.org is the framework for a message search system, not the portal, read: http://api.loklak.org/about.html#notasearchportal",
+  "readme_2": "This is supposed to be the back-end of a search portal. For the api, see http://api.loklak.org/api.html",
   "readme_3": "Parameters q=(query), source=(cache|backend|twitter|all), callback=p for jsonp, maximumRecords=(message count), minified=(true|false)",
   "search_metadata": {
     "itemsPerPage": "100",
@@ -1044,11 +1044,11 @@ fuzziness). location coordinates are given as [lon,lat]
 Example usage:
 </p>
 <ul class="request">
-<li><a href="http://loklak.org/api/geocode.json?data={%22places%22:[%22Frankfurt%20am%20Main%22,%22New%20York%22,%22Singapore%22]}" target="_blank">http://loklak.org/api/geocode.json?data={%22places%22:[%22Frankfurt%20am%20Main%22,%22New%20York%22,%22Singapore%22]} 
+<li><a href="http://api.loklak.org/api/geocode.json?data={%22places%22:[%22Frankfurt%20am%20Main%22,%22New%20York%22,%22Singapore%22]}" target="_blank">http://api.loklak.org/api/geocode.json?data={%22places%22:[%22Frankfurt%20am%20Main%22,%22New%20York%22,%22Singapore%22]} 
 </a></li>
-<li> Other languages: <br> <a href="http://loklak.org/api/geocode.json?data={%22places%22:[%22%E5%9C%A3%E8%83%A1%E5%88%A9%E5%A8%85%20%E5%BE%B7%E6%B4%9B%E9%87%8C%E4%BA%9A%22]}" target="_blank">http://loklak.org/api/geocode.json?data={%22places%22:[%22%E5%9C%A3%E8%83%A1%E5%88%A9%E5%A8%85%20%E5%BE%B7%E6%B4%9B%E9%87%8C%E4%BA%9A%22]}</a></li>
-<li> Multiple Cities: <br><a href="http://loklak.org/api/geocode.json?minified=true&data={%22places%22:[%22Singapore%22,%20%22New%20York%22,%20%22Los%20Angeles%22]}" target="_blank">
-http://loklak.org/api/geocode.json?minified=true&data={%22places%22:[%22Singapore%22,%20%22New%20York%22,%20%22Los%20Angeles%22]}
+<li> Other languages: <br> <a href="http://api.loklak.org/api/geocode.json?data={%22places%22:[%22%E5%9C%A3%E8%83%A1%E5%88%A9%E5%A8%85%20%E5%BE%B7%E6%B4%9B%E9%87%8C%E4%BA%9A%22]}" target="_blank">http://api.loklak.org/api/geocode.json?data={%22places%22:[%22%E5%9C%A3%E8%83%A1%E5%88%A9%E5%A8%85%20%E5%BE%B7%E6%B4%9B%E9%87%8C%E4%BA%9A%22]}</a></li>
+<li> Multiple Cities: <br><a href="http://api.loklak.org/api/geocode.json?minified=true&data={%22places%22:[%22Singapore%22,%20%22New%20York%22,%20%22Los%20Angeles%22]}" target="_blank">
+http://api.loklak.org/api/geocode.json?minified=true&data={%22places%22:[%22Singapore%22,%20%22New%20York%22,%20%22Los%20Angeles%22]}
 </a></li>
 </ul>
 <p>
@@ -1541,7 +1541,7 @@ shortens this array to only one entry. The API also has reverse geocoding and fu
 <p>This servlet provides the retrieval of user followers and the accounts which the user is following.
    Just submit the <code>screen_name</code> as GET http attribute. Example:
    <ul class="request">
-  <li><a href="http://loklak.org/api/user.json?screen_name=loklak_app">http://loklak.org/api/user.json?screen_name=loklak_app</a></li>
+  <li><a href="http://api.loklak.org/api/user.json?screen_name=loklak_app">http://api.loklak.org/api/user.json?screen_name=loklak_app</a></li>
    </ul><br/>
 </p>
 <pre>{
@@ -1581,9 +1581,9 @@ shortens this array to only one entry. The API also has reverse geocoding and fu
     "entities" : {
       "description" : {
         "urls" : [ {
-          "expanded_url" : "http://loklak.org",
+          "expanded_url" : "http://api.loklak.org",
           "indices" : [ 93, 115 ],
-          "display_url" : "loklak.org",
+          "display_url" : "api.loklak.org",
           "url" : "http://t.co/D8XmZwuU2Y"
         } ]
       },
@@ -1591,7 +1591,7 @@ shortens this array to only one entry. The API also has reverse geocoding and fu
         "urls" : [ {
           "expanded_url" : "http://loklak.org",
           "indices" : [ 0, 23 ],
-          "display_url" : "loklak.org",
+          "display_url" : "api.loklak.org",
           "url" : "https://t.co/D8XmZwdjbq"
         } ]
       }
@@ -1630,7 +1630,7 @@ shortens this array to only one entry. The API also has reverse geocoding and fu
    This will produce a list of
    <code>&lt;maxcount&gt;</code> user entries in a 'topology' object. Example :
    <ul class="request">
-  <li><a href="http://loklak.org/api/user.json?screen_name=loklak_app&followers=10000&following=10000">http://loklak.org/api/user.json?screen_name=loklak_app&followers=10000&following=10000</a></li>
+  <li><a href="http://api.loklak.org/api/user.json?screen_name=loklak_app&followers=10000&following=10000">http://api.loklak.org/api/user.json?screen_name=loklak_app&followers=10000&following=10000</a></li>
    </ul><br/>
 </p>
 
@@ -1687,7 +1687,7 @@ shortens this array to only one entry. The API also has reverse geocoding and fu
   <br/>
   <p>Furthermore, the servlet can now be called with an 'category' property, like:</p>
   <ul class="request">
-    <li><a href="http://loklak.org/api/apps.json?category=Demo">http://loklak.org/api/apps.json?category=Demo</a></li>
+    <li><a href="http://api.loklak.org/api/apps.json?category=Demo">http://api.loklak.org/api/apps.json?category=Demo</a></li>
   </ul>
   <br/>
   <p>This will reduce the app list to the sub-list which contains only apps from that category.</p>
@@ -1700,7 +1700,7 @@ shortens this array to only one entry. The API also has reverse geocoding and fu
     "alternativeHeadline": "the 'hello world' app that you want to copy-paste for your own app",
     "applicationCategory": "Demo",
     "applicationSubCategory": "Hello World",
-    "operatingSystem": "http://loklak.org",
+    "operatingSystem": "http://api.loklak.org",
     "author": {
       "@type": "Person",
       "name": "Michael Christen",
@@ -1965,7 +1965,7 @@ loklak_messages under the name image0.png</p>
 
 <p>Here is an example :
 <ul class="request">
-  <li><a href="http://loklak.org/vis/markdown.png?text=hello%20world%0Dhello%20universe&color_text=000000&color_background=ffffff&padding=3">http://loklak.org/vis/markdown.png?text=hello%20world%0Dhello%20universe&color_text=000000&color_background=ffffff&padding=3</a></li>
+  <li><a href="http://api.loklak.org/vis/markdown.png?text=hello%20world%0Dhello%20universe&color_text=000000&color_background=ffffff&padding=3">http://api.loklak.org/vis/markdown.png?text=hello%20world%0Dhello%20universe&color_text=000000&color_background=ffffff&padding=3</a></li>
 </ul><br/>
 </p>
 </section>
@@ -1985,7 +1985,7 @@ loklak_messages under the name image0.png</p>
 }
   </pre>
   <ul class="request">
-    <li><a href="http://loklak.org/vis/piechart.png?data={%22ford%22:%2217.272992%22,%22toyota%22:%2227.272992%22,%22renault%22:%2247.272992%22}&width=1000&height=1000">http://loklak.org/vis/piechart.png?data={%22ford%22:%2217.272992%22,%22toyota%22:%2227.272992%22,%22renault%22:%2247.272992%22}&width=1000&height=1000</a></li>
+    <li><a href="http://api.loklak.org/vis/piechart.png?data={%22ford%22:%2217.272992%22,%22toyota%22:%2227.272992%22,%22renault%22:%2247.272992%22}&width=1000&height=1000">http://api.loklak.org/vis/piechart.png?data={%22ford%22:%2217.272992%22,%22toyota%22:%2227.272992%22,%22renault%22:%2247.272992%22}&width=1000&height=1000</a></li>
     <br>
     <li>
     <div class="tabcol0">data</div>
