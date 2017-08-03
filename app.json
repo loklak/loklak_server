@@ -2,10 +2,10 @@
 	"name": "Loklak Server",
 	"description": "Distributed Tweet Search Server",
 	"logo": "https://raw.githubusercontent.com/loklak/loklak_server/master/html/images/loklak_anonymous.png",
-	"website": "http://loklak.org",
+	"website": "http://api.loklak.org",
 	"repository": "https://github.com/loklak/loklak_server.git",
 	"image": "mariobehling/loklak",
 	"env": {
-		"BUILDPACK_URL": "https://github.com/loklak/heroku_buildpack_ant_loklak.git"
+		"BUILDPACK_URL": "https://github.com/heroku/heroku-buildpack-gradle.git"
 	}
 }
