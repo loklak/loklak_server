@@ -68,6 +68,7 @@ import org.loklak.harvester.TwitterScraper;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.api.search.GithubProfileScraper;
 import org.loklak.api.search.QuoraProfileScraper;
+import org.loklak.api.search.InstagramProfileScraper;
 import org.loklak.harvester.BaseScraper;
 import org.loklak.http.AccessTracker;
 import org.loklak.http.ClientConnection;
@@ -75,7 +76,6 @@ import org.loklak.http.RemoteAccess;
 import org.loklak.objects.AbstractObjectEntry;
 import org.loklak.objects.AccountEntry;
 import org.loklak.objects.ImportProfileEntry;
-//import org.loklak.objects.TwitterTweet;
 import org.loklak.objects.Peers;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.ResultList;
@@ -1234,7 +1234,7 @@ public class DAO {
         Timeline2 dataSet = new Timeline2(order);
         List<String> scraperList = Arrays.asList(inputMap.get("scraper").trim().split("\\s*,\\s*"));
         List<BaseScraper> scraperObjList = getScraperObjects(scraperList, inputMap);
-        ExecutorService scraperRunner = Executors.newFixedThreadPool(2);
+        ExecutorService scraperRunner = Executors.newFixedThreadPool(scraperObjList.size());
 
         try{
             for (BaseScraper scraper : scraperObjList) {
@@ -1262,6 +1262,10 @@ public class DAO {
         }
         if (scraperList.contains("quora") || scraperList.contains("all")) {
             scraperObj = new QuoraProfileScraper(inputMap);
+            scraperObjList.add(scraperObj);
+        }
+        if (scraperList.contains("instagram") || scraperList.contains("all")) {
+            scraperObj = new InstagramProfileScraper(inputMap);
             scraperObjList.add(scraperObj);
         }
         //TODO: add more scrapers

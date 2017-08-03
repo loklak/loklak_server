@@ -59,6 +59,7 @@ public abstract class BaseScraper extends AbstractAPIHandler {
 
     protected void setExtra(Map<String, String> _extra) {
         this.extra = _extra;
+        this.query = _extra.get("query");
         this.setParam();
     }
 
