@@ -63,8 +63,10 @@ import org.json.JSONObject;
 import org.json.JSONArray;
 import org.loklak.Caretaker;
 import org.loklak.api.search.SearchServlet;
+import org.loklak.api.search.WordpressCrawlerService;
 import org.loklak.geo.GeoNames;
 import org.loklak.harvester.TwitterScraper;
+import org.loklak.harvester.YoutubeScraper;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.api.search.GithubProfileScraper;
 import org.loklak.api.search.QuoraProfileScraper;
@@ -1266,6 +1268,14 @@ public class DAO {
         }
         if (scraperList.contains("instagram") || scraperList.contains("all")) {
             scraperObj = new InstagramProfileScraper(inputMap);
+            scraperObjList.add(scraperObj);
+        }
+        if (scraperList.contains("youtube") || scraperList.contains("all")) {
+            scraperObj = new YoutubeScraper(inputMap);
+            scraperObjList.add(scraperObj);
+        }
+        if (scraperList.contains("wordpress") || scraperList.contains("all")) {
+            scraperObj = new WordpressCrawlerService(inputMap);
             scraperObjList.add(scraperObj);
         }
         //TODO: add more scrapers
