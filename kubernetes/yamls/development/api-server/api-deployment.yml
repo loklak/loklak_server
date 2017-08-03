@@ -11,8 +11,6 @@ spec:
       labels:
         app: server
     spec:
-      nodeSelector:
-        server: primary
       containers:
       - name: server
         image: loklak/loklak_server:latest-kubernetes-development
