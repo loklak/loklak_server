@@ -61,7 +61,6 @@ public class YoutubeScraper extends BaseScraper{
     public YoutubeScraper(Map<String, String> _extra) {
         this();
         this.setExtra(_extra);
-        this.query = this.getExtraValue("query");
     }
 
     public YoutubeScraper(String _query) {
@@ -142,6 +141,7 @@ public class YoutubeScraper extends BaseScraper{
                 this.query = this.query.substring(this.query.length() - 11);
             }
         }
+        this.setExtraValue("query", this.query);
     }
 
     @Override
@@ -155,6 +155,7 @@ public class YoutubeScraper extends BaseScraper{
                 break;
             case "video":
                 postList.addPost(this.parseVideo(br, type, url));
+                out.put("videos", postList.toArray());
                 break;
             case "search":
                 //TODO: Add scraper
@@ -163,7 +164,6 @@ public class YoutubeScraper extends BaseScraper{
                 break;
         }
 
-        out.put(this.scraperName, postList.toArray());
         return out;
     }
 
