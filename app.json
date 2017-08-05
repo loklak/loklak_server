@@ -4,7 +4,7 @@
 	"logo": "https://raw.githubusercontent.com/loklak/loklak_server/master/html/images/loklak_anonymous.png",
 	"website": "http://api.loklak.org",
 	"repository": "https://github.com/loklak/loklak_server.git",
-	"image": "mariobehling/loklak",
+	"image": "loklak/loklak_server:latest-master",
 	"env": {
 		"BUILDPACK_URL": "https://github.com/heroku/heroku-buildpack-gradle.git"
 	}
