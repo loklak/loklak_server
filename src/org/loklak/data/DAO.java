@@ -87,6 +87,7 @@ import org.loklak.objects.Timeline2;
 import org.loklak.objects.TimelineCache;
 import org.loklak.objects.UserEntry;
 import org.loklak.server.*;
+import org.loklak.stream.MQTTPublisher;
 import org.loklak.tools.DateParser;
 import org.loklak.tools.OS;
 import org.loklak.tools.storage.*;
@@ -165,6 +166,9 @@ public class DAO {
     public static Map<String, Accounting> accounting_temporary = new HashMap<>();
     public static JsonFile login_keys;
     public static TimelineCache timelineCache;
+
+    public static MQTTPublisher mqttPublisher = null;
+    public static boolean streamEnabled = false;
 
     public static enum IndexName {
     	messages_hour("messages.json"), messages_day("messages.json"), messages_week("messages.json"), messages, queries, users, accounts, import_profiles;
@@ -395,6 +399,13 @@ public class DAO {
 	        	geoNames = null;
 	        }
     	}
+
+        // Connect to MQTT message broker
+        String mqttAddress = getConfig("stream.mqtt.address", "tcp://127.0.0.1:1883");
+        streamEnabled = getConfig("stream.enabled", false);
+        if (streamEnabled) {
+            mqttPublisher = new MQTTPublisher(mqttAddress);
+        }
 
         // finally wait for healthy status of elasticsearch shards
         ClusterHealthStatus required_status = ClusterHealthStatus.fromString(config.get("elasticsearch_requiredClusterHealthStatus"));
