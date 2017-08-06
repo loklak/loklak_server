@@ -62,9 +62,21 @@ public class MQTTPublisher {
         this.mqttClient.publish(new PublishMessage(channel, QoS.AT_LEAST_ONCE, message));
     }
 
-    public void publish(String channel, String messages[]) {
+    public void publish(String channel, String[] messages) {
         for (String message : messages) {
             this.publish(channel, message);
+        }
+    }
+
+    public void publish(String[] channels, String message) {
+        for (String channel : channels) {
+            this.publish(channel, message);
+        }
+    }
+
+    public void publish(String[] channels, String[] messages) {
+        for (String channel : channels) {
+            this.publish(channel, messages);
         }
     }
 }
