@@ -6,12 +6,12 @@
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
- *  
+ *
  *  This library is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
@@ -33,9 +33,9 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.http.ClientConnection;
 import org.loklak.http.RemoteAccess;
-import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.objects.ProviderType;
 import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
@@ -68,16 +68,16 @@ public class PeersServlet extends HttpServlet {
         //System.out.println(parser.text());
         return tl;
     }
-    
+
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         doGet(request, response);
     }
-    
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         Query post = RemoteAccess.evaluate(request);
-        
+
         // manage DoS
         String path = request.getServletPath();
         if (post.isDoS_blackout()) {response.sendError(503, "your request frequency is too high"); return;}
@@ -90,7 +90,7 @@ public class PeersServlet extends HttpServlet {
         if (classes.length == 0) classes = new String[]{"HelloServlet","SuggestServlet"};
         Set<String> classcheck = new HashSet<>();
         for (String c: classes) classcheck.add(c);
-        
+
         // Evaluating the get Parameter
         String callback = post.get("callback", "");
         boolean jsonp = callback != null && callback.length() > 0;
@@ -122,7 +122,7 @@ public class PeersServlet extends HttpServlet {
                 }
             }
             json.put("count", count);
-    
+
             // write json
             response.setCharacterEncoding("UTF-8");
             PrintWriter sos = response.getWriter();
@@ -164,5 +164,5 @@ public class PeersServlet extends HttpServlet {
 
         post.finalize();
     }
-    
+
 }

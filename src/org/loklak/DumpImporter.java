@@ -6,12 +6,12 @@
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
- *  
+ *
  *  This library is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
@@ -41,11 +41,11 @@ public class DumpImporter extends Thread {
 
     private boolean shallRun = true, isBusy = false;
     private int count = Integer.MAX_VALUE;
-    
+
     public DumpImporter(int count) {
         this.count = count;
     }
-    
+
     /**
      * ask the thread to shut down
      */
@@ -58,15 +58,15 @@ public class DumpImporter extends Thread {
     public boolean isBusy() {
         return this.isBusy;
     }
-    
+
     @Override
     public void run() {
-        
+
         // work loop
         loop: while (this.shallRun) try {
 
             this.isBusy = false;
-            
+
             // scan dump input directory to import files
             Collection<File> import_dumps = DAO.message_dump.getImportDumps(this.count);
 
@@ -82,7 +82,7 @@ public class DumpImporter extends Thread {
             final JsonReader dumpReader = DAO.message_dump.getDumpReader(import_dump);
             final AtomicLong newTweets = new AtomicLong(0);
             Log.getLog().info("started import of dump file " + import_dump.getAbsolutePath());
-            
+
             // we start concurrent indexing threads to process the json objects
             Thread[] indexerThreads = new Thread[dumpReader.getConcurrency()];
             for (int i = 0; i < dumpReader.getConcurrency(); i++) {
@@ -127,7 +127,7 @@ public class DumpImporter extends Thread {
                 };
                 indexerThreads[i].start();
             }
-            
+
             // wait for termination of the indexing threads and do logging meanwhile
             boolean running = true;
             while (running) {
@@ -145,11 +145,11 @@ public class DumpImporter extends Thread {
 
             // catch up the number of processed tweets
             Log.getLog().info("finished import of dump file " + import_dump.getAbsolutePath() + ", " + newTweets.get() + " new tweets");
-            
+
             // shift the dump file to prevent that it is imported again
             DAO.message_dump.shiftProcessedDump(import_dump.getName());
             this.isBusy = false;
-                    
+
         } catch (Throwable e) {
             Log.getLog().warn("DumpImporter THREAD", e);
             try {Thread.sleep(10000);} catch (InterruptedException e1) {}
@@ -157,5 +157,5 @@ public class DumpImporter extends Thread {
 
         Log.getLog().info("DumpImporter terminated");
     }
-    
+
 }

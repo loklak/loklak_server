@@ -6,12 +6,12 @@
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
- *  
+ *
  *  This library is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  Lesser General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program in the file lgpl21.txt
  *  If not, see <http://www.gnu.org/licenses/>.
@@ -22,7 +22,6 @@ package org.loklak.data;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
-
 import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
 
@@ -32,11 +31,11 @@ import org.loklak.objects.UserEntry;
 public class OutgoingMessageBuffer {
 
     private  BlockingQueue<Timeline> pushToBackendTimeline;
-    
+
     public OutgoingMessageBuffer() {
         this.pushToBackendTimeline = new LinkedBlockingQueue<Timeline>();
     }
-    
+
     public void transmitTimelineToBackend(Timeline tl) {
         if (DAO.getConfig("backend", new String[0], ",").length > 0) {
             boolean clone = false;
@@ -54,7 +53,7 @@ public class OutgoingMessageBuffer {
             }
         }
     }
-    
+
     public void transmitMessage(final TwitterTweet tweet, final UserEntry user) {
         if (!tweet.getSourceType().propagate()) return;
         if (DAO.getConfig("backend", new String[0], ",").length <= 0) return;
@@ -87,7 +86,7 @@ public class OutgoingMessageBuffer {
             return tl;
         }
     }
-    
+
     public int timelineSize() {
         int c = 0;
         for (Timeline tl: this.pushToBackendTimeline) c += tl.size();
