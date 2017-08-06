@@ -48,5 +48,5 @@ elif [ "$TRAVIS_BRANCH" == "master" ]; then
     docker tag $KUBERNETES_BRANCH $KUBERNETES_COMMIT
     docker push $KUBERNETES_COMMIT
 else
-    echo "Skipping Kubenetes image push for branch $TRAVIS_BRANCH"
+    echo "Skipping Kubernetes image push for branch $TRAVIS_BRANCH"
 fi
