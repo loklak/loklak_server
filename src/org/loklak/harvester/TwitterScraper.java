@@ -806,7 +806,7 @@ public class TwitterScraper {
             this.provider_hash = (String) lazyGet(json, "provider_hash");
             this.screen_name = (String) lazyGet(json, "screen_name");
             this.retweet_from = (String) lazyGet(json, "retweet_from");
-            this.postId = (String) lazyGet(json, "post_id");
+            this.postId = (String) lazyGet(json, "id_str");
             this.text = (String) lazyGet(json, "text");
             try {
                 this.status_id_url = new URL((String) lazyGet(json, "link"));
