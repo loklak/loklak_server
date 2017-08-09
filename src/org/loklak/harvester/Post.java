@@ -2,6 +2,7 @@ package org.loklak.harvester;
 
 import java.util.Date;
 import org.json.JSONObject;
+import org.loklak.data.DAO;
 import org.loklak.objects.ObjectEntry;
 
 /**
@@ -99,5 +100,14 @@ public class Post extends JSONObject implements ObjectEntry {
     public JSONObject toJSON() {
         return this;
     }
-}
 
+    protected String[] getStreamChannels() {
+        return new String[] {
+            "all"
+        };
+    }
+
+    public final void publishToMQTT() {
+        DAO.mqttPublisher.publish(this.getStreamChannels(), this.toString());
+    }
+}
