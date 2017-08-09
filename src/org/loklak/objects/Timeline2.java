@@ -31,7 +31,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.loklak.data.DAO;
 import org.loklak.data.DAO.IndexName;
 import org.loklak.harvester.Post;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
@@ -265,16 +264,46 @@ public class Timeline2 implements Iterable<Post> {
         return this;
     }
 
+    public Timeline2 addPost(JSONObject post) {
+        this.addPost(new Post(post));
+        return this;
+    }
+
     public void mergePost(Timeline2 list) {
         for (Post post: list) {
             this.add(post);
         }
     }
 
+    public void mergePost(Post post) {
+        this.add(post);
+
+    }
+
     public void mergePost(Timeline2[] lists) {
         for (Timeline2 list: lists) {
             this.mergePost(list);
         }
+    }
+
+    public void collectMetadata(JSONObject metadata) {
+        int hits = 0;
+        int count = 0;
+        Set scrapers = new HashSet<String>();
+
+        List<String> listKeys = new ArrayList<String>(this.posts.keySet());
+        int n = listKeys.size();
+        for (int i = 0; i < n; i++) {
+            Post postMetadata = (Post) this.posts.get(listKeys.get(i)).get("metadata");
+            hits = hits + Integer.parseInt(String.valueOf(postMetadata.get("hits")));
+            count = count + Integer.parseInt(String.valueOf(postMetadata.get("count")));
+            scrapers.add(postMetadata.get("scraper"));
+        }
+
+        metadata.put("hits", hits);
+        metadata.put("count", count);
+        metadata.put("scraper_count", scrapers.size());
+        metadata.put("scrapers", scrapers);
     }
 
     protected UserEntry getUser(String user_screen_name) {
@@ -370,31 +399,10 @@ public class Timeline2 implements Iterable<Post> {
         return posts;
     }
 
-    public String toString() {
-        return toJSON(true, "search_metadata", "statuses").toString();
-        //return new ObjectMapper().writer().writeValueAsString(toMap(true));
-    }
-
-    public JSONObject toJSON(boolean withEnrichedData, String metadata_field_name, String statuses_field_name) throws JSONException {
-        JSONObject json = toSusi(withEnrichedData, new SusiThought(metadata_field_name, statuses_field_name));
-        json.getJSONObject(metadata_field_name).put("count", Integer.toString(this.posts.size()));
-        json.put("peer_hash", DAO.public_settings.getPeerHash());
-        json.put("peer_hash_algorithm", DAO.public_settings.getPeerHashAlgorithm());
-        return json;
-    }
-
-    public JSONObject toJSON() throws JSONException {
-        SusiThought susiThought = new SusiThought();
-        SusiThought json = toSusi(false, susiThought);
-        json.getJSONObject(susiThought.metadata_name).put("count", Integer.toString(this.posts.size()));
-        json.put("peer_hash", DAO.public_settings.getPeerHash());
-        json.put("peer_hash_algorithm", DAO.public_settings.getPeerHashAlgorithm());
-        return json;
-    }
-
     public SusiThought toSusi(boolean withEnrichedData) throws JSONException {
         return toSusi(withEnrichedData, new SusiThought());
     }
+
     private SusiThought toSusi(boolean withEnrichedData, SusiThought json) throws JSONException {
         UserEntry user;
         json.setQuery(this.query)

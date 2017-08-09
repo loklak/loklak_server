@@ -146,7 +146,7 @@ public class GithubProfileScraper extends BaseScraper {
 
         if ("all".equals(type) || "user".equals(type)) {
             JSONArray statuses = new JSONArray();
-            typeArray.put("user", statuses.put(scrapeGithub(this.query, br)));
+            this.putData(typeArray, "user", statuses.put(this.scrapeGithub(this.query, br)));
             return typeArray;
         } else {
             return typeArray;

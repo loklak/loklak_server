@@ -33,7 +33,6 @@ import org.loklak.objects.AccountEntry;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.ResultList;
 import org.loklak.objects.Timeline;
-import org.loklak.objects.Timeline2;
 import org.loklak.objects.UserEntry;
 import org.loklak.server.APIException;
 import org.loklak.server.APIHandler;
@@ -202,8 +201,7 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
         });
         dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?wordpress +?WHERE +?url ??= ??'(.*?)' ??;"), matcher -> {
             BaseScraper wordpressScrape = new WordpressCrawlerService(matcher.group(2));
-            Timeline2 dataList = wordpressScrape.getData();
-            SusiThought json = new SusiThought(dataList.toJSON());
+            SusiThought json = new SusiThought(wordpressScrape.getData());
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
             json.setData(transfer.conclude(json.getData()));
             return json;
@@ -216,8 +214,7 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
         });
         dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?githubProfile +?WHERE +?profile ??= ??'(.*?)' ??;"), matcher -> {
             BaseScraper githubScrape = new GithubProfileScraper(matcher.group(2));
-            Timeline2 dataList = githubScrape.getData();
-            SusiThought json = new SusiThought(dataList.toJSON());
+            SusiThought json = new SusiThought(githubScrape.getData());
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
             json.setData(transfer.conclude(json.getData()));
             return json;
@@ -236,8 +233,7 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
         });
         dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?instagramprofile +?WHERE +?profile ??= ??'(.*?)' ??;"), matcher -> {
             BaseScraper instaScrape = new InstagramProfileScraper(matcher.group(2));
-            Timeline2 dataList = instaScrape.getData();
-            SusiThought json = new SusiThought(dataList.toJSON());
+            SusiThought json = new SusiThought(instaScrape.getData());
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
             json.setData(transfer.conclude(json.getData()));
             return json;
@@ -245,8 +241,7 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
 
         dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?quoraprofile +?WHERE +?profile ??= ??'(.*?)' ??;"), matcher -> {
             BaseScraper quoraScrape = new QuoraProfileScraper(matcher.group(2));
-            Timeline2 dataList = quoraScrape.getData();
-            SusiThought json = new SusiThought(dataList.toJSON());
+            SusiThought json = new SusiThought(quoraScrape.getData());
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
             json.setData(transfer.conclude(json.getData()));
             return json;
