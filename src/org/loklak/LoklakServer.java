@@ -765,33 +765,23 @@ public class LoklakServer {
 
     	// check http port
         if(!httpsMode.equals(HttpsMode.ONLY)){
-	        ServerSocket ss = null;
-	        try {
-	            ss = new ServerSocket(httpPort);
+	        try(ServerSocket ss = new ServerSocket(httpPort)){
 	            ss.setReuseAddress(true);
 	            ss.setReceiveBufferSize(65536);
 	        } catch (IOException e) {
 	            // the socket is already occupied by another service
 	            throw new IOException("port " + httpPort + " is already occupied by another service, maybe another loklak is running on this port already. exit.");
-	        } finally {
-	            // close the socket again
-	            if (ss != null) ss.close();
 	        }
         }
 
         // check https port
         if(httpsMode.isGreaterOrEqualTo(HttpsMode.ON)){
-	        ServerSocket sss = null;
-	        try {
-	            sss = new ServerSocket(httpsPort);
+	        try(ServerSocket sss = new ServerSocket(httpsPort)){
 	            sss.setReuseAddress(true);
 	            sss.setReceiveBufferSize(65536);
 	        } catch (IOException e) {
 	            // the socket is already occupied by another service
 	        	throw new IOException("port " + httpsPort + " is already occupied by another service, maybe another loklak is running on this port already. exit.");
-	        } finally {
-	            // close the socket again
-	            if (sss != null) sss.close();
 	        }
         }
     }
