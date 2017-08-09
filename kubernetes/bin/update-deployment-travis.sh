@@ -17,9 +17,20 @@ if [ "$TRAVIS_BRANCH" != "master" ] && [ "$TRAVIS_BRANCH" != "development" ]; th
     exit 0
 fi
 
-GC_PROJECT=loklak-1
+# Temporary, will be removed once we have all the deployments running
+if [ "$TRAVIS_BRANCH" == "master" ]; then
+    echo "No deployments for master branch"
+    exit 0
+fi
+
+GC_PROJECT_STAGING=loklak-1
+GC_PROJECT_API=YET-TO-DEPLOY
+
 GC_CLUSTER=loklak-cluster
-TAG=loklak/loklak_server:kubernetes-$TRAVIS_COMMIT
+GC_ZONE=us-central1-a
+
+TAG_STAGING=loklak/loklak_server:kubernetes-staging-$TRAVIS_COMMIT
+TAG_API=loklak/loklak_server:kubernetes-api-$TRAVIS_COMMIT
 
 echo ">>> Decrypting credentials"
 openssl aes-256-cbc -K $encrypted_48d01dc243a6_key -iv $encrypted_48d01dc243a6_iv  -in kubernetes/gcloud-credentials.json.enc -out kubernetes/gcloud-credentials.json -d
@@ -34,12 +45,13 @@ echo ">>> Authenticating Google Cloud using decrypted credentials"
 gcloud auth activate-service-account --key-file kubernetes/gcloud-credentials.json
 
 echo ">>> Configuring Google Cloud"
-gcloud config set compute/zone us-central1-a
+gcloud config set compute/zone $GC_ZONE
 export GOOGLE_APPLICATION_CREDENTIALS=kubernetes/gcloud-credentials.json
-gcloud config set project $GC_PROJECT
-gcloud container clusters get-credentials $GC_CLUSTER
 
-echo ">>> Updating Kubernetes deployment"
+
 if [ $TRAVIS_BRANCH == "development" ]; then
-    kubectl set image deployment/server --namespace=web server=$TAG
+    echo ">>> Updating Kubernetes deployment for staging.loklak.org"
+    gcloud config set project $GC_PROJECT_STAGING
+    gcloud container clusters get-credentials $GC_CLUSTER
+    kubectl set image deployment/server --namespace=web server=$TAG_STAGING
 fi
