@@ -102,6 +102,7 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
         Runtime runtime = Runtime.getRuntime();
         JSONObject json = new JSONObject(true);
         JSONObject system = new JSONObject(true);
+        String xmx = DAO.getConfig("Xmx", "");
         system.put("assigned_memory", runtime.maxMemory());
         system.put("used_memory", runtime.totalMemory() - runtime.freeMemory());
         system.put("available_memory", runtime.maxMemory() - runtime.totalMemory() + runtime.freeMemory());
@@ -114,6 +115,48 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
         system.put("load_process_cpu", OS.getProcessCpuLoad());
         system.put("server_threads", LoklakServer.getServerThreads());
         system.put("server_uri", LoklakServer.getServerURI());
+        system.put("Xmx", xmx);
+
+        JSONObject searchCount = new JSONObject(true);
+        String search_count_low = DAO.getConfig("search.count.low", "");
+        String search_count_default = DAO.getConfig("search.count.default", "");
+        String search_count_max_public = DAO.getConfig("search.count.max.public", "");
+        String search_count_max_localhost = DAO.getConfig("search.count.max.localhost", "");
+        String search_timeout = DAO.getConfig("search.timeout", "");
+        searchCount.put("search_count_low", search_count_low);
+        searchCount.put("search_count_default", search_count_default);
+        searchCount.put("search_count_max_public", search_count_max_public);
+        searchCount.put("search_count_max_localhost", search_count_max_localhost);
+        searchCount.put("search_timeout", search_timeout);
+
+        JSONObject retrievalForBackend = new JSONObject(true);
+        String retrieval_forbackend_enabled = DAO.getConfig("retrieval.forbackend.enabled", "");
+        String retrieval_forbackend_concurrency = DAO.getConfig("retrieval.forbackend.concurrency", "");
+        String retrieval_forbackend_loops = DAO.getConfig("retrieval.forbackend.loops", "");
+        String retrieval_forbackend_sleep_base = DAO.getConfig("retrieval.forbackend.sleep.base", "");
+        String retrieval_forbackend_sleep_randomoffset = DAO.getConfig("retrieval.forbackend.sleep.randomoffset", "");
+        retrievalForBackend.put("retrieval_forbackend_enabled", retrieval_forbackend_enabled);
+        retrievalForBackend.put("retrieval_forbackend_concurrency", retrieval_forbackend_concurrency);
+        retrievalForBackend.put("retrieval_forbackend_loops", retrieval_forbackend_loops);
+        retrievalForBackend.put("retrieval_forbackend_sleep_base", retrieval_forbackend_sleep_base);
+        retrievalForBackend.put("retrieval_forbackend_sleep_randomoffset", retrieval_forbackend_sleep_randomoffset);
+
+        JSONObject elasticsearch = new JSONObject(true);
+        String watermark_low = DAO.getConfig("elasticsearch.cluster.routing.allocation.disk.watermark.low", "");
+        String watermark_high = DAO.getConfig("elasticsearch.cluster.routing.allocation.disk.watermark.high", "");
+        elasticsearch.put("elasticsearch_cluster_routing_allocation_disk_watermark_low", watermark_low);
+        elasticsearch.put("elasticsearch_cluster_routing_allocation_disk_watermark_high", watermark_high);
+
+        JSONObject caretakerProperties = new JSONObject(true);
+        String caretaker_retries = DAO.getConfig("caretaker.backendpush.retries", "");
+        String caretaker_backoff = DAO.getConfig("caretaker.backendpush.backoff", "");
+        caretakerProperties.put("caretaker_backendpush_retries", caretaker_retries);
+        caretakerProperties.put("caretaker_backendpush_backoff", caretaker_backoff);
+
+        system.put("searchCount", searchCount);
+        system.put("retrievalForBackend", retrievalForBackend);
+        system.put("elasticsearch", elasticsearch);
+        system.put("caretakerProperties", caretakerProperties);
 
         JSONObject index = new JSONObject(true);
         long countLocalMinMessagesCreated  = DAO.countLocalMessages(60000L, true);
@@ -228,5 +271,4 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
             e.printStackTrace();
         }
     }
-
 }
