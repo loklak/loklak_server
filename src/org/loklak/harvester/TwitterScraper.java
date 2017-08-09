@@ -27,8 +27,8 @@ import org.loklak.objects.AbstractObjectEntry;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -37,14 +37,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.json.JSONObject;
-import org.loklak.api.search.ShortlinkFromTweetServlet;
 import org.loklak.data.Classifier;
 import org.loklak.data.DAO;
 import org.loklak.data.Classifier.Category;
 import org.loklak.data.Classifier.Context;
 import org.loklak.geo.GeoMark;
 import org.loklak.geo.LocationSource;
-import org.loklak.harvester.Post;
 import org.loklak.objects.QueryEntry.PlaceContext;
 import org.loklak.tools.bayes.Classification;
 
@@ -54,30 +52,22 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
-import org.loklak.data.DAO;
 import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.http.ClientConnection;
 import org.loklak.objects.MessageEntry;
@@ -972,6 +962,44 @@ enrichData(this.text);
             // Text's length without link, users and hashtags
             this.without_luh_len = text.length();
 
+        }
+
+        /**
+         * Channels on which the Tweet will be published -
+         *      all
+         *      twitter
+         *      twitter/mention/*username*
+         *      twitter/user/*username*         (User who posted the Tweet)
+         *      twitter/hashtag/*hashtag*
+         *      twitter/country/*country code*
+         *      twitter/text/*token*
+         * @return Array of channels to publish message to
+         */
+        @Override
+        protected String[] getStreamChannels() {
+            ArrayList<String> channels = new ArrayList<>();
+
+            for (String mention : this.mentions) {
+                channels.add("twitter/mention/" + mention);
+            }
+
+            for (String hashtag : this.hashtags) {
+                channels.add("twitter/hashtag/" + hashtag);
+            }
+
+            channels.add("twitter/user/" + this.getScreenName());
+            if (this.place_country != null) {
+                channels.add("twitter/country/" + this.place_country);
+            }
+
+            for (String token : Classifier.normalize(this.text)) {
+                channels.add("twitter/text/" + token);
+            }
+
+            channels.add("all");
+            channels.add("twitter");
+
+            return channels.toArray(new String[channels.size()]);
         }
 
         @Override
