@@ -53,7 +53,7 @@ public class MessageEntry extends AbstractObjectEntry {
     // two or more
     public final static Pattern SPACEX_PATTERN = Pattern.compile("  +");
     // right boundary must be space or ) since others may appear in urls
-    public final static Pattern URL_PATTERN = Pattern.compile("(?:\\b|^)(https?://[-A-Za-z0-9+&@#/%?=~_()|!:,.;]*[-A-Za-z0-9+&@#/%=~_()|])");
+    public final static Pattern URL_PATTERN = Pattern.compile("(?:\\b|^)?(https?:\\/\\/[-A-Za-z0-9+&@#\\/%\\?=~_\\(\\)\\|\\!:,.;]*[-A-Za-z0-9+&@#\\/%=~_\\(\\)|])");
     // left boundary must be space since the @ is itself a boundary
     public final static Pattern USER_PATTERN = Pattern.compile("(?:[ (]|^)(@..*?)(?:\\b|$)");
     // left boundary must be a space since the # is itself a boundary
@@ -84,7 +84,8 @@ public class MessageEntry extends AbstractObjectEntry {
             dataList.add(m.group(regexGroup));
         }
         for (String r: dataList) {
-            text.replaceAll(r, "");
+            //text.replaceAll(r, "");
+            text.replace(r, "");
         }
         return dataList;
     }
@@ -186,6 +187,10 @@ public class MessageEntry extends AbstractObjectEntry {
         return videoList;
     }
 
+    public Set<String> getLinksVideo(List<String> links) {
+        return this.getLinksVideo(links, null);
+    }
+
     public Set<String> getLinksAudio(List<String> links, Set<String> audioLinks) {
         boolean endLink = false;
         boolean withLinkTerm = false;
@@ -200,6 +205,10 @@ public class MessageEntry extends AbstractObjectEntry {
             if (withLinkTerm || endLink) audioLinks.add(link);
         }
         return audioLinks;
+    }
+
+    public Set<String> getLinksAudio(List<String> links) {
+        return this.getLinksAudio(links, null);
     }
 
     public Set<String> getLinksImage(List<String> links, Set<String> imageLinks) {
@@ -220,10 +229,14 @@ public class MessageEntry extends AbstractObjectEntry {
                     || link.indexOf("imgur.com") > 0
                     || link.indexOf("giphy.com") > 0
                     || link.indexOf("pic.twitter.com") > 0;
-            
+
             if (endLink || withLinkTerm) imageLinks.add(link);
         }
         return imageLinks;
+    }
+
+    public Set<String> getLinksImage(List<String> links) {
+        return this.getLinksImage(links, null);
     }
 
     public TextLinkMap getText(final int iflinkexceedslength, final String urlstub, String text, String[] linksArray, String postId) {
