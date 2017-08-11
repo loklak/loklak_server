@@ -11,11 +11,10 @@ spec:
       labels:
         app: server
     spec:
-      nodeSelector:
-        server: primary
       containers:
       - name: server
-        image: loklak/loklak_server:latest-kubernetes-master
+        imagePullPolicy: Always
+        image: loklak/loklak_server:latest-kubernetes-api
         ports:
         - containerPort: 80
           protocol: TCP
@@ -26,10 +25,3 @@ spec:
           initialDelaySeconds: 60
           timeoutSeconds: 10
           periodSeconds: 360
-        volumeMounts:
-          - name: dump
-            mountPath: /loklak_server/data
-      volumes:
-        - name: dump
-          persistentVolumeClaim:
-            claimName: dump
