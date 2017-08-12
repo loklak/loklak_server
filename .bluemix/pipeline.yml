@@ -10,11 +10,12 @@ stages:
   - name: Build
     type: builder
     artifact_dir: ''
-    build_type: ant
+    build_type: shell
     script: |-
       #!/bin/bash
+      echo "Run gradle build..."
       export JAVA_HOME=/opt/IBM/java8
-      ant
+      ./gradlew build
 - name: Deploy Stage
   inputs:
   - type: job
