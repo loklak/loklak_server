@@ -258,6 +258,13 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
         json.put("index", index);
         json.put("client_info", client_info);
 
+        String commitHash = System.getenv("COMMIT_HASH");
+        String commitComment = System.getenv("COMMIT_COMMENT").replaceAll("^[ \n]+", "").replaceAll("[ \n]+$", "");
+        JSONObject commit = new JSONObject(true);
+        commit.put("hash", commitHash);
+        commit.put("comment", commitComment);
+        json.put("commit", commit);
+
         return json;
     }
 
