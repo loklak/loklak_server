@@ -72,12 +72,12 @@
     <div class="jumbotron">
       <div class="container">
         <h1><code>loklak</code></h1>
-        <h2>Distributed Social Media Message Search Server</h2>
+        <h2>Distributed API Search Server for Twitter & Social Media</h2>
         <span style="font-weight: bold;">
           Collect, search, download and visualize messages from various sources: tweets, youtube descriptions and from more social media sources.
         </span>&nbsp;<br>
         <span ng-controller="status" >
-          This is the Search Server for the <a style="font-weight: bold;" href="http://loklak.net" target="_self">Loklak Webclient</a> {{(index.messages.size > 0) ? " hosting " + (index.messages.size | number : fractionSize) + " messages for " + (index.users.size | number : fractionSize) + " users."  : ""}}&nbsp;<br>
+          This is the Open Source API Search Server for the <a style="font-weight: bold;" href="http://loklak.org" target="_self"> Loklak Twitter and Social Media Search Engine </a> {{(index.messages.size > 0) ? " hosting " + (index.messages.size | number : fractionSize) + " messages for " + (index.users.size | number : fractionSize) + " users."  : ""}}&nbsp;<br>
           {{(index.messages.size > 0 && index.mps > 0) ? "Collection Speed: " + index.mps + " message" + (index.mps > 1 ? "s" : "") + " per second; " + ((index.mps * 86400) | number : fractionSize) + " messages per day."  : ""}}
         </span>&nbsp;<br><br>
           
@@ -133,8 +133,8 @@
           <p>No, this is a back-end search- and storage-infrastructure for microblog-messages. Make your own search portal!
           <code>loklak</code> scrapes tweets from twitter html pages (more message sources to come).
           We+You collect and share tweets with a peer-to-peer network.</p>
-          <p><a class="btn btn-default" href="about.html#whyuse" role="button">why is this better &raquo;</a>
-          <a class="btn btn-default" href="about.html#distributed" role="button">p2p architecture &raquo;</a></p>
+          <p><a class="btn btn-default" href="http://dev.loklak.org/server/index.html#why-should-i-use-loklak" role="button">why is this better &raquo;</a>
+          <a class="btn btn-default" href="http://dev.loklak.org/server/index.html#distributed-peer-to-peer" role="button">p2p architecture &raquo;</a></p>
         </div>
         <div class="col-md-4">
           <h2>API Example?</h2>
@@ -142,7 +142,7 @@
           or <code>/api/search.rss?q=&lt;search-term&gt;</code> for <a href="http://www.opensearch.org/Specifications/OpenSearch/1.1#OpenSearch_description_document">opensearch/rss</a> results.
           You don't need a twitter account or an <a href="https://dev.twitter.com/oauth">OAuth key</a>.</p>
           <p><a class="btn btn-default" href="/api/search.json?q=fossasia&callback=p" role="button">show an example &raquo;</a>
-          <a class="btn btn-default" href="api.html" role="button">show apidoc &raquo;</a></p>
+          <a class="btn btn-default" href="http://dev.loklak.org/server/development/api.html" role="button">show apidoc &raquo;</a></p>
         </div>
         <div class="col-md-3">
           <h2>Open Source</h2>

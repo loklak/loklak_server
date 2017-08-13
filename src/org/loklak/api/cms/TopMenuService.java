@@ -38,14 +38,13 @@ public class TopMenuService extends AbstractAPIHandler implements APIHandler {
 		int limited_count = (int) DAO.getConfig("download.limited.count", (long) Integer.MAX_VALUE);
 
 		JSONObject json = new JSONObject(true);
-		JSONArray topmenu = new JSONArray().put(new JSONObject().put("Search", "http://loklak.net"))
-				.put(new JSONObject().put("Apps", "http://apps.loklak.org"))
+		JSONArray topmenu = new JSONArray().put(new JSONObject().put("About", "http://loklak.org/about"))
+				.put(new JSONObject().put("Search", "http://loklak.org"))
+				.put(new JSONObject().put("Blog", "http://blog.loklak.net"))
 				.put(new JSONObject().put("Developers", "http://dev.loklak.org"))
-				.put(new JSONObject().put("API", "api.html"));
+				.put(new JSONObject().put("API", "http://api.loklak.org"));
 		if (limited_count > 0)
 			topmenu.put(new JSONObject().put("Dumps", "dump.html"));
-		topmenu.put(new JSONObject().put("About", "about.html"));
-		topmenu.put(new JSONObject().put("Blog", "http://blog.loklak.net"));
 		json.put("items", topmenu);
 
 		// modify caching
