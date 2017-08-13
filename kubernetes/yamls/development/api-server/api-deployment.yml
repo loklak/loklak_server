@@ -18,13 +18,8 @@ spec:
           httpGet:
             path: /api/status.json
             port: 80
-          initialDelaySeconds: 30
-          timeoutSeconds: 3
-        readinessProbe:
-          httpGet:
-            path: /api/status.json
-            port: 80
-          initialDelaySeconds: 30
+          initialDelaySeconds: 90
+          periodSeconds: 300
           timeoutSeconds: 3
         ports:
         - containerPort: 80
