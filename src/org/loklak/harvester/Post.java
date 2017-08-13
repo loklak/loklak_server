@@ -108,6 +108,8 @@ public class Post extends JSONObject implements ObjectEntry {
     }
 
     public final void publishToMQTT() {
-        DAO.mqttPublisher.publish(this.getStreamChannels(), this.toString());
+        if (DAO.mqttPublisher != null) {  // Will be null if stream is disabled
+            DAO.mqttPublisher.publish(this.getStreamChannels(), this.toString());
+        }
     }
 }

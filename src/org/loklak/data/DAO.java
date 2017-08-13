@@ -700,6 +700,7 @@ public class DAO {
                 if (mw.dump && writeDump) {
                     message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
                 }
+                mw.t.publishToMQTT();
              }
 
             // teach the classifier
@@ -797,13 +798,14 @@ public class DAO {
         Set<String> created = writeMessageBulkNoDump(mws);
 
         for (MessageWrapper mw: mws) try {
+            mw.t.publishToMQTT();
             if (!created.contains(mw.t.getPostId())) continue;
             synchronized (DAO.class) {
                 // record tweet into text file
                 if (writeDump) {
                     message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
                 }
-             }
+            }
 
             // teach the classifier
             Classifier.learnPhrase(mw.t.getText());

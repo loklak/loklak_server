@@ -1,65 +1,58 @@
 package org.loklak.stream;
 
-import net.sf.xenqtt.client.AsyncClientListener;
-import net.sf.xenqtt.client.AsyncMqttClient;
-import net.sf.xenqtt.client.MqttClient;
-import net.sf.xenqtt.client.PublishMessage;
-import net.sf.xenqtt.client.Subscription;
-import net.sf.xenqtt.message.ConnectReturnCode;
-import net.sf.xenqtt.message.QoS;
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.loklak.data.DAO;
 
 public class MQTTPublisher {
 
-    private AsyncMqttClient mqttClient;
+    private MqttClient client;
+    private String clientId;
+    private MemoryPersistence persistence = new MemoryPersistence();
+    private int qos;
 
-    public MQTTPublisher(String address) {
-        AsyncClientListener listener = new AsyncClientListener() {
+    public MQTTPublisher(String address, String clientId, boolean cleanSession, int qos) throws MqttException {
+        this.clientId = clientId;
+        this.qos = qos;
+        this.client = new MqttClient(address, clientId, persistence);
+        MqttConnectOptions connOpts = new MqttConnectOptions();
+        connOpts.setCleanSession(cleanSession);
+        this.client.connect();
+    }
 
-            @Override
-            public void publishReceived(MqttClient client, PublishMessage message) {
-                DAO.severe("Received a message when no subscriptions were active. Please check your broker.");
-            }
+    public MQTTPublisher(String address) throws MqttException {
+        this(address, "loklak_server", true, 0);
+    }
 
-            @Override
-            public void disconnected(MqttClient client, Throwable cause, boolean reconnecting) {
-                if (cause != null) {
-                    DAO.severe("Disconnected from the broker due to an exception.", cause);
-                } else {
-                    DAO.log("Disconnected from the broker.");
-                }
-                if (reconnecting) {
-                    DAO.log("Attempting to reconnect to the broker.");
-                }
-            }
+    public MemoryPersistence getMemoryPersistence() {
+        return this.persistence;
+    }
 
-            @Override
-            public void connected(MqttClient client, ConnectReturnCode returnCode) {
-                DAO.log("Connected to client " + client + " with return code " + returnCode);
-            }
+    public String getClientId() {
+        return this.clientId;
+    }
 
-            @Override
-            public void subscribed(MqttClient client, Subscription[] requestedSubscriptions, Subscription[] grantedSubscriptions, boolean requestsGranted) {
-                DAO.log("Subscribed to " + grantedSubscriptions.length + "/" + requestedSubscriptions.length + " subscriptions.");
-            }
-
-            @Override
-            public void unsubscribed(MqttClient client, String[] topics) {
-                DAO.log("Unsubscribed from " + topics.length + " topics.");
-            }
-
-            @Override
-            public void published(MqttClient client, PublishMessage message) {
-            }
-
-        };
-
-        this.mqttClient = new AsyncMqttClient(address, listener, 5);
-        this.mqttClient.connect("loklak_server", false);
+    public MqttClient getClient() {
+        return this.client;
     }
 
     public void publish(String channel, String message) {
-        this.mqttClient.publish(new PublishMessage(channel, QoS.AT_LEAST_ONCE, message));
+        channel = channel.replaceAll("#", "");
+        DAO.log("Publishing " + message.substring(0, 10) + " to " + channel);
+        MqttMessage msg = new MqttMessage(message.getBytes());
+        msg.setQos(this.qos);
+        try {
+            this.client.publish(channel, msg);
+        } catch (MqttException e) {
+            DAO.severe("Failed to publish message to channel " + channel + " due to MQTT exception", e);
+        } catch (IllegalArgumentException e) {
+            DAO.severe("Failed to publish message to channel " + channel + " because of invalid channel name", e);
+        } catch (Exception e) {
+            DAO.severe("Failed to publish message to channel " + channel + " due to unknown exception", e);
+        }
     }
 
     public void publish(String channel, String[] messages) {
