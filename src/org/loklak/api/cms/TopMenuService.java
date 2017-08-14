@@ -40,6 +40,7 @@ public class TopMenuService extends AbstractAPIHandler implements APIHandler {
 		JSONObject json = new JSONObject(true);
 		JSONArray topmenu = new JSONArray().put(new JSONObject().put("About", "http://loklak.org/about"))
 				.put(new JSONObject().put("Search", "http://loklak.org"))
+				.put(new JSONObject().put("Apps", "http://apps.loklak.org"))
 				.put(new JSONObject().put("Blog", "http://blog.loklak.net"))
 				.put(new JSONObject().put("Developers", "http://dev.loklak.org"))
 				.put(new JSONObject().put("API", "http://api.loklak.org"));

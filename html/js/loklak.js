@@ -54,4 +54,19 @@ angular.element(document).ready(function () {
       $('#navbar > ul').prepend(liItem);
     });
   });
+  var lastScrollTop = $(window).scrollTop();
+  $(window).scroll(function(event){
+    var st = $(this).scrollTop();
+    if (st <= 100){
+      $("nav").animate({
+        top: "0"
+      }, 10);
+    }
+    else if(st > lastScrollTop && st > 100){
+      $("nav").animate({
+        top: "-50%"
+      }, 5);
+    }
+    lastScrollTop = st;
+  });
 });

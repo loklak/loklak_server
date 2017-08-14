@@ -20,4 +20,39 @@
 body {
   padding-top: 50px;
   font: DroidSansMono;
+  overflow-x: none;
+}
+
+.logo {
+  position: relative;
+  top: -11px;
+  left: 10px;
+}
+
+.topmenu {
+  font-family: 'Roboto', sans-serif;
+}
+
+.footer {
+  background: #f2f2f2;
+  padding: 0px 14px;
+  border-top: 1px solid #e4e4e4;
+  display:  flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.links a {
+  padding: 0px 6px;
+  color: #666;
+  font-size: small;
+  line-height: 40px;
+  font-family: 'Roboto', sans-serif;
+}
+
+@media(max-width: 400px) {
+  .footer {
+    justify-content: space-around;
+  }
 }

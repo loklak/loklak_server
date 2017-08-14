@@ -18,28 +18,29 @@
     <meta name="twitter:url" content="http://loklak.org">
     <meta name="twitter:description" content="Data Mining for Social Media: Statistics, Classification and Big Data Indexing">
     <meta name="twitter:image" content="http://loklak.org/artwork/loklak_org_sticker.png">
+    <link rel="icon" type="image/png" href="images/favicon.png">
 
     <script type="application/ld+json">
-{
-  "@context": "http://schema.org",
-  "@type": "Organization",
-  "name": "loklak.org - Distributed Social Media Message Search Server",
-  "alternateName": "Data Mining for Social Media: Statistics, Classification and Big Data Indexing",
-  "url": "http://loklak.org",
-  "logo": "http://loklak.org/artwork/loklak_org_sticker.png",
-  "sameAs": [
-    "https://twitter.com/loklak_app",
-    "https://twitter.com/lklknt",
-    "https://www.facebook.com/loklakmessages/",
-    "https://www.youtube.com/channel/UCzlERcAMNubMu6Q6OujAPbg",
-    "https://loklaknet.wordpress.com/"
-  ],
-  "potentialAction": {
-    "@type": "SearchAction",
-    "target": "http://loklak.org/api/search.json?q={query}",
-    "query-input": "required name=query"
-  }
-}
+      {
+        "@context": "http://schema.org",
+        "@type": "Organization",
+        "name": "loklak.org - Distributed Social Media Message Search Server",
+        "alternateName": "Data Mining for Social Media: Statistics, Classification and Big Data Indexing",
+        "url": "http://loklak.org",
+        "logo": "http://loklak.org/artwork/loklak_org_sticker.png",
+        "sameAs": [
+          "https://twitter.com/loklak_app",
+          "https://twitter.com/lklknt",
+          "https://www.facebook.com/loklakmessages/",
+          "https://www.youtube.com/channel/UCzlERcAMNubMu6Q6OujAPbg",
+          "https://loklaknet.wordpress.com/"
+        ],
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "http://loklak.org/api/search.json?q={query}",
+          "query-input": "required name=query"
+        }
+      }
     </script>
     <!--#include file="../ssi/common_head_back.include" -->
     <!--#include file="../data/ssi/custom_head.include" -->
@@ -57,10 +58,12 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="index.html"><div style="padding:2px 4px; font-size:90%; color: #c7254e; background-color:#f9f2f4; border-radius:4px;">loklak</div></a>
+          <a class="navbar-brand" href="index.html">
+            <img class="logo img-rounded" src="images/icon.png">
+          </a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
-          <ul class="nav navbar-nav navbar-right">
+          <ul class="nav navbar-nav navbar-right topmenu">
             <!-- This will get populated -->
           </ul>
         </div>
@@ -74,10 +77,10 @@
         <h1><code>loklak</code></h1>
         <h2>Distributed API Search Server for Twitter & Social Media</h2>
         <span style="font-weight: bold;">
-          Collect, search, download and visualize messages from various sources: tweets, youtube descriptions and from more social media sources.
+          Collect, search, download and visualize messages from various sources: Tweets, YouTube, GitHub and many more.
         </span>&nbsp;<br>
         <span ng-controller="status" >
-          This is the Open Source API Search Server for the <a style="font-weight: bold;" href="http://loklak.org" target="_self"> Loklak Twitter and Social Media Search Engine </a> {{(index.messages.size > 0) ? " hosting " + (index.messages.size | number : fractionSize) + " messages for " + (index.users.size | number : fractionSize) + " users."  : ""}}&nbsp;<br>
+          This is the Open Source API Search Server for the <a style="font-weight: bold;" href="http://loklak.org" target="_self"> Loklak Twitter and Social Media Search Engine </a> {{(index.messages.size > 0) ? " hosting " + (index.messages.size | number : fractionSize) + " messages for " + (index.users.size | number : fractionSize) + " users."  : ""}}&nbsp;
           {{(index.messages.size > 0 && index.mps > 0) ? "Collection Speed: " + index.mps + " message" + (index.mps > 1 ? "s" : "") + " per second; " + ((index.mps * 86400) | number : fractionSize) + " messages per day."  : ""}}
         </span>&nbsp;<br><br>
           
@@ -153,12 +156,26 @@
         </div>
       </div>
 
-      <footer style="position: absolute; right: 0; bottom: 0; left: 0; padding: 1rem; text-align: center;">
+      <span style="padding: 1rem; text-align: center;">
         <p>Nice? To get latest news about <code>loklak</code>, follow <a href="https://twitter.com/0rb1t3r"><code>@0rb1t3r</code></a>.  Help to spread the news: <a class="btn btn-default" href="https://twitter.com/intent/tweet?hashtags=loklak&original_referer=http%3A%2F%2Floklak.org&text=%23anonymous%20%23twitter%20%23json%20%23rss%20%23search%20by%20@0rb1t3r&tw_p=tweetbutton&url=http%3A%2F%2Floklak.org" role="button">tweet about this &raquo;</a></p>
-      </footer>
+      </span>
     </div> <!-- /container -->
 
     <!--#include file="../ssi/common_body_back.include" -->
     <!--#include file="../data/ssi/custom_body_back.include" -->
+    <footer class="footer" style="position: absolute; right: 0; bottom: 0; left: 0">
+      <div class="left links">
+        <a href="http://loklak.org/about"> About </a>
+        <a href="http://blog.loklak.net/"> Blog </a>
+        <a href="http://dev.loklak.org/"> Developers </a>
+        <a href="http://api.loklak.org/"> API </a>
+        <a href="http://apps.loklak.org/"> Apps </a>
+        <a href="https://github.com/loklak/loklak_server"> Code </a>
+      </div>
+      <div class="right links">
+        <a href="http://loklak.org/terms"> Terms </a>
+        <a href="http://loklak.org/contact"> Contact </a>
+      </div>
+    </footer>
   </body>
 </html>
