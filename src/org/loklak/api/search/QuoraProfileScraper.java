@@ -359,7 +359,7 @@ public class QuoraProfileScraper extends BaseScraper {
         for (Element count: counts) {
             String topic = count.parent().text();
             topic = topic.substring(0, topic.indexOf(count.text())).trim();
-            feeds.put(topic.toLowerCase() + "_url", baseUrl + count.parent().attr("href"));
+            feeds.put(topic.toLowerCase() + "_url", baseUrl + count.parent().attr("href").substring(1));
             feeds.put(topic.toLowerCase(), count.text());
         }
         quoraProfile.put("feeds", feeds);
