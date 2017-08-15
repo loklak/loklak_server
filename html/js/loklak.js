@@ -3,6 +3,10 @@ app.controller("status", function($scope, $http) {
   $http.get("api/status.json").
     success(function(data, status, headers, config) {
       $scope.index = data.index;
+      $scope.commit = data.commit;
+      // Max 40 chars
+      $scope.commit.comment = $scope.commit.comment.length > 50 ?
+          $scope.commit.comment.substring(0, 47) + '...' : $scope.commit.comment;
     });
 });
 

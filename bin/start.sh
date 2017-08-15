@@ -5,6 +5,10 @@
 # Make sure we're on project root
 cd $(dirname $0)/..
 
+# Set commit details as env var
+export COMMIT_HASH=`git rev-parse HEAD`
+export COMMIT_COMMENT=`git log -1 --pretty=%B`
+
 # Execute preload script
 source bin/.preload.sh
 
