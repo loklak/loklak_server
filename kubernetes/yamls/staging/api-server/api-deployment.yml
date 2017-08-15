@@ -13,7 +13,8 @@ spec:
     spec:
       containers:
       - name: server
-        image: loklak/loklak_server:latest-kubernetes-development
+        imagePullPolicy: Always
+        image: loklak/loklak_server:latest-kubernetes-staging
         livenessProbe:
           httpGet:
             path: /api/status.json
