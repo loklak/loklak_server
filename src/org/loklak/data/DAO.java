@@ -1242,7 +1242,8 @@ public class DAO {
     public static JSONArray scrapeLoklak(
             Map<String, String> inputMap,
             boolean byUserQuery,
-            boolean recordQuery) {
+            boolean recordQuery,
+            JSONObject metadata) {
         Timeline2.Order order= getOrder(inputMap.get("order"));
         Timeline2 dataSet = new Timeline2(order);
         List<String> scraperList = Arrays.asList(inputMap.get("scraper").trim().split("\\s*,\\s*"));
@@ -1252,7 +1253,7 @@ public class DAO {
         try{
             for (BaseScraper scraper : scraperObjList) {
                 scraperRunner.execute(() -> {
-                    dataSet.mergePost(scraper.getData());
+                    dataSet.add(scraper.getData());
                 });
             }
         } finally {
@@ -1261,6 +1262,7 @@ public class DAO {
                 scraperRunner.awaitTermination(24L, TimeUnit.HOURS);
             } catch (InterruptedException e) { }
         }
+        dataSet.collectMetadata(metadata);
         return dataSet.toArray();
     }
 
@@ -1296,21 +1298,6 @@ public class DAO {
     public static Timeline2.Order getOrder(String orderString) {
         //TODO: order set according to input
         return Timeline2.parseOrder("timestamp");
-    }
-
-    protected class parallelScrape extends Thread {
-
-        private Timeline2 dataSet = null;
-        private BaseScraper scraper = null;
-
-        public parallelScrape(Timeline2 _dataSet, BaseScraper _scraper) {
-            this.dataSet = _dataSet;
-            this.scraper = _scraper;
-        }
-
-        public void run() {
-            dataSet.mergePost(scraper.getData());
-        }
     }
 
     public static final Random random = new Random(System.currentTimeMillis());
