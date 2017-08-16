@@ -134,13 +134,11 @@ public class QuoraProfileScraper extends BaseScraper {
 
     @Override
     public Post getResults() {
-        String midUrl;
         String url;
         Thread[] dataThreads = new Thread[2];
         Timeline2 postList = new Timeline2(this.order);
 
         if(this.typeList.contains("user") || this.typeList.contains("all")) {
-            midUrl = "profile/";
             url = prepareSearchUrl("user");
             dataThreads[0] = new ConcurrentScrape(url, "users", postList);
             dataThreads[0].start();
@@ -148,7 +146,6 @@ public class QuoraProfileScraper extends BaseScraper {
             dataThreads[0] = new Thread();
         }
         if(this.typeList.contains("question") || this.typeList.contains("all")) {
-            midUrl = "search/?q=";
             url = prepareSearchUrl("question");
             dataThreads[1] = new ConcurrentScrape(url, "question", postList);
             dataThreads[1].start();
