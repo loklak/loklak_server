@@ -133,7 +133,7 @@ public class QuoraProfileScraper extends BaseScraper {
     }
 
     @Override
-    public Timeline2 getData() {
+    public Post getResults() {
         String midUrl;
         String url;
         Thread[] dataThreads = new Thread[2];
@@ -170,10 +170,7 @@ public class QuoraProfileScraper extends BaseScraper {
         Post postArray = new Post();
         postArray.put(this.scraperName, postList.toArray());
 
-        postList = new Timeline2(this.order);
-        postList.addPost(postArray);
-
-        return postList;
+        return postArray;
     }
 
     protected class ConcurrentScrape extends Thread {
@@ -374,10 +371,10 @@ public class QuoraProfileScraper extends BaseScraper {
 
         switch(type) {
             case "users":
-                typeArray.put("users", this.scrapeProfile(br, url).toArray());
+                this.putData(typeArray, "users", this.scrapeProfile(br, url));
                 break;
             case "question":
-                typeArray.put("question", this.scrapeQues(br, url).toArray());
+                this.putData(typeArray, "question", this.scrapeQues(br, url));
                 break;
             default:
                 break;

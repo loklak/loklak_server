@@ -36,7 +36,7 @@ public class Post extends JSONObject implements ObjectEntry {
 
 
     public Post(JSONObject json) {
-        this();
+        super(json.toString());
     }
 
     public Post(String data, String query) {

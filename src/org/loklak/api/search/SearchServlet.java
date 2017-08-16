@@ -134,6 +134,8 @@ public class SearchServlet extends HttpServlet {
         final long start = System.currentTimeMillis();
         final Query post = RemoteAccess.evaluate(request);
         Map<String, String> inputMap = post.getMap();
+        JSONObject metadata = new JSONObject(true);
+
         final ClientIdentity identity = AbstractAPIHandler.getIdentity(request, response, post);
         JSONArray dataArray = null;
         try {
@@ -142,9 +144,14 @@ public class SearchServlet extends HttpServlet {
             if (post.isDoS_blackout()) {response.sendError(503, "your (" + post.getClientHost() + ") request frequency is too high"); return;}
 
             // check call type
-            boolean jsonExt = request.getServletPath().endsWith(".json");
-            boolean rssExt = request.getServletPath().endsWith(".rss");
-            boolean txtExt = request.getServletPath().endsWith(".txt");
+            String callType = "json";
+            if(request.getServletPath().endsWith(".json")){
+                callType = "json";
+            } else if(request.getServletPath().endsWith(".rss")) {
+                callType = "rss";
+            } else if(request.getServletPath().endsWith(".txt")) {
+                callType = "txt";
+            }
 
             // evaluate get parameter
             String scraper = post.get("scraper", "");
@@ -184,7 +191,7 @@ public class SearchServlet extends HttpServlet {
                 inputMap.put("query", query);
                 DAO.log(request.getServletPath() + " scraping with query: "
                         + query + " scraper: " + scraper);
-                dataArray = DAO.scrapeLoklak(inputMap, true, true);
+                dataArray = DAO.scrapeLoklak(inputMap, true, true, metadata);
             } else if (tl.size() > 0) {
                 // return the timeline from a cached search result
                 // in case that the number of available records in the cache is too low, try to get more
@@ -356,109 +363,11 @@ public class SearchServlet extends HttpServlet {
             // create json or xml according to path extension
             int shortlink_iflinkexceedslength = shortlink_request ? (int) DAO.getConfig("shortlink.iflinkexceedslength", 500L) : Integer.MAX_VALUE;
             String shortlink_urlstub = DAO.getConfig("shortlink.urlstub", "http://127.0.0.1:9000");
-            if (jsonExt) {
-                post.setResponse(response, jsonp ? "application/javascript" : "application/json");
-                // generate json
-                JSONObject m = new JSONObject(true);
-                JSONObject metadata = new JSONObject(true);
-                if (!minified) {
-                    m.put("readme_0", "THIS JSON IS THE RESULT OF YOUR SEARCH QUERY - THERE IS NO WEB PAGE WHICH SHOWS THE RESULT!");
-                    m.put("readme_1", "loklak.org is the framework for a message search system, not the portal, read: http://loklak.org/about.html#notasearchportal");
-                    m.put("readme_2", "This is supposed to be the back-end of a search portal. For the api, see http://loklak.org/api.html");
-                    m.put("readme_3", "Parameters q=(query), source=(cache|backend|twitter|all), callback=p for jsonp, maximumRecords=(message count), minified=(true|false)");
-                }
-                metadata.put("startRecord", Integer.toString(startRecord));       // the number of the first record (according to SRU set to 1 for very first)
-                metadata.put("maximumRecords", Integer.toString(maximumRecords)); // number of records within this json result set returned in the api call
-                metadata.put("count", Integer.toString(tl.size()));               // number of records available in the search cache (so far, may be increased later > hits)
-                metadata.put("hits", tl.getHits());                               // number of records in the search index (so far, may be increased later as well)
-                if (tl.getOrder() == Timeline.Order.CREATED_AT) metadata.put("period", tl.period());
-                metadata.put("query", query);
-                metadata.put("filter", filter);
-                metadata.put("client", post.getClientHost());
-                metadata.put("time", System.currentTimeMillis() - post.getAccessTime());
-                metadata.put("servicereduction", post.isDoS_servicereduction() ? "true" : "false");
-                metadata.putAll(hits);
-                if (tl.getScraperInfo().length() > 0) metadata.put("scraperInfo", tl.getScraperInfo());
-                if (tl.getResultIndex() != null) metadata.put("index", tl.getResultIndex());
-                m.put("search_metadata", metadata);
-                JSONArray statuses = new JSONArray();
-                try {
-                    for (TwitterTweet t : tl.getNextTweets(startRecord - 1, maximumRecords)) {
-                        UserEntry u = tl.getUser(t);
-                        statuses.put(t.toJSON(u, true, shortlink_iflinkexceedslength, shortlink_urlstub));
-                    }
-                } catch (ConcurrentModificationException e) {
-                    // late incoming messages from concurrent peer retrieval may cause this
-                    // we silently do nothing here and return what we listed so far
-                }
 
-                if (dataArray == null) {
-                    m.put("statuses", statuses);
-                } else {
-                    m.put("results", dataArray);
-                }
-                // aggregations
-                m.put("aggregations", aggregations[0]);
+            dataOutput( response, dataArray, query, startRecord, maximumRecords, minified,
+                    callType, jsonp, post, tl, aggregations[0], hits, callback, shortlink_urlstub,
+                    shortlink_iflinkexceedslength, filter, metadata);
 
-                // write json
-                response.setCharacterEncoding("UTF-8");
-                PrintWriter sos = response.getWriter();
-                if (jsonp) sos.print(callback + "(");
-                sos.print(m.toString(minified ? 0 : 2));
-                if (jsonp) sos.println(");");
-                sos.println();
-            } else if (rssExt) {
-                response.setCharacterEncoding("UTF-8");
-                post.setResponse(response, "application/rss+xml;charset=utf-8");
-                // generate xml
-                RSSMessage channel = new RSSMessage();
-                channel.setPubDate(new Date());
-                channel.setTitle("RSS feed for Twitter search for " + query);
-                channel.setDescription("");
-                channel.setLink("");
-                RSSFeed feed = new RSSFeed(tl.size());
-                feed.setChannel(channel);
-                try {
-                    for (TwitterTweet t : tl.getNextTweets(startRecord - 1, maximumRecords)) {
-                        UserEntry u = tl.getUser(t);
-                        RSSMessage m = new RSSMessage();
-                        m.setLink(t.getStatusIdUrl().toExternalForm());
-                        m.setAuthor(u.getName() + " @" + u.getScreenName());
-                        m.setTitle(u.getName() + " @" + u.getScreenName());
-                        m.setDescription(t.moreData.getText(shortlink_iflinkexceedslength, shortlink_urlstub, t.getText(), t.getLinks(), t.getPostId()).text);
-                        m.setPubDate(t.getCreatedAt());
-                        m.setGuid(t.getPostId());
-                        feed.addMessage(m);
-                    }
-                } catch (ConcurrentModificationException e) {
-                    // late incoming messages from concurrent peer retrieval may cause this
-                    // we silently do nothing here and return what we listed so far
-                }
-                String rss = feed.toString();
-                //System.out.println("feed has " + feed.size() + " entries");
-
-                // write xml
-                response.getOutputStream().write(UTF8.getBytes(rss));
-            } else if (txtExt) {
-                post.setResponse(response, "text/plain");
-                final StringBuilder buffer = new StringBuilder(1000);
-                try {
-                    for (TwitterTweet t : tl) {
-                        UserEntry u = tl.getUser(t);
-                        buffer.append(t.getCreatedAt()).append(" ")
-                                .append(u.getScreenName())
-                                .append(": ")
-                                .append(t.moreData.getText(
-                                        shortlink_iflinkexceedslength, shortlink_urlstub,
-                                        t.getText(), t.getLinks(), t.getPostId()).text)
-                                .append('\n');
-                    }
-                } catch (ConcurrentModificationException e) {
-                    // late incoming messages from concurrent peer retrieval may cause this
-                    // we silently do nothing here and return what we listed so far
-                }
-                response.getOutputStream().write(UTF8.getBytes(buffer.toString()));
-            }
             post.recordEvent("result_count", tl.size());
             post.recordEvent("postprocessing_time", System.currentTimeMillis() - start);
             post.recordEvent("hits", hits);
@@ -469,6 +378,144 @@ public class SearchServlet extends HttpServlet {
             DAO.severe(e.getMessage(), e);
             //DAO.severe(e);
         }
+    }
+
+    private static void dataOutput(HttpServletResponse response, JSONArray dataArray,
+            String query, int startRecord, int maximumRecords, boolean minified,
+            String callType, boolean jsonp, Query post, Timeline tl, JSONObject aggregations,
+            JSONObject hits, String callback, String shortlink_urlstub,
+            int shortlink_iflinkexceedslength, String filter, JSONObject metadata) throws IOException {
+        if ("json".equals(callType)) {
+            post.setResponse(response, jsonp ? "application/javascript" : "application/json");
+
+            JSONObject m = new JSONObject(true);
+            JSONArray statuses = new JSONArray();
+
+            try {
+                for (TwitterTweet t : tl.getNextTweets(startRecord - 1, maximumRecords)) {
+                    UserEntry u = tl.getUser(t);
+                    statuses.put(t.toJSON(u, true, shortlink_iflinkexceedslength, shortlink_urlstub));
+                }
+            } catch (ConcurrentModificationException e) {
+                // late incoming messages from concurrent peer retrieval may cause this
+                // we silently do nothing here and return what we listed so far
+            }
+
+            if (!minified) setReadMe(m);
+            if (dataArray == null) {
+                setTwitterMetaData(metadata, startRecord, maximumRecords, tl, query, filter, post, hits);
+                m.put("search_metadata", metadata);
+                m.put("statuses", statuses);
+            } else {
+                moreMetaData(metadata, post);
+                m.put("results", dataArray);
+                m.put("metadata", metadata);
+            }
+            m.put("aggregations", aggregations);
+
+            // write json
+            response.setCharacterEncoding("UTF-8");
+            PrintWriter sos = response.getWriter();
+            if (jsonp) sos.print(callback + "(");
+            sos.print(m.toString(minified ? 0 : 2));
+            if (jsonp) sos.println(");");
+            sos.println();
+        } else if ("rss".equals(callType)) {
+            response.setCharacterEncoding("UTF-8");
+            post.setResponse(response, "application/rss+xml;charset=utf-8");
+
+            // generate xml
+            RSSMessage channel = new RSSMessage();
+            channel.setPubDate(new Date());
+            channel.setTitle("RSS feed for Twitter search for " + query);
+            channel.setDescription("");
+            channel.setLink("");
+            RSSFeed feed = new RSSFeed(tl.size());
+            feed.setChannel(channel);
+
+            try {
+                for (TwitterTweet t : tl.getNextTweets(startRecord - 1, maximumRecords)) {
+                    UserEntry u = tl.getUser(t);
+                    RSSMessage m = new RSSMessage();
+                    m.setLink(t.getStatusIdUrl().toExternalForm());
+                    m.setAuthor(u.getName() + " @" + u.getScreenName());
+                    m.setTitle(u.getName() + " @" + u.getScreenName());
+                    m.setDescription(t.moreData.getText(shortlink_iflinkexceedslength, shortlink_urlstub, t.getText(), t.getLinks(), t.getPostId()).text);
+                    m.setPubDate(t.getCreatedAt());
+                    m.setGuid(t.getPostId());
+                    feed.addMessage(m);
+                }
+            } catch (ConcurrentModificationException e) {
+                // late incoming messages from concurrent peer retrieval may cause this
+                // we silently do nothing here and return what we listed so far
+            }
+            String rss = feed.toString();
+            //System.out.println("feed has " + feed.size() + " entries");
+
+            // write xml
+            response.getOutputStream().write(UTF8.getBytes(rss));
+        } else if ("txt".equals(callType)) {
+            post.setResponse(response, "text/plain");
+            final StringBuilder buffer = new StringBuilder(1000);
+
+            // Write text file
+            try {
+                for (TwitterTweet t : tl) {
+                    UserEntry u = tl.getUser(t);
+                    buffer.append(t.getCreatedAt()).append(" ")
+                            .append(u.getScreenName())
+                            .append(": ")
+                            .append(t.moreData.getText(
+                                    shortlink_iflinkexceedslength, shortlink_urlstub,
+                                    t.getText(), t.getLinks(), t.getPostId()).text)
+                            .append('\n');
+                }
+            } catch (ConcurrentModificationException e) {
+                // late incoming messages from concurrent peer retrieval may cause this
+                // we silently do nothing here and return what we listed so far
+            }
+            response.getOutputStream().write(UTF8.getBytes(buffer.toString()));
+        }
+    }
+
+    private static void setReadMe(JSONObject m) {
+        m.put("readme_0", "THIS JSON IS THE RESULT OF YOUR SEARCH QUERY - THERE IS NO WEB PAGE WHICH SHOWS THE RESULT!");
+        m.put("readme_1", "loklak.org is the framework for a message search system, not the portal, read: http://api.loklak.org/about.html#notasearchportal");
+        m.put("readme_2", "This is supposed to be the back-end of a search portal. For the api, see http://api.loklak.org/api.html");
+        m.put("readme_3", "Parameters q=(query), source=(cache|backend|twitter|all), callback=p for jsonp, maximumRecords=(message count), minified=(true|false)");
+    }
+
+    private static void moreMetaData(JSONObject metadata, Query post) {
+        metadata.put("client", post.getClientHost());
+        metadata.put("time", System.currentTimeMillis() - post.getAccessTime());
+        metadata.put("servicereduction", post.isDoS_servicereduction() ? "true" : "false");
+//        metadata.put("scraper", scraperInfo);
+//        String index = tl.getResultIndex() == null ? "" : String.valueOf(tl.getResultIndex());
+//        metadata.put("index", index);
+    }
+
+    private static void setTwitterMetaData(JSONObject metadata, final int startRecord,
+            final int maximumRecords, Timeline tl, String query, String filter, Query post, JSONObject hits) {
+        // the number of the first record (according to SRU set to 1 for very first)
+        metadata.put("startRecord", startRecord);
+        // number of records within this json result set returned in the api call
+        metadata.put("maximumRecords", maximumRecords);
+        // number of records available in the search cache (so far, may be increased later > hits)
+        metadata.put("count", tl.size());
+        // number of records in the search index (so far, may be increased later as well)
+        metadata.put("hits", tl.getHits());
+        if (tl.getOrder() == Timeline.Order.CREATED_AT) metadata.put("period", tl.period());
+        metadata.put("query", query);
+        metadata.put("filter", filter);
+        metadata.put("client", post.getClientHost());
+        metadata.put("time", System.currentTimeMillis() - post.getAccessTime());
+        metadata.put("servicereduction", post.isDoS_servicereduction() ? "true" : "false");
+        metadata.putAll(hits);
+
+        String scraperInfo = tl.getScraperInfo() == null ? "" : tl.getScraperInfo();
+        metadata.put("scraperInfo", scraperInfo);
+        String index = tl.getResultIndex() == null ? "" : String.valueOf(tl.getResultIndex());
+        metadata.put("index", index);
     }
 
     public static void main(String[] args) {

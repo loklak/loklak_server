@@ -12,6 +12,7 @@ import org.loklak.server.AbstractAPIHandler;
 import org.loklak.data.DAO;
 import org.loklak.http.ClientConnection;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import org.loklak.objects.ProviderType;
 import org.loklak.objects.SourceType;
 import org.loklak.objects.Timeline2;
@@ -43,12 +44,14 @@ public abstract class BaseScraper extends AbstractAPIHandler {
     protected ProviderType provider_type;
     protected Map<String, String> extra =null;
     protected final Timeline2.Order order = Timeline2.parseOrder("timestamp");
+    protected int hits = 0;
+    protected int count = 0;
 
     @Override
     public JSONObject serviceImpl(Query call, HttpServletResponse response, Authorization rights,
             JSONObjectWithDefault permissions) throws APIException {
         this.setExtra(call);
-        return this.getData().toJSON(false, "metadata", "posts");
+        return this.getData();
     }
 
     protected void setExtra(Query call) {
@@ -82,27 +85,47 @@ public abstract class BaseScraper extends AbstractAPIHandler {
 
     protected abstract String prepareSearchUrl(String type);
 
-    public Timeline2 getData() {
-        Post postArray = new Post();
-        Timeline2 tl = new Timeline2(order);
+    public Post getDataScraper() {
+        Post outputOfScraper = new Post(true);
+        outputOfScraper.put("results", getResults());
+        return outputOfScraper;
+    }
+
+    public Post getData() {
+        Post output = new Post(true);
+        Post postArray = new Post(true);
+
+        output.putAll(getResults());
+        output.put("metadata", this.getMetadata());
 
         try {
-            postArray.put(this.scraperName, getDataFromConnection());
+            postArray.put(this.scraperName, output);
         } catch (Exception e) {
             DAO.severe("check internet connection");
         }
-        tl.addPost(postArray);
-        return tl;
+
+        return output;
+    }
+
+    public Post getResults() {
+        try {
+            return getDataFromConnection();
+        } catch (IOException e) {
+            DAO.severe("Error on connection to url:" + this.prepareSearchUrl("all"));
+            return new Post(true);
+        }
     }
 
     public Post getDataFromConnection(String url, String type) throws IOException {
+        // This adds to hits count even if connection fails
+        this.hits++;
         ClientConnection connection = new ClientConnection(url);
         BufferedReader br;
         Post postArray = null;
         try {
+
             // get instance of bufferReader
             br = getHtml(connection);
-
             postArray = this.scrape(br, type, url);
 
         } catch (Exception e) {
@@ -133,6 +156,32 @@ public abstract class BaseScraper extends AbstractAPIHandler {
     }
 
     protected abstract Post scrape(BufferedReader br, String type, String url);
+
+    protected Post putData(Post typeArray, String key, Timeline2 postList) {
+        //this.count = this.count + postList.size();
+        return this.putData(typeArray, key, postList.toArray());
+    }
+
+    protected Post putData(Post typeArray, String key, JSONArray postList) {
+        this.count = this.count + postList.length();
+        typeArray.put(key, postList);
+        return typeArray;
+    }
+
+    protected Post getMetadata() {
+        Post metadata = new Post(true);
+
+        metadata.put("hits", this.hits);
+        metadata.put("count", this.count);
+        metadata.put("scraper", this.scraperName);
+        metadata.put("input_parameters", this.extra);
+        
+        //TODO: implement these
+        //metadata.put("provider_type", this.providerType);
+        //metadata.put("source_type", this.sourceType);
+
+        return metadata;
+    }
 
     public String bufferedReaderToString(BufferedReader br) throws IOException {
     StringBuilder everything = new StringBuilder();
