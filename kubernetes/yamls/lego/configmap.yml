@@ -3,6 +3,6 @@ metadata:
   name: kube-lego
   namespace: kube-lego
 data:
-  lego.email: "vibhorverma1995@gmail.com"
+  lego.email: "info@loklak.org"
   lego.url: "https://acme-v01.api.letsencrypt.org/directory"
 kind: ConfigMap
