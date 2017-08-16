@@ -57,7 +57,7 @@ public class MessageEntry extends AbstractObjectEntry {
     // left boundary must be space since the @ is itself a boundary
     public final static Pattern USER_PATTERN = Pattern.compile("(?:[ (]|^)(@..*?)(?:\\b|$)");
     // left boundary must be a space since the # is itself a boundary
-    final static Pattern HASHTAG_PATTERN = Pattern.compile("(?:[ (]|^)(#..*?)(?:\\b|$)");
+    final static Pattern HASHTAG_PATTERN = Pattern.compile("(?:[ (]|^)#(..*?)(?:\\b|$)");
     public final static Pattern A_END_TAG = Pattern.compile("</a>");
     public final static Pattern QUOT_TAG = Pattern.compile("&quot;");
     public final static Pattern AMP_TAG = Pattern.compile("&amp;");
