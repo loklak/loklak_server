@@ -1,22 +1,24 @@
 <!DOCTYPE html>
 <html lang="en" ng-app="loklak">
-  <head>
+<head>
     <!--#include file="../ssi/common_head_front.include" -->
     <meta name="description" content="Data Mining for Social Media: Statistics, Classification and Big Data Indexing">
     <meta name="author" content="Michael Peter Christen, @0rb1t3r">
-    <link rel="canonical" href="http://dev.loklak.org" />
+    <link rel="canonical" href="http://dev.loklak.org"/>
     <title>loklak.org - Distributed Social Media Message Search Server</title>
 
     <meta property="og:title" content="loklak.org - Distributed Social Media Message Search Server">
     <meta property="og:type" content="Website">
     <meta property="og:url" content="http://loklak.org">
     <meta property="og:image" content="http://loklak.org/artwork/loklak_org_sticker.png">
-    <meta property="og:description" content="Data Mining for Social Media: Statistics, Classification and Big Data Indexing">
+    <meta property="og:description"
+          content="Data Mining for Social Media: Statistics, Classification and Big Data Indexing">
 
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="loklak.org - Distributed Social Media Message Search Server">
     <meta name="twitter:url" content="http://loklak.org">
-    <meta name="twitter:description" content="Data Mining for Social Media: Statistics, Classification and Big Data Indexing">
+    <meta name="twitter:description"
+          content="Data Mining for Social Media: Statistics, Classification and Big Data Indexing">
     <meta name="twitter:image" content="http://loklak.org/artwork/loklak_org_sticker.png">
     <link rel="icon" type="image/png" href="images/favicon.png">
 
@@ -41,142 +43,204 @@
           "query-input": "required name=query"
         }
       }
+
+
     </script>
     <!--#include file="../ssi/common_head_back.include" -->
     <!--#include file="../data/ssi/custom_head.include" -->
-  </head>
+</head>
 
-  <body style="position: relative; margin: 0; padding-bottom: 6rem; min-height: 100%;"> <!-- style woodoo is for footer line -->
-    <!--#include file="../data/ssi/custom_body_front.include" -->
-    <!--#include file="../ssi/common_body_front.include" -->
-    <nav class="navbar navbar-inverse navbar-fixed-top">
-      <div class="container-fluid">
+<body style="position: relative; margin: 0; min-height: 100%;">
+<!-- style woodoo is for footer line -->
+<!--#include file="../data/ssi/custom_body_front.include" -->
+<!--#include file="../ssi/common_body_front.include" -->
+<nav class="navbar navbar-default navbar-fixed-top grey">
+    <div class="container-fluid">
         <div class="navbar-header">
-          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="index.html">
-            <img class="logo img-rounded" src="images/icon.png">
-          </a>
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar" id="toggle-button">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">
+                <img class="logo img-rounded" src="images/icon.png">
+            </a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
-          <ul class="nav navbar-nav navbar-right topmenu">
-            <!-- This will get populated -->
-          </ul>
+            <ul class="nav navbar-nav navbar-right topmenu">
+                <!-- This will get populated -->
+            </ul>
         </div>
-      </div>
-    </nav>
+    </div>
+</nav>
 
-    <a href="https://github.com/loklak/loklak_server.git"><img style="position:absolute; top:20; right:0; border:0;" src="images/forkme_right_green_007200.png" alt="Fork me on GitHub" title="loklak server source code on github"></a>
-    
-    <div class="jumbotron">
-      <div class="container">
+<a href="https://github.com/loklak/loklak_server.git">
+    <img style="position:absolute; top:20; right:0; border:0;" src="images/forkme_right_green_007200.png"
+         alt="Fork me on GitHub" title="loklak server source code on github">
+</a>
+
+<div class="jumbotron">
+    <div class="container">
         <h1><code>loklak</code></h1>
         <h2>Distributed API Search Server for Twitter & Social Media</h2>
         <span style="font-weight: bold;">
           Collect, search, download and visualize messages from various sources: Tweets, YouTube, GitHub and many more.
         </span>&nbsp;<br>
-        <span ng-controller="status" >
-          This is the Open Source API Search Server for the <a style="font-weight: bold;" href="http://loklak.org" target="_self"> Loklak Twitter and Social Media Search Engine </a> {{(index.messages.size > 0) ? " hosting " + (index.messages.size | number : fractionSize) + " messages for " + (index.users.size | number : fractionSize) + " users."  : ""}}&nbsp;
+        <span ng-controller="status">
+          This is the Open Source API Search Server for the <a style="font-weight: bold;" href="http://loklak.org"
+                                                               target="_self"> Loklak Twitter and Social Media Search Engine </a> {{(index.messages.size > 0) ? " hosting " + (index.messages.size | number : fractionSize) + " messages for " + (index.users.size | number : fractionSize) + " users."  : ""}}&nbsp;
           {{(index.messages.size > 0 && index.mps > 0) ? "Collection Speed: " + index.mps + " message" + (index.mps > 1 ? "s" : "") + " per second; " + ((index.mps * 86400) | number : fractionSize) + " messages per day."  : ""}}
         </span>&nbsp;<br><br>
-          
-      <div class="row">
-        <div class="col-md-4" style="text-align:center;">
-            <img src="images/loklak_collect.png" width="320" height="240" alt="collection" title="Collect, index and store social media messages.">
-            <h3>Collect, index and store social media messages.</h3>
+
+        <div class="row">
+            <div class="col-md-4" style="text-align:center;">
+                <img src="images/loklak_collect.png" width="320" height="240" alt="collection"
+                     title="Collect, index and store social media messages.">
+                <h3>Collect, index and store social media messages.</h3>
+            </div>
+            <div class="col-md-4" style="text-align:center;">
+                <img src="images/loklak_anonymous.png" width="320" height="240" alt="anonymous"
+                     title="Anonymous search API. No authorization required.">
+                <h3>Anonymous search API. No subscription required.</h3>
+            </div>
+            <div class="col-md-4" style="text-align:center;">
+                <img src="images/loklak_share.png" width="320" height="240" alt="share"
+                     title="Peer-to-peer message routing and sharing.">
+                <h3>Peer-to-peer message routing and sharing.</h3>
+            </div>
         </div>
-        <div class="col-md-4" style="text-align:center;">
-            <img src="images/loklak_anonymous.png" width="320" height="240" alt="anonymous" title="Anonymous search API. No authorization required.">
-            <h3>Anonymous search API. No subscription required.</h3>
-        </div>
-        <div class="col-md-4" style="text-align:center;">
-            <img src="images/loklak_share.png" width="320" height="240" alt="share" title="Peer-to-peer message routing and sharing.">
-            <h3>Peer-to-peer message routing and sharing.</h3>
-        </div>
-      </div>
         <br>
         <br>
-          <form action="#" class="col-lg-12 hidden-xs">
+        <form action="#" class="col-lg-12 hidden-xs">
             <input id="timezoneOffset0" type="hidden" name="timezoneOffset" value="">
             <script>document.getElementById("timezoneOffset0").value = new Date().getTimezoneOffset();</script>
             <div class="input-group input-group-lg col-sm-8" style="float:left">
-              <input name="q" id="query" type="text" class="center-block form-control input-lg" title="Search Twitter and the loklak network" placeholder="Search Twitter and the loklak network">
-              <span class="input-group-btn"><button class="btn btn-lg btn-primary" type="submit" target="_blank" onclick="form.target='_blank'; form.action='/api/search.json?q=' + document.getElementById('query').value;">Get JSON Data</button></span>
+                <input name="q" id="query" type="text" class="center-block form-control input-lg"
+                       title="Search Twitter and the loklak network"
+                       placeholder="Search Twitter and the loklak network">
+                <span class="input-group-btn"><button class="btn btn-lg btn-primary" type="submit" target="_blank"
+                                                      onclick="form.target='_blank'; form.action='/api/search.json?q=' + document.getElementById('query').value;">Get JSON Data</button></span>
             </div>
-            <input type="submit" value="Get RSS Feed" class="btn btn-success btn-lg" onclick="form.target='_blank'; form.action='/api/search.rss?q=' + document.getElementById('query').value;"/>
+            <input type="submit" value="Get RSS Feed" class="btn btn-success btn-lg"
+                   onclick="form.target='_blank'; form.action='/api/search.rss?q=' + document.getElementById('query').value;"/>
             <br/><span style="font-size:7pt;">
               <span class="label label-info">Info</span>
               Input a search text or "search text" for exact matches; @user finds user mentions, from:user find messages from a user, #hashtag finds a hashtag, near:location finds messages near a location.</span>
-          </form>
+        </form>
 
-          <form class="col-lg-12 hidden-lg hidden-md hidden-sm row">
+        <form class="col-lg-12 hidden-lg hidden-md hidden-sm row">
             <input id="timezoneOffset1" type="hidden" name="timezoneOffset" value="">
             <script>document.getElementById("timezoneOffset1").value = new Date().getTimezoneOffset();</script>
-            <input name="q" id="query" type="text" class="center-block form-control input-lg" title="Search Twitter and the loklak network" placeholder="Search Twitter & the loklak network" style="border-bottom-width: 5px;padding-right: 12px;">
+            <input name="q" id="query" type="text" class="center-block form-control input-lg"
+                   title="Search Twitter and the loklak network" placeholder="Search Twitter & the loklak network"
+                   style="border-bottom-width: 5px;padding-right: 12px;">
             <div class="input-group input-group-lg row col-sm-12" style="float:left">
-              <span class="input-group-btn"><button class="btn btn-lg btn-primary" type="submit" target="_blank" onclick="form.target='_blank'; form.action='/api/search.json?q=' + document.getElementById('query').value;">Get JSON Data</button>
-              <input type="submit" value="Get RSS Feed" class="btn btn-success btn-lg" onclick="form.target='_blank'; form.action='/api/search.rss?q=' + document.getElementById('query').value;"/></span>
+              <span class="input-group-btn"><button class="btn btn-lg btn-primary" type="submit" target="_blank"
+                                                    onclick="form.target='_blank'; form.action='/api/search.json?q=' + document.getElementById('query').value;">Get JSON Data</button>
+              <input type="submit" value="Get RSS Feed" class="btn btn-success btn-lg"
+                     onclick="form.target='_blank'; form.action='/api/search.rss?q=' + document.getElementById('query').value;"/></span>
             </div>
             <br/><span style="font-size:7pt;">
               <span class="label label-info">Info</span>
               Input a search text or "search text" for exact matches; @user finds user mentions, from:user find messages from a user, #hashtag finds a hashtag, near:location finds messages near a location.</span>
-          </form>
-      </div>
+        </form>
     </div>
+</div>
 
+<div class="grey" style="padding: 60px 0;">
     <div class="container">
-      <!-- Example row of columns -->
-      <div class="row">
-        <div class="col-md-5">
-          <h2>A Search Portal?</h2>
-          <p>No, this is a back-end search- and storage-infrastructure for microblog-messages. Make your own search portal!
-          <code>loklak</code> scrapes tweets from twitter html pages (more message sources to come).
-          We+You collect and share tweets with a peer-to-peer network.</p>
-          <p><a class="btn btn-default" href="http://dev.loklak.org/server/index.html#why-should-i-use-loklak" role="button">why is this better &raquo;</a>
-          <a class="btn btn-default" href="http://dev.loklak.org/server/index.html#distributed-peer-to-peer" role="button">p2p architecture &raquo;</a></p>
-        </div>
-        <div class="col-md-4">
-          <h2>API Example?</h2>
-          <p>Easy, call <code>/api/search.json?q=&lt;search-term&gt;</code> for <a href="https://dev.twitter.com/rest/reference/get/search/tweets">official Twitter API</a>-like results
-          or <code>/api/search.rss?q=&lt;search-term&gt;</code> for <a href="http://www.opensearch.org/Specifications/OpenSearch/1.1#OpenSearch_description_document">opensearch/rss</a> results.
-          You don't need a twitter account or an <a href="https://dev.twitter.com/oauth">OAuth key</a>.</p>
-          <p><a class="btn btn-default" href="/api/search.json?q=fossasia&callback=p" role="button">show an example &raquo;</a>
-          <a class="btn btn-default" href="http://dev.loklak.org/server/development/api.html" role="button">show apidoc &raquo;</a></p>
-        </div>
-        <div class="col-md-3">
-          <h2>Open Source</h2>
-          <p>This is <a href="https://www.gnu.org/licenses/old-licenses/lgpl-2.1">LGPL</a>ed, <a href="http://fsfe.org/about/basics/freesoftware.html">free software</a> using <a href="http://eclipse.org/jetty/">Jetty</a> and <a href="http://www.elasticsearch.org/">Elasticsearch</a>.
-          <a href="http://www.elasticsearch.org/overview/kibana/">Kibana</a> can easily be added.<br/><br/>Clone the Git Repo:</p>
-          <p><a class="btn btn-default" href="https://github.com/loklak/loklak_server.git" role="button">download, install and extend &raquo;</a></p>
-          
-        </div>
-      </div>
+        <!-- Example row of columns -->
+        <div class="row">
+            <div class="col-md-5">
+                <h2>A Search Portal?</h2>
+                <p>No, this is a back-end search- and storage-infrastructure for microblog-messages. Make your own
+                    search portal!
+                    <code>loklak</code> scrapes tweets from twitter html pages (more message sources to come).
+                    We+You collect and share tweets with a peer-to-peer network.</p>
+                <p><a class="btn btn-default" href="http://dev.loklak.org/server/index.html#why-should-i-use-loklak"
+                      role="button">why is this better &raquo;</a>
+                    <a class="btn btn-default" href="http://dev.loklak.org/server/index.html#distributed-peer-to-peer"
+                       role="button">p2p architecture &raquo;</a></p>
+            </div>
+            <div class="col-md-4">
+                <h2>API Example?</h2>
+                <p>Easy, call <code>/api/search.json?q=&lt;search-term&gt;</code> for <a
+                        href="https://dev.twitter.com/rest/reference/get/search/tweets">official Twitter API</a>-like
+                    results
+                    or <code>/api/search.rss?q=&lt;search-term&gt;</code> for <a
+                            href="http://www.opensearch.org/Specifications/OpenSearch/1.1#OpenSearch_description_document">opensearch/rss</a>
+                    results.
+                    You don't need a twitter account or an <a href="https://dev.twitter.com/oauth">OAuth key</a>.</p>
+                <p><a class="btn btn-default" href="/api/search.json?q=fossasia&callback=p" role="button">show an
+                    example &raquo;</a>
+                    <a class="btn btn-default" href="http://dev.loklak.org/server/development/api.html" role="button">show
+                        apidoc &raquo;</a></p>
+            </div>
+            <div class="col-md-3">
+                <h2>Open Source</h2>
+                <p>This is <a href="https://www.gnu.org/licenses/old-licenses/lgpl-2.1">LGPL</a>ed, <a
+                        href="http://fsfe.org/about/basics/freesoftware.html">free software</a> using <a
+                        href="http://eclipse.org/jetty/">Jetty</a> and <a href="http://www.elasticsearch.org/">Elasticsearch</a>.
+                    <a href="http://www.elasticsearch.org/overview/kibana/">Kibana</a> can easily be added.<br/><br/>Clone
+                    the Git Repo:</p>
+                <p><a class="btn btn-default" href="https://github.com/loklak/loklak_server.git" role="button">download,
+                    install and extend &raquo;</a></p>
 
-      <span style="text-align: center;">
-        <p>Nice? To get latest news about <code>loklak</code>, follow <a href="https://twitter.com/0rb1t3r"><code>@0rb1t3r</code></a>.  Help to spread the news: <a class="btn btn-default" href="https://twitter.com/intent/tweet?hashtags=loklak&original_referer=http%3A%2F%2Floklak.org&text=%23anonymous%20%23twitter%20%23json%20%23rss%20%23search%20by%20@0rb1t3r&tw_p=tweetbutton&url=http%3A%2F%2Floklak.org" role="button">tweet about this &raquo;</a></p>
-        <p ng-controller="status" style="font-size: 12px">Deployment commit: <a href="https://github.com/loklak/loklak_server/tree/{{ commit.hash }}" target="_blank"><code>{{ commit.comment }}</code></a></p>
-      </span>
+            </div>
+        </div>
     </div> <!-- /container -->
+</div>
 
-    <!--#include file="../ssi/common_body_back.include" -->
-    <!--#include file="../data/ssi/custom_body_back.include" -->
-    <footer class="footer" style="position: absolute; right: 0; bottom: 0; left: 0">
-      <div class="left links">
+<div style="padding: 60px 0; font-size: 20px; line-height: 160%;">
+    <div class="container text-center">
+        <p>
+            Get latest news about <a href="http://loklak.org/search?query=%23loklak"
+                                           target="_blank"><code>loklak</code></a>
+            and follow
+            <a href="https://twitter.com/intent/follow?screen_name=lklknt" target="_blank">
+                <button class="btn btn-twitter btn-xs"><i class="fa fa-twitter" aria-hidden="true"></i> @lklknt</button></a>,
+            <a href="https://twitter.com/intent/follow?screen_name=fossasia" target="_blank">
+                <button class="btn btn-twitter btn-xs"><i class="fa fa-twitter" aria-hidden="true"></i> @fossasia</button></a>
+            and the project founders
+            <a href="https://twitter.com/intent/follow?screen_name=0rb1t3r" target="_blank">
+                <button class="btn btn-twitter btn-xs"><i class="fa fa-twitter" aria-hidden="true"></i> @0rb1t3r</button></a>
+            and
+            <a href="https://twitter.com/intent/follow?screen_name=mariobehling" target="_blank">
+                <button class="btn btn-twitter btn-xs"><i class="fa fa-twitter" aria-hidden="true"></i> @mariobehling</button></a>
+        </p>
+        <p>
+            Help to spread the news: <a class="btn btn-default"
+                                        href="https://twitter.com/intent/tweet?hashtags=loklak&original_referer=http%3A%2F%2Floklak.org&text=%23anonymous%20%23twitter%20%23json%20%23rss%20%23search%20by%20@0rb1t3r&tw_p=tweetbutton&url=http%3A%2F%2Floklak.org"
+                                        role="button">tweet about this &raquo;</a>
+        </p>
+    </div>
+</div>
+
+
+<!--#include file="../ssi/common_body_back.include" -->
+<!--#include file="../data/ssi/custom_body_back.include" -->
+<footer class="footer">
+    <div class="left links">
         <a href="http://loklak.org/about"> About </a>
         <a href="http://blog.loklak.net/"> Blog </a>
         <a href="http://dev.loklak.org/"> Developers </a>
         <a href="http://api.loklak.org/"> API </a>
         <a href="http://apps.loklak.org/"> Apps </a>
         <a href="https://github.com/loklak/loklak_server"> Code </a>
-      </div>
-      <div class="right links">
+    </div>
+    <div class="right links">
         <a href="http://loklak.org/terms"> Terms </a>
         <a href="http://loklak.org/contact"> Contact </a>
-      </div>
-    </footer>
-  </body>
+    </div>
+</footer>
+<div class="version grey">
+    <p ng-controller="status" class="text-center" style="font-size: 12px; margin: 0;">
+        Version: <a href="https://github.com/loklak/loklak_server/tree/{{ commit.hash }}" target="_blank"><code>{{
+        commit.hash }}</code></a>
+    </p>
+</div>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+</body>
 </html>

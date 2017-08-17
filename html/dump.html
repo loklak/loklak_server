@@ -1,49 +1,52 @@
 <!DOCTYPE html>
 <html lang="en" ng-app="loklak">
-  <head>
+<head>
     <!--#include file="../ssi/common_head_front.include" -->
     <meta name="description" content="loklak.org - Dump Download">
     <meta name="author" content="@0rb1t3r">
-    <link rel="canonical" href="http://dev.loklak.org/dump.html" />
+    <link rel="canonical" href="http://dev.loklak.org/dump.html"/>
     <title>loklak Dump Download</title>
     <!--#include file="../ssi/common_head_back.include" -->
     <!--#include file="../data/ssi/custom_head.include" -->
     <script type="application/javascript">
-
-      function resizeIFrameToFitContent( iFrame ) {
-          iFrame.width  = iFrame.contentWindow.document.body.scrollWidth;
-          iFrame.height = iFrame.contentWindow.document.body.scrollHeight;
-      }
-
+        function resizeIFrameToFitContent(iFrame) {
+            iFrame.width = iFrame.contentWindow.document.body.scrollWidth;
+            iFrame.height = iFrame.contentWindow.document.body.scrollHeight;
+        }
     </script>
-  </head>
+</head>
 
-  <body>
-    <!--#include file="../data/ssi/custom_body_front.include" -->
-    <!--#include file="../ssi/common_body_front.include" -->
-    <nav class="navbar navbar-inverse navbar-fixed-top">
-      <div class="container-fluid">
-        <div class="navbar-header">
-          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="http://loklak.org"><img src="images/loklak_org.png" height="24" style="float:left;">: Dump</a>
-        </div>
-        <div id="navbar" class="navbar-collapse collapse">
-          <ul class="nav navbar-nav navbar-right">
-            <!-- This will get populated -->
-          </ul>
-        </div>
-      </div>
-    </nav>
-
+<body style="position: relative; margin: 0; min-height: 100%;">
+<!--#include file="../data/ssi/custom_body_front.include" -->
+<!--#include file="../ssi/common_body_front.include" -->
+<nav class="navbar navbar-default navbar-fixed-top grey">
     <div class="container-fluid">
-        <iframe src="dump/" width="99%" height="800" frameBorder="0" id="dump-iframe" onload="resizeIFrameToFitContent(this);"></iframe>
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar" id="toggle-button">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">
+                <img class="logo img-rounded" src="images/icon.png" style="float: left;">
+                <span style="margin-left: 20px;">: Dumps</span>
+            </a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse no-margin">
+            <ul class="nav navbar-nav navbar-right topmenu">
+                <!-- This will get populated -->
+            </ul>
+        </div>
     </div>
-    <!--#include file="../ssi/common_body_back.include" -->
-    <!--#include file="../data/ssi/custom_body_back.include" -->
-  </body>
+</nav>
+
+<div class="container-fluid">
+    <iframe src="dump/" width="99%" height="800" frameBorder="0" id="dump-iframe"
+            onload="resizeIFrameToFitContent(this);"></iframe>
+</div>
+<!--#include file="../ssi/common_body_back.include" -->
+<!--#include file="../data/ssi/custom_body_back.include" -->
+</body>
 </html>
