@@ -197,7 +197,7 @@ public class TwitterScraperTest {
         return k;
     }
 
-    public Object executePrivateMethod(
+    public static Object executePrivateMethod(
             Class<?> clazz,
             Object instanceObj,
             String methodName,
@@ -219,7 +219,7 @@ public class TwitterScraperTest {
         }
     }
 
-    public Object executePrivateMethod(
+    public static Object executePrivateMethod(
             Class<?> clazz,
             String methodName,
             Class<?>[] parameterTypes,

@@ -253,7 +253,7 @@ public class QuoraProfileScraper extends BaseScraper {
                         input = input.substring(matcher.end());
                         break;
                     } else {
-                    input = br.readLine();
+                        input = br.readLine();
                     }
 
                 }
