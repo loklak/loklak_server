@@ -1,58 +1,124 @@
 /* Move down content because we have a fixed navbar that is 50px tall */
 @font-face {
-  font-family: 'Droid Sans Mono';
-  font-style: normal;
-  font-weight: 400;
-  src:
-  local('Droid Sans Mono'),
-  local('DroidSansMono'),
-  url('../fonts/DroidSansMono.eot?#iefix') format('embedded-opentype'),
-  url('../fonts/DroidSansMono.woff') format('woff'),
-  url('../fonts/DroidSansMono.ttf')  format('truetype'),
-  url('../fonts/DroidSansMono.svg#svgFontName') format('svg');
+    font-family: 'Droid Sans Mono';
+    font-style: normal;
+    font-weight: 400;
+    src: local('Droid Sans Mono'),
+    local('DroidSansMono'),
+    url('../fonts/DroidSansMono.eot?#iefix') format('embedded-opentype'),
+    url('../fonts/DroidSansMono.woff') format('woff'),
+    url('../fonts/DroidSansMono.ttf') format('truetype'),
+    url('../fonts/DroidSansMono.svg#svgFontName') format('svg');
 }
 
 * {
-  font-family: 'Droid Sans Mono';
+    font-family: 'Droid Sans Mono';
 }
 
-
 body {
-  padding-top: 50px;
-  font: DroidSansMono;
-  overflow-x: none;
+    padding-top: 50px;
+    font: DroidSansMono;
+    overflow-x: none;
 }
 
 .logo {
-  position: relative;
-  top: -11px;
-  left: 10px;
+    position: relative;
+    top: -11px;
+    left: 10px;
 }
 
 .topmenu {
-  font-family: 'Roboto', sans-serif;
+    font-family: 'Roboto', sans-serif;
 }
 
 .footer {
-  background: #f2f2f2;
-  padding: 0px 14px;
-  border-top: 1px solid #e4e4e4;
-  display:  flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
+    background: #f1f1f1;
+    padding: 0 14px;
+    border-top: 1px solid #e4e4e4;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .links a {
-  padding: 0px 6px;
-  color: #666;
-  font-size: small;
-  line-height: 40px;
-  font-family: 'Roboto', sans-serif;
+    padding: 0 6px;
+    color: #666;
+    font-size: small;
+    line-height: 40px;
+    font-family: 'Roboto', sans-serif;
 }
 
-@media(max-width: 400px) {
-  .footer {
-    justify-content: space-around;
-  }
+@media (max-width: 400px) {
+    .footer {
+        justify-content: space-around;
+    }
+}
+
+.jumbotron {
+    padding: 30px 15px;
+    margin-bottom: 30px;
+    color: inherit;
+    background-color: white;
+}
+
+nav {
+    padding: 4px 0 4px 0;
+    -webkit-transition: all 200ms;
+    -moz-transition: all 200ms;
+    -ms-transition: all 200ms;
+    -o-transition: all 200ms;
+    transition: all 200ms;
+}
+
+.navbar-default .navbar-nav > li > a:hover {
+    color: #333;
+    background-color: #e1e1e1;
+    border-radius: 3px;
+}
+
+.navbar-collapse .collapsing {
+    background-color: #f1f1f1;
+}
+
+.navbar-collapse .navbar-collapse .in {
+    background-color: #f1f1f1;
+}
+
+.grey {
+    background-color: #f1f1f1;
+    color: black;
+}
+
+.nav-up {
+    top: -60px;
+}
+
+.nav-down {
+    top: 0;
+}
+
+.version {
+    padding: 6px 0;
+}
+
+@media (min-width: 768px) {
+    .navbar-right {
+        float: right !important;
+        margin-right: 0;
+    }
+}
+
+.btn-twitter {
+    background-color: #1b95e0;
+    color: white;
+}
+
+.btn-twitter:hover {
+    color: white;
+    background: #0c7abf;
+}
+
+.btn:focus {
+    color: white;
 }
