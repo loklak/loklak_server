@@ -1,6 +1,6 @@
 web:
   name: "loklak"
-  image: mariobehling/loklak
+  image: loklak/loklak_server:latest-master
   ports:
     - "80"
     - "443"
