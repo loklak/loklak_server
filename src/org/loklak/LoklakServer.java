@@ -139,6 +139,7 @@ import org.loklak.http.RemoteAccess;
 import org.loklak.server.APIHandler;
 import org.loklak.server.FileHandler;
 import org.loklak.server.HttpsMode;
+import org.loklak.stream.StreamServlet;
 import org.loklak.tools.Browser;
 import org.loklak.tools.OS;
 
@@ -722,6 +723,7 @@ public class LoklakServer {
         servletHandler.addServlet(MapServlet.class, "/vis/map.jpg");
         servletHandler.addServlet(MapServlet.class, "/vis/map.jpg.base64");
         servletHandler.addServlet(PieChartServlet.class, "/vis/piechart.png");
+        servletHandler.addServlet(StreamServlet.class, "/api/stream.json");
         servletHandler.setMaxFormContentSize(10 * 1024 * 1024); // 10 MB
 
         ErrorHandler errorHandler = new ErrorHandler();
