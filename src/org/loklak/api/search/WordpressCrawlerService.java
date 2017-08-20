@@ -84,7 +84,7 @@ public class WordpressCrawlerService extends BaseScraper {
 
    protected Post scrape(BufferedReader br, String type, String url) {
         Post typeArray = new Post(true);
-        typeArray.put("blogs", this.crawlWordpress(this.query, br).toArray());
+        this.putData(typeArray, "blogs", this.crawlWordpress(this.query, br));
         return typeArray;
     }
 
