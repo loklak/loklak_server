@@ -41,6 +41,7 @@ import org.loklak.data.DAO;
 import org.loklak.harvester.BaseScraper;
 import org.loklak.harvester.Post;
 import org.loklak.objects.Timeline2;
+import org.loklak.objects.SourceType;
 import org.loklak.server.BaseUserRole;
 
 public class QuoraProfileScraper extends BaseScraper {
@@ -52,6 +53,7 @@ public class QuoraProfileScraper extends BaseScraper {
         super();
         this.baseUrl = "https://www.quora.com/";
         this.scraperName = "quora";
+        this.sourceType = SourceType.QUORA;
     }
 
     public QuoraProfileScraper(String _query) {
@@ -81,6 +83,32 @@ public class QuoraProfileScraper extends BaseScraper {
             this.setExtraValue("type", String.join(",", this.typeList));
         }
         this.query = this.getExtraValue("query");
+    }
+
+    @Override
+    protected void setCacheMap() {
+        this.cacheMap = new HashMap<String, Map<String, String>>();
+
+        Map<String, String> getMap = new HashMap<String, String>();
+        if(this.typeList.contains("user") && this.typeList.size() == 1) {
+            getMap.put("post_type", "user");
+            getMap.put("user_name", this.query);
+        } else if(this.typeList.contains("question") && this.typeList.size() == 1) {
+            getMap.put("post_type", "question");
+            getMap.put("post_ques", this.query);
+        }
+        getMap.put("post_scraper", this.scraperName);
+
+        Map<String, String> alsoGetMap = new HashMap<String, String>();
+        if(this.typeList.contains("question") || this.typeList.contains("all")) {
+            alsoGetMap.put("post_ques", this.query);
+        }
+        if(this.typeList.contains("user") || this.typeList.contains("all")) {
+            alsoGetMap.put("user_name", this.query);
+        }
+
+        this.cacheMap.put("get", getMap);
+        this.cacheMap.put("also_get", alsoGetMap);
     }
 
     @Override
@@ -245,8 +273,8 @@ public class QuoraProfileScraper extends BaseScraper {
                 while(input != null) {
                     matcher = quesLink.matcher(input);
                     if(matcher.find()) {
-                        _qPostId = String.valueOf(matcher.end());
-                        _qPostUrl = this.baseUrl + matcher.group(1);
+                        _qPostId = matcher.group(1).substring(1);
+                        _qPostUrl = this.baseUrl + _qPostId;
                         input = input.substring(matcher.end());
                         break;
                     } else {
@@ -259,7 +287,7 @@ public class QuoraProfileScraper extends BaseScraper {
                 qPost.put("search_url", url);
                 qPost.put("post_url", _qPostUrl);
                 qPost.put("post_type", "question");
-
+                qPost.put("post_scraper", "quora");
                 // Get questions
                 while(input != null) {
                     matcher = quesStart.matcher(input);
@@ -316,7 +344,8 @@ public class QuoraProfileScraper extends BaseScraper {
         Document userHTML = Jsoup.parse(html);
 
         quoraProfile.put("search_url", url);
-
+        quoraProfile.put("post_type", "user");
+        quoraProfile.put("post_scraper", this.scraperName);
         String bio = userHTML.getElementsByAttributeValueContaining("class", "ProfileDescription").text();
         quoraProfile.put("bio", bio);
 
@@ -324,7 +353,7 @@ public class QuoraProfileScraper extends BaseScraper {
         quoraProfile.put("profileImage", profileImage);
 
         String userName = userHTML.getElementsByAttributeValueContaining("class", "profile_photo_img").attr("alt");
-        quoraProfile.put("user", userName);
+        quoraProfile.put("user_name", userName);
 
         String rssFeedLink = url + "/rss";
         quoraProfile.put("rss_feed_link", rssFeedLink);
@@ -388,9 +417,8 @@ public class QuoraProfileScraper extends BaseScraper {
         public QuoraPost(String _quoraId, int _quoraPostNo) {
             //not UTC, may be error prone
             super();
-            this.quoraId = _quoraId;
             this.quoraPostNo = _quoraPostNo;
-            this.setPostId();
+            this.setPostId(_quoraId);
         }
 
         public void getQuoraId(String _quoraId) {
@@ -399,10 +427,6 @@ public class QuoraProfileScraper extends BaseScraper {
 
         public void getQuoraPostNo(int _quoraPostNo) {
             this.quoraPostNo = _quoraPostNo;
-        }
-
-        private void setPostId() {
-            this.postId = this.timestamp + this.quoraPostNo + this.quoraId;
         }
 
         public String getPostId() {

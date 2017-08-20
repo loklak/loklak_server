@@ -25,6 +25,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -123,6 +124,18 @@ public class GithubProfileScraper extends BaseScraper {
         }
     }
 
+    @Override
+    protected void setCacheMap() {
+        this.cacheMap = new HashMap<String, Map<String, String>>();
+
+        Map<String, String> getMap = new HashMap<String, String>();
+        getMap.put("user", this.extra.get("query"));
+        getMap.put("post_type", "user");
+        getMap.put("post_scraper", this.scraperName);
+
+        this.cacheMap.put("get", getMap);
+    }
+
     private JSONArray getDataFromApi(String url) {
         URI uri = null;
         try {
@@ -143,10 +156,13 @@ public class GithubProfileScraper extends BaseScraper {
 
     protected Post scrape(BufferedReader br, String type, String url) {
         Post typeArray = new Post(true);
+        Timeline2 postList = new Timeline2(this.order);
 
         if ("all".equals(type) || "user".equals(type)) {
-            JSONArray statuses = new JSONArray();
-            this.putData(typeArray, "user", statuses.put(this.scrapeGithub(this.query, br)));
+            postList.addPost(this.scrapeGithub(this.query, br));
+            // TODO: Indexing of github post will fail if key name in json has '.'.
+            // This is limitation of ElasticSearch 2.x
+            this.putData(typeArray, "user", postList);
             return typeArray;
         } else {
             return typeArray;
@@ -167,7 +183,7 @@ public class GithubProfileScraper extends BaseScraper {
         githubProfile.put("full_name", fullName);
 
         String userName = html.getElementsByAttributeValueContaining("class", "vcard-username").text();
-        githubProfile.put("user_name", userName);
+        githubProfile.put("user", userName);
 
         String bio = html.getElementsByAttributeValueContaining("class", "user-profile-bio").text();
         githubProfile.put("bio", bio);
@@ -237,7 +253,7 @@ public class GithubProfileScraper extends BaseScraper {
         Post githubProfile,
         Document html) {
 
-        githubProfile.put("user_name", profile);
+        githubProfile.put("user", profile);
 
         String shortDescription = html.getElementsByAttributeValueContaining("class", "TableObject-item TableObject-item--primary").get(0).child(2).text();
         githubProfile.put("short_description", shortDescription);
@@ -278,7 +294,8 @@ public class GithubProfileScraper extends BaseScraper {
         m.find();
         userId = m.group(1);
         githubProfile.put("user_id", userId);
-
+        githubProfile.put("post_type", "user");
+        githubProfile.put("post_scraper", this.scraperName);
         githubProfile.put("avatar_url", "https://avatars0.githubusercontent.com/u/" + userId);
 
         String email = html.getElementsByAttributeValueContaining("itemprop", "email").text();
@@ -360,7 +377,7 @@ public class GithubProfileScraper extends BaseScraper {
             super();
             this.githubId = _githubId;
             this.githubPostNo = _githubPostNo;
-            this.postId = this.timestamp + this.githubPostNo + this.githubId;
+            this.setPostId(this.githubId);
         }
 
         public void setGithubId(String _githubId) {

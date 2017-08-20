@@ -30,6 +30,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -146,6 +147,18 @@ public class YoutubeScraper extends BaseScraper {
     }
 
     @Override
+    protected void setCacheMap() {
+        this.cacheMap = new HashMap<String, Map<String, String>>();
+
+        Map<String, String> getMap = new HashMap<String, String>();
+        getMap.put("id_str", String.valueOf(this.query));
+        getMap.put("post_type", "video");
+        getMap.put("post_scraper", this.scraperName);
+
+        this.cacheMap.put("get", getMap);
+    }
+
+    @Override
     protected Post scrape(BufferedReader br, String type, String url) {
         Post out = new Post(true);
         Timeline2 postList = new Timeline2(this.order);
@@ -155,7 +168,7 @@ public class YoutubeScraper extends BaseScraper {
                 break;
             case "video":
                 postList.addPost(this.parseVideo(br, type, url));
-                out.put("videos", postList.toArray());
+                this.putData(out, "videos", postList);
                 break;
             case "search":
                 //TODO: Add scraper
@@ -196,10 +209,16 @@ public class YoutubeScraper extends BaseScraper {
 
     public Post parseVideo(final BufferedReader br, String type, String url) {
         String input = "";
-        Post json = new Post(true);
+        Post json = new Post();
         boolean parse_span = false, parse_license = false;
         // values for span
-        String itemProp = "";
+        String itemprop= "";
+        String itemtype = "";
+
+        json.setPostId(url.substring(url.length() - 11));
+        json.put("post_type", "video");
+        json.put("post_scraper", this.scraperName);
+                String itemProp = "";
         String itemType = "";
         try {
             while ((input = br.readLine()) != null) {
