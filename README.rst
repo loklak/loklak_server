@@ -355,9 +355,9 @@ here <https://github.com/loklak/loklak_server/issues>`__.
 .. |Average time to resolve an issue| image:: http://isitmaintained.com/badge/resolution/loklak/loklak_server.svg
    :target: http://isitmaintained.com/project/loklak/loklak_server
 .. |Twitter| image:: https://img.shields.io/twitter/url/http/shields.io.svg?style=social
-   :target: https://twitter.com/intent/tweet?text=Wow%20Check%20Loklak%20on%20@gitHub%20@loklak_app%20@lklknt:%20https://github.com/loklak/loklak_server%20&url=%5Bobject%20Object%5D
+   :target: https://twitter.com/intent/tweet?text=Wow%20Check%20Loklak%20on%20@gitHub%20@loklak_app%20@loklak_:%20https://github.com/loklak/loklak_server%20&url=%5Bobject%20Object%5D
 .. |Twitter Follow| image:: https://img.shields.io/twitter/follow/lklknt.svg?style=social&label=Follow&maxAge=2592000?style=flat-square
-   :target: https://twitter.com/lklknt
+   :target: https://twitter.com/loklak_
 .. |Build Status| image:: https://travis-ci.org/loklak/loklak_server.svg?branch=development
    :target: https://travis-ci.org/loklak/loklak_server
 .. |Docker Build Status| image:: https://img.shields.io/docker/build/jrottenberg/ffmpeg.svg?
