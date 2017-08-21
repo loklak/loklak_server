@@ -172,6 +172,7 @@ How do I install loklak: Download, Build, Run
 |Deploy on Scalingo|
 |Deploy to Bluemix|
 |Deploy to Docker Cloud|
+|Deploy to Azure|
 
 At this time, loklak is not provided in compiled form, you easily build
 it yourself. It's not difficult and done in one minute! The source code
@@ -375,6 +376,8 @@ here <https://github.com/loklak/loklak_server/issues>`__.
    :target: https://bluemix.net/deploy?repository=https://github.com/loklak/loklak_server
 .. |Deploy to Docker Cloud| image:: https://files.cloud.docker.com/images/deploy-to-dockercloud.svg
    :target: https://cloud.docker.com/stack/deploy/
+.. |Deploy to Azure| image:: https://azuredeploy.net/deploybutton.svg
+   :target: https://deploy.azure.com/?repository=https://github.com/loklak/loklak_server
 
 .. toctree::
    :caption: Home
