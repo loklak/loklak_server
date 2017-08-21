@@ -1,18 +1,31 @@
 #!/bin/bash
 export DIR=kubernetes
 
-USAGE="USAGE: ./kubernetes/bin/deploy-development.sh create|create all|delete|delete all"
+USAGE="USAGE: ./kubernetes/bin/deploy.sh  api|staging create|create all|delete|delete all"
 
-if [[ "$1" = "create" ]];
+if [[ "$1" = "api" ]]
 then
+    BRANCH=api
+elif [[ "$1" = "staging" ]]
+then
+    BRANCH=staging
+else
+    echo "Please input correct arguments"
+    echo $USAGE
+    exit
+fi
+
+if [[ "$2" = "create" ]]
+then
+    echo "Starting '$BRANCH' branch deployment"
     echo "Creating objects from configurations."
     echo "Make sure that persistent disk is already created."
     echo ""
     echo "Creating Elasticsearch Deployment"
-        kubectl create -R -f ${DIR}/yamls/staging/elasticsearch/
+    kubectl create -R -f ${DIR}/yamls/${BRANCH}/elasticsearch/
     # For mqtt
-        kubectl create -R -f ${DIR}/yamls/mosquitto/
-    if [[ "$2" = "all" ]];
+    kubectl create -R -f ${DIR}/yamls/mosquitto/
+    if [[ "$3" = "all" ]];
     then
         # Start KubeLego deployment for TLS certificates
         kubectl create -R -f ${DIR}/yamls/lego/
@@ -20,34 +33,32 @@ then
         kubectl create -R -f ${DIR}/yamls/nginx/
     fi
     # Create web namespace
-    kubectl create -R -f ${DIR}/yamls/staging/web/
+    kubectl create -R -f ${DIR}/yamls/${BRANCH}/web/
     # Wait for some time to prevent any chance of API-Server to access incomplete deployments
     sleep 20
-    echo "Creating loklak deployment"
+    echo "Creating Loklak Server deployment"
     # Create API server deployment and service for development branch
-    kubectl create -R -f ${DIR}/yamls/staging/api-server/
-    echo "Deployed loklak on Kubernetes"
+    kubectl create -R -f ${DIR}/yamls/${BRANCH}/api-server/
+    echo "Deployed Loklak Server branch '$BRANCH' on Kubernetes"
     echo "Trying to fetch public IP. ~50s."
     sleep 50
-    if [[ "$2" = "all" ]];
+    if [[ "$3" = "all" ]]
     then
         kubectl get services --namespace=nginx-ingress
-    fi
     else
         kubectl get services --namespace=web
     fi
-if [[ "$1" = "delete" ]];
+elif [[ "$2" = "delete" ]]
 then
     echo "Clearing the cluster."
-    if [ "$2" = "all" ]; then
+    if [ "$3" = "all" ]; then
         kubectl delete -f ${DIR}/yamls/lego/00-namespace.yml
         kubectl delete -f ${DIR}/yamls/nginx/00-namespace.yml
     fi
-    kubectl delete -R -f ${DIR}/yamls/staging/
+    kubectl delete -R -f ${DIR}/yamls/${BRANCH}/
     kubectl delete -f ${DIR}/yamls/mosquitto/00-namespace.yaml
     echo "Deleted loklak project from Kubernetes"
-elif [[ -z "$1" ]];
-then
-    echo "No arguments provided"
+else
+    echo "Please arguments provided!"
     echo $USAGE
 fi

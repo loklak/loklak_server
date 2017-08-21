@@ -3,7 +3,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: server
-  namespace: web
+  namespace: staging-web
 spec:
   ports:
   - port: 80
@@ -11,4 +11,4 @@ spec:
     targetPort: 80
   selector:
     app: server
-  type: LoadBalancer
+

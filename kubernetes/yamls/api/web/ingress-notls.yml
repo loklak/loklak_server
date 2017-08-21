@@ -2,12 +2,12 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: web-notls
-  namespace: staging-web
+  namespace: api-web
   annotations:
     kubernetes.io/ingress.class: "nginx"
 spec:
   rules:
-  - host: staging.loklak.org
+  - host: api.loklak.org
     http:
       paths:
       - path: /
