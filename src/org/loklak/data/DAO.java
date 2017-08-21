@@ -1261,7 +1261,7 @@ public class DAO {
         } finally {
             scraperRunner.shutdown();
             try {
-                scraperRunner.awaitTermination(24L, TimeUnit.HOURS);
+                scraperRunner.awaitTermination(3000L, TimeUnit.SECONDS);
             } catch (InterruptedException e) { }
         }
         dataSet.collectMetadata(metadata);

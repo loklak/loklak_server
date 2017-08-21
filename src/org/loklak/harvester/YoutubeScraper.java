@@ -148,7 +148,6 @@ public class YoutubeScraper extends BaseScraper{
     protected Post scrape(BufferedReader br, String type, String url) {
         Post out = new Post(true);
         Timeline2 postList = new Timeline2(this.order);
-        url = prepareSearchUrl(type);
         switch(type) {
             case "user":
                 //TODO: Add scraper
