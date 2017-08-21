@@ -71,12 +71,10 @@ function hasScrolled() {
     var st = $(this).scrollTop();
     if (Math.abs(lastScrollTop - st) <= delta)
         return;
-    if (st > lastScrollTop && st > navbarHeight) {
+    if (st > lastScrollTop && st > navbarHeight + 80) {
         $("nav").removeClass("nav-down").addClass("nav-up");
-    } else {
-        if (st + $(window).height() < $(document).height()) {
-            $("nav").removeClass("nav-up").addClass("nav-down");
-        }
+    } else { // if (st + $(window).height() < $(document).height()) {
+        $("nav").removeClass("nav-up").addClass("nav-down");
     }
     lastScrollTop = st;
 }
