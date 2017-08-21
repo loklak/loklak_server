@@ -9,11 +9,11 @@ This section shows you how to get such an image.
 Some possibilities may be used in the sections but you can may be able to exchange them.
 
 #### Pull a loklak docker image
-Pull a docker image from [dockerhub](https://hub.docker.com/r/mariobehling/loklak/).
+Pull a docker image from [dockerhub](https://hub.docker.com/r/loklak/loklak_server/).
 
 Type this command in your terminal:
         ```
-        docker pull mariobehling/loklak
+        docker pull loklak/loklak_server
         ```
 
 #### Build a docker image on your local machine
@@ -95,7 +95,7 @@ cf ic login   (No credentials are necessary of you logged in to bluemix before
    ```
 10. Init your docker connection with `cf ic init`
 
-11. Upload the loklak docker file to your namespace with `cf ic cpi mariobehling/loklak loklak`   (takes some time)
+11. Upload the loklak docker file to your namespace with `cf ic cpi loklak/loklak_server loklak`   (takes some time)
 
 12. Create docker group with: (the XXXX must be unique, play around to found a free name)
    ```
@@ -161,8 +161,8 @@ cf ic login   (No credentials are necessary of you logged in to bluemix before
 
 14. Once docker is installed, we start our loklak-server by entering:
 	```
-	sudo docker pull mariobehling/loklak
-	sudo docker run -d -p 80:80 -p 443:443 mariobehling/loklak:latest
+	sudo docker pull loklak/loklak_server
+	sudo docker run -d -p 80:80 -p 443:443 loklak/loklak_server:latest-master
 	```
 
 15. Check if Loklak is running on your server, by going to your public DNS, e.g.: ```ec2-54-169-103-75.ap-southeast-1.compute.amazonaws.com```.
@@ -205,13 +205,13 @@ sudo fallocate -l 4G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
-sudo docker pull mariobehling/loklak
+sudo docker pull loklak/loklak_server
 ```
 
 Once finished, you will get fully working image. You can check if it exists by entering ```sudo docker images```.
 Run our server by entering:
 ```
-sudo docker run -d -p 80:80 -p 443:443 mariobehling/loklak
+sudo docker run -d -p 80:80 -p 443:443 loklak/loklak_server
 ```
 Enter your assigned HTTP IP address into your browser to check if it is working.
 
@@ -251,14 +251,14 @@ Enter your assigned HTTP IP address into your browser to check if it is working.
     Built:        Fri Nov 20 13:12:04 UTC 2015
     OS/Arch:      linux/amd64
    ```
-5. Pull Docker image from [Loklak repository](https://hub.docker.com/r/mariobehling/loklak/) in Docker Hub (it should take about a minute):
+5. Pull Docker image from [Loklak repository](https://hub.docker.com/r/loklak/loklak_server/) in Docker Hub (it should take about a minute):
    ```bash
-   docker pull mariobehling/loklak
+   docker pull loklak/loklak_server
    ```
 
 6. OK, you're ready to run Loklak:
    ```bash
-   docker run -d -p 80:80 -p 443:443 mariobehling/loklak:latest
+   docker run -d -p 80:80 -p 443:443 loklak/loklak_server:latest-master
    ```
 
 7. Go to your droplet IP using web browser. You should see Loklak main page.

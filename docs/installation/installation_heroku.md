@@ -6,7 +6,7 @@
 4. Clone the Loklak server (if not already) : `git clone https://github.com/loklak/loklak_server.git`
 5. Move into the cloned repository: `cd loklak_server`
 6. Create a heroku app: `heroku create`
-7. Set the buildpack: `heroku buildpacks:set https://github.com/loklak/heroku_buildpack_ant_loklak.git`
+7. Set the buildpack: `heroku buildpacks:set https://github.com/heroku/heroku-buildpack-gradle.git`
 8. Push your app to heroku: `git push heroku master`
 In case if it doesn't get pushed, use `git push heroku HEAD:master`
 9. Confirm the loklak server is running: `heroku logs --tail`
