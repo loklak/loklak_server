@@ -97,10 +97,12 @@ public class InstagramProfileScraper extends BaseScraper {
     }
 
     protected Post scrape(BufferedReader br, String type, String url) {
-        return scrapeInstagram(br, url);
+   	    Post instaObj = new Post(true);
+        this.putData(instaObj, "profile_posts", this.scrapeInstagram(br, url));
+        return instaObj;
     }
 
-	public Post scrapeInstagram(BufferedReader br, String url) {
+	public JSONArray scrapeInstagram(BufferedReader br, String url) {
 		Document htmlPage = null;
         Post instaObj = null;
         JSONArray instaProfile = new JSONArray();
@@ -121,9 +123,7 @@ public class InstagramProfileScraper extends BaseScraper {
         //Only useful data shall be outputted.
 		instaObj = new Post(script, this.query);
         instaProfile.put(instaObj);
-		instaObj = new Post(true);
-        instaObj.put("profile_posts", instaProfile);
-        return instaObj;
+       return instaProfile;
 	}
 
 }

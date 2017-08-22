@@ -158,7 +158,7 @@ public abstract class BaseScraper extends AbstractAPIHandler {
     protected abstract Post scrape(BufferedReader br, String type, String url);
 
     protected Post putData(Post typeArray, String key, Timeline2 postList) {
-        //this.count = this.count + postList.size();
+        this.count = this.count + postList.size();
         return this.putData(typeArray, key, postList.toArray());
     }
 
