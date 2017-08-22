@@ -12,13 +12,13 @@
 }
 
 * {
-    font-family: 'Droid Sans Mono';
+    font-family: 'Droid Sans Mono', monospace;
 }
 
 body {
     padding-top: 50px;
-    font: DroidSansMono;
-    overflow-x: none;
+    font-family: 'DroidSansMono', monospace;
+    overflow-x: hidden;
 }
 
 .logo {
@@ -63,7 +63,7 @@ body {
 }
 
 nav {
-    padding: 4px 0 4px 0;
+    padding: 4px 0;
     -webkit-transition: all 200ms;
     -moz-transition: all 200ms;
     -ms-transition: all 200ms;
@@ -71,10 +71,12 @@ nav {
     transition: all 200ms;
 }
 
+.navbar-collapse > ul > li > a {
+    font-family: 'Roboto', sans-serif;
+}
+
 .navbar-default .navbar-nav > li > a:hover {
     color: #333;
-    background-color: #e1e1e1;
-    border-radius: 3px;
 }
 
 .navbar-collapse .collapsing {
@@ -100,13 +102,6 @@ nav {
 
 .version {
     padding: 6px 0;
-}
-
-@media (min-width: 768px) {
-    .navbar-right {
-        float: right !important;
-        margin-right: 0;
-    }
 }
 
 .btn-twitter {
