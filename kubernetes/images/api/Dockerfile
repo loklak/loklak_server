@@ -21,5 +21,3 @@ RUN apk update && apk add openjdk8 git bash && \
 
 # Start
 CMD ["bin/start.sh", "-Idn"]
-
-RUN rm -rf .[^.] .??*
