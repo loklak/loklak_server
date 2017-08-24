@@ -265,6 +265,8 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
         commit.put("comment", commitComment);
         json.put("commit", commit);
 
+        json.put("stream_enabled", DAO.getConfig("stream.enabled", false));
+
         return json;
     }
 
