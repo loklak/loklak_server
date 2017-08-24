@@ -784,6 +784,109 @@ The crawler returns immediately with an object describing the index size (exactl
 }
 ```
 
+## /api/stream.json
+
+```
+This API is open and can be accessed without any restrictions!
+```
+
+The stream servlet is an [Eventsource](https://www.w3.org/TR/2009/WD-eventsource-20090423/) servlet for streaming message from loklak as they are discovered. User can pass channel as the request parameter:
+```
+channel  =  <string>  # Name of channel to listen on
+```
+
+Example:
+http://api.loklak.org/api/stream.json?channel=twitter%2Fhashtag%2FFOSSASIA (channel=twitter/hashtag/FOSSASIA).
+
+Some peers may have disabled streaming API. In this case, the users will see a `404` while accessing the servlet.
+
+See the list of available channels [here](../misc/StreamChannels.md).
+
+## /api/classifier.json
+
+```
+This API is open and can be accessed without any restrictions!
+```
+
+The classifier servlet can be used to get aggregated data from classifiers present in loklak. The supported classifiers are
+- emotion
+- profanity
+- language
+
+Request properties are:
+
+```
+classifier  = <string>                                # Name of classifier
+classes     = <strings, comma separated>              # Classes to include in response
+all         = <true | false>                          # True includes all classes for the classifier. Defaults to false
+countries   = <country codes | all, comma separated>  # List of countries to get aggregation for, including "all" will return results for all possible countries
+since       = <timestamp>                             # Timestamp to start yyyy-MM-ddThh:mm:ss.SSS or partial
+until       = <timestamp>                             # Timestamp to end yyyy-MM-ddThh:mm:ss.SSS or partial
+minified    = <true | false>                          # Whether to minify results. Defaults to false
+callback    = <string>                                # JSONP callback function name
+```
+
+Timestamp can be anything [supported by Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-date-format.html). Some examples include:
+- `2011-11-09T08:46:13.221`
+- `2011-11`
+- `2011-11-09T08:46`
+
+Examples of API call:  
+http://api.loklak.org/api/classifier.json?classifier=emotion&classes=fear,anger&since=2017-06&countries=in&minified=true
+
+Here is an example of result - 
+
+```JSON
+{
+    "aggregations": {
+        "GLOBAL": [
+            {
+                "avg": 2.5526744278749015e-07,
+                "class": "anger",
+                "count": 458057,
+                "sum": 0.11692703904090937
+            },
+            {
+                "avg": 1.9712122980312926e-07,
+                "class": "fear",
+                "count": 480783,
+                "sum": 0.0947725362284379
+            }
+        ],
+        "in": [
+            {
+                "avg": 4.1480348032586565e-08,
+                "class": "anger",
+                "count": 16597,
+                "sum": 0.0006884493362968393
+            },
+            {
+                "avg": 1.620086000206267e-08,
+                "class": "fear",
+                "count": 18450,
+                "sum": 0.00029890586703805623
+            }
+        ]
+    },
+    "metadata": {
+        "all": "false",
+        "classes": "fear, anger",
+        "classifier": "emotion",
+        "client": "162.158.155.100",
+        "servicereduction": "false",
+        "since": "2017-06",
+        "time": 1
+    },
+    "session": {
+        "identity": {
+            "anonymous": true,
+            "name": "162.158.155.100",
+            "type": "host"
+        }
+    }
+}
+```
+
 ## /api/hello.json
 
 ```
