@@ -127,34 +127,34 @@ At http://loklak.github.io/loklak_server/ or by building them via 'ant javadoc'
 Hey, this is the tool for that! Just put http://loklak.org/api/search.rss?q=%23loklak into your rss reader. Oh wait.. you will get a lot of information about tasty Cambodian food with that as well. Alternatively you may also read the authors timeline using http://loklak.org/api/search.rss?q=0rb1t3r or just follow @0rb1t3r (that's a zero after the at sign)
 
 ## How to compile using Gradle?
+
 - To install Gradle on Ubuntu:
 
-  ```
-  $ sudo add-apt-repository ppa:cwchien/gradle
+    ```
+    $ sudo add-apt-repository ppa:cwchien/gradle
+    $ sudo apt-get update
+    $ sudo apt-get install gradle
+    ```
 
-  $ sudo apt-get update
-
-  $ sudo apt-get install gradle
-  ```
 - To install Gradle on Mac OS X with homebrew
 
-  ```
-  brew install gradle
-  ```
+    ```
+    brew install gradle
+    ```
 
-  Compile the source to classes and a jar file
+    Compile the source to classes and a jar file
 
-  ```
-  gradle build
-  ```
+    ```
+    gradle build
+    ```
 
-  Compiled file can be found in build dir
+    Compiled file can be found in build dir
   
-  To remove compiled classes and jar file
+    To remove compiled classes and jar file
 
-  ```
-  gradle clean
-  ```
+    ```
+    gradle clean
+    ```
 
 
 ## What is the software license?
@@ -169,8 +169,7 @@ This project is considered a community work. The development crew consist of YOU
 
 ## How can I contribute?
 
-There are a lot of [issues][issues] you can solve.
-If you are here for the first time, you can look at [`first-timers-only` issues][first-timers-issues].
+There are a lot of [issues][issues] you can solve. If you are here for the first time, you can look at [first-timers-only][first-timers-issues] issues.
 They are either
 
 - easy to do and introduce you to github and git
