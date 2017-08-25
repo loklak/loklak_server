@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>loklak Streaming Example</title>
+    <script type="text/javascript">
+        var origin = 'some-origin';  // Replace with proper host
+        var eventSource = new EventSouce(origin + '/api/stream.json?channel=twitter');
+        eventSource.onmessage = function (event) {
+            console.log(event.data);
+        }
+    </script>
+</head>
+<body>
+    See console for magic!
+</body>
+</html>
