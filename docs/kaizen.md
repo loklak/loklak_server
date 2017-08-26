@@ -21,6 +21,7 @@ To enable Kaizen harvester, set `harvester.type` to `kaizen` in `config.properti
 ## Configuring Kaizen Harvester
 The following fields can be set in `config.properties` to tweak with Kaizen harvester -
 
+<!-- markdown+ -->
 | Field | Description | Default |
 |-------|-------------|---------|
 | `harvester.kaizen.suggestions_count` | The amount of suggestions to request. | 1000 |
@@ -28,3 +29,4 @@ The following fields can be set in `config.properties` to tweak with Kaizen harv
 | `harvester.kaizen.place_radius` | The radius for location/place queries (in miles) | 5 |
 | `harvester.kaizen.queries_limit` | The query limit (setting this to 0 or below means infinite). | 500 |
 | `harvester.kaizen.verbose` | Verbosity (gives information to logs, if enabled) | true |
+<!-- endmarkdown+ -->

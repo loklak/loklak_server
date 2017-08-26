@@ -5,12 +5,14 @@ This API can be used to create your own social media search engine using the pub
 ## Client Authentication
 
 You can access the API `without any authentication`. This service can be use without subscription, however, there is a user management to grant users administration rights. Excessive usage of APIs is restricted with DoS protection. Some servlets can only be called from localhost or administration rights to protect user data submitted to the server. There are three classes for access rights: 
- 
+
+<!-- markdown+ -->
 | Class | Accesibility |
 | --- | --- |
 | Open | access without any restrictions for all clients from any IP |
 | Limited | localhost clients or administration users are granted more data than public clients |
 | Restricted | only localhost clients or administration users are granted access |
+<!-- endmarkdown+ -->
 
 ## Cross-Origin Resource Sharing
 

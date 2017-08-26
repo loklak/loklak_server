@@ -41,6 +41,7 @@ The file structure follows a default java application folder naming:
    +-- src
 ```
 
+<!-- markdown+ -->
 | Directory | Description |
 | --- | --- |
 | bin | directory: start and stop scripts |
@@ -64,6 +65,7 @@ The file structure follows a default java application folder naming:
 | messages.log |   file     : application output is streamed in here
 | README.txt |   file     : you should read this if you are using loklak the first time
 | src |   directory: java sources
+<!-- endmarkdown+ -->
 
 ## Application Sockets and Ports
 

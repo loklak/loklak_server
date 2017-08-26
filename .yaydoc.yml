@@ -1,0 +1,17 @@
+metadata:
+  projectname: loklak_server
+  author: FOSSASIA
+  version: development
+  autoindex:
+    apidoc:
+      javadoc:
+        show: true
+
+build:
+  source: docs
+  theme:
+    name: sphinx_fossasia_theme
+
+extras:
+  javadoc:
+    path: 'src/'
