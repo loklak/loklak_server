@@ -74,13 +74,48 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
         return json;
     }
 
-    @Override
-    public JSONObject serviceImpl(Query post, HttpServletResponse response, Authorization rights, JSONObjectWithDefault permissions) throws APIException {
-
-        if (post.isLocalhostAccess() && OS.canExecUnix && post.get("upgrade", "").equals("true")) {
-            Caretaker.upgrade(); // it's a hack to add this here, this may disappear anytime
+    public static JSONObject getConfig(Runtime runtime) throws Exception {
+        JSONObject system = null;
+        JSONObject elasticsearch = null;
+        JSONObject searchCount = null;
+        JSONObject retrievalForBackend = null;
+        JSONObject caretakerProperties = null;
+        try{
+            system = getSystemConfig(runtime);
+            elasticsearch = getElasticsearchConfig();
+            searchCount = getSearchCount();
+            retrievalForBackend = getRetrievalForBackendConfig();
+            caretakerProperties = getCaretakerProperties();
+            system.put("elasticsearch", elasticsearch);
+            system.put("searchCount", searchCount);
+            system.put("retrievalForBackend", retrievalForBackend);
+            system.put("caretakerProperties", caretakerProperties);
+        } catch(Exception e) {
+            DAO.trace(e);
         }
+        return system; 
+    }
 
+    public static JSONObject getSystemConfig(Runtime runtime) throws Exception {
+        JSONObject system = new JSONObject();
+        String xmx = DAO.getConfig("Xmx", "");
+        system.put("assigned_memory", runtime.maxMemory());
+        system.put("used_memory", runtime.totalMemory() - runtime.freeMemory());
+        system.put("available_memory", runtime.maxMemory() - runtime.totalMemory() + runtime.freeMemory());
+        system.put("cores", runtime.availableProcessors());
+        system.put("threads", Thread.activeCount());
+        system.put("runtime", System.currentTimeMillis() - Caretaker.startupTime);
+        system.put("time_to_restart", Caretaker.upgradeTime - System.currentTimeMillis());
+        system.put("load_system_average", OS.getSystemLoadAverage());
+        system.put("load_system_cpu", OS.getSystemCpuLoad());
+        system.put("load_process_cpu", OS.getProcessCpuLoad());
+        system.put("server_threads", LoklakServer.getServerThreads());
+        system.put("server_uri", LoklakServer.getServerURI());
+        system.put("Xmx", xmx);
+        return system;
+    }
+
+    public static JSONObject getIndexConfig() throws Exception {
         final String backend = DAO.getConfig("backend", "");
         final boolean backend_push = DAO.getConfig("backend.push.enabled", false);
         JSONObject backend_status = null;
@@ -96,69 +131,8 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
         long local_messages = DAO.countLocalMessages();
         long local_users = DAO.countLocalUsers();
 
-        post.setResponse(response, "application/javascript");
-
-        // generate json
-        Runtime runtime = Runtime.getRuntime();
-        JSONObject json = new JSONObject(true);
-        JSONObject system = new JSONObject(true);
-        String xmx = DAO.getConfig("Xmx", "");
-        system.put("assigned_memory", runtime.maxMemory());
-        system.put("used_memory", runtime.totalMemory() - runtime.freeMemory());
-        system.put("available_memory", runtime.maxMemory() - runtime.totalMemory() + runtime.freeMemory());
-        system.put("cores", runtime.availableProcessors());
-        system.put("threads", Thread.activeCount());
-        system.put("runtime", System.currentTimeMillis() - Caretaker.startupTime);
-        system.put("time_to_restart", Caretaker.upgradeTime - System.currentTimeMillis());
-        system.put("load_system_average", OS.getSystemLoadAverage());
-        system.put("load_system_cpu", OS.getSystemCpuLoad());
-        system.put("load_process_cpu", OS.getProcessCpuLoad());
-        system.put("server_threads", LoklakServer.getServerThreads());
-        system.put("server_uri", LoklakServer.getServerURI());
-        system.put("Xmx", xmx);
-
-        JSONObject searchCount = new JSONObject(true);
-        String search_count_low = DAO.getConfig("search.count.low", "");
-        String search_count_default = DAO.getConfig("search.count.default", "");
-        String search_count_max_public = DAO.getConfig("search.count.max.public", "");
-        String search_count_max_localhost = DAO.getConfig("search.count.max.localhost", "");
-        String search_timeout = DAO.getConfig("search.timeout", "");
-        searchCount.put("search_count_low", search_count_low);
-        searchCount.put("search_count_default", search_count_default);
-        searchCount.put("search_count_max_public", search_count_max_public);
-        searchCount.put("search_count_max_localhost", search_count_max_localhost);
-        searchCount.put("search_timeout", search_timeout);
-
-        JSONObject retrievalForBackend = new JSONObject(true);
-        String retrieval_forbackend_enabled = DAO.getConfig("retrieval.forbackend.enabled", "");
-        String retrieval_forbackend_concurrency = DAO.getConfig("retrieval.forbackend.concurrency", "");
-        String retrieval_forbackend_loops = DAO.getConfig("retrieval.forbackend.loops", "");
-        String retrieval_forbackend_sleep_base = DAO.getConfig("retrieval.forbackend.sleep.base", "");
-        String retrieval_forbackend_sleep_randomoffset = DAO.getConfig("retrieval.forbackend.sleep.randomoffset", "");
-        retrievalForBackend.put("retrieval_forbackend_enabled", retrieval_forbackend_enabled);
-        retrievalForBackend.put("retrieval_forbackend_concurrency", retrieval_forbackend_concurrency);
-        retrievalForBackend.put("retrieval_forbackend_loops", retrieval_forbackend_loops);
-        retrievalForBackend.put("retrieval_forbackend_sleep_base", retrieval_forbackend_sleep_base);
-        retrievalForBackend.put("retrieval_forbackend_sleep_randomoffset", retrieval_forbackend_sleep_randomoffset);
-
-        JSONObject elasticsearch = new JSONObject(true);
-        String watermark_low = DAO.getConfig("elasticsearch.cluster.routing.allocation.disk.watermark.low", "");
-        String watermark_high = DAO.getConfig("elasticsearch.cluster.routing.allocation.disk.watermark.high", "");
-        elasticsearch.put("elasticsearch_cluster_routing_allocation_disk_watermark_low", watermark_low);
-        elasticsearch.put("elasticsearch_cluster_routing_allocation_disk_watermark_high", watermark_high);
-
-        JSONObject caretakerProperties = new JSONObject(true);
-        String caretaker_retries = DAO.getConfig("caretaker.backendpush.retries", "");
-        String caretaker_backoff = DAO.getConfig("caretaker.backendpush.backoff", "");
-        caretakerProperties.put("caretaker_backendpush_retries", caretaker_retries);
-        caretakerProperties.put("caretaker_backendpush_backoff", caretaker_backoff);
-
-        system.put("searchCount", searchCount);
-        system.put("retrievalForBackend", retrievalForBackend);
-        system.put("elasticsearch", elasticsearch);
-        system.put("caretakerProperties", caretakerProperties);
-
         JSONObject index = new JSONObject(true);
+
         long countLocalMinMessagesCreated  = DAO.countLocalMessages(60000L, true);
         long countLocalMinMessagesTimestamp  = DAO.countLocalMessages(60000L, false);
         long countLocal10MMessagesCreated  = DAO.countLocalMessages(600000L, true);
@@ -241,6 +215,78 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
             List<QueryEntry> queryList = DAO.SearchLocalQueries("", 1000, "retrieval_next", "date", SortOrder.ASC, null, new Date(), "retrieval_next");
             index.put("queries_pending", queryList.size());
         }
+        return index; 
+    }
+
+    public static JSONObject getCaretakerProperties() throws Exception {
+        JSONObject caretakerProperties = new JSONObject();
+        String caretaker_retries = DAO.getConfig("caretaker.backendpush.retries", "");
+        String caretaker_backoff = DAO.getConfig("caretaker.backendpush.backoff", "");
+        caretakerProperties.put("caretaker_backendpush_retries", caretaker_retries);
+        caretakerProperties.put("caretaker_backendpush_backoff", caretaker_backoff);
+        return caretakerProperties;
+    }
+
+    public static JSONObject getRetrievalForBackendConfig() throws Exception {
+        JSONObject retrievalForBackend = new JSONObject();
+        String retrieval_forbackend_enabled = DAO.getConfig("retrieval.forbackend.enabled", "");
+        String retrieval_forbackend_concurrency = DAO.getConfig("retrieval.forbackend.concurrency", "");
+        String retrieval_forbackend_loops = DAO.getConfig("retrieval.forbackend.loops", "");
+        String retrieval_forbackend_sleep_base = DAO.getConfig("retrieval.forbackend.sleep.base", "");
+        String retrieval_forbackend_sleep_randomoffset = DAO.getConfig("retrieval.forbackend.sleep.randomoffset", "");
+        retrievalForBackend.put("retrieval_forbackend_enabled", retrieval_forbackend_enabled);
+        retrievalForBackend.put("retrieval_forbackend_concurrency", retrieval_forbackend_concurrency);
+        retrievalForBackend.put("retrieval_forbackend_loops", retrieval_forbackend_loops);
+        retrievalForBackend.put("retrieval_forbackend_sleep_base", retrieval_forbackend_sleep_base);
+        retrievalForBackend.put("retrieval_forbackend_sleep_randomoffset", retrieval_forbackend_sleep_randomoffset);
+        return retrievalForBackend;
+    }
+
+    public static JSONObject getSearchCount() throws Exception {
+        JSONObject searchCount = new JSONObject();
+        String search_count_low = DAO.getConfig("search.count.low", "");
+        String search_count_default = DAO.getConfig("search.count.default", "");
+        String search_count_max_public = DAO.getConfig("search.count.max.public", "");
+        String search_count_max_localhost = DAO.getConfig("search.count.max.localhost", "");
+        String search_timeout = DAO.getConfig("search.timeout", "");
+        searchCount.put("search_count_low", search_count_low);
+        searchCount.put("search_count_default", search_count_default);
+        searchCount.put("search_count_max_public", search_count_max_public);
+        searchCount.put("search_count_max_localhost", search_count_max_localhost);
+        searchCount.put("search_timeout", search_timeout);
+        return searchCount;
+    }
+
+    public static JSONObject getElasticsearchConfig() throws Exception {
+        JSONObject json = new JSONObject();
+        String watermark_low = DAO.getConfig("elasticsearch.cluster.routing.allocation.disk.watermark.low", "");
+        String watermark_high = DAO.getConfig("elasticsearch.cluster.routing.allocation.disk.watermark.high", "");
+        json.put("elasticsearch_cluster_routing_allocation_disk_watermark_low", watermark_low);
+        json.put("elasticsearch_cluster_routing_allocation_disk_watermark_high", watermark_high);
+        return json;
+    }
+
+    @Override
+    public JSONObject serviceImpl(Query post, HttpServletResponse response, Authorization rights, JSONObjectWithDefault permissions) throws APIException {
+
+        if (post.isLocalhostAccess() && OS.canExecUnix && post.get("upgrade", "").equals("true")) {
+            Caretaker.upgrade(); // it's a hack to add this here, this may disappear anytime
+        }
+
+        post.setResponse(response, "application/javascript");
+
+        // generate json
+        Runtime runtime = Runtime.getRuntime();
+        JSONObject json = new JSONObject(true);
+
+        JSONObject system = null;
+        JSONObject index = null;
+        try{
+            system = getConfig(runtime);
+            index = getIndexConfig();
+        } catch(Exception e) {
+            DAO.trace(e);
+        }
 
         JSONObject client_info = new JSONObject(true);
         client_info.put("RemoteHost", post.getClientHost());
@@ -258,6 +304,7 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
         json.put("index", index);
         json.put("client_info", client_info);
 
+        
         String commitHash = System.getenv("COMMIT_HASH");
         String commitComment = System.getenv("COMMIT_COMMENT").replaceAll("^[ \n]+", "").replaceAll("[ \n]+$", "");
         JSONObject commit = new JSONObject(true);
@@ -272,12 +319,12 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
 
     public static void main(String[] args) {
         try {
-            JSONObject json = status("http://loklak.org");
+            JSONObject json = status("http://api.loklak.org");
             JSONObject index_sizs = (JSONObject) json.get("index_sizes");
             System.out.println(json.toString());
             System.out.println(index_sizs.toString());
         } catch (IOException e) {
-            e.printStackTrace();
+            DAO.trace(e);
         }
     }
 }
