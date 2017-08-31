@@ -51,6 +51,7 @@ public abstract class BaseScraper extends AbstractAPIHandler {
     public JSONObject serviceImpl(Query call, HttpServletResponse response, Authorization rights,
             JSONObjectWithDefault permissions) throws APIException {
         this.setExtra(call);
+        this.setParam();
         return this.getData();
     }
 

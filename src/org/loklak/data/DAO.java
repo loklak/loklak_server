@@ -69,8 +69,9 @@ import org.loklak.harvester.TwitterScraper;
 import org.loklak.harvester.YoutubeScraper;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.api.search.GithubProfileScraper;
-import org.loklak.api.search.QuoraProfileScraper;
 import org.loklak.api.search.InstagramProfileScraper;
+import org.loklak.api.search.QuoraProfileScraper;
+import org.loklak.api.search.TweetScraper;
 import org.loklak.harvester.BaseScraper;
 import org.loklak.http.AccessTracker;
 import org.loklak.http.ClientConnection;
@@ -1291,6 +1292,10 @@ public class DAO {
         }
         if (scraperList.contains("wordpress") || scraperList.contains("all")) {
             scraperObj = new WordpressCrawlerService(inputMap);
+            scraperObjList.add(scraperObj);
+        }
+        if (scraperList.contains("twitter") || scraperList.contains("all")) {
+            scraperObj = new TweetScraper(inputMap);
             scraperObjList.add(scraperObj);
         }
         //TODO: add more scrapers

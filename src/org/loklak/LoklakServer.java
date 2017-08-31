@@ -117,6 +117,7 @@ import org.loklak.api.search.SearchServlet;
 import org.loklak.api.search.ShortlinkFromTweetServlet;
 import org.loklak.api.search.SuggestServlet;
 import org.loklak.api.search.TimeAndDateService;
+import org.loklak.api.search.TweetScraper;
 import org.loklak.api.search.UserServlet;
 import org.loklak.api.search.VideoUrlService;
 import org.loklak.api.search.WeiboUserInfo;
@@ -643,7 +644,8 @@ public class LoklakServer {
                 TimeAndDateService.class,
                 WikiGeoData.class,
                 QuoraProfileScraper.class,
-                YoutubeScraper.class
+                YoutubeScraper.class,
+                TweetScraper.class
                 // tools
 
                 // vis
