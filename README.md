@@ -1,16 +1,16 @@
 # loklak
 [![Join the chat at https://gitter.im/loklak/loklak](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/loklak/loklak)
-[![Docker Pulls](https://img.shields.io/docker/pulls/mariobehling/loklak.svg?maxAge=2592000?style=flat-square)](https://hub.docker.com/r/mariobehling/loklak/)
+[![Docker Pulls](https://img.shields.io/docker/pulls/loklak/loklak_server.svg?maxAge=2592000?style=flat-square)](https://hub.docker.com/r/mariobehling/loklak/)
 [![Percentage of issues still open](http://isitmaintained.com/badge/open/loklak/loklak_server.svg)](http://isitmaintained.com/project/loklak/loklak_server "Percentage of issues still open")
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/loklak/loklak_server.svg)](http://isitmaintained.com/project/loklak/loklak_server "Average time to resolve an issue")
 [![Twitter](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Wow%20Check%20Loklak%20on%20@gitHub%20@loklak_app%20@loklak_:%20https://github.com/loklak/loklak_server%20&url=%5Bobject%20Object%5D)
 [![Twitter Follow](https://img.shields.io/twitter/follow/lklknt.svg?style=social&label=Follow&maxAge=2592000?style=flat-square)](https://twitter.com/loklak_)
 
-Development: [![Build Status](https://travis-ci.org/loklak/loklak_server.svg?branch=development)](https://travis-ci.org/loklak/loklak_server) [![Docker Build Status](https://img.shields.io/docker/build/jrottenberg/ffmpeg.svg)](https://hub.docker.com/r/mariobehling/loklak/builds/)
-Master: [![Build Status](https://travis-ci.org/loklak/loklak_server.svg?branch=master)](https://travis-ci.org/loklak/loklak_server)
+Development: [![Build Status](https://travis-ci.org/loklak/loklak_server.svg?branch=development)](https://travis-ci.org/loklak/loklak_server) [![Docker Build Status](https://img.shields.io/docker/build/jrottenberg/ffmpeg.svg)](https://hub.docker.com/r/loklak/loklak_server/builds/)
+Master: [![Build Status](https://travis-ci.org/loklak/loklak_server.svg?branch=master)](https://travis-ci.org/loklak/loklak_server)  
 Dependencies: [![Gemnasium](https://img.shields.io/gemnasium/mathiasbynens/he.svg)](https://gemnasium.com/loklak)
 
-loklak is a server application which is able to collect messages from various sources, including twitter. The server contains a search index and a peer-to-peer index sharing interface. All messages are stored in an elasticsearch index. An automatic deployment from the development branch at GitHub is available for tests here https://loklak-server-dev.herokuapp.com
+loklak is a server application which is able to collect messages from various sources, including twitter. The server contains a search index and a peer-to-peer index sharing interface. All messages are stored in an elasticsearch index. An automatic deployment from the development branch at GitHub is available for tests at https://loklak-server-dev.herokuapp.com and http://staging.loklak.org.
 
 'Lok Lak' is also a very tasty Cambodian stir-fry meat dish (usually beef) with a LOT of fresh black pepper. If you ever have the chance to eat Beef Lok Lak, please try it. I hope not to scare vegetarians with this name, currently I am one as well.
 
@@ -44,7 +44,7 @@ At this time, loklak is not provided in compiled form, you easily build it yours
 
     > git clone https://github.com/loklak/loklak_server.git
     > cd loklak_server
-    > ant
+    > ./gradlew build
 
 This command may give an error while building like `Unable to locate tools.jar`.
 It means that there is no java in your system or JAVA_HOME Environment Variable is not set. [Refererence](https://www.digitalocean.com/community/tutorials/how-to-install-java-on-ubuntu-with-apt-get) to fix it and run `ant` again.
@@ -124,7 +124,7 @@ At http://loklak.github.io/loklak_server/ or by building them via 'ant javadoc'
 
 ### Where can I get the latest news about loklak?
 
-Hey, this is the tool for that! Just put http://loklak.org/api/search.rss?q=%23loklak into your rss reader. Oh wait.. you will get a lot of information about tasty Cambodian food with that as well. Alternatively you may also read the authors timeline using http://loklak.org/api/search.rss?q=0rb1t3r or just follow @0rb1t3r (that's a zero after the at sign)
+Hey, this is the tool for that! Just put http://api.loklak.org/api/search.rss?q=%23loklak into your rss reader. Oh wait.. you will get a lot of information about tasty Cambodian food with that as well. Alternatively you may also read the authors timeline using http://api.loklak.org/api/search.rss?q=0rb1t3r or just follow @0rb1t3r (that's a zero after the at sign).
 
 ## How to compile using Gradle?
 
