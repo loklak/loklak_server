@@ -58,7 +58,7 @@ public class ShortlinkFromTweetServlet extends HttpServlet {
             id = id.substring(0, p);
         }
         
-        TwitterTweet message = DAO.readMessage(id);
+        TwitterTweet message = (TwitterTweet) DAO.readMessage(id);
         if (message == null) {
             // try to get that from the incoming message buffer
             message = LoklakServer.queuedIndexing.readMessage(id);

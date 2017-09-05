@@ -38,11 +38,14 @@ public abstract class BaseScraper extends AbstractAPIHandler {
     protected String baseUrl;
     protected String midUrl;
     protected String query = null;
+    protected String source;
+    protected int resultCount = 0;
     // where did the message come from
-    protected SourceType source_type;
+    protected SourceType sourceType = SourceType.GENERIC;
     // who created the message
     protected ProviderType provider_type;
-    protected Map<String, String> extra =null;
+    protected Map<String, String> extra = null;
+    protected Map<String, Map<String, String>> cacheMap = null;
     protected final Timeline2.Order order = Timeline2.parseOrder("timestamp");
     protected int hits = 0;
     protected int count = 0;
@@ -55,14 +58,19 @@ public abstract class BaseScraper extends AbstractAPIHandler {
     }
 
     protected void setExtra(Query call) {
-        this.extra = call.getMap();
-        this.query = call.get("query", "");
-        this.setParam();
+        this.setExtra(call.getMap());
     }
 
     protected void setExtra(Map<String, String> _extra) {
         this.extra = _extra;
         this.query = _extra.get("query");
+        try{
+            this.resultCount = Integer.parseInt(_extra.get("count"));
+        } catch (NumberFormatException e) {
+            //TODO: set with config file
+            this.resultCount = 10;
+        }
+        this.source = _extra.get("source");
         this.setParam();
     }
 
@@ -81,21 +89,19 @@ public abstract class BaseScraper extends AbstractAPIHandler {
         this.extra.put(key, value);
     }
 
+    protected void setCacheMap() {
+        cacheMap = null;
+    }
+
     protected abstract void setParam();
 
     protected abstract String prepareSearchUrl(String type);
-
-    public Post getDataScraper() {
-        Post outputOfScraper = new Post(true);
-        outputOfScraper.put("results", getResults());
-        return outputOfScraper;
-    }
 
     public Post getData() {
         Post output = new Post(true);
         Post postArray = new Post(true);
 
-        output.putAll(getResults());
+        output.putAll(getDataScraper());
         output.put("metadata", this.getMetadata());
 
         try {
@@ -105,6 +111,30 @@ public abstract class BaseScraper extends AbstractAPIHandler {
         }
 
         return output;
+    }
+
+    public Post getDataScraper() {
+        Post outputOfScraper = null;
+
+        if("cache".equals(this.source)) {
+            outputOfScraper = this.getCache();
+        } else {
+            outputOfScraper = this.getResults();
+        }
+        return outputOfScraper;
+    }
+
+    public Post getCache() {
+        this.setCacheMap();
+        DAO.SearchLocalMessages indexScrape = new DAO.SearchLocalMessages (this.cacheMap,
+                this.order, this.resultCount);
+        this.hits = this.hits + indexScrape.postList.getHits();
+
+        // Add scraper name
+        Post postArray = new Post(true);
+        postArray.put(this.scraperName, indexScrape.postList.toArray());
+
+        return postArray;
     }
 
     public Post getResults() {
@@ -158,7 +188,10 @@ public abstract class BaseScraper extends AbstractAPIHandler {
     protected abstract Post scrape(BufferedReader br, String type, String url);
 
     protected Post putData(Post typeArray, String key, Timeline2 postList) {
-        this.count = this.count + postList.size();
+        if(!"cache".equals(this.source)) {
+            //TODO: base it on SourceType
+            postList.writeToIndex();
+        }
         return this.putData(typeArray, key, postList.toArray());
     }
 
@@ -175,7 +208,7 @@ public abstract class BaseScraper extends AbstractAPIHandler {
         metadata.put("count", this.count);
         metadata.put("scraper", this.scraperName);
         metadata.put("input_parameters", this.extra);
-        
+
         //TODO: implement these
         //metadata.put("provider_type", this.providerType);
         //metadata.put("source_type", this.sourceType);
@@ -191,5 +224,4 @@ public abstract class BaseScraper extends AbstractAPIHandler {
     }
     return everything.toString();
     }
-
 }

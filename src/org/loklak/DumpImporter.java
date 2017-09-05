@@ -31,6 +31,7 @@ import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.data.IndexEntry;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
+import org.loklak.harvester.Post;
 
 import org.loklak.objects.UserEntry;
 import org.loklak.tools.storage.JsonFactory;
@@ -91,7 +92,7 @@ public class DumpImporter extends Thread {
                         JsonFactory tweet;
                         try {
                             List<IndexEntry<UserEntry>> userBulk = new ArrayList<>();
-                            List<IndexEntry<TwitterTweet>> messageBulk = new ArrayList<>();
+                            List<IndexEntry<Post>> messageBulk = new ArrayList<>();
                             while ((tweet = dumpReader.take()) != JsonStreamReader.POISON_JSON_MAP) {
                                 try {
                                     JSONObject json = tweet.getJSON();
@@ -101,7 +102,7 @@ public class DumpImporter extends Thread {
                                     TwitterTweet t = new TwitterTweet(json);
                                     // record user into search index
                                     userBulk.add(new IndexEntry<UserEntry>(u.getScreenName(), t.getSourceType(), u));
-                                    messageBulk.add(new IndexEntry<TwitterTweet>(t.getPostId(), t.getSourceType(), t));
+                                    messageBulk.add(new IndexEntry<Post>(t.getPostId(), t.getSourceType(), t));
                                     if (userBulk.size() > 1500 || messageBulk.size() > 1500) {
                                         DAO.users.writeEntries(userBulk);
                                         DAO.messages.writeEntries(messageBulk);

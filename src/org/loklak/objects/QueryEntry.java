@@ -27,6 +27,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -506,6 +507,18 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
             this.queryBuilder = preparse(q, timezoneOffset, filterList);
         }
 
+        public ElasticsearchQuery(
+                Map<String, String> getMap,
+                Map<String, String> notGetMap,
+                Map<String, String> mayAlsoGetMap) {
+            // default values for since and util
+            this.since = new Date(0);
+            this.until = new Date(Long.MAX_VALUE);
+
+            // parse the query
+            this.queryBuilder = preparse(getMap, notGetMap, mayAlsoGetMap);
+        }
+
         public ElasticsearchQuery(String q, int timezoneOffset) {
             this(q, timezoneOffset, new ArrayList<>());
         }
@@ -527,10 +540,36 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
             return aquery;
         }
 
+        private QueryBuilder preparse(
+                Map<String, String> getMap,
+                Map<String, String> notGetMap,
+                Map<String, String> mayAlsoGetMap) {
+            BoolQueryBuilder query = new BoolQueryBuilder();
+            // Result must have these fields. Acts as AND operator
+            if(getMap != null) {
+                for(Map.Entry<String, String> field : getMap.entrySet()) {
+                    query.must(QueryBuilders.termQuery(field.getKey(), field.getValue()));
+                }
+            }
+            // Result must have these fields.
+            if(notGetMap != null) {
+                for(Map.Entry<String, String> field : notGetMap.entrySet()) {
+                    query.mustNot(QueryBuilders.termQuery(field.getKey(), field.getValue()));
+                }
+            }
+            // Result may preferably also get these fields. Acts as OR operator
+            if(mayAlsoGetMap != null) {
+                for(Map.Entry<String, String> field : mayAlsoGetMap.entrySet()) {
+                    query.should(QueryBuilders.termQuery(field.getKey(), field.getValue()));
+                }
+            }
+            return query;
+        }
+
         private QueryBuilder preparse(String q, int timezoneOffset) {
             return preparse(q, timezoneOffset, new ArrayList<>());
         }
-        
+
         private QueryBuilder parse (
                 String q,
                 int timezoneOffset, 
@@ -540,7 +579,7 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
             q = q.replaceAll(" AND ", " "); // AND is default
             boolean ORconnective = q.indexOf(" OR ") >= 0;
             q = q.replaceAll(" OR ", " "); // if we know that all terms are OR, we remove that and apply it later
-            
+
             // tokenize the query
             Set<String> qe = new LinkedHashSet<String>();
             Matcher m = tokenizerPattern.matcher(q);
