@@ -59,7 +59,7 @@ public class QuoraProfileScraperTest {
         JSONObject quoraProfile = (JSONObject)profileList.get(0);
 
         assertEquals(quoraProfile.getString("search_url"), url);
-        assertEquals(quoraProfile.getString("user"), userName);
+        assertEquals(quoraProfile.getString("user_name"), userName);
         assertEquals(quoraProfile.getString("rss_feed_link"), rssFeedLink);
         assertEquals(quoraProfile.getString("profileImage"), profileImage);
         assertEquals(quoraProfile.getJSONObject("feeds").getString("topics_url"), topicsUrl);
