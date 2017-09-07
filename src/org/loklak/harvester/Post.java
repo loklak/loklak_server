@@ -1,9 +1,12 @@
 package org.loklak.harvester;
 
 import java.util.Date;
+import java.util.Map;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.objects.ObjectEntry;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 
 /**
  * @author vibhcool (Vibhor Verma)
@@ -15,8 +18,9 @@ import org.loklak.objects.ObjectEntry;
 public class Post extends JSONObject implements ObjectEntry {
 
     protected long timestamp = 0;
-    protected String postId;
+    protected String postId = null;
     private boolean wrapper = false;
+    private Date createdAt = null;
 
     public Post() {
         this.setTimestamp();
@@ -39,6 +43,10 @@ public class Post extends JSONObject implements ObjectEntry {
         super(json.toString());
     }
 
+    public Post(Map<String, Object> map) {
+        super(map);
+    }
+
     public Post(String data, String query) {
         super(data);
         this.setTimestamp();
@@ -50,17 +58,21 @@ public class Post extends JSONObject implements ObjectEntry {
     }
 
     public long getTimestamp() {
+        if(this.timestamp == 0 && this.has("timestamp_id")) {
+            this.timestamp = Long.parseLong(String.valueOf(this.get("timestamp_id")));
+        }
+        this.setTimestamp(this.timestamp);
         return this.timestamp;
     }
 
     public void setTimestamp(long timestamp) {
-        this.put("timestamp", timestamp);
+        this.put("timestamp_id", timestamp);
         this.timestamp = timestamp;
     }
 
     public void setTimestamp() {
-        if(this.has("timestamp")) {
-            long timestampValue = Long.parseLong(String.valueOf(this.get("timestamp")));
+        if(this.has("timestamp_id")) {
+            long timestampValue = Long.parseLong(String.valueOf(this.get("timestamp_id")));
             this.setTimestamp(timestampValue);
         } else {
             long timestamp = System.currentTimeMillis();
@@ -69,23 +81,45 @@ public class Post extends JSONObject implements ObjectEntry {
     }
 
     public Date getTimestampDate() {
-        return new Date(this.timestamp);
+        DAO.log("date is " + String.valueOf(this.getTimestamp()) + "    " + String.valueOf(new Date(this.getTimestamp())));
+        return new Date(this.getTimestamp());
+    }
+
+    public DateTime getTimestampDate(String a) {
+        DAO.log("date is " + String.valueOf(this.getTimestamp()) + "    " + String.valueOf(new Date(this.getTimestamp())));
+        return new DateTime(this.getTimestamp(), DateTimeZone.UTC);
+    }
+
+    // if the Post doesn't have 
+    public Date getCreated() {
+        if(this.createdAt == null) {
+            return this.getTimestampDate();
+        } else {
+            return this.createdAt;
+        }
+    }
+
+    public void setCreated(Date _createdAt) {
+        this.createdAt = _createdAt;
     }
 
     private void setPostId() {
-        if(this.has("post_id")) {
-            this.setPostId(String.valueOf(this.get("post_id")));
+        if(this.has("id_str")) {
+            this.setPostId(String.valueOf(this.get("id_str")));
         } else {
             this.setPostId(String.valueOf(this.getTimestamp()));
         }
     }
 
     public void setPostId(String postId) {
-        this.put("post_id", postId);
+        this.put("id_str", postId);
         this.postId = postId;
     }
 
     public String getPostId() {
+        if(this.has("id_str")) {
+            this.postId = String.valueOf(this.get("id_str"));
+        }
         return this.postId;
     }
 
@@ -93,7 +127,7 @@ public class Post extends JSONObject implements ObjectEntry {
         return this.wrapper;
     }
 
-    public String toString(){
+    public String toString() {
         return super.toString();
     }
 

@@ -65,12 +65,14 @@ import org.loklak.Caretaker;
 import org.loklak.api.search.SearchServlet;
 import org.loklak.api.search.WordpressCrawlerService;
 import org.loklak.geo.GeoNames;
+import org.loklak.harvester.Post;
 import org.loklak.harvester.TwitterScraper;
 import org.loklak.harvester.YoutubeScraper;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.api.search.GithubProfileScraper;
-import org.loklak.api.search.QuoraProfileScraper;
 import org.loklak.api.search.InstagramProfileScraper;
+import org.loklak.api.search.QuoraProfileScraper;
+import org.loklak.api.search.TweetScraper;
 import org.loklak.harvester.BaseScraper;
 import org.loklak.http.AccessTracker;
 import org.loklak.http.ClientConnection;
@@ -679,18 +681,18 @@ public class DAO {
                 // and check if the message exists
                 boolean exists = false;
                 if (mw.t.getCreatedAt().after(DateParser.oneHourAgo())) {
-                    exists = messages_hour.writeEntry(new IndexEntry<TwitterTweet>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
+                    exists = messages_hour.writeEntry(new IndexEntry<Post>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
                     if (exists) return false;
                 }
                 if (mw.t.getCreatedAt().after(DateParser.oneDayAgo())) {
-                    exists = messages_day.writeEntry(new IndexEntry<TwitterTweet>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
+                    exists = messages_day.writeEntry(new IndexEntry<Post>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
                     if (exists) return false;
                 }
                 if (mw.t.getCreatedAt().after(DateParser.oneWeekAgo())) {
-                    exists = messages_week.writeEntry(new IndexEntry<TwitterTweet>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
+                    exists = messages_week.writeEntry(new IndexEntry<Post>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
                     if (exists) return false;
                 }
-                exists = messages.writeEntry(new IndexEntry<TwitterTweet>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
+                exists = messages.writeEntry(new IndexEntry<Post>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
                 if (exists) return false;
 
                 // write the user into the index
@@ -720,8 +722,68 @@ public class DAO {
         }
         Set<String> createdIDs = new HashSet<>();
         createdIDs.addAll(writeMessageBulkNoDump(noDump));
-        createdIDs.addAll(writeMessageBulkDump(dump)); // does also do an writeMessageBulkNoDump internally
+        // does also do an writeMessageBulkNoDump internally
+        createdIDs.addAll(writeMessageBulkDump(dump));
         return createdIDs;
+    }
+
+    public static Set<String> writeMessageBulk(Set<Timeline2> postBulk) {
+        for (Timeline2 postList: postBulk) {
+            if (postList.size() < 1) continue;
+            if(postList.dump) {
+                writeMessageBulkDump(postList);
+            }
+            writeMessageBulkNoDump(postList);
+        }
+        //TODO: return total dumped, or IDs dumped to create hash of IDs
+        return new HashSet<>();
+    }
+
+    private static Set<String> writeMessageBulkNoDump(Timeline2 postList) {
+        if (postList.size() == 0) return new HashSet<>();
+        List<Post> messageBulk = new ArrayList<>();
+
+        for (Post post: postList) {
+            if (messages.existsCache(post.getPostId())) {
+                continue;
+            }
+            synchronized (DAO.class) {
+                messageBulk.add(post);
+            }
+        }
+        ElasticsearchClient.BulkWriteResult result = null;
+        try {
+            Date limitDate = new Date();
+            limitDate.setTime(DateParser.oneHourAgo().getTime());
+            List<Post> macc = new ArrayList<Post>();
+            final Set<String> existed = new HashSet<>();
+            long hourLong = limitDate.getTime();
+            for(Post post : messageBulk) {
+                if(hourLong <= post.getTimestamp()) macc.add(post);
+            }
+            
+            result = messages_hour.writeEntries(macc);
+            for (Post i: macc) if (!(result.getCreated().contains(i.getPostId()))) existed.add(i.getPostId());
+
+            limitDate.setTime(DateParser.oneDayAgo().getTime());
+            macc = messageBulk.stream().filter(i -> !(existed.contains(i.getPostId()))).filter(i -> i.getCreated().after(limitDate)).collect(Collectors.toList());
+            result = messages_day.writeEntries(macc);
+            for (Post i: macc) if (!(result.getCreated().contains(i.getPostId()))) existed.add(i.getPostId());
+
+            limitDate.setTime(DateParser.oneWeekAgo().getTime());
+            macc = messageBulk.stream().filter(i -> !(existed.contains(i.getPostId())))
+                    .filter(i -> i.getCreated().after(limitDate)).collect(Collectors.toList());
+            result = messages_week.writeEntries(macc);
+            for (Post i: macc) if (!(result.getCreated().contains(i.getPostId()))) existed.add(i.getPostId());
+
+            macc = messageBulk.stream().filter(i -> !(existed.contains(i.getPostId()))).collect(Collectors.toList());
+            result = messages.writeEntries(macc);
+            for (Post i: macc) if (!(result.getCreated().contains(i.getPostId()))) existed.add(i.getPostId());
+        } catch (IOException e) {
+        	Log.getLog().warn(e);
+        }
+        if (result == null) return new HashSet<String>();
+        return result.getCreated();
     }
 
     /**
@@ -732,7 +794,7 @@ public class DAO {
     private static Set<String> writeMessageBulkNoDump(Collection<MessageWrapper> mws) {
         if (mws.size() == 0) return new HashSet<>();
         List<IndexEntry<UserEntry>> userBulk = new ArrayList<>();
-        List<IndexEntry<TwitterTweet>> messageBulk = new ArrayList<>();
+        List<IndexEntry<Post>> messageBulk = new ArrayList<>();
         for (MessageWrapper mw: mws) {
             if (messages.existsCache(mw.t.getPostId())) continue; // we omit writing this again
             synchronized (DAO.class) {
@@ -740,7 +802,7 @@ public class DAO {
                 userBulk.add(new IndexEntry<UserEntry>(mw.u.getScreenName(), mw.t.getSourceType(), mw.u));
 
                 // record tweet into search index
-                messageBulk.add(new IndexEntry<TwitterTweet>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
+                messageBulk.add(new IndexEntry<Post>(mw.t.getPostId(), mw.t.getSourceType(), mw.t));
              }
 
             // teach the classifier
@@ -749,40 +811,40 @@ public class DAO {
         ElasticsearchClient.BulkWriteResult result = null;
         try {
             final Date limitDate = new Date();
-            List<IndexEntry<TwitterTweet>> macc;
+            List<IndexEntry<Post>> macc;
             final Set<String> existed = new HashSet<>();
 
             //DAO.log("***DEBUG messages     INIT: " + messageBulk.size());
 
             limitDate.setTime(DateParser.oneHourAgo().getTime());
-            macc = messageBulk.stream().filter(i -> i.getObject().getCreatedAt().after(limitDate)).collect(Collectors.toList());
+            macc = messageBulk.stream().filter(i -> i.getObject().getCreated().after(limitDate)).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for HOUR: " + macc.size());
             result = messages_hour.writeEntries(macc);
             //DAO.log("***DEBUG messages for HOUR: " + result.getCreated().size() + "  created");
-            for (IndexEntry<TwitterTweet> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
+            for (IndexEntry<Post> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for HOUR: " + existed.size() + "  existed");
 
             limitDate.setTime(DateParser.oneDayAgo().getTime());
-            macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getPostId()))).filter(i -> i.getObject().getCreatedAt().after(limitDate)).collect(Collectors.toList());
+            macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getPostId()))).filter(i -> i.getObject().getCreated().after(limitDate)).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for  DAY : " + macc.size());
             result = messages_day.writeEntries(macc);
             //DAO.log("***DEBUG messages for  DAY: " + result.getCreated().size() + " created");
-            for (IndexEntry<TwitterTweet> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
+            for (IndexEntry<Post> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for  DAY: " + existed.size()  + "  existed");
 
             limitDate.setTime(DateParser.oneWeekAgo().getTime());
-            macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getPostId()))).filter(i -> i.getObject().getCreatedAt().after(limitDate)).collect(Collectors.toList());
+            macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getPostId()))).filter(i -> i.getObject().getCreated().after(limitDate)).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for WEEK: " + macc.size());
             result = messages_week.writeEntries(macc);
             //DAO.log("***DEBUG messages for WEEK: " + result.getCreated().size() + "  created");
-            for (IndexEntry<TwitterTweet> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
+            for (IndexEntry<Post> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for WEEK: " + existed.size()  + "  existed");
 
             macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getPostId()))).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for  ALL : " + macc.size());
             result = messages.writeEntries(macc);
             //DAO.log("***DEBUG messages for  ALL: " + result.getCreated().size() + "  created");
-            for (IndexEntry<TwitterTweet> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
+            for (IndexEntry<Post> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for  ALL: " + existed.size()  + "  existed");
 
             users.writeEntries(userBulk);
@@ -813,6 +875,23 @@ public class DAO {
         	Log.getLog().warn(e);
         }
 
+        return created;
+    }
+
+    private static Set<String> writeMessageBulkDump(Timeline2 postList) {
+        Set<String> created = writeMessageBulkNoDump(postList);
+
+        for (Post post: postList) try {
+            if (!created.contains(post.getPostId())) continue;
+            synchronized (DAO.class) {
+                // record tweet into text file
+                if (writeDump) {
+                    message_dump.write(post);
+                }
+            }
+        } catch (IOException e) {
+        	Log.getLog().warn(e);
+        }
         return created;
     }
 
@@ -918,8 +997,8 @@ public class DAO {
         return elasticsearch_client.count(IndexName.accounts.name(), AbstractObjectEntry.TIMESTAMP_FIELDNAME, -1);
     }
 
-    public static TwitterTweet readMessage(String id) throws IOException {
-        TwitterTweet m = null;
+    public static Post readMessage(String id) throws IOException {
+        Post m = null;
         return messages_hour != null && ((m = messages_hour.read(id)) != null) ? m :
                messages_day  != null && ((m = messages_day.read(id))  != null) ? m :
                messages_week != null && ((m = messages_week.read(id)) != null) ? m :
@@ -956,6 +1035,7 @@ public class DAO {
 
     public static class SearchLocalMessages {
         public Timeline timeline;
+        public Timeline2 postList;
         public Map<String, List<Map.Entry<String, Long>>> aggregations;
         public ElasticsearchClient.Query query;
 
@@ -1003,6 +1083,13 @@ public class DAO {
                             this.query =  elasticsearch_client.query((resultIndex = IndexName.messages).name(), sq.queryBuilder, orderField.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
                 }}}
             }
+            this.query = elasticsearch_client.query(
+                        (resultIndex = IndexName.messages_day).name(),
+                        sq.queryBuilder,
+                        orderField.getMessageFieldName(),
+                        resultCount
+                );
+                
             timeline.setHits(query.hitCount);
             timeline.setResultIndex(resultIndex);
 
@@ -1041,8 +1128,72 @@ public class DAO {
             );
         }
 
-        private static boolean insufficient(ElasticsearchClient.Query query, int resultCount, int aggregationLimit, String... aggregationFields) {
-            return query.hitCount < resultCount || (aggregationFields.length > 0 && getAggregationResultLimit(query.aggregations) < aggregationLimit);
+        public SearchLocalMessages (
+                Map<String, Map<String, String>> inputMap,
+                final Timeline2.Order orderField,
+                final int resultCount
+        ) {
+            this.postList = new Timeline2(orderField);
+            IndexName resultIndex;
+            QueryEntry.ElasticsearchQuery sq = new QueryEntry.ElasticsearchQuery(
+                    inputMap.get("get"), inputMap.get("not_get"), inputMap.get("also_get"));
+
+            this.query = elasticsearch_client.query(
+                    (resultIndex = IndexName.messages_hour).name(),
+                    sq.queryBuilder,
+                    orderField.getMessageFieldName(),
+                    resultCount
+            );
+
+            if (this.query.hitCount < resultCount) {
+                this.query =  elasticsearch_client.query(
+                        (resultIndex = IndexName.messages_day).name(),
+                        sq.queryBuilder,
+                        orderField.getMessageFieldName(),
+                        resultCount
+                );
+            }
+
+            if (this.query.hitCount < resultCount) {
+                this.query =  elasticsearch_client.query(
+                        (resultIndex = IndexName.messages_week).name(),
+                        sq.queryBuilder,
+                        orderField.getMessageFieldName(),
+                        resultCount
+                );
+            }
+
+            if (this.query.hitCount < resultCount) {
+                this.query =  elasticsearch_client.query(
+                        (resultIndex = IndexName.messages).name(),
+                        sq.queryBuilder,
+                        orderField.getMessageFieldName(),
+                        resultCount
+                );
+            }
+
+            // Feed search results to postList
+            this.postList.setResultIndex(resultIndex);
+
+            addResults();
+        }
+
+        private void addResults() {
+            Post outputPost;
+            for (Map<String, Object> map: this.query.result) {
+                outputPost = new Post(map);
+                this.postList.addPost(outputPost);
+            }
+        }
+
+        private static boolean insufficient(
+                ElasticsearchClient.Query query,
+                int resultCount,
+                int aggregationLimit,
+                String... aggregationFields
+        ) {
+            return query.hitCount < resultCount || (aggregationFields.length > 0
+                    && getAggregationResultLimit(query.aggregations) < aggregationLimit);
         }
 
         public JSONObject getAggregations() {
@@ -1256,6 +1407,7 @@ public class DAO {
             for (BaseScraper scraper : scraperObjList) {
                 scraperRunner.execute(() -> {
                     dataSet.add(scraper.getData());
+                    
                 });
             }
         } finally {
@@ -1291,6 +1443,10 @@ public class DAO {
         }
         if (scraperList.contains("wordpress") || scraperList.contains("all")) {
             scraperObj = new WordpressCrawlerService(inputMap);
+            scraperObjList.add(scraperObj);
+        }
+        if (scraperList.contains("twitter") || scraperList.contains("all")) {
+            scraperObj = new TweetScraper(inputMap);
             scraperObjList.add(scraperObj);
         }
         //TODO: add more scrapers

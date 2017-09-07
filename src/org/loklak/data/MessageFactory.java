@@ -20,9 +20,10 @@
 package org.loklak.data;
 
 import org.json.JSONObject;
+import org.loklak.harvester.Post;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
 
-public class MessageFactory extends AbstractIndexFactory<TwitterTweet> implements IndexFactory<TwitterTweet> {
+public class MessageFactory extends AbstractIndexFactory<Post> implements IndexFactory<Post> {
 
     public MessageFactory(final ElasticsearchClient elasticsearch_client, final String index_name, final int cacheSize, final int existSize) {
         super(elasticsearch_client, index_name, cacheSize, existSize);

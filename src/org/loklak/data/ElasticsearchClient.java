@@ -623,6 +623,12 @@ public class ElasticsearchClient {
             try {Thread.sleep(regulator);} catch (InterruptedException e) {}
         }
         Log.getLog().info("elastic write bulk to index " + indexName + ": " + jsonMapList.size() + " entries, " + result.created.size() + " created, " + result.errors.size() + " errors, " + duration + " ms" + (regulator == 0 ? "" : ", throttled with " + regulator + " ms") + ", " + ops + " objects/second");
+        if(result.errors.size() > 0) {
+            DAO.severe("Errors faced while indexing:");
+            for(String key : result.errors.keySet()) {
+                DAO.severe(result.errors.get(key));
+            }
+        }
         return result;
     }
 
@@ -662,7 +668,9 @@ public class ElasticsearchClient {
             this.type = type;
             this.version = version;
             this.jsonMap = jsonMap;
-            if (timestamp_fieldname != null && !this.jsonMap.containsKey(timestamp_fieldname)) this.jsonMap.put(timestamp_fieldname, utcFormatter.print(System.currentTimeMillis()));
+            if (timestamp_fieldname != null && !this.jsonMap.containsKey(timestamp_fieldname)) {
+                this.jsonMap.put(timestamp_fieldname, utcFormatter.print(System.currentTimeMillis()));
+            }
         }
     }
 
@@ -700,32 +708,44 @@ public class ElasticsearchClient {
         return result;
     }
 
-    public Map<String, Object> query(final String indexName, final String field_name, String field_value) {
-        if (field_value == null || field_value.length() == 0) return null;
+    public Map<String, Object> query(final String indexName, final String fieldKey, final String fieldValue) {
+        if (fieldKey == null || fieldValue.length() == 0) return null;
         // prepare request
         BoolQueryBuilder query = QueryBuilders.boolQuery();
-        query.filter(QueryBuilders.constantScoreQuery(QueryBuilders.termQuery(field_name, field_value)));
+        query.filter(QueryBuilders.constantScoreQuery(QueryBuilders.termQuery(fieldKey, fieldValue)));
 
         SearchRequestBuilder request = elasticsearchClient.prepareSearch(indexName)
                 .setSearchType(SearchType.QUERY_THEN_FETCH)
                 .setQuery(query)
                 .setFrom(0)
-                .setSize(1).setTerminateAfter(1);
+                .setSize(1)
+                .setTerminateAfter(1);
 
         // get response
         SearchResponse response = request.execute().actionGet();
 
         // evaluate search result
-        //long totalHitCount = response.getHits().getTotalHits();
         SearchHit[] hits = response.getHits().getHits();
         if (hits.length == 0) return null;
         assert hits.length == 1;
+
         Map<String, Object> map = hits[0].getSource();
+
         return map;
     }
 
     public Query query(final String indexName, final QueryBuilder queryBuilder, String order_field, int timezoneOffset, int resultCount, long histogram_interval, String histogram_timefield, int aggregationLimit, String... aggregationFields) {
         return new Query(indexName,  queryBuilder, order_field, timezoneOffset, resultCount, histogram_interval, histogram_timefield, aggregationLimit, aggregationFields);
+    }
+
+    public Query query(
+            final String indexName,
+            final QueryBuilder queryBuilder,
+            String order,
+            int resultCount
+    ) {
+        if (queryBuilder == null) return null;
+        return new Query(indexName, queryBuilder, order, resultCount);
     }
 
     public class Query {
@@ -831,6 +851,30 @@ public class ElasticsearchClient {
                 aggregations.put(histogram_timefield, list);
             }
         }
+
+    public Query(final String indexName, QueryBuilder queryBuilder, String order_field, int resultCount) {
+        //TODO: sort data using order_field
+            // prepare request
+            SearchRequestBuilder request = elasticsearchClient.prepareSearch(indexName)
+                    .setSearchType(SearchType.QUERY_THEN_FETCH)
+                    .setQuery(queryBuilder)
+                    .setFrom(0)
+                    .setSize(resultCount);
+            request.clearRescorers();
+
+            // get response
+            SearchResponse response = request.execute().actionGet();
+            hitCount = (int) response.getHits().getTotalHits();
+            // evaluate search result
+            SearchHit[] hits = response.getHits().getHits();
+            this.result = new ArrayList<Map<String, Object>>(hitCount);
+            for (SearchHit hit: hits) {
+                Map<String, Object> map = hit.getSource();
+                this.result.add(map);
+            }
+
+        }
+
     }
 
 

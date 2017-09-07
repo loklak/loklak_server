@@ -32,6 +32,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.loklak.data.DAO.IndexName;
+import org.loklak.data.DAO;
+import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.harvester.Post;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.susi.SusiThought;
@@ -64,7 +66,7 @@ public class Timeline2 implements Iterable<Post> {
     // the key is the date plus id of the post
     private NavigableMap<String, Post> posts;
     private Map<String, UserEntry> users;
-    private String lastKey = "0";
+    private long lastKey = 0;
     private int hits = -1;
     private String scraperInfo = "";
     final private Order order;
@@ -73,6 +75,7 @@ public class Timeline2 implements Iterable<Post> {
     private int cursor; // used for pagination, set this to the number of tweets returned so far to the user; they should be considered as unchangable
     private long accessTime;
     private final Map<Integer, Post> precursorPostCache = new ConcurrentHashMap<>();
+    public boolean dump = false;
 
     public Timeline2(Order order) {
         this.posts = new ConcurrentSkipListMap<String, Post>();
@@ -201,23 +204,20 @@ public class Timeline2 implements Iterable<Post> {
         return t;
     }
 
-    public Timeline2 add(Post post, UserEntry user) {
+    public void add(Post post, UserEntry user) {
         this.addUser(user);
         this.addPost(post);
-        return this;
     }
 
-    public Timeline2 add(Post post) {
+    public void add(Post post) {
         this.addPost(post);
-        return this;
     }
 
-    private Timeline2 addUser(UserEntry user) {
+    private void addUser(UserEntry user) {
         assert user != null;
         if (user != null) {
             this.users.put(user.getScreenName(), user);
         }
-        return this;
     }
 
 /*  //TODO: remove this
@@ -246,21 +246,15 @@ public class Timeline2 implements Iterable<Post> {
     public Timeline2 addPost(Post post) {
         String key = "";
         if (this.order == Order.TIMESTAMP) {
-            if(!post.isWrapper()) {
-                key = Long.toHexString(post.getTimestamp()) + "_" + post.getPostId();
+            if(post.has("id_str")) {
+                key = String.valueOf(post.getPostId());
             } else {
-                long keyValue = Long.valueOf(lastKey) + 1;
+                long keyValue = this.lastKey + 1;
+                this.lastKey = keyValue;
                 key = String.valueOf(keyValue);
-                this.lastKey = key;
             }
         }
-        synchronized (this.posts) {
-            Post precursorPost = getPrecursorPost();
-            if (precursorPost == null || !post.getTimestampDate().before(precursorPost.getTimestampDate())) {
-                // ignore this post in case it would change the list of shown posts
-                this.posts.put(key, post);
-            }
-        }
+        this.posts.put(key, post);
         return this;
     }
 
@@ -469,7 +463,8 @@ public class Timeline2 implements Iterable<Post> {
 
     //TODO: this passes Timeline as argument
     public void writeToIndex() {
-        //IncomingMessageBuffer.addScheduler(this, true);
+        this.dump = true;
+        IncomingMessageBuffer.addScheduler(this);
     }
 
     public Timeline2 setHits(int hits) {

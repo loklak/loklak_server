@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.json.JSONObject;
+import org.loklak.harvester.Post;
 import org.loklak.objects.AbstractObjectEntry;
 import org.loklak.objects.ObjectEntry;
 import org.loklak.objects.SourceType;
@@ -44,7 +45,7 @@ import org.loklak.tools.CacheStats;
 public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> implements IndexFactory<IndexObject> {
     
     protected final ElasticsearchClient elasticsearch_client;
-    protected final CacheMap<String, IndexObject> objectCache;
+    protected final CacheMap<String, ObjectEntry> objectCache;
     private CacheSet<String> existCache;
     protected final String index_name;
     private AtomicLong indexWrite, indexExist, indexGet;
@@ -83,7 +84,7 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
     public IndexObject read(String id) throws IOException {
         assert id != null;
         if (id == null) return null;
-        IndexObject entry = this.objectCache.get(id);
+        IndexObject entry = (IndexObject) this.objectCache.get(id);
         if (entry != null) {
             this.existCache.add(id);
             return entry;
@@ -164,6 +165,22 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
     }
 
     @Override
+    public boolean writeEntry(JSONObject json) throws IOException {
+        if (json == null) return false;
+        
+        /*
+         * best data format here would be XContentBuilder because the data is converted into
+         * this format always; in this case with these lines
+         *   XContentBuilder builder = XContentFactory.contentBuilder(XContentType.JSON);
+         *   builder.map(source);
+         */
+        if (!json.has(AbstractObjectEntry.TIMESTAMP_FIELDNAME)) json.put(AbstractObjectEntry.TIMESTAMP_FIELDNAME, AbstractObjectEntry.utcFormatter.print(System.currentTimeMillis()));
+        boolean newDoc = elasticsearch_client.writeMap(this.index_name, json.toMap(), "local", String.valueOf(json.get("id_str")));
+        this.indexWrite.incrementAndGet();
+        return newDoc;
+    }
+
+    @Override
     public ElasticsearchClient.BulkWriteResult writeEntries(Collection<IndexEntry<IndexObject>> entries) throws IOException {
 
         List<ElasticsearchClient.BulkEntry> jsonMapList = new ArrayList<ElasticsearchClient.BulkEntry>();
@@ -176,6 +193,29 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
             assert jsonMap != null;
             if (jsonMap == null) continue;
             ElasticsearchClient.BulkEntry be = new ElasticsearchClient.BulkEntry(entry.getId(), entry.getType().toString(), AbstractObjectEntry.TIMESTAMP_FIELDNAME, null, jsonMap);
+
+            jsonMapList.add(be);
+        }
+        if (jsonMapList.size() == 0) return ElasticsearchClient.EMPTY_BULK_RESULT;
+        
+        ElasticsearchClient.BulkWriteResult result = elasticsearch_client.writeMapBulk(this.index_name, jsonMapList);
+        this.indexWrite.addAndGet(jsonMapList.size());
+        return result;
+    }
+
+    @Override
+    public ElasticsearchClient.BulkWriteResult writeEntries(List<Post> entries) throws IOException {
+
+        List<ElasticsearchClient.BulkEntry> jsonMapList = new ArrayList<ElasticsearchClient.BulkEntry>();
+        for (Post entry: entries) {
+            this.objectCache.put(entry.getPostId(), entry);
+            this.existCache.add(entry.getPostId());
+
+            Map<String, Object> jsonMap = entry.toJSON().toMap();
+            assert jsonMap != null;
+            if (jsonMap == null) continue;
+            ElasticsearchClient.BulkEntry be = new ElasticsearchClient.BulkEntry(
+                    entry.getPostId(), "local", "timestamp_id", null, jsonMap);
 
             jsonMapList.add(be);
         }

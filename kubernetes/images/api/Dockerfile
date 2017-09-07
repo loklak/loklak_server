@@ -17,6 +17,7 @@ RUN apk update && apk add openjdk8 git bash && \
     sed -i.bak 's/^\(elasticsearch_transport.addresses\).*/\1=elasticsearch.elasticsearch:9300/' conf/config.properties && \
     sed -i.bak 's/^\(dump.write_enabled\).*/\1=false/' conf/config.properties && \
     sed -i.bak 's/^\(backend=\).*/\1http:\/\/root.loklak.org/' conf/config.properties && \
+    sed -i.bak 's/^\(Xmx\).*/\1=3G/' conf/config.properties && \
     echo "while true; do sleep 10;done" >> bin/start.sh
 
 # Start

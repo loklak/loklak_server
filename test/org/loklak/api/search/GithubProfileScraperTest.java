@@ -47,7 +47,7 @@ public class GithubProfileScraperTest {
         Post fetchedProfile = githubScraper.scrapeGithub(profile, br);
 
         assertEquals(fetchedProfile.getString("short_description"), shortDescription);
-        assertEquals(fetchedProfile.getString("user_name"), userName);
+        assertEquals(fetchedProfile.getString("user"), userName);
         assertEquals(fetchedProfile.getString("user_id"), userId);
         assertEquals(fetchedProfile.getString("location"), location);
         assertEquals(fetchedProfile.getString("special_link"), specialLink);
@@ -81,7 +81,7 @@ public class GithubProfileScraperTest {
 
             Post fetchedProfile = githubScraper.scrapeGithub(profile, br);
 
-            assertEquals(fetchedProfile.getString("user_name"), userName);
+            assertEquals(fetchedProfile.getString("user"), userName);
             assertEquals(fetchedProfile.getString("full_name"), fullName);
             assertEquals(fetchedProfile.getString("special_link"), specialLink);
             assertEquals(fetchedProfile.getString("user_id"), userId);
