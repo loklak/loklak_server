@@ -33,7 +33,7 @@ import org.loklak.objects.UserEntry;
 public class IncomingMessageBuffer extends Thread {
 
     private final static int MESSAGE_QUEUE_MAXSIZE = 100000;
-    //private final static int bufferLimit = MESSAGE_QUEUE_MAXSIZE * 3 / 4;
+    private final static int bufferLimit = MESSAGE_QUEUE_MAXSIZE * 3 / 4;
     private static BlockingQueue<DAO.MessageWrapper> messageQueue = new ArrayBlockingQueue<DAO.MessageWrapper>(MESSAGE_QUEUE_MAXSIZE);
     private static AtomicInteger queueClients = new AtomicInteger(0);
 
@@ -108,12 +108,11 @@ public class IncomingMessageBuffer extends Thread {
 
                 // in case that the message queue is too large, dump the queue into a file here
                 // to make room that clients can continue to push without blocking
-                /*
                 if (messageQueue.size() > bufferLimit) {
-                    this.jsonBufferHandler.buffer(mw.t.getCreatedAt(), mw.t.toMap(mw.u, false, Integer.MAX_VALUE, ""));
+                    DAO.message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
                     continue pollloop;
                 }
-                */
+                
                 // if there is time enough to finish this, continue to write into the index
 
                 mw.t.enrich(); // we enrich here again because the remote peer may have done this with an outdated version or not at all
