@@ -69,11 +69,11 @@ public class HelloService extends AbstractAPIHandler implements APIHandler {
         String peername = (String) DAO.getConfig("peername", "anonymous");
 
         // retrieve some simple statistics from the index
-        final String backend = DAO.getConfig("backend", "");
+        final String[] backend = DAO.getBackend();
         final boolean backend_push = DAO.getConfig("backend.push.enabled", false);
         JSONObject backend_status = null;
         JSONObject backend_status_index_sizes = null;
-        if (backend.length() > 0 && !backend_push) {
+        if (backend.length > 0 && !backend_push) {
             try {
                 backend_status = StatusService.status(backend);
             } catch (IOException e) {

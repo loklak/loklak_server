@@ -72,21 +72,31 @@ public class SearchServlet extends HttpServlet {
     public final static String frontpeer_hash = Integer.toHexString(Integer.MAX_VALUE - 1);
 
     // possible values: cache, twitter, all
-    public static Timeline search(final String protocolhostportstub, final String query, final ArrayList<String> filterList, final Timeline.Order order, final String source, final int count, final int timezoneOffset, final String provider_hash, final long timeout) throws IOException {
+    public static Timeline search(final String[] protocolhostportstubs, final String query, final ArrayList<String> filterList, final Timeline.Order order, final String source, final int count, final int timezoneOffset, final String provider_hash, final long timeout) throws IOException {
         Timeline tl = new Timeline(order);
         if ("".equals(query)) return tl;
         String urlstring = "";
         String filterString = "";
 
         try {
-            urlstring = protocolhostportstub + "/api/search.json?q=" + URLEncoder.encode(query.replace(' ', '+'), "UTF-8") + "&timezoneOffset=" + timezoneOffset + "&maximumRecords=" + count + "&source=" + (source == null ? "all" : source) + "&minified=true&shortlink=false&timeout=" + timeout;
+            byte[] jsonb = null;
+            IOException ee = null;
+            backendloop: for (String protocolhostportstub: protocolhostportstubs) {
+                ee = null;
+                try {
+                    urlstring = protocolhostportstub + "/api/search.json?q=" + URLEncoder.encode(query.replace(' ', '+'), "UTF-8") + "&timezoneOffset=" + timezoneOffset + "&maximumRecords=" + count + "&source=" + (source == null ? "all" : source) + "&minified=true&shortlink=false&timeout=" + timeout;
 
-            if(!"".equals(filterString = String.join(", ", filterList))) {
-                urlstring = urlstring + "&filter=" + filterString;
+                    if (!"".equals(filterString = String.join(", ", filterList))) {
+                        urlstring = urlstring + "&filter=" + filterString;
+                    }
+
+                    jsonb = ClientConnection.downloadPeer(urlstring);
+                    break backendloop;
+                } catch (IOException e) {
+                    ee = e;
+                }
             }
-
-            byte[] jsonb = ClientConnection.downloadPeer(urlstring);
-            if (jsonb == null || jsonb.length == 0) throw new IOException("empty content from " + protocolhostportstub);
+            if (jsonb == null || jsonb.length == 0) throw ee == null ? new IOException("empty content from " + protocolhostportstubs) : ee;
             String jsons = UTF8.String(jsonb);
             JSONObject json = new JSONObject(jsons);
             if (json == null || json.length() == 0) return tl;
@@ -118,10 +128,10 @@ public class SearchServlet extends HttpServlet {
     }
 
     public static Timeline search(
-            final String protocolhostportstub, final String query, final Timeline.Order order,
+            final String[] protocolhostportstubs, final String query, final Timeline.Order order,
             final String source, final int count, final int timezoneOffset,
             final String provider_hash, final long timeout) throws IOException {
-        return search(protocolhostportstub, query, new ArrayList<>(), order, source, count, timezoneOffset, provider_hash, timeout);
+        return search(protocolhostportstubs, query, new ArrayList<>(), order, source, count, timezoneOffset, provider_hash, timeout);
     }
 
     @Override
@@ -520,7 +530,7 @@ public class SearchServlet extends HttpServlet {
 
     public static void main(String[] args) {
         try {
-            Timeline tl = search("http://loklak.org", "beer", Timeline.Order.CREATED_AT, "cache", 20, -120, backend_hash, 10000);
+            Timeline tl = search(new String[]{"http://root.loklak.org"}, "beer", Timeline.Order.CREATED_AT, "cache", 20, -120, backend_hash, 10000);
             System.out.println(tl.toJSON(false, "search_metadata", "statuses").toString(2));
         } catch (IOException e) {
             DAO.severe(e);

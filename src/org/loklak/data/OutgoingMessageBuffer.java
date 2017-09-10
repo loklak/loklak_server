@@ -37,7 +37,7 @@ public class OutgoingMessageBuffer {
     }
 
     public void transmitTimelineToBackend(Timeline tl) {
-        if (DAO.getConfig("backend", new String[0], ",").length > 0) {
+        if (DAO.getBackend().length > 0) {
             boolean clone = false;
             for (TwitterTweet message: tl) {
                 if (!message.getSourceType().propagate()) {clone = true; break;}
@@ -56,7 +56,7 @@ public class OutgoingMessageBuffer {
 
     public void transmitMessage(final TwitterTweet tweet, final UserEntry user) {
         if (!tweet.getSourceType().propagate()) return;
-        if (DAO.getConfig("backend", new String[0], ",").length <= 0) return;
+        if (DAO.getBackend().length <= 0) return;
         if (!DAO.getConfig("backend.push.enabled", false)) return;
         Timeline tl = this.pushToBackendTimeline.poll();
         if (tl == null) tl = new Timeline(Timeline.Order.CREATED_AT);

@@ -74,7 +74,7 @@ public class ClassicHarvester implements Harvester {
     }
 
     public int harvest() {
-        String backend = DAO.getConfig("backend","http://api.loklak.org");
+        String[] backend = DAO.getBackend();
 
         if (random.nextInt(100) != 0 && hitsOnBackend < HITS_LIMIT_4_QUERIES && pendingQueries.size() == 0 && pendingContext.size() > 0) {
             // harvest using the collected keys instead using the queries

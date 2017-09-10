@@ -75,7 +75,7 @@ public class Caretaker extends Thread {
     public void run() {
         Thread.currentThread().setName("CARETAKER");
         // send a message to other peers that I am alive
-        String[] remote = DAO.getConfig("backend", new String[0], ",");
+        String[] backends = DAO.getBackend();
         int maxRetries = Integer.valueOf(DAO.getConfig("caretaker.backendpush.retries", "5"));
         int backOffParameter = Integer.valueOf(DAO.getConfig("caretaker.backendpush.backoff", "3000"));
 
@@ -96,7 +96,7 @@ public class Caretaker extends Thread {
             // check ping
             if (System.currentTimeMillis() - helloPeriod > helloTime) {
                 helloTime = System.currentTimeMillis();
-                HelloService.propagate(remote);
+                HelloService.propagate(backends);
             }
             
             // clear caches
@@ -111,12 +111,12 @@ public class Caretaker extends Thread {
             
             // peer-to-peer operation
             Timeline tl = DAO.outgoingMessages.takeTimelineMin(Timeline.Order.CREATED_AT, TIMELINE_PUSH_MINSIZE, TIMELINE_PUSH_MAXSIZE);
-            if (tl != null && tl.size() > 0 && remote.length > 0) {
+            if (tl != null && tl.size() > 0 && backends.length > 0) {
                 // transmit the timeline
                 long start = System.currentTimeMillis();
-                boolean success = PushServlet.push(remote, tl);
+                boolean success = PushServlet.push(backends, tl);
                 if (success) {
-                    DAO.log("success pushing " + tl.size() + " messages to backend " + Arrays.toString(remote) + " in 1st attempt in " + (System.currentTimeMillis() - start) + " ms");
+                    DAO.log("success pushing " + tl.size() + " messages to backend " + Arrays.toString(backends) + " in 1st attempt in " + (System.currentTimeMillis() - start) + " ms");
                 }
                 if (!success) {
                     // we should try again.. but not an infinite number because then
@@ -124,15 +124,15 @@ public class Caretaker extends Thread {
                     retrylook: for (int retry = 0; retry < maxRetries; retry++) {
                         // give back-end time to recover
                         try {Thread.sleep((retry + 1) * backOffParameter);} catch (InterruptedException e) {}
-                        DAO.log("trying to push (again) " + tl.size() + " messages to backend " + Arrays.toString(remote) + ", attempt #" + (retry + 1) + "/5");
+                        DAO.log("trying to push (again) " + tl.size() + " messages to backend " + Arrays.toString(backends) + ", attempt #" + (retry + 1) + "/5");
                         start = System.currentTimeMillis();
-                        if (PushServlet.push(remote, tl)) {
-                            DAO.log("success pushing " + tl.size() + " messages to backend " + Arrays.toString(remote) + " in " + (retry + 2) + ". attempt in " + (System.currentTimeMillis() - start) + " ms");
+                        if (PushServlet.push(backends, tl)) {
+                            DAO.log("success pushing " + tl.size() + " messages to backend " + Arrays.toString(backends) + " in " + (retry + 2) + ". attempt in " + (System.currentTimeMillis() - start) + " ms");
                             success = true;
                             break retrylook;
                         }
                     }
-                    if (!success) DAO.log("failed pushing " + tl.size() + " messages to backend " + Arrays.toString(remote));
+                    if (!success) DAO.log("failed pushing " + tl.size() + " messages to backend " + Arrays.toString(backends));
                 }
                 busy = true;
             }
@@ -147,7 +147,7 @@ public class Caretaker extends Thread {
             // run some harvesting steps
             if (DAO.getConfig("retrieval.forbackend.enabled", false) &&
                 DAO.getConfig("backend.push.enabled", false) &&
-                (DAO.getConfig("backend", "").length() > 0) &&
+                (DAO.getBackend().length > 0) &&
                 DAO.outgoingMessages.timelineSize() < TIMELINE_PUSH_MAXSIZE) {
                 int retrieval_forbackend_concurrency = (int) DAO.getConfig("retrieval.forbackend.concurrency", 1);
                 int retrieval_forbackend_loops = (int) DAO.getConfig("retrieval.forbackend.loops", 10);

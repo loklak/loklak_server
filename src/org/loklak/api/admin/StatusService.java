@@ -64,6 +64,18 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
     }
 
 
+    public static JSONObject status(final String[] protocolhostportstubs) throws IOException {
+        IOException e = null;
+        for (String protocolhostportstub: protocolhostportstubs) {
+            try {
+                return status(protocolhostportstub);
+            } catch (IOException ee) {
+                e = ee;
+            }
+        }
+        throw e == null ? new IOException("no url given") : e;
+    }
+    
     public static JSONObject status(final String protocolhostportstub) throws IOException {
         final String urlstring = protocolhostportstub + "/api/status.json";
         byte[] response = ClientConnection.downloadPeer(urlstring);
@@ -116,11 +128,11 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
     }
 
     public static JSONObject getIndexConfig() throws Exception {
-        final String backend = DAO.getConfig("backend", "");
+        final String[] backend = DAO.getBackend();
         final boolean backend_push = DAO.getConfig("backend.push.enabled", false);
         JSONObject backend_status = null;
         JSONObject backend_status_index_sizes = null;
-        if (backend.length() > 0 && !backend_push) {
+        if (backend.length > 0 && !backend_push) {
             try {
                 backend_status = StatusService.status(backend);
                 backend_status_index_sizes = backend_status == null ? null : (JSONObject) backend_status.get("index_sizes");

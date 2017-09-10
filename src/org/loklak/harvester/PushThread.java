@@ -5,10 +5,10 @@ import org.loklak.data.DAO;
 import org.loklak.objects.Timeline;
 
 public class PushThread implements Runnable {
-    private String peer;
+    private String[] peers;
     private Timeline tl;
-    public PushThread(String peer, Timeline tl) {
-        this.peer = peer;
+    public PushThread(String[] peers, Timeline tl) {
+        this.peers = peers;
         this.tl = tl;
     }
     @Override
@@ -17,7 +17,7 @@ public class PushThread implements Runnable {
         for (int i = 0; i < 5; i++) {
             try {
                 long start = System.currentTimeMillis();
-                success = PushServlet.push(new String[]{peer}, tl);
+                success = PushServlet.push(this.peers, tl);
                 if (success) {
                     DAO.log("retrieval of " + tl.size() + " new messages for q = " + tl.getQuery() +
                             ", pushed to backend synchronously in " + (System.currentTimeMillis() - start) + " ms; amount = " + tl.size());

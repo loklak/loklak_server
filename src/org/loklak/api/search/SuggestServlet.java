@@ -65,7 +65,7 @@ public class SuggestServlet extends HttpServlet {
     public static Map<Integer, JSONObject> cache = new ConcurrentHashMap<>();
 
     public static ResultList<QueryEntry> suggest(
-            final String protocolhostportstub,
+            final String[] protocolhostportstubs,
             final String q,
             final String source,
             final int count,
@@ -80,22 +80,32 @@ public class SuggestServlet extends HttpServlet {
         int httpsport = (int) DAO.getConfig("port.https", 9443);
         String peername = (String) DAO.getConfig("peername", "anonymous");
         ResultList<QueryEntry>  rl = new ResultList<QueryEntry>();
-        String urlstring = "";
-        urlstring = protocolhostportstub + "/api/suggest.json?q=" + URLEncoder.encode(q.replace(' ', '+'), "UTF-8") +
-                "&timezoneOffset=" + timezoneOffset +
-                "&count=" + count +
-                "&source=" + (source == null ? "all" : source) +
-                (order == null ? "" : ("&order=" + order)) +
-                (orderby == null ? "" : ("&orderby=" + orderby)) +
-                (since == null ? "" : ("&since=" + since)) +
-                (until == null ? "" : ("&until=" + until)) +
-                (selectby == null ? "" : ("&selectby=" + selectby)) +
-                (random < 0 ? "" : ("&random=" + random)) +
-                "&minified=true" +
-                "&port.http=" + httpport +
-                "&port.https=" + httpsport +
-                "&peername=" + peername;
-        byte[] response = ClientConnection.downloadPeer(urlstring);
+        byte[] response = null;
+        IOException ee = null;
+        backendloop: for (String protocolhostportstub: protocolhostportstubs) {
+            try {
+                ee = null;
+                String urlstring = protocolhostportstub + "/api/suggest.json?q=" + URLEncoder.encode(q.replace(' ', '+'), "UTF-8") +
+                        "&timezoneOffset=" + timezoneOffset +
+                        "&count=" + count +
+                        "&source=" + (source == null ? "all" : source) +
+                        (order == null ? "" : ("&order=" + order)) +
+                        (orderby == null ? "" : ("&orderby=" + orderby)) +
+                        (since == null ? "" : ("&since=" + since)) +
+                        (until == null ? "" : ("&until=" + until)) +
+                        (selectby == null ? "" : ("&selectby=" + selectby)) +
+                        (random < 0 ? "" : ("&random=" + random)) +
+                        "&minified=true" +
+                        "&port.http=" + httpport +
+                        "&port.https=" + httpsport +
+                        "&peername=" + peername;
+                response = ClientConnection.downloadPeer(urlstring);
+                break backendloop;
+            } catch (IOException e) {
+                ee = e;
+            }
+        }
+        if (response == null && ee != null) throw ee;
         if (response == null || response.length == 0) return rl;
         String responseString = UTF8.String(response);
         if (responseString == null || responseString.length() == 0 || responseString.startsWith("<")) {
@@ -228,7 +238,7 @@ public class SuggestServlet extends HttpServlet {
 
     public static void main(String[] args) {
         try {
-            ResultList<QueryEntry> rl = suggest("http://loklak.org", "","query",1000,"asc","retrieval_next",DateParser.getTimezoneOffset(),null,"now","retrieval_next",3);
+            ResultList<QueryEntry> rl = suggest(new String[]{"http://root.loklak.org"}, "","query",1000,"asc","retrieval_next",DateParser.getTimezoneOffset(),null,"now","retrieval_next",3);
             for (QueryEntry qe: rl) {
                 System.out.println(UTF8.String(qe.toJSONBytes()));
             }

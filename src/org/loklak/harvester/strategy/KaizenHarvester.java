@@ -35,7 +35,7 @@ import java.util.concurrent.Executors;
  */
 public class KaizenHarvester implements Harvester {
 
-    private final String BACKEND;
+    private final String[] BACKEND;
     private final int SUGGESTIONS_COUNT;
     private final int SUGGESTIONS_RANDOM;
     private final int PLACE_RADIUS;
@@ -50,7 +50,7 @@ public class KaizenHarvester implements Harvester {
     private Twitter twitter = null;
 
     public KaizenHarvester(KaizenQueries queries) {
-        BACKEND = DAO.getConfig("backend", "http://loklak.org");
+        BACKEND = DAO.getBackend();
         SUGGESTIONS_COUNT = DAO.getConfig("harvester.kaizen.suggestions_count", 1000);
         SUGGESTIONS_RANDOM = DAO.getConfig("harvester.kaizen.suggestions_random", 5);
         PLACE_RADIUS = DAO.getConfig("harvester.kaizen.place_radius", 5);

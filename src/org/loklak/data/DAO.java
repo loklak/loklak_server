@@ -1515,10 +1515,14 @@ public class DAO {
         return getBestPeers(testpeers);
     }
 
+    public static String[] getBackend() {
+        return DAO.getConfig("backend", new String[]{"http://api.loklak.org"}, ",");
+    }
+    
     public static List<String> getBackendPeers() {
         List<String> testpeers = new ArrayList<>();
         if (backendPeerCache.size() == 0) {
-            String[] remote = DAO.getConfig("backend", new String[0], ",");
+            final String[] remote = DAO.getBackend();
             for (String peer: remote) backendPeerCache.add(peer);
         }
         testpeers.addAll(backendPeerCache);
@@ -1545,7 +1549,7 @@ public class DAO {
             String peer = remote.get(pick);
             long start = System.currentTimeMillis();
             try {
-                Timeline tl = SearchServlet.search(peer, q, filterList, order, source, count, timezoneOffset, provider_hash, timeout);
+                Timeline tl = SearchServlet.search(new String[]{peer}, q, filterList, order, source, count, timezoneOffset, provider_hash, timeout);
                 peerLatency.put(peer, System.currentTimeMillis() - start);
                 // to show which peer was used for the retrieval, we move the picked peer to the front of the list
                 if (pick != 0) remote.add(0, remote.remove(pick));
