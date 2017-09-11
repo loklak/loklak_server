@@ -117,6 +117,7 @@ import org.loklak.api.search.SearchServlet;
 import org.loklak.api.search.ShortlinkFromTweetServlet;
 import org.loklak.api.search.SuggestServlet;
 import org.loklak.api.search.TimeAndDateService;
+import org.loklak.api.search.TweetCheckServlet;
 import org.loklak.api.search.TweetScraper;
 import org.loklak.api.search.UserServlet;
 import org.loklak.api.search.VideoUrlService;
@@ -666,6 +667,7 @@ public class LoklakServer {
         servletHandler.addServlet(AccessServlet.class, "/api/access.html");
         servletHandler.addServlet(AccessServlet.class, "/api/access.txt");
         servletHandler.addServlet(ClassifierServlet.class, "/api/classifier.json");
+        servletHandler.addServlet(TweetCheckServlet.class, "/api/check.json");
         servletHandler.addServlet(PeersServlet.class, "/api/peers.json");
         servletHandler.addServlet(PeersServlet.class, "/api/peers.csv");
         servletHandler.addServlet(CrawlerServlet.class, "/api/crawler.json");
