@@ -1516,7 +1516,7 @@ public class DAO {
     }
 
     public static String[] getBackend() {
-        return DAO.getConfig("backend", new String[]{"http://api.loklak.org"}, ",");
+        return DAO.getConfig("backend", new String[0], ",");
     }
     
     public static List<String> getBackendPeers() {
