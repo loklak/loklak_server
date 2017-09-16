@@ -29,7 +29,6 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.eclipse.jetty.util.log.Log;
 import org.loklak.api.search.SearchServlet;
 import org.loklak.api.search.SuggestServlet;
 import org.loklak.data.DAO;
@@ -112,7 +111,7 @@ public class ClassicHarvester implements Harvester {
                     if (pendingContext.size() == 0) try {Thread.sleep(10000);} catch (InterruptedException e) {}
                 }
             } catch (IOException e) {
-            	Log.getLog().warn(e.getMessage());
+            	DAO.severe(e.getMessage());
                 try {Thread.sleep(10000);} catch (InterruptedException e1) {} // if the remote peer is down, throttle down
             }
         }

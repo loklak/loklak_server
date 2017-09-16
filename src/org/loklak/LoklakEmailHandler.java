@@ -26,7 +26,6 @@ import javax.mail.*;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
-import org.eclipse.jetty.util.log.Log;
 import org.loklak.data.DAO;
 
 public class LoklakEmailHandler {
@@ -92,7 +91,7 @@ public class LoklakEmailHandler {
         message.setSubject(subject, "UTF-8");
         message.setText(text, "UTF-8");
         Transport.send(message);
-        Log.getLog().info("Successfully send mail to " + addressTo);
+        DAO.log("Successfully send mail to " + addressTo);
 	}
 
     /**

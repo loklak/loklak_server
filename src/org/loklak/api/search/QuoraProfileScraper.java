@@ -21,7 +21,6 @@ package org.loklak.api.search;
 
 import java.io.IOException;
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;

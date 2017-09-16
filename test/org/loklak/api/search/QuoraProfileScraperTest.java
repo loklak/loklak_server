@@ -9,8 +9,6 @@ import org.loklak.http.ClientConnection;
 import org.loklak.objects.Timeline2;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.loklak.objects.Timeline2;
-
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;

@@ -16,10 +16,6 @@ import org.json.JSONArray;
 import org.loklak.objects.ProviderType;
 import org.loklak.objects.SourceType;
 import org.loklak.objects.Timeline2;
-import org.loklak.tools.storage.JSONObjectWithDefault;
-import org.json.JSONObject;
-import org.loklak.data.DAO;
-import org.loklak.http.ClientConnection;
 import org.loklak.server.*;
 
 /**

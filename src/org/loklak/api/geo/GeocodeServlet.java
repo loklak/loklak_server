@@ -27,7 +27,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
@@ -82,7 +81,7 @@ public class GeocodeServlet extends HttpServlet {
                     return;
                 }
             } catch (IOException e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
             }
         }
         

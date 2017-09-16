@@ -29,7 +29,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.PrintWriter;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
 import org.json.JSONArray;
 import org.json.XML;
@@ -132,7 +131,7 @@ public class NOAAAlertServlet extends HttpServlet {
         	sos.println();
         }
         catch (IOException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         	JSONObject json = new JSONObject(true);
         	json.put("error", "Looks like there is an error in the conversion");
         	json.put("type", "Error");

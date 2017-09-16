@@ -45,11 +45,6 @@ import org.apache.http.client.utils.URIBuilder;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Map;
-import java.util.Set;
-
 import org.json.JSONException;
 import org.loklak.objects.MessageEntry;
 import org.loklak.objects.ProviderType;

@@ -37,7 +37,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.zip.GZIPInputStream;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
@@ -157,7 +156,7 @@ public class JsonRepository {
                         try {
                             Compression.gunzip(source, dest, true);
                         } catch (IOException e) {
-                        	Log.getLog().warn(e);
+                        	DAO.severe(e);
                             // mark the file as invalid
                             if (dest.exists()) dest.delete();
                             final File invalid = new File(path, d + ".invalid");

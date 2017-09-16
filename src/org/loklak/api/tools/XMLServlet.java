@@ -27,9 +27,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
 import org.json.XML;
+import org.loklak.data.DAO;
 import org.loklak.http.RemoteAccess;
 import org.loklak.server.Query;
 
@@ -59,7 +59,7 @@ public class XMLServlet extends HttpServlet {
         	sos.println();
         }
         catch (IOException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         	JSONObject json = new JSONObject(true);
         	json.put("error", "Malformed XML. Please check XML Again");
         	json.put("type", "Error");

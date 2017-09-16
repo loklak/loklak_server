@@ -22,6 +22,7 @@ package org.loklak.data;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.fge.jackson.JsonLoader;
 import com.google.common.base.Charsets;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -51,7 +52,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.eclipse.jetty.util.ConcurrentHashSet;
-import org.eclipse.jetty.util.log.Log;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
 import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.logging.slf4j.Slf4jESLoggerFactory;
@@ -93,6 +93,8 @@ import org.loklak.stream.MQTTPublisher;
 import org.loklak.tools.DateParser;
 import org.loklak.tools.OS;
 import org.loklak.tools.storage.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The Data Access Object for the message project.
@@ -119,6 +121,8 @@ public class DAO {
     public final static com.fasterxml.jackson.databind.ObjectMapper jsonMapper = new com.fasterxml.jackson.databind.ObjectMapper(DAO.jsonFactory);
     public final static com.fasterxml.jackson.core.type.TypeReference<HashMap<String,Object>> jsonTypeRef = new com.fasterxml.jackson.core.type.TypeReference<HashMap<String,Object>>() {};
 
+    private static Logger logger = LoggerFactory.getLogger(DAO.class);
+    
     public final static String MESSAGE_DUMP_FILE_PREFIX = "messages_";
     public final static String ACCOUNT_DUMP_FILE_PREFIX = "accounts_";
     public final static String USER_DUMP_FILE_PREFIX = "users_";
@@ -277,7 +281,7 @@ public class DAO {
         OS.protectPath(login_keys_path);
 
 
-        Log.getLog().info("Initializing user roles");
+        DAO.log("Initializing user roles");
 
         Path userRoles_path = settings_dir.resolve("userRoles.json");
         userRoles = new UserRoles(new JsonFile(userRoles_path.toFile()));
@@ -285,9 +289,9 @@ public class DAO {
 
         try{
             userRoles.loadUserRolesFromObject();
-            Log.getLog().info("Loaded user roles from file");
+            DAO.log("Loaded user roles from file");
         }catch (IllegalArgumentException e){
-            Log.getLog().info("Load default user roles");
+            DAO.log("Load default user roles");
             userRoles.loadDefaultUserRoles();
         }
 
@@ -314,12 +318,12 @@ public class DAO {
         	try {
         	    elasticsearch_client.createIndexIfNotExists(index.name(), shards, replicas);
         	} catch (Throwable e) {
-        		Log.getLog().warn(e);
+        		DAO.severe(e);
         	}
             try {
                 elasticsearch_client.setMapping(index.name(), new File(mappingsDir, index.getSchemaFilename()));
             } catch (Throwable e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
             }
         }
         // elasticsearch will probably take some time until it is started up. We do some other stuff meanwhile..
@@ -396,7 +400,7 @@ public class DAO {
 	        try{
 	        	geoNames = new GeoNames(cities1000, new File(conf_dir, "iso3166.json"), 1);
 	        }catch(IOException e){
-	        	Log.getLog().warn(e.getMessage());
+	        	DAO.severe(e.getMessage());
 	        	cities1000.delete();
 	        	geoNames = null;
 	        }
@@ -431,7 +435,7 @@ public class DAO {
                 try {
                     Classifier.init(10000, 1000);
                 } catch (Throwable e) {
-                	Log.getLog().warn(e);
+                	DAO.severe(e);
                 }
                 log("classifier initialized!");
             }
@@ -473,7 +477,7 @@ public class DAO {
                 queries.writeEntries(bulkEntries);
                 reader.close();
             } catch (IOException e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
             }
         }
         log("queries initialized.");
@@ -527,11 +531,11 @@ public class DAO {
                                     AccountEntry a = new AccountEntry(json);
                                     DAO.writeAccount(a, false);
                                 } catch (IOException e) {
-                                	Log.getLog().warn(e);
+                                	DAO.severe(e);
                                 }
                             }
                         } catch (InterruptedException e) {
-                        	Log.getLog().warn(e);
+                        	DAO.severe(e);
                         }
                     }
                 };
@@ -548,7 +552,7 @@ public class DAO {
      * close all objects in this class
      */
     public static void close() {
-        Log.getLog().info("closing DAO");
+        DAO.log("closing DAO");
 
         // close the dump files
         message_dump.close();
@@ -574,7 +578,7 @@ public class DAO {
         // close the index
         elasticsearch_client.close();
 
-        Log.getLog().info("closed DAO");
+        DAO.log("closed DAO");
     }
 
     /**
@@ -708,7 +712,7 @@ public class DAO {
             // teach the classifier
             Classifier.learnPhrase(mw.t.getText());
         } catch (IOException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         }
         return true;
     }
@@ -780,7 +784,7 @@ public class DAO {
             result = messages.writeEntries(macc);
             for (Post i: macc) if (!(result.getCreated().contains(i.getPostId()))) existed.add(i.getPostId());
         } catch (IOException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         }
         if (result == null) return new HashSet<String>();
         return result.getCreated();
@@ -850,7 +854,7 @@ public class DAO {
             users.writeEntries(userBulk);
 
         } catch (IOException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         }
         if (result == null) return new HashSet<String>();
         return result.getCreated();
@@ -872,7 +876,7 @@ public class DAO {
             // teach the classifier
             Classifier.learnPhrase(mw.t.getText());
         } catch (IOException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         }
 
         return created;
@@ -890,7 +894,7 @@ public class DAO {
                 }
             }
         } catch (IOException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         }
         return created;
     }
@@ -912,7 +916,7 @@ public class DAO {
             // record account into search index
             accounts.writeEntry(new IndexEntry<AccountEntry>(a.getScreenName(), a.getSourceType(), a));
         } catch (IOException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         }
         return true;
     }
@@ -932,7 +936,7 @@ public class DAO {
             // record import profile into search index
             importProfiles.writeEntry(new IndexEntry<ImportProfileEntry>(i.getId(), i.getSourceType(), i));
         } catch (IOException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         }
         return true;
     }
@@ -1103,7 +1107,7 @@ public class DAO {
                         timeline.add(tweet, user);
                     }
                 } catch (IOException e) {
-                	Log.getLog().warn(e);
+                	DAO.severe(e);
                 }
             }
             this.aggregations = query.aggregations;
@@ -1230,7 +1234,7 @@ public class DAO {
         try {
             return users.read(screen_name);
         } catch (IOException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
             return null;
         }
     }
@@ -1250,7 +1254,7 @@ public class DAO {
         try {
             return accounts.read(screen_name);
         } catch (IOException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
             return null;
         }
     }
@@ -1276,7 +1280,7 @@ public class DAO {
         try {
             return importProfiles.read(id);
         } catch (IOException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
             return null;
         }
     }
@@ -1365,7 +1369,7 @@ public class DAO {
         try {
             qe = queries.read(q);
         } catch (IOException | JSONException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         }
 
         if (recordQuery && Caretaker.acceptQuery4Retrieval(q)) {
@@ -1379,7 +1383,7 @@ public class DAO {
             try {
                 queries.writeEntry(new IndexEntry<QueryEntry>(q, qe.source_type == null ? SourceType.TWITTER : qe.source_type, qe));
             } catch (IOException e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
             }
         } else {
             // accept rules may change, we want to delete the query then in the index
@@ -1602,7 +1606,7 @@ public class DAO {
      */
     public static void log(String line) {
         if(DAO.getConfig("flag.log.dao", "true").equals("true")) {
-            Log.getLog().info(line);
+            logger.info(line);
         }
     }
 
@@ -1611,19 +1615,19 @@ public class DAO {
      */
     public static void severe(String line) {
         if(DAO.getConfig("flag.severe.dao", "true").equals("true")) {
-            Log.getLog().warn(line);
+            logger.warn(line);
         }
     }
 
     public static void severe(String line, Throwable e) {
         if(DAO.getConfig("flag.severe.dao", "true").equals("true")) {
-            Log.getLog().warn(line, e);
+            logger.warn(line);
         }
     }
 
     public static void severe(Throwable e) {
         if(DAO.getConfig("flag.severe.dao", "true").equals("true")) {
-            Log.getLog().warn(e);
+            logger.warn("", e);
         }
     }
 
@@ -1632,7 +1636,7 @@ public class DAO {
      */
     public static void debug(Throwable e) {
         if(DAO.getConfig("flag.debug.dao", "true").equals("true")) {
-            Log.getLog().debug(e);
+            DAO.severe(e);
         }
     }
 

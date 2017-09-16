@@ -39,7 +39,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import org.eclipse.jetty.util.log.Log;
 import org.elasticsearch.action.ActionWriteResponse;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.cluster.stats.ClusterStatsAction;
@@ -129,7 +128,7 @@ public class ElasticsearchClient {
                 int port = Integer.parseInt(a.substring(p + 1));
                 tc.addTransportAddress(new InetSocketTransportAddress(i, port));
             } catch (UnknownHostException e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
             }
         }
         this.elasticsearchClient = tc;
@@ -198,7 +197,7 @@ public class ElasticsearchClient {
                 .setUpdateAllTypes(true)
                 .setType("_default_").execute().actionGet();
         } catch (Throwable e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         };
     }
 
@@ -209,7 +208,7 @@ public class ElasticsearchClient {
                 .setUpdateAllTypes(true)
                 .setType("_default_").execute().actionGet();
         } catch (Throwable e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         };
     }
 
@@ -220,7 +219,7 @@ public class ElasticsearchClient {
                 .setUpdateAllTypes(true)
                 .setType("_default_").execute().actionGet();
         } catch (Throwable e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         };
     }
 
@@ -233,7 +232,7 @@ public class ElasticsearchClient {
                 .execute()
                 .actionGet();
         } catch (Throwable e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         };
     }
 
@@ -327,7 +326,7 @@ public class ElasticsearchClient {
                 .actionGet();
             return response.getHits().getTotalHits();
         } catch (Throwable e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
             return 0;
         }
     }
@@ -341,7 +340,7 @@ public class ElasticsearchClient {
                 .actionGet();
             return response.getHits().getTotalHits();
         } catch (Throwable e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
             return 0;
         }
     }
@@ -575,7 +574,7 @@ public class ElasticsearchClient {
             regulator = (long) (throttling_factor * duration);
             try {Thread.sleep(regulator);} catch (InterruptedException e) {}
         }
-        Log.getLog().info("elastic write entry to index " + indexName + ": " + (created ? "created":"updated") + ", " + duration + " ms" + (regulator == 0 ? "" : ", throttled with " + regulator + " ms"));
+        DAO.log("elastic write entry to index " + indexName + ": " + (created ? "created":"updated") + ", " + duration + " ms" + (regulator == 0 ? "" : ", throttled with " + regulator + " ms"));
         return created;
     }
 
@@ -622,7 +621,7 @@ public class ElasticsearchClient {
             regulator = (long) (throttling_factor * duration);
             try {Thread.sleep(regulator);} catch (InterruptedException e) {}
         }
-        Log.getLog().info("elastic write bulk to index " + indexName + ": " + jsonMapList.size() + " entries, " + result.created.size() + " created, " + result.errors.size() + " errors, " + duration + " ms" + (regulator == 0 ? "" : ", throttled with " + regulator + " ms") + ", " + ops + " objects/second");
+        DAO.log("elastic write bulk to index " + indexName + ": " + jsonMapList.size() + " entries, " + result.created.size() + " created, " + result.errors.size() + " errors, " + duration + " ms" + (regulator == 0 ? "" : ", throttled with " + regulator + " ms") + ", " + ops + " objects/second");
         if(result.errors.size() > 0) {
             DAO.severe("Errors faced while indexing:");
             for(String key : result.errors.keySet()) {

@@ -45,7 +45,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-import org.eclipse.jetty.util.log.Log;
+import org.loklak.data.DAO;
 
 public final class OS {
 
@@ -149,7 +149,7 @@ public final class OS {
                 try {
                     fos.close();
                 } catch (final Exception e ) {
-                	Log.getLog().warn(e);
+                	DAO.severe(e);
                 }
             }
         }
@@ -170,7 +170,7 @@ public final class OS {
             try {
                 Runtime.getRuntime().exec("chmod 755 " + scriptFile.getAbsolutePath().replaceAll(" ", "\\ ")).waitFor();
             } catch (final InterruptedException e) {
-            	Log.getLog().warn("DEPLOY of script file failed. file = " + scriptFile.getAbsolutePath(), e);
+            	DAO.severe("DEPLOY of script file failed. file = " + scriptFile.getAbsolutePath(), e);
                 throw new IOException(e.getMessage());
             }
         }

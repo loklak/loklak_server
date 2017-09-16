@@ -18,7 +18,6 @@
  */
 package org.loklak.api.iot;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -118,7 +117,7 @@ public class ImportProfileServlet extends HttpServlet {
             success = DAO.writeImportProfile(importProfileEntry, true);
         } catch (IOException | NullPointerException e) {
             response.sendError(400, "submitted data is invalid : " + e.getMessage());
-            Log.getLog().warn(e);
+            DAO.severe(e);
             return;
         }
 

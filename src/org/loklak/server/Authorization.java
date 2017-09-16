@@ -19,8 +19,8 @@
 
 package org.loklak.server;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
+import org.loklak.data.DAO;
 import org.loklak.tools.storage.JSONObjectWithDefault;
 import org.loklak.tools.storage.JsonTray;
 
@@ -54,7 +54,7 @@ public class Authorization {
      */
     public Authorization(@Nonnull ClientIdentity identity, JsonTray parent, @Nonnull UserRoles urs) {
 
-        Log.getLog().debug("new authorization");
+        DAO.severe("new authorization");
 
         this.parent = parent;
         this.accounting = null;
@@ -72,15 +72,15 @@ public class Authorization {
     	else json = new JSONObject();
     	
     	if(json.has("userRole") && userRoles.has(json.getString("userRole"))){
-            Log.getLog().debug("user role " + json.getString("userRole") + " valid");
+            DAO.severe("user role " + json.getString("userRole") + " valid");
     		userRole = userRoles.getUserRoleFromString(json.getString("userRole"));
-            Log.getLog().debug("user role: " + userRole.getName());
+            DAO.severe("user role: " + userRole.getName());
     	}
     	else{
-            Log.getLog().debug("user role invalid");
+            DAO.severe("user role invalid");
             userRole = userRoles.getDefaultUserRole(BaseUserRole.ANONYMOUS);
             json.put("userRole", userRole.getName());
-            Log.getLog().debug("user role: " + userRole.getName());
+            DAO.severe("user role: " + userRole.getName());
         }
 
         if(!json.has("permissions")) json.put("permissions", new JSONObject());

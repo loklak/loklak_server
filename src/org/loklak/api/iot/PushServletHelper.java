@@ -1,6 +1,5 @@
 package org.loklak.api.iot;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
@@ -45,7 +44,7 @@ public class PushServletHelper {
                 DAO.MessageWrapper mw = new DAO.MessageWrapper(messageEntry, userEntry, true);
                 successful = DAO.writeMessage(mw);
             } catch (Exception e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
                 report.incrementErrorCount();
                 continue;
             }
@@ -86,7 +85,7 @@ public class PushServletHelper {
             try {
                 profile.put("harvesting_freq", HarvestingFrequency.valueOf(Integer.parseInt(harvesting_freq)).getFrequency());
             } catch (IllegalArgumentException e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
                 throw new IOException("Unsupported 'harvesting_freq' parameter value : " + harvesting_freq);
             }
         } else {
@@ -98,7 +97,7 @@ public class PushServletHelper {
             try {
                 lifetime = Long.parseLong(lifetime_str);
             } catch (NumberFormatException e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
                 throw new IOException("Invalid lifetime parameter (must be an integer) : " + lifetime_str);
             }
             profile.put("lifetime", lifetime);
@@ -120,12 +119,12 @@ public class PushServletHelper {
         try {
             importProfileEntry = new ImportProfileEntry(profile);
         } catch (Exception e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
             throw new IOException("Unable to create import profile : " + e.getMessage());
         }
         boolean success = DAO.writeImportProfile(importProfileEntry, true);
         if (!success) {
-            Log.getLog().warn("Error saving import profile from " + post.getClientHost());
+            DAO.severe("Error saving import profile from " + post.getClientHost());
             throw new IOException("Unable to save import profile : " + importProfileEntry);
         }
         return importProfileEntry;

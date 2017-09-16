@@ -27,7 +27,6 @@ import java.util.HashSet;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.eclipse.jetty.util.log.Log;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.objects.Timeline;
 import org.loklak.objects.Timeline2;
@@ -72,7 +71,7 @@ public class IncomingMessageBuffer extends Thread {
     public void shutdown() {
         this.shallRun = false;
         this.interrupt();
-        Log.getLog().info("catched QueuedIndexing termination signal");
+        DAO.log("catched QueuedIndexing termination signal");
     }
 
     public boolean isBusy() {
@@ -101,10 +100,10 @@ public class IncomingMessageBuffer extends Thread {
             this.isBusy = false;
 
         } catch (Throwable e) {
-            Log.getLog().warn("QueuedIndexing THREAD", e);
+            DAO.severe("QueuedIndexing THREAD", e);
         }
 
-        Log.getLog().info("QueuedIndexing terminated");
+        DAO.log("QueuedIndexing terminated");
     }
 
     private void indexPosts() {
@@ -139,9 +138,9 @@ public class IncomingMessageBuffer extends Thread {
             if (messageQueue.size() > bufferLimit) {
                 try {
                     DAO.message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
-                    Log.getLog().info("writing message directly to dump, messageQueue.size() = " + messageQueue.size() + ", bufferLimit = " + bufferLimit);
+                    DAO.log("writing message directly to dump, messageQueue.size() = " + messageQueue.size() + ", bufferLimit = " + bufferLimit);
                 } catch (IOException e) {
-                    Log.getLog().warn("writing of dump failed", e);
+                    DAO.severe("writing of dump failed", e);
                     e.printStackTrace();
                 }
                 continue pollloop;
@@ -189,7 +188,7 @@ public class IncomingMessageBuffer extends Thread {
         try {
             messageQueue.put(new DAO.MessageWrapper(t, u, dump));
         } catch (InterruptedException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         }
     }
 
