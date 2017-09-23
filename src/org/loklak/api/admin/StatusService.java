@@ -119,8 +119,9 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
         system.put("runtime", System.currentTimeMillis() - Caretaker.startupTime);
         system.put("time_to_restart", Caretaker.upgradeTime - System.currentTimeMillis());
         system.put("load_system_average", OS.getSystemLoadAverage());
-        system.put("load_system_cpu", OS.getSystemCpuLoad());
-        system.put("load_process_cpu", OS.getProcessCpuLoad());
+        double systemCpuLoad = OS.getSystemCpuLoad();
+        system.put("load_system_cpu", systemCpuLoad);
+        system.put("load_process_cpu", systemCpuLoad == Double.NaN ? 0 : systemCpuLoad);
         system.put("server_threads", LoklakServer.getServerThreads());
         system.put("server_uri", LoklakServer.getServerURI());
         system.put("Xmx", xmx);
@@ -318,7 +319,8 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
 
         
         String commitHash = System.getenv("COMMIT_HASH");
-        String commitComment = System.getenv("COMMIT_COMMENT").replaceAll("^[ \n]+", "").replaceAll("[ \n]+$", "");
+        String commitComment = System.getenv("COMMIT_COMMENT");
+        if (commitComment != null) commitComment = commitComment.replaceAll("^[ \n]+", "").replaceAll("[ \n]+$", "");
         JSONObject commit = new JSONObject(true);
         commit.put("hash", commitHash);
         commit.put("comment", commitComment);
