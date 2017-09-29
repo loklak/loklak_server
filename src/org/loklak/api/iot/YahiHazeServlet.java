@@ -40,7 +40,12 @@ import org.loklak.http.RemoteAccess;
 
 public class YahiHazeServlet extends HttpServlet {
 
-	private static String readAll(Reader rd) throws IOException {
+	/**
+     * 
+     */
+    private static final long serialVersionUID = -8158860688432162781L;
+
+    private static String readAll(Reader rd) throws IOException {
 		StringBuilder sb = new StringBuilder();
 		int cp;
 		while ((cp = rd.read()) != -1) {

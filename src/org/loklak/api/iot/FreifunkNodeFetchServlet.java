@@ -65,7 +65,12 @@ Requests the freifunk router network and fetches the information from the router
 
 public class FreifunkNodeFetchServlet extends HttpServlet {
 
-	private static String readAll(Reader rd) throws IOException {
+	/**
+     * 
+     */
+    private static final long serialVersionUID = 7553602358995797888L;
+
+    private static String readAll(Reader rd) throws IOException {
 		StringBuilder sb = new StringBuilder();
 		int cp;
 		while ((cp = rd.read()) != -1) {

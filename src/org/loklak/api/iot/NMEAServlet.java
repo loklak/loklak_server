@@ -57,7 +57,12 @@ $xxxxx,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A
  */
 public class NMEAServlet extends HttpServlet {
 
-	interface SentenceParser {
+	/**
+     * 
+     */
+    private static final long serialVersionUID = 7870805991586027734L;
+
+    interface SentenceParser {
 		public boolean parse(String [] tokens, GPSPosition position);
 	}
 	

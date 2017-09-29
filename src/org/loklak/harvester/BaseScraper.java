@@ -27,6 +27,10 @@ import org.loklak.server.*;
  */
 public abstract class BaseScraper extends AbstractAPIHandler {
 
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 2088186173633845169L;
     // a time stamp that is given by loklak upon the arrival of the post which is the current local time
     //TODO: check if UTC time needed
     protected String scraperName;
