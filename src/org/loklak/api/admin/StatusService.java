@@ -120,7 +120,7 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
         system.put("time_to_restart", Caretaker.upgradeTime - System.currentTimeMillis());
         system.put("load_system_average", OS.getSystemLoadAverage());
         double systemCpuLoad = OS.getSystemCpuLoad();
-        system.put("load_system_cpu", systemCpuLoad);
+        system.put("load_system_cpu", systemCpuLoad == Double.NaN ? 0 : systemCpuLoad);
         system.put("load_process_cpu", systemCpuLoad == Double.NaN ? 0 : systemCpuLoad);
         system.put("server_threads", LoklakServer.getServerThreads());
         system.put("server_uri", LoklakServer.getServerURI());
