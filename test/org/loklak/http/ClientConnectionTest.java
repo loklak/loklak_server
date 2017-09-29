@@ -12,7 +12,7 @@ public class ClientConnectionTest {
     public void metaUrlExtractorTest() throws IOException {
         HashMap<String, String> linkMap = new HashMap<>();
 
-        linkMap.put("http://yacy.net", "http://yacy.net/en/index.html");
+        linkMap.put("https://yacy.net", "https://yacy.net/en/index.html");
 
         for (HashMap.Entry<String, String> pair : linkMap.entrySet()) {
             assertEquals(pair.getValue(), ClientConnection.getRedirect(pair.getKey()));
