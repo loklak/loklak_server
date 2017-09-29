@@ -50,6 +50,10 @@ public class YoutubeScraper extends BaseScraper {
     //TODO: Not used right now, commenting temporarily, to work on this
     //public final static ExecutorService executor = Executors.newFixedThreadPool(40);
 
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 3324726267150935678L;
     private final static String[] html_tags = new String[]{"title"};
     private final static String[] microformat_vocabularies = new String[]{"og", "twitter"};
     private String type = null;
