@@ -9,6 +9,11 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 public class StreamServlet extends EventSourceServlet {
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 1224323810947361163L;
+
     @Override
     protected EventSource newEventSource(HttpServletRequest request) {
         String channel = request.getParameter("channel");

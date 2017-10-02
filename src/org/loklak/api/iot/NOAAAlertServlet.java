@@ -38,7 +38,12 @@ import org.loklak.data.DAO;
 
 public class NOAAAlertServlet extends HttpServlet {
 
-	@Override
+	/**
+     * 
+     */
+    private static final long serialVersionUID = 2237108001955192947L;
+
+    @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         doGet(request, response);
     }
