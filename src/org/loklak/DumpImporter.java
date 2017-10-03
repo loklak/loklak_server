@@ -26,7 +26,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.data.IndexEntry;
@@ -53,7 +52,7 @@ public class DumpImporter extends Thread {
     public void shutdown() {
         this.shallRun = false;
         this.interrupt();
-        Log.getLog().info("catched DumpImporter termination signal");
+        DAO.log("catched DumpImporter termination signal");
     }
 
     public boolean isBusy() {
@@ -82,7 +81,7 @@ public class DumpImporter extends Thread {
             File import_dump = import_dumps.iterator().next();
             final JsonReader dumpReader = DAO.message_dump.getDumpReader(import_dump);
             final AtomicLong newTweets = new AtomicLong(0);
-            Log.getLog().info("started import of dump file " + import_dump.getAbsolutePath());
+            DAO.log("started import of dump file " + import_dump.getAbsolutePath());
 
             // we start concurrent indexing threads to process the json objects
             Thread[] indexerThreads = new Thread[dumpReader.getConcurrency()];
@@ -111,7 +110,7 @@ public class DumpImporter extends Thread {
                                     }
                                     newTweets.incrementAndGet();
                                 } catch (IOException e) {
-                                	Log.getLog().warn(e);
+                                	DAO.severe(e);
                                 }
                                 if (LoklakServer.queuedIndexing.isBusy()) try {Thread.sleep(200);} catch (InterruptedException e) {}
                             }
@@ -119,10 +118,10 @@ public class DumpImporter extends Thread {
                                 DAO.users.writeEntries(userBulk);
                                 DAO.messages.writeEntries(messageBulk);
                             } catch (IOException e) {
-                            	Log.getLog().warn(e);
+                            	DAO.severe(e);
                             }
                         } catch (InterruptedException e) {
-                        	Log.getLog().warn(e);
+                        	DAO.severe(e);
                         }
                     }
                 };
@@ -141,22 +140,22 @@ public class DumpImporter extends Thread {
                 try {Thread.sleep(10000);} catch (InterruptedException e) {}
                 long runtime = System.currentTimeMillis() - startTime;
                 long count = newTweets.get() - startCount;
-                Log.getLog().info("imported " + newTweets.get() + " tweets at " + (count * 1000 / runtime) + " tweets per second from " + import_dump.getName());
+                DAO.log("imported " + newTweets.get() + " tweets at " + (count * 1000 / runtime) + " tweets per second from " + import_dump.getName());
             }
 
             // catch up the number of processed tweets
-            Log.getLog().info("finished import of dump file " + import_dump.getAbsolutePath() + ", " + newTweets.get() + " new tweets");
+            DAO.log("finished import of dump file " + import_dump.getAbsolutePath() + ", " + newTweets.get() + " new tweets");
 
             // shift the dump file to prevent that it is imported again
             DAO.message_dump.shiftProcessedDump(import_dump.getName());
             this.isBusy = false;
 
         } catch (Throwable e) {
-            Log.getLog().warn("DumpImporter THREAD", e);
+            DAO.severe("DumpImporter THREAD", e);
             try {Thread.sleep(10000);} catch (InterruptedException e1) {}
         }
 
-        Log.getLog().info("DumpImporter terminated");
+        DAO.log("DumpImporter terminated");
     }
 
 }

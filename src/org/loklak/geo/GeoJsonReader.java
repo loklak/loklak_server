@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-import org.eclipse.jetty.util.log.Log;
+import org.loklak.data.DAO;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
@@ -78,13 +78,13 @@ public class GeoJsonReader implements Runnable {
                         try {
                             this.featureQueue.put(feature);
                         } catch (InterruptedException e) {
-                        	Log.getLog().warn(e);
+                        	DAO.severe(e);
                         }
                     }
                 }
             }
         } catch (IOException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         } finally {
             for (int i = 0; i < this.concurrency; i++) {
                 try {this.featureQueue.put(POISON_FEATURE);} catch (InterruptedException e) {}

@@ -45,11 +45,6 @@ import org.apache.http.client.utils.URIBuilder;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Map;
-import java.util.Set;
-
 import org.json.JSONException;
 import org.loklak.objects.MessageEntry;
 import org.loklak.objects.ProviderType;
@@ -58,6 +53,10 @@ import org.loklak.objects.UserEntry;
 
 public class TweetScraper extends BaseScraper {
 
+    /**
+     * 
+     */
+    private static final long serialVersionUID = -3803127453010542460L;
     private static final Pattern emoji_pattern_span = Pattern.compile("<span [^>]*class=\"Emoji Emoji--forLinks\" [^>]*>[\\n]*[^<]*</span>[\\n]*<span [^>]*class=\"visuallyhidden\" [^>]*aria-hidden=\"true\"[^>]*>[\\n]*([^<]*)[\\n]*</span>");
     private final static Pattern hashtag_pattern = Pattern.compile("<a href=\"/hashtag/.*?\".*?class=\"twitter-hashtag.*?\".*?><s>#</s><b>(.*?)</b></a>");
     private final static Pattern timeline_link_pattern = Pattern.compile("<a href=\"https://(.*?)\".*? data-expanded-url=\"(.*?)\".*?twitter-timeline-link.*?title=\"(.*?)\".*?>.*?</a>");

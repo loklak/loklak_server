@@ -32,7 +32,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -111,7 +110,7 @@ public class PushServlet extends HttpServlet {
                 transmittedToAtLeastOnePeer = true;
             } catch (IOException | JSONException | SignatureException | InvalidKeyException e) {
                 DAO.log("FAILED to push " + timeline.size() + " messages to backend " + hoststub);
-                Log.getLog().warn(e);
+                DAO.severe(e);
             } finally {
                 if (connection != null) connection.close();
             }
@@ -229,7 +228,7 @@ public class PushServlet extends HttpServlet {
                         try {
                             DAO.queries.writeEntry(new IndexEntry<QueryEntry>(query, qe.getSourceType(), qe));
                         } catch (IOException e) {
-                        	Log.getLog().warn(e);
+                        	DAO.severe(e);
                         }
                     }
                 }

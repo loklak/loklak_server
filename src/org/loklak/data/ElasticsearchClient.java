@@ -39,7 +39,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import org.eclipse.jetty.util.log.Log;
 import org.elasticsearch.action.ActionWriteResponse;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.cluster.stats.ClusterStatsAction;
@@ -86,6 +85,7 @@ import org.elasticsearch.search.aggregations.bucket.range.Range;
 import org.elasticsearch.search.aggregations.bucket.range.date.DateRangeBuilder;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsBuilder;
 import org.elasticsearch.search.aggregations.metrics.avg.Avg;
 import org.elasticsearch.search.aggregations.metrics.sum.Sum;
 import org.elasticsearch.search.sort.SortBuilders;
@@ -129,7 +129,7 @@ public class ElasticsearchClient {
                 int port = Integer.parseInt(a.substring(p + 1));
                 tc.addTransportAddress(new InetSocketTransportAddress(i, port));
             } catch (UnknownHostException e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
             }
         }
         this.elasticsearchClient = tc;
@@ -198,7 +198,7 @@ public class ElasticsearchClient {
                 .setUpdateAllTypes(true)
                 .setType("_default_").execute().actionGet();
         } catch (Throwable e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         };
     }
 
@@ -209,7 +209,7 @@ public class ElasticsearchClient {
                 .setUpdateAllTypes(true)
                 .setType("_default_").execute().actionGet();
         } catch (Throwable e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         };
     }
 
@@ -220,7 +220,7 @@ public class ElasticsearchClient {
                 .setUpdateAllTypes(true)
                 .setType("_default_").execute().actionGet();
         } catch (Throwable e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         };
     }
 
@@ -233,7 +233,7 @@ public class ElasticsearchClient {
                 .execute()
                 .actionGet();
         } catch (Throwable e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         };
     }
 
@@ -327,7 +327,7 @@ public class ElasticsearchClient {
                 .actionGet();
             return response.getHits().getTotalHits();
         } catch (Throwable e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
             return 0;
         }
     }
@@ -341,7 +341,7 @@ public class ElasticsearchClient {
                 .actionGet();
             return response.getHits().getTotalHits();
         } catch (Throwable e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
             return 0;
         }
     }
@@ -575,7 +575,7 @@ public class ElasticsearchClient {
             regulator = (long) (throttling_factor * duration);
             try {Thread.sleep(regulator);} catch (InterruptedException e) {}
         }
-        Log.getLog().info("elastic write entry to index " + indexName + ": " + (created ? "created":"updated") + ", " + duration + " ms" + (regulator == 0 ? "" : ", throttled with " + regulator + " ms"));
+        DAO.log("elastic write entry to index " + indexName + ": " + (created ? "created":"updated") + ", " + duration + " ms" + (regulator == 0 ? "" : ", throttled with " + regulator + " ms"));
         return created;
     }
 
@@ -622,7 +622,7 @@ public class ElasticsearchClient {
             regulator = (long) (throttling_factor * duration);
             try {Thread.sleep(regulator);} catch (InterruptedException e) {}
         }
-        Log.getLog().info("elastic write bulk to index " + indexName + ": " + jsonMapList.size() + " entries, " + result.created.size() + " created, " + result.errors.size() + " errors, " + duration + " ms" + (regulator == 0 ? "" : ", throttled with " + regulator + " ms") + ", " + ops + " objects/second");
+        DAO.log("elastic write bulk to index " + indexName + ": " + jsonMapList.size() + " entries, " + result.created.size() + " created, " + result.errors.size() + " errors, " + duration + " ms" + (regulator == 0 ? "" : ", throttled with " + regulator + " ms") + ", " + ops + " objects/second");
         if(result.errors.size() > 0) {
             DAO.severe("Errors faced while indexing:");
             for(String key : result.errors.keySet()) {
@@ -1120,7 +1120,7 @@ public class ElasticsearchClient {
      * @param aggr Pre-configured AggregationBuilder object
      * @return HashMap with parsed aggregations
      */
-    private SearchResponse getAggregationResponse(String index, AggregationBuilder aggr) {
+    private SearchResponse getAggregationResponse(String index, @SuppressWarnings("rawtypes") AggregationBuilder aggr) {
         return this.elasticsearchClient.prepareSearch(index)
             .setSearchType(SearchType.QUERY_THEN_FETCH)
             .setQuery(QueryBuilders.matchAllQuery())
@@ -1202,7 +1202,7 @@ public class ElasticsearchClient {
      * @param classifierName Name of classifier
      * @return AggregationBuilder with required configuration
      */
-    private static AggregationBuilder getClassifierAggregationBuilder(String classifierName) {
+    private static TermsBuilder getClassifierAggregationBuilder(String classifierName) {
         String probabilityField = classifierName + "_probability";
         return AggregationBuilders.terms("by_class").field(classifierName)
             .subAggregation(
@@ -1220,7 +1220,7 @@ public class ElasticsearchClient {
      * @param toDate End date for creation of row
      * @return AggregationBuilder with required configuration
      */
-    private static AggregationBuilder getClassifierAggregationBuilder(String classifierName, String fromDate, String toDate) {
+    private static DateRangeBuilder getClassifierAggregationBuilder(String classifierName, String fromDate, String toDate) {
         return getDateRangeAggregationBuilder("created_at", fromDate, toDate)
             .subAggregation(getClassifierAggregationBuilder(classifierName));
     }
@@ -1231,7 +1231,7 @@ public class ElasticsearchClient {
      * @param classifierName Name of field containing country code
      * @return AggregationBuilder with required configuration
      */
-    private static AggregationBuilder getClassifierAggregationBuilderByCountry(String fieldName, String classifierName) {
+    private static TermsBuilder getClassifierAggregationBuilderByCountry(String fieldName, String classifierName) {
         return AggregationBuilders.terms("by_country").field(fieldName)
             .subAggregation(getClassifierAggregationBuilder(classifierName));
     }
@@ -1244,7 +1244,7 @@ public class ElasticsearchClient {
      * @param endDate End date for creation of row
      * @return AggregationBuilder with required configuration
      */
-    private static AggregationBuilder getClassifierAggregationBuilderByCountry(String fieldName, String classifierName, String startDate, String endDate) {
+    private static DateRangeBuilder getClassifierAggregationBuilderByCountry(String fieldName, String classifierName, String startDate, String endDate) {
         return getDateRangeAggregationBuilder("created_at", startDate, endDate)
             .subAggregation(getClassifierAggregationBuilderByCountry(fieldName, classifierName));
     }
@@ -1256,7 +1256,7 @@ public class ElasticsearchClient {
      * @param toDate End date for restriction
      * @return AggregationBuilder with required configuration
      */
-    private static AggregationBuilder getDateRangeAggregationBuilder(String fieldName, String fromDate, String toDate) {
+    private static DateRangeBuilder getDateRangeAggregationBuilder(String fieldName, String fromDate, String toDate) {
         DateRangeBuilder dateRangeAggregation = AggregationBuilders.dateRange("by_date").field(fieldName);
         if (fromDate == null && toDate != null) {
             dateRangeAggregation = dateRangeAggregation.addUnboundedTo(toDate);

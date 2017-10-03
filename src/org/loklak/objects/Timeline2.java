@@ -32,7 +32,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.loklak.data.DAO.IndexName;
-import org.loklak.data.DAO;
 import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.harvester.Post;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;

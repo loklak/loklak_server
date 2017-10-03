@@ -30,7 +30,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
 
@@ -127,9 +126,9 @@ public class JsonDataset {
                                 }
                             }
                         } catch (InterruptedException e) {
-                        	Log.getLog().warn(e);
+                        	DAO.severe(e);
                         } catch (IOException e) {
-                        	Log.getLog().warn(e);
+                        	DAO.severe(e);
                         }
                     }
                 };

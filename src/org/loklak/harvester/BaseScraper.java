@@ -16,10 +16,6 @@ import org.json.JSONArray;
 import org.loklak.objects.ProviderType;
 import org.loklak.objects.SourceType;
 import org.loklak.objects.Timeline2;
-import org.loklak.tools.storage.JSONObjectWithDefault;
-import org.json.JSONObject;
-import org.loklak.data.DAO;
-import org.loklak.http.ClientConnection;
 import org.loklak.server.*;
 
 /**
@@ -31,6 +27,10 @@ import org.loklak.server.*;
  */
 public abstract class BaseScraper extends AbstractAPIHandler {
 
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 2088186173633845169L;
     // a time stamp that is given by loklak upon the arrival of the post which is the current local time
     //TODO: check if UTC time needed
     protected String scraperName;

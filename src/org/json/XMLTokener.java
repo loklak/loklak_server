@@ -28,7 +28,7 @@ SOFTWARE.
  * The XMLTokener extends the JSONTokener to provide additional methods
  * for the parsing of XML texts.
  * @author JSON.org
- * @version 2012-11-13
+ * @version 2015-12-09
  */
 public class XMLTokener extends JSONTokener {
 
@@ -36,10 +36,10 @@ public class XMLTokener extends JSONTokener {
    /** The table of entity values. It initially contains Character values for
     * amp, apos, gt, lt, quot.
     */
-   public static final java.util.HashMap entity;
+   public static final java.util.HashMap<String, Character> entity;
 
    static {
-       entity = new java.util.HashMap(8);
+       entity = new java.util.HashMap<String, Character>(8);
        entity.put("amp",  XML.AMP);
        entity.put("apos", XML.APOS);
        entity.put("gt",   XML.GT);
@@ -63,12 +63,9 @@ public class XMLTokener extends JSONTokener {
     public String nextCDATA() throws JSONException {
         char         c;
         int          i;
-        StringBuffer sb = new StringBuffer();
-        for (;;) {
+        StringBuilder sb = new StringBuilder();
+        while (more()) {
             c = next();
-            if (end()) {
-                throw syntaxError("Unclosed CDATA");
-            }
             sb.append(c);
             i = sb.length() - 3;
             if (i >= 0 && sb.charAt(i) == ']' &&
@@ -77,6 +74,7 @@ public class XMLTokener extends JSONTokener {
                 return sb.toString();
             }
         }
+        throw syntaxError("Unclosed CDATA");
     }
 
 
@@ -91,7 +89,7 @@ public class XMLTokener extends JSONTokener {
      */
     public Object nextContent() throws JSONException {
         char         c;
-        StringBuffer sb;
+        StringBuilder sb;
         do {
             c = next();
         } while (Character.isWhitespace(c));
@@ -101,9 +99,12 @@ public class XMLTokener extends JSONTokener {
         if (c == '<') {
             return XML.LT;
         }
-        sb = new StringBuffer();
+        sb = new StringBuilder();
         for (;;) {
-            if (c == '<' || c == 0) {
+            if (c == 0) {
+                return sb.toString().trim();
+            }
+            if (c == '<') {
                 back();
                 return sb.toString().trim();
             }
@@ -125,7 +126,7 @@ public class XMLTokener extends JSONTokener {
      * @throws JSONException If missing ';' in XML entity.
      */
     public Object nextEntity(char ampersand) throws JSONException {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         for (;;) {
             char c = next();
             if (Character.isLetterOrDigit(c) || c == '#') {
@@ -137,8 +138,37 @@ public class XMLTokener extends JSONTokener {
             }
         }
         String string = sb.toString();
-        Object object = entity.get(string);
-        return object != null ? object : ampersand + string + ";";
+        return unescapeEntity(string);
+    }
+    
+    /**
+     * Unescapes an XML entity encoding;
+     * @param e entity (only the actual entity value, not the preceding & or ending ;
+     * @return
+     */
+    static String unescapeEntity(String e) {
+        // validate
+        if (e == null || e.isEmpty()) {
+            return "";
+        }
+        // if our entity is an encoded unicode point, parse it.
+        if (e.charAt(0) == '#') {
+            int cp;
+            if (e.charAt(1) == 'x') {
+                // hex encoded unicode
+                cp = Integer.parseInt(e.substring(2), 16);
+            } else {
+                // decimal encoded unicode
+                cp = Integer.parseInt(e.substring(1));
+            }
+            return new String(new int[] {cp},0,1);
+        } 
+        Character knownEntity = entity.get(e);
+        if(knownEntity==null) {
+            // we don't know the entity so keep it encoded
+            return '&' + e + ';';
+        }
+        return knownEntity.toString();
     }
 
 
@@ -219,7 +249,7 @@ public class XMLTokener extends JSONTokener {
     public Object nextToken() throws JSONException {
         char c;
         char q;
-        StringBuffer sb;
+        StringBuilder sb;
         do {
             c = next();
         } while (Character.isWhitespace(c));
@@ -244,7 +274,7 @@ public class XMLTokener extends JSONTokener {
         case '"':
         case '\'':
             q = c;
-            sb = new StringBuffer();
+            sb = new StringBuilder();
             for (;;) {
                 c = next();
                 if (c == 0) {
@@ -263,7 +293,7 @@ public class XMLTokener extends JSONTokener {
 
 // Name
 
-            sb = new StringBuffer();
+            sb = new StringBuilder();
             for (;;) {
                 sb.append(c);
                 c = next();

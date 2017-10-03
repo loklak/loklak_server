@@ -40,7 +40,12 @@ import org.loklak.http.RemoteAccess;
 
 public class StuffInSpaceServlet extends HttpServlet {
 
-	private static String readAll(Reader rd) throws IOException {
+	/**
+     * 
+     */
+    private static final long serialVersionUID = 4379074480577586181L;
+
+    private static String readAll(Reader rd) throws IOException {
 		StringBuilder sb = new StringBuilder();
 		int cp;
 		while ((cp = rd.read()) != -1) {

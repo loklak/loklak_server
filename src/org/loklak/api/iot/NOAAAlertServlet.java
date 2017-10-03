@@ -29,7 +29,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.PrintWriter;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
 import org.json.JSONArray;
 import org.json.XML;
@@ -39,7 +38,12 @@ import org.loklak.data.DAO;
 
 public class NOAAAlertServlet extends HttpServlet {
 
-	@Override
+	/**
+     * 
+     */
+    private static final long serialVersionUID = 2237108001955192947L;
+
+    @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         doGet(request, response);
     }
@@ -132,7 +136,7 @@ public class NOAAAlertServlet extends HttpServlet {
         	sos.println();
         }
         catch (IOException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         	JSONObject json = new JSONObject(true);
         	json.put("error", "Looks like there is an error in the conversion");
         	json.put("type", "Error");

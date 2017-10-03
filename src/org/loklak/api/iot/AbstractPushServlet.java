@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.github.fge.jsonschema.core.report.ProcessingReport;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
@@ -56,12 +55,12 @@ public abstract class AbstractPushServlet extends HttpServlet {
         try {
             validator = new JsonValidator(this.getValidatorSchema());
         } catch (IOException e) {
-        	Log.getLog().warn("Unable to initialize push servlet validator : " + e);
+        	DAO.severe("Unable to initialize push servlet validator : " + e);
         }
         try {
             converter = new JsonFieldConverter(this.getConversionSchema());
         } catch (IOException e) {
-        	Log.getLog().warn("Unable to initialize push servlet field converter : " + e);
+        	DAO.severe("Unable to initialize push servlet field converter : " + e);
         }
     }
 

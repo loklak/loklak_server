@@ -21,6 +21,10 @@ import org.loklak.tools.storage.JSONObjectWithDefault;
 
 public class VideoUrlService extends AbstractAPIHandler implements APIHandler {
 
+    /**
+     * 
+     */
+    private static final long serialVersionUID = -6766893925839806345L;
     private static final Pattern twitterUrlPattern = Pattern.compile("https?://(www\\.)?twitter.com(/.*?/status/[0-9]+)/?");
     private static final int maxVideoPerRequest = DAO.getConfig("videoUrlService.maxVideos", 20);
 
