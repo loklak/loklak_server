@@ -44,7 +44,7 @@ public class TopMenuService extends AbstractAPIHandler implements APIHandler {
 				.put(new JSONObject().put("Blog", "http://blog.loklak.net"))
 				.put(new JSONObject().put("Developers", "http://dev.loklak.org"))
 				.put(new JSONObject().put("API", "http://api.loklak.org"));
-		if (limited_count > 0)
+		if (limited_count > 0 && DAO.writeDump)
 			topmenu.put(new JSONObject().put("Dumps", "dump.html"));
 		json.put("items", topmenu);
 
