@@ -1,5 +1,5 @@
 FROM alpine:latest
-MAINTAINER Ansgar Schmidt <ansgar.schmidt@gmx.net>
+LABEL MAINTAINER="ansgar.schmidt@gmx.net"
 
 # setup locales
 ENV LANG=en_US.UTF-8
