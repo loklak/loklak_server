@@ -42,7 +42,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.eclipse.jetty.util.log.Log;
+import org.loklak.data.DAO;
 
 public class Digest {
 
@@ -140,7 +140,7 @@ public class Digest {
         try {
             in = new FileInputStream(file);
         } catch (final java.io.FileNotFoundException e) {
-        	Log.getLog().warn("file not found:" + file.toString(), e);
+        	DAO.severe("file not found:" + file.toString(), e);
             return null;
         }
 
@@ -161,7 +161,7 @@ public class Digest {
                 md5consumer.consume(c);
             }
         } catch (final IOException e) {
-        	Log.getLog().warn("file error with " + file.toString() + ": " + e.getMessage(), e);
+        	DAO.severe("file error with " + file.toString() + ": " + e.getMessage(), e);
             md5consumer.consume(md5FilechunkConsumer.poison);
             throw e;
         } finally {
@@ -174,10 +174,10 @@ public class Digest {
         try {
             return md5result.get().digest();
         } catch (final InterruptedException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
             throw new IOException(e);
         } catch (final ExecutionException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
             throw new IOException(e);
         }
     }
@@ -216,7 +216,7 @@ public class Digest {
             try {
                 this.filed.put(c);
             } catch (final InterruptedException e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
             }
         }
 
@@ -224,7 +224,7 @@ public class Digest {
             try {
                 return this.empty.take();
             } catch (final InterruptedException e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
                 throw new IOException(e);
             }
         }
@@ -240,7 +240,7 @@ public class Digest {
                     this.empty.put(c);
                 }
             } catch (final InterruptedException e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
             }
             return this.digest;
         }
@@ -280,7 +280,7 @@ public class Digest {
         try {
             digest = MessageDigest.getInstance("MD5");
         } catch (final NoSuchAlgorithmException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
             return null;
         }
         final RandomAccessFile raf = new RandomAccessFile(file, "r");

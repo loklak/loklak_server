@@ -29,7 +29,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
 
-import org.eclipse.jetty.util.log.Log;
+import org.loklak.data.DAO;
 import org.loklak.tools.IO;
 import org.loklak.tools.storage.JsonFile;
 
@@ -133,7 +133,7 @@ public class Settings extends JsonFile {
             return true;
         }
         catch(NoSuchAlgorithmException | InvalidKeySpecException e){
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         }
         return false;
     }

@@ -65,7 +65,6 @@ import org.eclipse.jetty.server.session.HashSessionIdManager;
 import org.eclipse.jetty.server.session.HashSessionManager;
 import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.util.ConcurrentHashSet;
-import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.security.Constraint;
@@ -217,7 +216,7 @@ public class LoklakServer {
         File dataFile = data.toFile();
         if (!dataFile.exists()) dataFile.mkdirs(); // should already be there since the start.sh script creates it
 
-        Log.getLog().info("Starting loklak initialization");
+        DAO.log("Starting loklak initialization");
 
         // prepare shutdown signal
         File pid = new File(dataFile, "loklak.pid");
@@ -274,7 +273,7 @@ public class LoklakServer {
         	checkServerPorts(httpPort, httpsPort);
         }
         catch(IOException e){
-        	Log.getLog().warn(e.getMessage());
+        	DAO.severe(e.getMessage());
 			System.exit(-1);
         }
 
@@ -282,8 +281,8 @@ public class LoklakServer {
         try{
         	DAO.init(config, data);
         } catch(Exception e){
-        	Log.getLog().warn(e.getMessage());
-        	Log.getLog().warn("Could not initialize DAO. Exiting.");
+        	DAO.severe(e.getMessage());
+        	DAO.severe("Could not initialize DAO. Exiting.");
         	System.exit(-1);
         }
 
@@ -291,7 +290,7 @@ public class LoklakServer {
         try {
 			setupHttpServer(httpPort, httpsPort);
 		} catch (Exception e) {
-			Log.getLog().warn(e.getMessage());
+			DAO.severe(e.getMessage());
 			System.exit(-1);
 		}
         setServerHandler(dataFile);
@@ -314,7 +313,7 @@ public class LoklakServer {
         // if this is not headless, we can open a browser automatically
         Browser.openBrowser("http://127.0.0.1:" + httpPort + "/");
 
-        Log.getLog().info("finished startup!");
+        DAO.log("finished startup!");
 
         // signal to startup script
         if (startup.exists()){
@@ -329,7 +328,7 @@ public class LoklakServer {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
                 try {
-                    Log.getLog().info("catched main termination signal");
+                    DAO.log("catched main termination signal");
                     LoklakServer.dumpImporter.shutdown();
                     LoklakServer.queuedIndexing.shutdown();
                     LoklakServer.caretaker.shutdown();
@@ -337,12 +336,12 @@ public class LoklakServer {
                     DAO.close();
                     TwitterScraper.executor.shutdown();
                     LoklakServer.harvester.stop();
-                    Log.getLog().info("main terminated, goodby.");
+                    DAO.log("main terminated, goodby.");
 
                     //LoklakServer.saveConfig();
-                    Log.getLog().info("saved customized_config.properties");
+                    DAO.log("saved customized_config.properties");
 
-                    Log.getLog().info("Shutting down log4j2");
+                    DAO.log("Shutting down log4j2");
                     LogManager.shutdown();
 
                 } catch (Exception e) {
@@ -353,7 +352,7 @@ public class LoklakServer {
         // ** wait for shutdown signal, do this with a kill HUP (default level 1, 'kill -1') signal **
 
         LoklakServer.server.join();
-        Log.getLog().info("server terminated");
+        DAO.log("server terminated");
 
         // After this, the jvm processes all shutdown hooks and terminates then.
         // The main termination line is therefore inside the shutdown hook.
@@ -379,8 +378,8 @@ public class LoklakServer {
                 }
             }
         } catch (IOException e) {
-            Log.getLog().warn("An exception has occurred while extracting contents from JAR File", e);
-            Log.getLog().info("Exiting due to fatal error ...");
+            DAO.severe("An exception has occurred while extracting contents from JAR File", e);
+            DAO.log("Exiting due to fatal error ...");
             System.exit(1);
         }
     }
@@ -445,7 +444,7 @@ public class LoklakServer {
         //uncommented lines for http2 (jetty 9.3 / java 8)
         if(httpsMode.isGreaterOrEqualTo(HttpsMode.ON)){
 
-            Log.getLog().info("HTTPS activated");
+            DAO.log("HTTPS activated");
 
         	String keySource = DAO.getConfig("https.keysource", "keystore");
             KeyStore keyStore;
@@ -453,7 +452,7 @@ public class LoklakServer {
 
         	//check for key source. Can be a java keystore or in pem format (gets converted automatically)
         	if("keystore".equals(keySource)){
-                Log.getLog().info("Loading keystore from disk");
+                DAO.log("Loading keystore from disk");
 
         		//use native keystore format
 
@@ -467,7 +466,7 @@ public class LoklakServer {
         		keystoreManagerPass = DAO.getConfig("keystore.password", "");
         	}
         	else if ("key-cert".equals(keySource)){
-                Log.getLog().info("Importing keystore from key/cert files");
+                DAO.log("Importing keystore from key/cert files");
         		//use more common pem format as used by openssl
 
                 //generate random password
@@ -507,7 +506,7 @@ public class LoklakServer {
                 keyStore.setCertificateEntry(cert.getSubjectX500Principal().getName(), cert);
                 keyStore.setKeyEntry("defaultKey",key, password.toCharArray(), new Certificate[] {cert});
 
-        		Log.getLog().info("Successfully imported keystore from key/cert files");
+        		DAO.log("Successfully imported keystore from key/cert files");
         	}
         	else{
         		throw new Exception("Invalid option for https.keysource");
@@ -579,8 +578,8 @@ public class LoklakServer {
 	            securityHandler.setLoginService(loginService);
         	}
 
-        	if(redirect) Log.getLog().info("Activated http-to-https redirect");
-        	if(auth) Log.getLog().info("Activated basic http auth");
+        	if(redirect) DAO.log("Activated http-to-https redirect");
+        	if(auth) DAO.log("Activated basic http auth");
         }
 
         // Setup IPAccessHandler for blacklists
@@ -595,7 +594,7 @@ public class LoklakServer {
                 blacklistedHosts.add(p < 0 ? b : b.substring(0, p));
             }
         } catch (IllegalArgumentException e) {
-            Log.getLog().warn("bad blacklist:" + blacklist, e);
+            DAO.severe("bad blacklist:" + blacklist, e);
         }
 
         WebAppContext htrootContext = new WebAppContext();
@@ -656,7 +655,7 @@ public class LoklakServer {
             try {
                 servletHandler.addServlet(service, ((APIHandler) (service.newInstance())).getAPIPath());
             } catch (InstantiationException | IllegalAccessException e) {
-                Log.getLog().warn(service.getName() + " instantiation error", e);
+                DAO.severe(service.getName() + " instantiation error", e);
                 e.printStackTrace();
             }
 

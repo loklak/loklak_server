@@ -10,7 +10,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.loklak.api.search.WordpressCrawlerService;
 import org.loklak.data.DAO;
-import org.loklak.harvester.Post;
 import org.loklak.http.ClientConnection;
 
 /**

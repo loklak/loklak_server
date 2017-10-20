@@ -19,8 +19,8 @@
 
 package org.loklak.server;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
+import org.loklak.data.DAO;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -73,20 +73,20 @@ public class UserRoles {
 
             // get all user roles based on BaseUserRole. Add all other into a queue.
             for (String name : json.keySet()) {
-                Log.getLog().debug("searching for key " + name);
+                DAO.severe("searching for key " + name);
                 JSONObject obj = json.getJSONObject(name);
                 if (hasMandatoryFields(obj)) {
-                    Log.getLog().debug(name + " has mandatory fields");
-                    Log.getLog().debug("parent value is: " + obj.getString("parent"));
+                    DAO.severe(name + " has mandatory fields");
+                    DAO.severe("parent value is: " + obj.getString("parent"));
                     BaseUserRole bur;
                     try {
                         bur = BaseUserRole.valueOf(obj.getString("parent"));
                     } catch (IllegalArgumentException e) {
                         queue.add(name);
-                        Log.getLog().debug("no bur, adding to queue");
+                        DAO.severe("no bur, adding to queue");
                         continue;
                     }
-                    Log.getLog().debug("successfully created bur from parent");
+                    DAO.severe("successfully created bur from parent");
                     UserRole userRole = new UserRole(name, bur, null, obj);
                     roles.put(name, userRole);
                 }
@@ -108,17 +108,17 @@ public class UserRoles {
                 }
             }
 
-            Log.getLog().debug("available roles: " + roles.keySet().toString());
+            DAO.severe("available roles: " + roles.keySet().toString());
 
             // get default roles
             JSONObject defaults = json.getJSONObject("defaults");
             for (BaseUserRole bur : BaseUserRole.values()) {
                 if(defaults.has(bur.name()) && roles.containsKey(defaults.getString(bur.name()))) {
-                    Log.getLog().debug("found default role for " + bur.name() + ": " + roles.get(defaults.getString(bur.name())).getDisplayName());
+                    DAO.severe("found default role for " + bur.name() + ": " + roles.get(defaults.getString(bur.name())).getDisplayName());
                     setDefaultUserRole(bur, roles.get(defaults.getString(bur.name())));
                 }
                 else{
-                    Log.getLog().info("could not find default role for " + bur.name() + ", creating default role" );
+                    DAO.log("could not find default role for " + bur.name() + ", creating default role" );
                     createDefaultUserRole(bur);
                 }
             }

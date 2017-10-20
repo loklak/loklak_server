@@ -26,8 +26,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ArrayBlockingQueue;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
+import org.loklak.data.DAO;
 import org.loklak.tools.BufferedRandomAccessFile;
 import org.loklak.tools.UTF8;
 
@@ -72,11 +72,11 @@ public class JsonRandomAccessFile extends BufferedRandomAccessFile implements Js
                     JSONObject json = new JSONObject(new String(textb, StandardCharsets.UTF_8));
                     this.jsonline.put(new JsonHandle(json, line.getPos(), textb.length));
                 } catch (Throwable e) {
-                    Log.getLog().warn("cannot parse line in file " + JsonRandomAccessFile.this.file + ": \"" + line + "\"", e);
+                    DAO.severe("cannot parse line in file " + JsonRandomAccessFile.this.file + ": \"" + line + "\"", e);
                 }
             }
         } catch (IOException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         } finally {
             for (int i = 0; i < this.concurrency; i++) {
                 try {this.jsonline.put(JsonReader.POISON_JSON_MAP);} catch (InterruptedException e) {}
@@ -144,7 +144,7 @@ public class JsonRandomAccessFile extends BufferedRandomAccessFile implements Js
             try {
                 return this.getJSON().toString();
             } catch (IOException e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
                 return "";
             }
         }

@@ -52,7 +52,12 @@ The different sets of magnitudes supported by USGS GOV EarthQuake Data sets are
 
 public class EarthquakeServlet extends HttpServlet {
 
-	private static String readAll(Reader rd) throws IOException {
+	/**
+     * 
+     */
+    private static final long serialVersionUID = -4911309869034399765L;
+
+    private static String readAll(Reader rd) throws IOException {
 		StringBuilder sb = new StringBuilder();
 		int cp;
 		while ((cp = rd.read()) != -1) {

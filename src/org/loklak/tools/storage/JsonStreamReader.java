@@ -28,8 +28,8 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ArrayBlockingQueue;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
+import org.loklak.data.DAO;
 
 public class JsonStreamReader implements JsonReader {
 
@@ -79,16 +79,16 @@ public class JsonStreamReader implements JsonReader {
                     JSONObject json = new JSONObject(line);
                     this.jsonline.put(new WrapperJsonFactory(json));
                 } catch (Throwable e) {
-                	Log.getLog().warn(e);
+                	DAO.severe(e);
                 }
             }
         } catch (IOException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
         } finally {
             try {
                 if (br != null) br.close();
             } catch (IOException e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
             }
         }
         for (int i = 0; i < this.concurrency; i++) {

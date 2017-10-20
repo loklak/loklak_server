@@ -33,7 +33,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.http.ClientConnection;
@@ -92,7 +91,7 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
                 };
                 results[rc] = json;
             } catch (Throwable e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
             }
         }
         return results;
@@ -211,7 +210,7 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
 			// delete cookie if set
 			deleteLoginCookie(response);
 
-			Log.getLog().info("Invalid login try via cookie from host: " + query.getClientHost());
+			DAO.log("Invalid login try via cookie from host: " + query.getClientHost());
 		}
 		else if(request.getSession().getAttribute("identity") != null){ // check session is set
 			return (ClientIdentity) request.getSession().getAttribute("identity");
@@ -226,7 +225,7 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
     			ClientIdentity identity = authentication.getIdentity();
     			
     			if(authentication.checkExpireTime()){
-    				Log.getLog().info("login for user: " + identity.getName() + " via access token from host: " + query.getClientHost());
+    				DAO.log("login for user: " + identity.getName() + " via access token from host: " + query.getClientHost());
     				
     				if("true".equals(request.getParameter("request_session"))){
             			request.getSession().setAttribute("identity",identity);
@@ -237,7 +236,7 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
     				return identity;
     			}
     		}
-    		Log.getLog().info("Invalid access token from host: " + query.getClientHost());
+    		DAO.log("Invalid access token from host: " + query.getClientHost());
     		authentication.delete();
     		return getAnonymousIdentity(query.getClientHost());
     	}
@@ -271,7 +270,7 @@ public abstract class AbstractAPIHandler extends HttpServlet implements APIHandl
 			md.update((salt + input).getBytes());
 			return Base64.getEncoder().encodeToString(md.digest());
 		} catch (NoSuchAlgorithmException e) {
-			Log.getLog().warn(e);
+			DAO.severe(e);
 		}
 		return null;
 	}

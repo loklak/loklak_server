@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
 import org.loklak.api.admin.StatusService;
 import org.loklak.data.DAO;
@@ -77,7 +76,7 @@ public class HelloService extends AbstractAPIHandler implements APIHandler {
             try {
                 backend_status = StatusService.status(backend);
             } catch (IOException e) {
-            	Log.getLog().warn(e);
+            	DAO.severe(e);
             }
             backend_status_index_sizes = backend_status == null ? null : (JSONObject) backend_status.get("index_sizes");
         }
@@ -123,7 +122,7 @@ public class HelloService extends AbstractAPIHandler implements APIHandler {
                 if (jsonb == null || jsonb.length == 0) throw new IOException("empty content from " + hoststub);
                 String jsons = UTF8.String(jsonb);
                 JSONObject json = new JSONObject(jsons);
-                Log.getLog().info("Hello response: " + json.toString());
+                DAO.log("Hello response: " + json.toString());
             } catch (IOException e) {
             }
         }

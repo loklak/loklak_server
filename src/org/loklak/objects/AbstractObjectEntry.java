@@ -29,7 +29,6 @@ import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 import org.loklak.harvester.Post;
 
 import com.fasterxml.jackson.core.JsonGenerator;

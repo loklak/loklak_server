@@ -16,6 +16,11 @@ import java.util.Map;
 
 public class SettingsManagementService extends AbstractAPIHandler implements APIHandler {
 
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 2803794331847463124L;
+
     @Override
     public String getAPIPath() {
         return "/api/settings-management.json";

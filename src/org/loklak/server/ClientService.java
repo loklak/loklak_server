@@ -22,8 +22,8 @@ package org.loklak.server;
 import java.text.ParseException;
 import java.util.Date;
 
-import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
+import org.loklak.data.DAO;
 import org.loklak.tools.DateParser;
 
 public class ClientService extends Client {
@@ -73,7 +73,7 @@ public class ClientService extends Client {
         try {
             return DateParser.iso8601Format.parse(d);
         } catch (ParseException e) {
-        	Log.getLog().warn(e);
+        	DAO.severe(e);
             return null;
         }
     }

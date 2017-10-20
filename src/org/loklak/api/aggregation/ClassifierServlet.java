@@ -21,6 +21,11 @@ import org.loklak.tools.storage.JSONObjectWithDefault;
 
 public class ClassifierServlet extends AbstractAPIHandler implements APIHandler {
 
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 8440978575594391088L;
+
     public static Map<String, List<String>> getAllowedClassifiers() {
 
         // Emotion classifier
