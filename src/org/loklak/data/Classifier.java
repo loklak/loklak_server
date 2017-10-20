@@ -125,6 +125,8 @@ public class Classifier {
     }
 
     public static List<String> normalize(String phrase) {
+        if (phrase == null) phrase = "";
+
         String cleanphrase = NON_WORD_PATTERN.matcher(phrase.toLowerCase()).replaceAll(" ");
         String[] rawtokens = WHITESPACE_PATTERN.split(cleanphrase, 0);
         List<String> tokens = new ArrayList<>();
@@ -138,6 +140,8 @@ public class Classifier {
     }
 
     public static Map<Context, Classification<String, Category>> classify(String phrase) {
+        if (phrase == null) phrase = "";
+
         Map<Context, Classification<String, Category>> map = new HashMap<>();
         for (Context c: Context.values()) {
             Classification<String, Category> classification = c.classify(phrase);

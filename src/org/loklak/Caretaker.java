@@ -21,11 +21,13 @@ package org.loklak;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.elasticsearch.search.sort.SortOrder;
@@ -103,7 +105,7 @@ public class Caretaker extends Thread {
             if (SuggestServlet.cache.size() > 100) SuggestServlet.cache.clear();
             
             // sleep a bit to prevent that the DoS limit fires at backend server
-            try {Thread.sleep(busy ? 1000 : 5000);} catch (InterruptedException e) {}
+            try {Thread.sleep(busy ? 500 : 5000);} catch (InterruptedException e) {}
             if (!this.shallRun) break beat;
             busy = false;
             
@@ -174,10 +176,23 @@ public class Caretaker extends Thread {
             }
             
             // run some crawl steps
-            for (int i = 0; i < 10; i++) {
-                if (Crawler.process() == 0) break; // this may produce tweets for the timeline push
-                try {Thread.sleep(random.nextInt(200));} catch (InterruptedException e) {}
-                busy = true;
+            crawler: for (int i = 0; i < 10; i++) {
+                List<Thread> t = new ArrayList<>();
+                final AtomicBoolean finished = new AtomicBoolean(false);
+                for (int j = 0; j < 10; j++) {
+                    Thread u = new Thread() {
+                        public void run() {
+                            if (Crawler.process() == 0) finished.set(true);
+                        }
+                    };
+                    u.start();
+                    t.add(u);
+                    try {Thread.sleep(random.nextInt(20));} catch (InterruptedException e) {}
+                }
+                t.forEach(u -> {
+                    try {u.join(1000);} catch (InterruptedException e) {}
+                });
+                if (finished.get()) break crawler; else busy = true;
             }
             
             // run searches

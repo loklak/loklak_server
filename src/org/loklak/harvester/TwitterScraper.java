@@ -313,6 +313,7 @@ public class TwitterScraper {
                 }
                 prop tweettext = new prop(input, p, null);
                 props.put("tweettext", tweettext);
+                
                 continue;
             }
             if ((p = input.indexOf("class=\"ProfileTweet-actionCount")) > 0) {
@@ -399,32 +400,30 @@ public class TwitterScraper {
                 );
 
                 prop tweettimems = props.get("tweettimems");
-                if (tweettimems == null) {
-                    if (debuglog) DAO.log("*** line " + line + " MISSING value tweettimems");
-                    continue;
-                }
                 prop tweetretweetcount = props.get("tweetretweetcount");
-                if (tweetretweetcount == null) {
-                    if (debuglog) DAO.log("*** line " + line + " MISSING value tweetretweetcount");
-                    continue;
-                }
                 prop tweetfavouritecount = props.get("tweetfavouritecount");
-                if (tweetfavouritecount == null) {
-                    if (debuglog) DAO.log("*** line " + line + " MISSING value tweetfavouritecount");
+                TwitterTweet tweet;
+                try {
+                    tweet = new TwitterTweet(
+                            user.getScreenName(),
+                            Long.parseLong(tweettimems.value),
+                            props.get("tweettimename").value,
+                            props.get("tweetstatusurl").value,
+                            props.get("tweettext").value,
+                            Long.parseLong(tweetretweetcount.value),
+                            Long.parseLong(tweetfavouritecount.value),
+                            images, videos, place_name, place_id,
+                            user, writeToIndex,  writeToBackend
+                    );
+
+                    videos = null;
+                    images = null;
+                    props.clear();
+                } catch (NullPointerException e) {
+                    DAO.severe(e);
+                    tweet = null;
                     continue;
                 }
-
-                TwitterTweet tweet = new TwitterTweet(
-                        user.getScreenName(),
-                        Long.parseLong(tweettimems.value),
-                        props.get("tweettimename").value,
-                        props.get("tweetstatusurl").value,
-                        props.get("tweettext").value,
-                        Long.parseLong(tweetretweetcount.value),
-                        Long.parseLong(tweetfavouritecount.value),
-                        images, videos, place_name, place_id,
-                        user, writeToIndex,  writeToBackend
-                );
                 if (DAO.messages == null || !DAO.messages.existsCache(tweet.getPostId())) {
                     // checking against the exist cache is incomplete. A false negative would just cause that a tweet is
                     // indexed again.
@@ -446,9 +445,6 @@ public class TwitterScraper {
                         timelineReady.add(tweet, user);
                     }
                 }
-                videos = null;
-                images = null;
-                props.clear();
                 continue;
             }
         }
@@ -879,6 +875,8 @@ public class TwitterScraper {
 
         //TODO: fix the location issue and shift to MessageEntry class
         public void getLocation() {
+            if (this.text == null) this.text = "";
+
             if ((this.location_point == null || this.location_point.length == 0) && DAO.geoNames != null) {
                 GeoMark loc = null;
                 if (place_name != null && this.place_name.length() > 0 &&
@@ -911,13 +909,14 @@ public class TwitterScraper {
         public void enrich() {
             if (this.enriched) return;
             this.moreData.classifier = Classifier.classify(this.text);
-enrichData(this.text);
+            enrichData(this.text);
             getLocation();
 
             this.enriched = true;
         }
 
         public void enrichData(String inputText) {
+            if (inputText == null) inputText = "";
             StringBuilder text = new StringBuilder(inputText);
             this.links = this.moreData.extractLinks(text.toString());
             text = new StringBuilder(MessageEntry.SPACEX_PATTERN.matcher(text).replaceAll(" ").trim());
