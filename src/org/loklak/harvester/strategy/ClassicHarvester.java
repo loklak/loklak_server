@@ -20,15 +20,15 @@
 package org.loklak.harvester.strategy;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.loklak.api.search.SearchServlet;
 import org.loklak.api.search.SuggestServlet;
 import org.loklak.data.DAO;
@@ -45,14 +45,14 @@ public class ClassicHarvester implements Harvester {
 
     private final int FETCH_RANDOM = 3;
     private final int HITS_LIMIT_4_QUERIES = 20;
-    private final int MAX_PENDING = 200; // this could be much larger but we don't want to cache too many of these
+    private final int MAX_PENDING = 300; // this could be much larger but we don't want to cache too many of these
     private final int MAX_HARVESTED = 10000; // just to prevent a memory leak with possible OOM after a long time we flush that cache after a while
     private final Random random = new Random(System.currentTimeMillis());
     public final ExecutorService executor = Executors.newFixedThreadPool(1);
 
     private LinkedHashSet<String> pendingQueries = new LinkedHashSet<>();
-    private ArrayList<String> pendingContext = new ArrayList<>();
-    private Set<String> harvestedContext = new HashSet<>();
+    private ConcurrentLinkedDeque<String> pendingContext = new ConcurrentLinkedDeque<>();
+    private Set<String> harvestedContext = new ConcurrentHashSet<>();
 
     private int hitsOnBackend = 1000;
 
@@ -66,9 +66,9 @@ public class ClassicHarvester implements Harvester {
     public void checkContext(String s, boolean front) {
         if (!front && pendingContext.size() > MAX_PENDING) return; // queue is full
         if (!harvestedContext.contains(s) && !pendingContext.contains(s)) {
-            if (front) pendingContext.add(0, s); else pendingContext.add(s);
+            if (front) pendingContext.addFirst(s); else pendingContext.addLast(s);
         }
-        while (pendingContext.size() > MAX_PENDING) pendingContext.remove(pendingContext.size() - 1);
+        while (pendingContext.size() > MAX_PENDING) pendingContext.removeLast();
         if (harvestedContext.size() > MAX_HARVESTED) harvestedContext.clear();
     }
 
@@ -77,8 +77,7 @@ public class ClassicHarvester implements Harvester {
 
         if (random.nextInt(100) != 0 && hitsOnBackend < HITS_LIMIT_4_QUERIES && pendingQueries.size() == 0 && pendingContext.size() > 0) {
             // harvest using the collected keys instead using the queries
-            int r = random.nextInt((pendingContext.size() / 2) + 1);
-            String q = pendingContext.remove(r);
+            String q = pendingContext.removeFirst();
             harvestedContext.add(q);
             Timeline tl = TwitterScraper.search(q, Timeline.Order.CREATED_AT, true, true, 400);
             if (tl == null || tl.size() == 0) return -1;
