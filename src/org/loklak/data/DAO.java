@@ -445,6 +445,11 @@ public class DAO {
         File harvestingPath = new File(datadir, "queries");
         if (!harvestingPath.exists()) harvestingPath.mkdirs();
         String[] list = harvestingPath.list();
+        if (list.length < 10) {
+            // use the test data instead
+            harvestingPath = new File(new File(datadir.getParentFile(), "test"), "queries");
+            list = harvestingPath.list();
+        }
         for (String queryfile: list) {
             if (queryfile.startsWith(".") || queryfile.endsWith("~")) continue;
             try {
