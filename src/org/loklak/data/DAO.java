@@ -1622,7 +1622,7 @@ public class DAO {
      * For logging informational events
      */
     public static void log(String line) {
-        if(DAO.getConfig("flag.log.dao", "true").equals("true")) {
+        if (DAO.getConfig("flag.log.dao", "true").equals("true")) {
             logger.info(line);
         }
     }
@@ -1631,19 +1631,19 @@ public class DAO {
      * For events serious enough to inform and log, but not fatal.
      */
     public static void severe(String line) {
-        if(DAO.getConfig("flag.severe.dao", "true").equals("true")) {
+        if (DAO.getConfig("flag.severe.dao", "true").equals("true")) {
             logger.warn(line);
         }
     }
 
     public static void severe(String line, Throwable e) {
-        if(DAO.getConfig("flag.severe.dao", "true").equals("true")) {
-            logger.warn(line);
+        if (DAO.getConfig("flag.severe.dao", "true").equals("true")) {
+            logger.warn(line, e);
         }
     }
 
     public static void severe(Throwable e) {
-        if(DAO.getConfig("flag.severe.dao", "true").equals("true")) {
+        if (DAO.getConfig("flag.severe.dao", "true").equals("true")) {
             logger.warn("", e);
         }
     }
@@ -1652,7 +1652,7 @@ public class DAO {
      * For Debugging events (very noisy).
      */
     public static void debug(Throwable e) {
-        if(DAO.getConfig("flag.debug.dao", "true").equals("true")) {
+        if (DAO.getConfig("flag.debug.dao", "true").equals("true")) {
             DAO.severe(e);
         }
     }
