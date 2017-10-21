@@ -1042,7 +1042,7 @@ public class DAO {
     }
     
     public static String getRandomTerm() {
-        return randomTerms.get(randomPicker.nextInt(randomTerms.size()));
+        return randomTerms.size() == 0 ? null : randomTerms.get(randomPicker.nextInt(randomTerms.size()));
     }
 
     public static boolean deleteImportProfile(String id, SourceType sourceType) {

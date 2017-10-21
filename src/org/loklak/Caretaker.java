@@ -245,9 +245,11 @@ public class Caretaker extends Thread {
             if (!busy) {
                 // start a crawler
                 String startTerm = DAO.getRandomTerm();
-                Crawler.stack(startTerm, 3, true, true, true);
-                DAO.log("started a crawler for term " + startTerm);
-                busy = true;
+                if (startTerm != null && startTerm.length() > 0) {
+                    Crawler.stack(startTerm, 3, true, true, true);
+                    DAO.log("started a crawler for term " + startTerm);
+                    busy = true;
+                }
             }
             
             // heal the latency to give peers with out-dated information a new chance
