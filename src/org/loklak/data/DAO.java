@@ -949,38 +949,44 @@ public class DAO {
     }
 
     private static long countLocalHourMessages(final long millis, boolean created_at) {
-        if (millis > 3600000L) return countLocalDayMessages(millis, created_at);
-        if (created_at && millis == 3600000L) return elasticsearch_client.count(IndexName.messages_hour.name());
+        if (millis > DateParser.HOUR_MILLIS) return countLocalDayMessages(millis, created_at);
+        if (created_at && millis == DateParser.HOUR_MILLIS) return elasticsearch_client.count(IndexName.messages_hour.name());
         return elasticsearch_client.count(
-                created_at ? IndexName.messages_hour.name() : IndexName.messages_week.name(),
+                created_at ? IndexName.messages_hour.name() : IndexName.messages_day.name(),
                 created_at ? AbstractObjectEntry.CREATED_AT_FIELDNAME : AbstractObjectEntry.TIMESTAMP_FIELDNAME,
                 millis);
     }
 
     private static long countLocalDayMessages(final long millis, boolean created_at) {
-        if (millis > 86400000L) return countLocalWeekMessages(millis, created_at);
-        if (created_at && millis == 86400000L) return elasticsearch_client.count(IndexName.messages_day.name());
+        if (millis > DateParser.DAY_MILLIS) return countLocalWeekMessages(millis, created_at);
+        if (created_at && millis == DateParser.DAY_MILLIS) return elasticsearch_client.count(IndexName.messages_day.name());
         return elasticsearch_client.count(
-                created_at ? IndexName.messages_day.name() : IndexName.messages.name(),
+                created_at ? IndexName.messages_day.name() : IndexName.messages_week.name(),
                 created_at ? AbstractObjectEntry.CREATED_AT_FIELDNAME : AbstractObjectEntry.TIMESTAMP_FIELDNAME,
                 millis);
     }
 
     private static long countLocalWeekMessages(final long millis, boolean created_at) {
-        if (millis > 604800000L) return countLocalMessages(millis, created_at);
-        if (created_at && millis == 604800000L) return elasticsearch_client.count(IndexName.messages_week.name());
+        if (millis > DateParser.WEEK_MILLIS) return countLocalMessages(millis, created_at);
+        if (created_at && millis == DateParser.WEEK_MILLIS) return elasticsearch_client.count(IndexName.messages_week.name());
         return elasticsearch_client.count(
                 created_at ? IndexName.messages_week.name() : IndexName.messages.name(),
                 created_at ? AbstractObjectEntry.CREATED_AT_FIELDNAME : AbstractObjectEntry.TIMESTAMP_FIELDNAME,
                 millis);
     }
 
+    /**
+     * count the messages in the local index
+     * @param millis number of milliseconds in the past
+     * @param created_at field selector: true -> use CREATED_AT, the time when the tweet was created; false -> use TIMESTAMP, the time when the tweet was harvested
+     * @return the number of messages in that time span
+     */
     public static long countLocalMessages(final long millis, boolean created_at) {
         if (millis == 0) return 0;
         if (millis > 0) {
-            if (millis <= 3600000L) return countLocalHourMessages(millis, created_at);
-            if (millis <= 86400000L) return countLocalDayMessages(millis, created_at);
-            if (millis <= 604800000L) return countLocalWeekMessages(millis, created_at);
+            if (millis <= DateParser.HOUR_MILLIS) return countLocalHourMessages(millis, created_at);
+            if (millis <= DateParser.DAY_MILLIS) return countLocalDayMessages(millis, created_at);
+            if (millis <= DateParser.WEEK_MILLIS) return countLocalWeekMessages(millis, created_at);
         }
         return elasticsearch_client.count(
                 IndexName.messages.name(),
@@ -1573,7 +1579,7 @@ public class DAO {
             } catch (IOException e) {
                 DAO.log("searchOnOtherPeers: no IO to scraping target: " + e.getMessage());
                 // the remote peer seems to be unresponsive, remove it (temporary) from the remote peer list
-                peerLatency.put(peer, 3600000L);
+                peerLatency.put(peer, DateParser.HOUR_MILLIS);
                 frontPeerCache.remove(peer);
                 backendPeerCache.remove(peer);
                 remote.remove(pick);
