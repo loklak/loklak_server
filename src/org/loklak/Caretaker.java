@@ -60,6 +60,7 @@ public class Caretaker extends Thread {
     public        static long upgradeTime = startupTime + upgradeWait;
     private final static long helloPeriod = 600000; // one ping each 10 minutes
     private       static long helloTime   = 0; // latest hello ping time
+    private       static long deletionTime = 0;
 
     private static final int TIMELINE_PUSH_MINSIZE = 200;
     private static final int TIMELINE_PUSH_MAXSIZE = 1000;
@@ -241,20 +242,32 @@ public class Caretaker extends Thread {
                 }
             }
             
+            if (!busy) {
+                // start a crawler
+                String startTerm = DAO.getRandomTerm();
+                Crawler.stack(startTerm, 3, true, true, true);
+                DAO.log("started a crawler for term " + startTerm);
+                busy = true;
+            }
+            
             // heal the latency to give peers with out-dated information a new chance
             DAO.healLatency(0.95f);
             
             // delete messages out of time frames
-            int d;
-            d = DAO.deleteOld(IndexName.messages_hour, DateParser.oneHourAgo());
-            if (d > 0) DAO.log("Deleted " + d + " outdated(hour) messages");
-            d = DAO.deleteOld(IndexName.messages_day, DateParser.oneDayAgo());
-            if (d > 0) DAO.log("Deleted " + d + " outdated(day) messages");
-            d = DAO.deleteOld(IndexName.messages_week, DateParser.oneWeekAgo());
-            if (d > 0) DAO.log("Deleted " + d + " outdated(week) messages");
-            if (DAO.getConfig("autodeletion", false)) {
-                d = DAO.deleteOld(IndexName.messages, DateParser.oneMonthAgo());
-                if (d > 0) DAO.log("Deleted " + d + " outdated(month) messages");
+            // this is IO heavy, so prevent to do this a lot
+            if (System.currentTimeMillis() - deletionTime > 60000) {
+                int d;
+                d = DAO.deleteOld(IndexName.messages_hour, DateParser.oneHourAgo());
+                if (d > 0) DAO.log("Deleted " + d + " outdated(hour) messages");
+                d = DAO.deleteOld(IndexName.messages_day, DateParser.oneDayAgo());
+                if (d > 0) DAO.log("Deleted " + d + " outdated(day) messages");
+                d = DAO.deleteOld(IndexName.messages_week, DateParser.oneWeekAgo());
+                if (d > 0) DAO.log("Deleted " + d + " outdated(week) messages");
+                if (DAO.getConfig("autodeletion", false)) {
+                    d = DAO.deleteOld(IndexName.messages, DateParser.oneMonthAgo());
+                    if (d > 0) DAO.log("Deleted " + d + " outdated(month) messages");
+                }
+                deletionTime = System.currentTimeMillis();
             }
         } catch (Throwable e) {
             DAO.severe("CARETAKER THREAD", e);

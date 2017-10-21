@@ -175,6 +175,7 @@ public class DAO {
 
     public static MQTTPublisher mqttPublisher = null;
     public static boolean streamEnabled = false;
+    public static List<String> randomTerms = new ArrayList<>();
 
     public static enum IndexName {
     	messages_hour("messages.json"), messages_day("messages.json"), messages_week("messages.json"), messages, queries, users, accounts, import_profiles;
@@ -467,6 +468,7 @@ public class DAO {
                     }
                     // write line into query database
                     if (!existQuery(line)) {
+                        randomTerms.add(line);
                         bulkEntries.add(
                             new IndexEntry<QueryEntry>(
                                 line,
@@ -1031,6 +1033,10 @@ public class DAO {
 
     public static boolean deleteQuery(String id, SourceType sourceType) {
         return queries.delete(id, sourceType);
+    }
+    
+    public static String getRandomTerm() {
+        return randomTerms.get(randomPicker.nextInt(randomTerms.size()));
     }
 
     public static boolean deleteImportProfile(String id, SourceType sourceType) {
