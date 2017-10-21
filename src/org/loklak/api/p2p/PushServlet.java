@@ -99,7 +99,7 @@ public class PushServlet extends HttpServlet {
         String data = timeline.toJSON(false, "search_metadata", "statuses").toString();
         assert data != null;
         boolean transmittedToAtLeastOnePeer = false;
-        for (String hoststub: hoststubs) {
+        pushattempts: for (String hoststub: hoststubs) {
             ClientConnection connection = null;
             try {
                 if (hoststub.endsWith("/")) hoststub = hoststub.substring(0, hoststub.length() - 1);
@@ -108,6 +108,7 @@ public class PushServlet extends HttpServlet {
                 JsonSignature.addSignature(post,DAO.private_settings.getPrivateKey());
                 connection = new ClientConnection(hoststub + "/api/push.json", post, !"peers".equals(DAO.getConfig("httpsclient.trustselfsignedcerts", "peers")));
                 transmittedToAtLeastOnePeer = true;
+                break pushattempts;
             } catch (IOException | JSONException | SignatureException | InvalidKeyException e) {
                 DAO.log("FAILED to push " + timeline.size() + " messages to backend " + hoststub);
                 DAO.severe(e);
