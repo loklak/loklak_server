@@ -107,6 +107,7 @@ public class PushServlet extends HttpServlet {
                 post.put("data", UTF8.getBytes(data)); // optionally implement a gzipped form here
                 JsonSignature.addSignature(post,DAO.private_settings.getPrivateKey());
                 connection = new ClientConnection(hoststub + "/api/push.json", post, !"peers".equals(DAO.getConfig("httpsclient.trustselfsignedcerts", "peers")));
+                DAO.log("SUCCESS push " + timeline.size() + " messages to backend " + hoststub);
                 transmittedToAtLeastOnePeer = true;
                 break pushattempts;
             } catch (IOException | JSONException | SignatureException | InvalidKeyException e) {
@@ -214,24 +215,28 @@ public class PushServlet extends HttpServlet {
 
             // update query database if query was given in the result list
             if (metadata != null) {
-                query = metadata.has("query") ? (String) metadata.get("query") : null;
-                if (query != null) {
-                    // update query database
-                    QueryEntry qe = null;
-                    try {
-                        qe = DAO.queries.read(query);
-                    } catch (IOException e1) {
-                        e1.printStackTrace();
-                    }
-                    if (qe != null) {
-                        // existing queries are updated
-                        qe.update(tl.period(), false);
-                        try {
-                            DAO.queries.writeEntry(new IndexEntry<QueryEntry>(query, qe.getSourceType(), qe));
-                        } catch (IOException e) {
-                        	DAO.severe(e);
+                final String querys = metadata.has("query") ? (String) metadata.get("query") : null;
+                if (querys != null) {
+                    // update query database concurrently
+                    new Thread() {
+                        public void run() {
+                            QueryEntry qe = null;
+                            try {
+                                qe = DAO.queries.read(querys);
+                            } catch (IOException e1) {
+                                e1.printStackTrace();
+                            }
+                            if (qe != null) {
+                                // existing queries are updated
+                                qe.update(tl.period(), false);
+                                try {
+                                    DAO.queries.writeEntry(new IndexEntry<QueryEntry>(querys, qe.getSourceType(), qe));
+                                } catch (IOException e) {
+                                    DAO.severe(e);
+                                }
+                            }
                         }
-                    }
+                    }.start();
                 }
             }
 
