@@ -959,7 +959,7 @@ public class DAO {
 
     private static long countLocalDayMessages(final long millis, boolean created_at) {
         if (millis > 86400000L) return countLocalWeekMessages(millis, created_at);
-        if (created_at && millis == 86400000L) return elasticsearch_client.count(IndexName.messages_hour.name());
+        if (created_at && millis == 86400000L) return elasticsearch_client.count(IndexName.messages_day.name());
         return elasticsearch_client.count(
                 created_at ? IndexName.messages_day.name() : IndexName.messages.name(),
                 created_at ? AbstractObjectEntry.CREATED_AT_FIELDNAME : AbstractObjectEntry.TIMESTAMP_FIELDNAME,
@@ -968,7 +968,7 @@ public class DAO {
 
     private static long countLocalWeekMessages(final long millis, boolean created_at) {
         if (millis > 604800000L) return countLocalMessages(millis, created_at);
-        if (created_at && millis == 604800000L) return elasticsearch_client.count(IndexName.messages_hour.name());
+        if (created_at && millis == 604800000L) return elasticsearch_client.count(IndexName.messages_week.name());
         return elasticsearch_client.count(
                 created_at ? IndexName.messages_week.name() : IndexName.messages.name(),
                 created_at ? AbstractObjectEntry.CREATED_AT_FIELDNAME : AbstractObjectEntry.TIMESTAMP_FIELDNAME,
