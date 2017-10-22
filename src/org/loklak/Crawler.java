@@ -58,6 +58,10 @@ public class Crawler {
         }
         return true;
     }
+    
+    public static int pending() {
+        return pending.size();
+    }
 
     public static int process() {
         // take a term from the stack

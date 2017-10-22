@@ -177,23 +177,25 @@ public class Caretaker extends Thread {
             }
             
             // run some crawl steps
-            crawler: for (int i = 0; i < 10; i++) {
-                List<Thread> t = new ArrayList<>();
-                final AtomicBoolean finished = new AtomicBoolean(false);
-                for (int j = 0; j < 10; j++) {
-                    Thread u = new Thread() {
-                        public void run() {
-                            if (Crawler.process() == 0) finished.set(true);
-                        }
-                    };
-                    u.start();
-                    t.add(u);
-                    try {Thread.sleep(random.nextInt(20));} catch (InterruptedException e) {}
+            if (Crawler.pending() > 0) {
+                crawler: for (int i = 0; i < 10; i++) {
+                    List<Thread> t = new ArrayList<>();
+                    final AtomicBoolean finished = new AtomicBoolean(false);
+                    for (int j = 0; j < 10; j++) {
+                        Thread u = new Thread() {
+                            public void run() {
+                                if (Crawler.process() == 0) finished.set(true);
+                            }
+                        };
+                        u.start();
+                        t.add(u);
+                        try {Thread.sleep(random.nextInt(20));} catch (InterruptedException e) {}
+                    }
+                    t.forEach(u -> {
+                        try {u.join(1000);} catch (InterruptedException e) {}
+                    });
+                    if (finished.get()) break crawler; else busy = true;
                 }
-                t.forEach(u -> {
-                    try {u.join(1000);} catch (InterruptedException e) {}
-                });
-                if (finished.get()) break crawler; else busy = true;
             }
             
             // run searches
