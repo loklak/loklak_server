@@ -881,7 +881,7 @@ public class DAO {
             }
 
             // teach the classifier
-            Classifier.learnPhrase(mw.t.getText());
+            if (randomPicker.nextInt(100) == 0) Classifier.learnPhrase(mw.t.getText());
         } catch (IOException e) {
         	DAO.severe(e);
         }
