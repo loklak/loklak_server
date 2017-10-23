@@ -78,6 +78,7 @@ public class JsonRepository {
     private final boolean dailyDump;
     private final Map<String, JsonRandomAccessFile> buffers;
     private JsonRandomAccessFile json_log;
+    private long write_counter_reset_time, write_counter;
     
     public JsonRepository(File dump_dir, String dump_file_prefix, String readme, final Mode mode, final boolean dailyDump, final int concurrency) throws IOException {
         this.dump_dir = dump_dir;
@@ -94,6 +95,8 @@ public class JsonRepository {
         this.mode = mode;
         this.dailyDump = dailyDump;
         this.concurrency = concurrency;
+        this.write_counter = 0;
+        this.write_counter_reset_time = System.currentTimeMillis();
         if (readme != null) {
             File message_dump_dir_readme = new File(this.dump_dir, "readme.txt");
             if (!message_dump_dir_readme.exists()) {
@@ -118,6 +121,12 @@ public class JsonRepository {
         return this.mode;
     }
 
+    public int objectsPersSecond() {
+        long time = System.currentTimeMillis() - this.write_counter_reset_time;
+        if (time == 0) return 0;
+        return (int) (this.write_counter * 1000L / time);
+    }
+    
     private static String dateSuffix(final boolean dailyDump, final Date d) {
         return (dailyDump ? dateFomatDaily : dateFomatMonthly).format(d);
     }
@@ -186,38 +195,36 @@ public class JsonRepository {
     }
     
     public JsonFactory write(JSONObject json) throws IOException {
+        return write(json.toString());
+    }
+    
+    public JsonFactory write(JSONObject json, char opkey) throws IOException {
         String line = json.toString(); // new ObjectMapper().writer().writeValueAsString(map);
-        JsonFactory jf = null;
+        StringBuilder sb = new StringBuilder();
+        sb.append('{').append('\"').append(OPERATION_KEY_STRING).append('\"').append(':').append('\"').append(opkey).append('\"').append(',');
+        sb.append(line.substring(1));
+        return write(sb.toString());
+    }
+    
+    private JsonFactory write(String line) throws IOException {
         byte[] b = line.getBytes(StandardCharsets.UTF_8);
+        JsonFactory jf = null;
         try {
             long seekpos = this.json_log.appendLine(b);
             jf = this.json_log.getJsonFactory(seekpos, b.length);
+            
+            // increase counter
+            this.write_counter++;
+            if (System.currentTimeMillis() - this.write_counter_reset_time > 600000) {
+                this.write_counter_reset_time = System.currentTimeMillis();
+                this.write_counter = 0;
+            }
         } catch (IOException e) {
             if (e.getMessage().indexOf("Stream Closed") < 0) throw e;
             open();
             long seekpos = this.json_log.appendLine(b);
             jf = this.json_log.getJsonFactory(seekpos, b.length);
             close();
-        }
-        return jf;
-    }
-    
-    public JsonFactory write(JSONObject json, char opkey) throws IOException {
-        String line = json.toString(); // new ObjectMapper().writer().writeValueAsString(map);
-        JsonFactory jf = null;
-        StringBuilder sb = new StringBuilder();
-        sb.append('{').append('\"').append(OPERATION_KEY_STRING).append('\"').append(':').append('\"').append(opkey).append('\"').append(',');
-        sb.append(line.substring(1));
-        byte[] b = sb.toString().getBytes(StandardCharsets.UTF_8);
-        try {
-            long seekpos = this.json_log.appendLine(b);
-            jf = this.json_log.getJsonFactory(seekpos, b.length);
-        } catch (IOException e) {
-            if (e.getMessage().indexOf("Stream Closed") < 0) throw e;
-            open();
-            long seekpos = this.json_log.appendLine(b);
-            jf = this.json_log.getJsonFactory(seekpos, b.length);
-            this.json_log.close();
         }
         return jf;
     }
