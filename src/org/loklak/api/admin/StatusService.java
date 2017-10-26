@@ -157,6 +157,7 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
         long countLocalWeekMessagesCreated = DAO.countLocalMessages(604800000L, true);
         long countLocalWeekMessagesTimestamp = DAO.countLocalMessages(604800000L, false);
         long countLocal10MinDump = DAO.message_dump.objectsPersSecond();
+        long countLocal10MinNotInIndex = DAO.message_dump.objectsNotInIndexPerSecond();
         float mps1mC  = countLocalMinMessagesCreated  / 60f;
         float mps1mT  = countLocalMinMessagesTimestamp  / 60f;
         float mps10mC = countLocal10MMessagesCreated  / 600f;
@@ -178,6 +179,7 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
         index.put("mps1wC", mps1wC);
         index.put("mps1wT", mps1wT);
         index.put("mps10mD", countLocal10MinDump);
+        index.put("mps10mNII", countLocal10MinNotInIndex);
         index.put("mps", (int)  // best of 1d, 1h and 10m
                 Math.max(
                     Math.max(

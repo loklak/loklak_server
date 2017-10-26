@@ -148,7 +148,7 @@ public class JsonDataset {
      * @throws IOException
      */
     public JsonFactory putUnique(JSONObject obj) throws IOException {
-        JsonFactory json = indexDump.write(obj, 'I');
+        JsonFactory json = indexDump.write(obj, 'I', true);
         for (Map.Entry<String, Boolean> column: this.columns.entrySet()) {
             //for (Map.Entry<String, JsonFactoryIndex> idxo: this.index.entrySet()) {
             String searchKey = column.getKey();

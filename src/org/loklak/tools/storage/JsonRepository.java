@@ -78,7 +78,7 @@ public class JsonRepository {
     private final boolean dailyDump;
     private final Map<String, JsonRandomAccessFile> buffers;
     private JsonRandomAccessFile json_log;
-    private long write_counter_reset_time, write_counter;
+    private long write_counter_reset_time, write_counter, not_in_index_write_counter;
     
     public JsonRepository(File dump_dir, String dump_file_prefix, String readme, final Mode mode, final boolean dailyDump, final int concurrency) throws IOException {
         this.dump_dir = dump_dir;
@@ -96,6 +96,7 @@ public class JsonRepository {
         this.dailyDump = dailyDump;
         this.concurrency = concurrency;
         this.write_counter = 0;
+        this.not_in_index_write_counter = 0;
         this.write_counter_reset_time = System.currentTimeMillis();
         if (readme != null) {
             File message_dump_dir_readme = new File(this.dump_dir, "readme.txt");
@@ -125,6 +126,12 @@ public class JsonRepository {
         long time = System.currentTimeMillis() - this.write_counter_reset_time;
         if (time == 0) return 0;
         return (int) (this.write_counter * 1000L / time);
+    }
+    
+    public int objectsNotInIndexPerSecond() {
+        long time = System.currentTimeMillis() - this.write_counter_reset_time;
+        if (time == 0) return 0;
+        return (int) (this.not_in_index_write_counter * 1000L / time);
     }
     
     private static String dateSuffix(final boolean dailyDump, final Date d) {
@@ -194,19 +201,26 @@ public class JsonRepository {
         return new File(path, prefix + currentDatePart + "_" + random + ".txt");
     }
     
-    public JsonFactory write(JSONObject json) throws IOException {
-        return write(json.toString());
+    /**
+     * write a json into the dump
+     * @param json the object
+     * @param inIndex true if the object exists also somewhere in an index, false otherwise
+     * @return the factory
+     * @throws IOException
+     */
+    public JsonFactory write(JSONObject json, boolean inIndex) throws IOException {
+        return write(json.toString(), inIndex);
     }
     
-    public JsonFactory write(JSONObject json, char opkey) throws IOException {
+    public JsonFactory write(JSONObject json, char opkey, boolean inIndex) throws IOException {
         String line = json.toString(); // new ObjectMapper().writer().writeValueAsString(map);
         StringBuilder sb = new StringBuilder();
         sb.append('{').append('\"').append(OPERATION_KEY_STRING).append('\"').append(':').append('\"').append(opkey).append('\"').append(',');
         sb.append(line.substring(1));
-        return write(sb.toString());
+        return write(sb.toString(), inIndex);
     }
     
-    private JsonFactory write(String line) throws IOException {
+    private JsonFactory write(String line, boolean inIndex) throws IOException {
         byte[] b = line.getBytes(StandardCharsets.UTF_8);
         JsonFactory jf = null;
         try {
@@ -215,9 +229,11 @@ public class JsonRepository {
             
             // increase counter
             this.write_counter++;
+            if (!inIndex) this.not_in_index_write_counter++;
             if (System.currentTimeMillis() - this.write_counter_reset_time > 600000) {
                 this.write_counter_reset_time = System.currentTimeMillis();
                 this.write_counter = 0;
+                this.not_in_index_write_counter = 0;
             }
         } catch (IOException e) {
             if (e.getMessage().indexOf("Stream Closed") < 0) throw e;

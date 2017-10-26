@@ -34,7 +34,7 @@ import org.loklak.objects.UserEntry;
 
 public class IncomingMessageBuffer extends Thread {
 
-    private final static int MESSAGE_QUEUE_MAXSIZE = 100000;
+    private final static int MESSAGE_QUEUE_MAXSIZE = 10000;
     private final static int bufferLimit = MESSAGE_QUEUE_MAXSIZE * 3 / 4;
     private static BlockingQueue<DAO.MessageWrapper> messageQueue = new ArrayBlockingQueue<DAO.MessageWrapper>(MESSAGE_QUEUE_MAXSIZE);
     private static BlockingQueue<Timeline2> postQueue = new ArrayBlockingQueue<Timeline2>(MESSAGE_QUEUE_MAXSIZE);
@@ -81,22 +81,24 @@ public class IncomingMessageBuffer extends Thread {
     @Override
     public void run() {
         // work loop
+        while (!DAO.wait_ready(1000)) {
+            try {Thread.sleep(10000);} catch (InterruptedException e) {}
+        }
         loop: while (this.shallRun) try {
             this.isBusy = false;
 
-            if ((messageQueue.isEmpty() && postQueue.isEmpty()) || !DAO.wait_ready(1000)) {
+            if (messageQueue.isEmpty() && postQueue.isEmpty()) {
                 // in case that the queue is empty, try to fill it with previously pushed content
                 //List<Map<String, Object>> shard = this.jsonBufferHandler.getBufferShard();
                 // if the shard has content, turn this into messages again
-
 
                 // if such content does not exist, simply sleep a while
                 try {Thread.sleep(10000);} catch (InterruptedException e) {}
                 continue loop;
             }
             this.isBusy = true;
-            if(messageQueue.size() > 0) indexTweets();
-            else if(postQueue.size() > 0) indexPosts();
+            if (messageQueue.size() > 0) indexTweets();
+            else if (postQueue.size() > 0) indexPosts();
             this.isBusy = false;
 
         } catch (Throwable e) {
@@ -137,7 +139,7 @@ public class IncomingMessageBuffer extends Thread {
             // to make room that clients can continue to push without blocking
             if (messageQueue.size() > bufferLimit) {
                 try {
-                    DAO.message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
+                    DAO.message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""), false);
                     DAO.log("writing message directly to dump, messageQueue.size() = " + messageQueue.size() + ", bufferLimit = " + bufferLimit);
                 } catch (IOException e) {
                     DAO.severe("writing of dump failed", e);
