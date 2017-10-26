@@ -122,16 +122,16 @@ public class IncomingMessageBuffer extends Thread {
 
     private void indexTweets() {
         DAO.MessageWrapper mw;
-        AtomicInteger candMessages = new AtomicInteger();
-        AtomicInteger knownMessagesCache = new AtomicInteger();
+        AtomicInteger newMessageCounter = new AtomicInteger();
+        AtomicInteger doubleMessageCounter = new AtomicInteger();
         int maxBulkSize = 200;
         List<DAO.MessageWrapper> bulk = new ArrayList<>();
         pollloop: while ((mw = messageQueue.poll()) != null) {
             if (DAO.messages.existsCache(mw.t.getPostId())) {
-                 knownMessagesCache.incrementAndGet();
+                 doubleMessageCounter.incrementAndGet();
                  continue pollloop;
             }
-            candMessages.incrementAndGet();
+            newMessageCounter.incrementAndGet();
 
             // in case that the message queue is too large, dump the queue into a file here
             // to make room that clients can continue to push without blocking
@@ -151,25 +151,25 @@ public class IncomingMessageBuffer extends Thread {
             mw.t.enrich(); // we enrich here again because the remote peer may have done this with an outdated version or not at all
             bulk.add(mw);
             if (bulk.size() >= maxBulkSize) {
-                dumpbulk(bulk, candMessages, knownMessagesCache);
+                dumpbulk(bulk, newMessageCounter, doubleMessageCounter);
                 bulk.clear();
             }
         }
         if (bulk.size() >= 0) {
-            dumpbulk(bulk, candMessages, knownMessagesCache);
+            dumpbulk(bulk, newMessageCounter, doubleMessageCounter);
             bulk.clear();
         }
     }
 
-    private void dumpbulk(List<DAO.MessageWrapper> bulk, AtomicInteger candMessages, AtomicInteger knownMessagesCache) {
+    private void dumpbulk(List<DAO.MessageWrapper> bulk, AtomicInteger newMessageCounter, AtomicInteger doubleMessageCounter) {
         long dumpstart = System.currentTimeMillis();
-        int notWrittenDouble = DAO.writeMessageBulk(bulk).size();
-        knownMessagesCache.addAndGet(notWrittenDouble);
-        candMessages.addAndGet(-notWrittenDouble);
+        int newWritten = DAO.writeMessageBulk(bulk).size();
+        doubleMessageCounter.addAndGet(bulk.size() - newWritten);
+        newMessageCounter.addAndGet(newWritten);
         long dumpfinish = System.currentTimeMillis();
-        DAO.log("dumped timelines: " + candMessages + " new " + knownMessagesCache + " known from cache, storage time: " + (dumpfinish - dumpstart) + " ms, remaining messages: " + messageQueue.size());
-        candMessages.set(0);
-        knownMessagesCache.set(0);
+        DAO.log("dumped timelines: " + newMessageCounter + " new, " + doubleMessageCounter + " known from cache, storage time: " + (dumpfinish - dumpstart) + " ms, remaining messages: " + messageQueue.size());
+        newMessageCounter.set(0);
+        doubleMessageCounter.set(0);
     }
 
     private void dumpbulk(Set<Timeline2> bulk) {

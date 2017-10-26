@@ -820,6 +820,7 @@ public class DAO {
             Classifier.learnPhrase(mw.t.getText());
         }
         ElasticsearchClient.BulkWriteResult result = null;
+        Set<String> created_ids = new HashSet<>();
         try {
             final Date limitDate = new Date();
             List<IndexEntry<Post>> macc;
@@ -831,6 +832,7 @@ public class DAO {
             macc = messageBulk.stream().filter(i -> i.getObject().getCreated().after(limitDate)).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for HOUR: " + macc.size());
             result = messages_hour.writeEntries(macc);
+            created_ids.addAll(result.getCreated());
             //DAO.log("***DEBUG messages for HOUR: " + result.getCreated().size() + "  created");
             for (IndexEntry<Post> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for HOUR: " + existed.size() + "  existed");
@@ -839,6 +841,7 @@ public class DAO {
             macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getPostId()))).filter(i -> i.getObject().getCreated().after(limitDate)).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for  DAY : " + macc.size());
             result = messages_day.writeEntries(macc);
+            created_ids.addAll(result.getCreated());
             //DAO.log("***DEBUG messages for  DAY: " + result.getCreated().size() + " created");
             for (IndexEntry<Post> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for  DAY: " + existed.size()  + "  existed");
@@ -847,6 +850,7 @@ public class DAO {
             macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getPostId()))).filter(i -> i.getObject().getCreated().after(limitDate)).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for WEEK: " + macc.size());
             result = messages_week.writeEntries(macc);
+            created_ids.addAll(result.getCreated());
             //DAO.log("***DEBUG messages for WEEK: " + result.getCreated().size() + "  created");
             for (IndexEntry<Post> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for WEEK: " + existed.size()  + "  existed");
@@ -854,6 +858,7 @@ public class DAO {
             macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getPostId()))).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for  ALL : " + macc.size());
             result = messages.writeEntries(macc);
+            created_ids.addAll(result.getCreated());
             //DAO.log("***DEBUG messages for  ALL: " + result.getCreated().size() + "  created");
             for (IndexEntry<Post> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for  ALL: " + existed.size()  + "  existed");
@@ -863,8 +868,7 @@ public class DAO {
         } catch (IOException e) {
         	DAO.severe(e);
         }
-        if (result == null) return new HashSet<String>();
-        return result.getCreated();
+        return created_ids;
     }
 
     private static Set<String> writeMessageBulkDump(Collection<MessageWrapper> mws) {
@@ -874,6 +878,7 @@ public class DAO {
             mw.t.publishToMQTT();
             if (!created.contains(mw.t.getPostId())) continue;
             synchronized (DAO.class) {
+                
                 // record tweet into text file
                 if (writeDump) {
                     message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
