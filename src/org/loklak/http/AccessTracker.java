@@ -110,7 +110,7 @@ public class AccessTracker extends Thread {
     
     private void writeToHistory(Track track, String comment) throws IOException {
         if (comment != null) track.put(COMMENT_KEY, comment);
-        this.history.write(track);
+        this.history.write(track, true);
     }
     
     public void close() {

@@ -711,7 +711,7 @@ public class DAO {
 
                 // record tweet into text file
                 if (mw.dump && writeDump) {
-                    message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
+                    message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""), true);
                 }
                 mw.t.publishToMQTT();
              }
@@ -881,7 +881,7 @@ public class DAO {
                 
                 // record tweet into text file
                 if (writeDump) {
-                    message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
+                    message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""), true);
                 }
             }
 
@@ -902,7 +902,7 @@ public class DAO {
             synchronized (DAO.class) {
                 // record tweet into text file
                 if (writeDump) {
-                    message_dump.write(post);
+                    message_dump.write(post, true);
                 }
             }
         } catch (IOException e) {
@@ -922,7 +922,7 @@ public class DAO {
         try {
             // record account into text file
             if (dump && writeDump) {
-                account_dump.write(a.toJSON(null));
+                account_dump.write(a.toJSON(null), true);
             }
 
             // record account into search index
@@ -943,7 +943,7 @@ public class DAO {
         try {
             // record import profile into text file
             if (dump && writeDump) {
-                import_profile_dump.write(i.toJSON());
+                import_profile_dump.write(i.toJSON(), true);
             }
             // record import profile into search index
             importProfiles.writeEntry(new IndexEntry<ImportProfileEntry>(i.getId(), i.getSourceType(), i));

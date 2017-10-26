@@ -125,7 +125,7 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
 
     @Override
     public boolean existsCache(String id) {
-        return this.objectCache.exist(id) || this.existCache.contains(id);
+        return this.existCache.contains(id) || this.objectCache.exist(id);
     }
     
     @Override
