@@ -34,7 +34,7 @@ import org.loklak.objects.UserEntry;
 
 public class IncomingMessageBuffer extends Thread {
 
-    private final static int MESSAGE_QUEUE_MAXSIZE = 10000;
+    private final static int MESSAGE_QUEUE_MAXSIZE = 20000;
     private final static int bufferLimit = MESSAGE_QUEUE_MAXSIZE * 3 / 4;
     private static BlockingQueue<DAO.MessageWrapper> messageQueue = new ArrayBlockingQueue<DAO.MessageWrapper>(MESSAGE_QUEUE_MAXSIZE);
     private static BlockingQueue<Timeline2> postQueue = new ArrayBlockingQueue<Timeline2>(MESSAGE_QUEUE_MAXSIZE);
