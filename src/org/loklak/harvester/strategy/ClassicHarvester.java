@@ -43,18 +43,18 @@ import org.loklak.tools.DateParser;
 
 public class ClassicHarvester implements Harvester {
 
-    private final int FETCH_RANDOM = 3;
-    private final int HITS_LIMIT_4_QUERIES = 20;
-    private final int MAX_PENDING = 300; // this could be much larger but we don't want to cache too many of these
-    private final int MAX_HARVESTED = 10000; // just to prevent a memory leak with possible OOM after a long time we flush that cache after a while
-    private final Random random = new Random(System.currentTimeMillis());
-    public final ExecutorService executor = Executors.newFixedThreadPool(1);
+    private final static int FETCH_MIN = 20;
+    private final static int HITS_LIMIT_4_QUERIES = 20;
+    private final static int MAX_PENDING = 300; // this could be much larger but we don't want to cache too many of these
+    private final static int MAX_HARVESTED = 10000; // just to prevent a memory leak with possible OOM after a long time we flush that cache after a while
+    private final static Random random = new Random(System.currentTimeMillis());
+    private final ExecutorService executor = Executors.newFixedThreadPool(1);
 
     private LinkedHashSet<String> pendingQueries = new LinkedHashSet<>();
     private ConcurrentLinkedDeque<String> pendingContext = new ConcurrentLinkedDeque<>();
     private Set<String> harvestedContext = new ConcurrentHashSet<>();
 
-    private int hitsOnBackend = 1000;
+    private int hitsOnBackend = 100;
 
     public void checkContext(Timeline tl, boolean front) {
         for (TwitterTweet tweet: tl) {
@@ -91,7 +91,8 @@ public class ClassicHarvester implements Harvester {
         // load more queries if pendingQueries is empty
         if (pendingQueries.size() == 0) {
             try {
-                ResultList<QueryEntry> rl = SuggestServlet.suggest(backend, "", "query", Math.min(1000, Math.max(FETCH_RANDOM * 30, hitsOnBackend / 10)), "asc", "retrieval_next", DateParser.getTimezoneOffset(), null, "now", "retrieval_next", FETCH_RANDOM);
+                int fetch_random = Math.min(100, Math.max(FETCH_MIN, hitsOnBackend / 10));
+                ResultList<QueryEntry> rl = SuggestServlet.suggest(backend, "", "query", fetch_random * 5, "asc", "retrieval_next", DateParser.getTimezoneOffset(), null, "now", "retrieval_next", fetch_random);
                 for (QueryEntry qe: rl) {
                     pendingQueries.add(qe.getQuery());
                 }
