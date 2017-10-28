@@ -18,6 +18,7 @@ ADD gradle /loklak_server/gradle/
 ADD gradlew /loklak_server/
 ADD build.gradle /loklak_server/
 ADD settings.gradle /loklak_server/
+ADD gradle.properties /loklak_server/
 
 # install OpenJDK 8 JDK, Ant, and Bash
 RUN apk update && apk add openjdk8 git bash && \
