@@ -419,6 +419,7 @@ public class LoklakServer {
     private static void setupHttpServer(int httpPort, int httpsPort) throws Exception{
     	QueuedThreadPool pool = new QueuedThreadPool();
         pool.setMaxThreads(500);
+        pool.start();
         LoklakServer.server = new Server(pool);
         LoklakServer.server.setStopAtShutdown(true);
 
@@ -436,6 +437,7 @@ public class LoklakServer {
 	        connector.setPort(httpPort);
 	        connector.setName("httpd:" + httpPort);
 	        connector.setIdleTimeout(20000); // timout in ms when no bytes send / received
+	        connector.start();
 	        LoklakServer.server.addConnector(connector);
         }
 
