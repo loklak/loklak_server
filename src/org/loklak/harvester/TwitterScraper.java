@@ -168,9 +168,9 @@ public class TwitterScraper {
         Timeline[] timelines = null;
         try {
             ClientConnection connection = new ClientConnection(https_url);
-            if (connection.inputStream == null) return null;
+            if (connection.getInputStream() == null) return null;
             try {
-                BufferedReader br = new BufferedReader(new InputStreamReader(connection.inputStream, StandardCharsets.UTF_8));
+                BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8));
 
                 timelines = search(br, filterList, order, writeToIndex, writeToBackend);
             } catch (IOException e) {
@@ -462,7 +462,7 @@ public class TwitterScraper {
         String bearerToken = null;
         try {
             ClientConnection conn = new ClientConnection(mobileUrl);
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.inputStream, StandardCharsets.UTF_8));
+            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
             String line;
             while ((line = br.readLine()) != null) {
                 if (bearerJsUrl != null && guestToken != null) {
@@ -507,7 +507,7 @@ public class TwitterScraper {
 
     private static String[] getConversationVideos(String tweetId, String bearerToken, String guestToken) throws IOException {
         String conversationApiUrl = "https://api.twitter.com/2/timeline/conversation/" + tweetId + ".json";
-        CloseableHttpClient httpClient = getCustomClosableHttpClient(true);
+        CloseableHttpClient httpClient = getCustomClosableHttpClient();
         HttpGet req = new HttpGet(conversationApiUrl);
         req.setHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.98 Safari/537.36");
         req.setHeader("Authorization", "Bearer " + bearerToken);
@@ -536,7 +536,7 @@ public class TwitterScraper {
 
     private static String getBearerTokenFromJs(String jsUrl) throws IOException {
         ClientConnection conn = new ClientConnection(jsUrl);
-        BufferedReader br = new BufferedReader(new InputStreamReader(conn.inputStream, StandardCharsets.UTF_8));
+        BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
         String line = br.readLine();
         Matcher m = bearerTokenRegex.matcher(line);
         if (m.find()) {

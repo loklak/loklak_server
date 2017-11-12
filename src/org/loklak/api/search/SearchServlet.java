@@ -90,7 +90,7 @@ public class SearchServlet extends HttpServlet {
                         urlstring = urlstring + "&filter=" + filterString;
                     }
 
-                    jsonb = ClientConnection.downloadPeer(urlstring);
+                    jsonb = ClientConnection.download(urlstring);
                     break backendloop;
                 } catch (IOException e) {
                     ee = e;

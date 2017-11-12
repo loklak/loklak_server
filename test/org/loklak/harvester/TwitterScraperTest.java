@@ -115,10 +115,10 @@ public class TwitterScraperTest {
             // Check Network
             assertThat(connection.getStatusCode(), is(200));
 
-            if (connection.inputStream == null) return;
+            if (connection.getInputStream() == null) return;
             try {
                 // Read all scraped html data
-                br = new BufferedReader(new InputStreamReader(connection.inputStream, StandardCharsets.UTF_8));
+                br = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8));
 
                 // Fetch list of tweets and set in ftweet_list
                 tweet_list = (Timeline[])executePrivateMethod(TwitterScraper.class, "search",new Class[]{BufferedReader.class, Timeline.Order.class, boolean.class, boolean.class},br, order, true, true);

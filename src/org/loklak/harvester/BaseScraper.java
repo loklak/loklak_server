@@ -178,11 +178,11 @@ public abstract class BaseScraper extends AbstractAPIHandler {
     }
 
     public BufferedReader getHtml(ClientConnection connection) {
-        if (connection.inputStream == null) {
+        if (connection.getInputStream() == null) {
             return null;
         }
         BufferedReader br = new BufferedReader(
-                new InputStreamReader(connection.inputStream, StandardCharsets.UTF_8));
+                new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8));
         return br;
     }
 

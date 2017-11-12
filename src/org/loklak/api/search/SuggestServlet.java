@@ -99,7 +99,7 @@ public class SuggestServlet extends HttpServlet {
                         "&port.http=" + httpport +
                         "&port.https=" + httpsport +
                         "&peername=" + peername;
-                response = ClientConnection.downloadPeer(urlstring);
+                response = ClientConnection.download(urlstring);
                 break backendloop;
             } catch (IOException e) {
                 ee = e;
