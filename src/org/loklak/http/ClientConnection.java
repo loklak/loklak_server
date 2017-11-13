@@ -54,8 +54,10 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.conn.routing.HttpRoute;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
@@ -66,6 +68,7 @@ import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.protocol.HttpContext;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.util.EntityUtils;
 import org.loklak.data.DAO;
@@ -83,7 +86,6 @@ public class ClientConnection {
     public static final byte[] CRLF = {CR, LF};
     private static final boolean debugLog = DAO.getConfig("flag.debug.redirect_unshortener", "false").equals("true");
     
-    public static PoolingHttpClientConnectionManager cm;
     private static RequestConfig defaultRequestConfig = RequestConfig.custom()
             .setSocketTimeout(60000)
             .setConnectTimeout(60000)
@@ -92,7 +94,7 @@ public class ClientConnection {
             .setCookieSpec(CookieSpecs.IGNORE_COOKIES)
             .build();
 
-    private final static CloseableHttpClient httpClient = getCustomClosableHttpClient();
+    private final static CloseableHttpClient httpClient = getClosableHttpClient();
     
     private int status;
     private BufferedInputStream inputStream;
@@ -136,18 +138,7 @@ public class ClientConnection {
         this.executeRequest(request);
     }
 
-    /**
-     * POST request
-     * @param urlstring
-     * @param map
-     * @throws ClientProtocolException
-     * @throws IOException
-     */
-    public ClientConnection(String urlstring, Map<String, byte[]> map) throws ClientProtocolException, IOException {
-    	this(urlstring, map, true);
-    }
-
-    public final static CloseableHttpClient getCustomClosableHttpClient() {
+    public final static CloseableHttpClient getClosableHttpClient() {
         boolean trustAllCerts = !"none".equals(DAO.getConfig("httpsclient.trustselfsignedcerts", "peers"))
                 && ("all".equals(DAO.getConfig("httpsclient.trustselfsignedcerts", "peers")));
         return HttpClients.custom()
@@ -168,7 +159,7 @@ public class ClientConnection {
      * @param trustAllCerts allow opportunistic encryption if needed
      * @return
      */
-    private static PoolingHttpClientConnectionManager getConnctionManager(boolean trustAllCerts) {
+    private static HttpClientConnectionManager getConnctionManager(boolean trustAllCerts) {
 
     	Registry<ConnectionSocketFactory> socketFactoryRegistry = null;
     	if(trustAllCerts){
@@ -193,17 +184,18 @@ public class ClientConnection {
         // twitter specific options
         cm.setMaxTotal(200);
         cm.setDefaultMaxPerRoute(20);
-        HttpHost twitter = new HttpHost("twitter.com", 443);
-        cm.setMaxPerRoute(new HttpRoute(twitter), 50);
-
+        cm.setMaxPerRoute(new HttpRoute(new HttpHost("twitter.com", 80)), 50);
+        cm.setMaxPerRoute(new HttpRoute(new HttpHost("twitter.com", 443)), 50);
+    	
         return cm;
     }
 
     private void executeRequest(HttpRequestBase request) throws IOException {
 
         this.httpResponse = null;
+        HttpContext context = HttpClientContext.create();
         try {
-            this.httpResponse = httpClient.execute(request);
+            this.httpResponse = httpClient.execute(request, context);
         } catch (UnknownHostException e) {
             request.reset();
             throw new IOException("client connection failed: unknown host " + request.getURI().getHost());
@@ -313,7 +305,7 @@ public class ClientConnection {
      * @return the redirect url for the given urlstring
      * @throws IOException if there is some error with the link
      */
-    public static String getRedirect(String urlstring, boolean isGet) throws IOException {
+    private final static String getRedirect(String urlstring, boolean isGet) throws IOException {
         HttpRequestBase req;
         if (isGet)
             req = new HttpGet(urlstring);

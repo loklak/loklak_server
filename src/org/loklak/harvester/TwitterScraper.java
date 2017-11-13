@@ -20,7 +20,7 @@
 package org.loklak.harvester;
 
 import static org.apache.http.util.EntityUtils.consumeQuietly;
-import static org.loklak.http.ClientConnection.getCustomClosableHttpClient;
+import static org.loklak.http.ClientConnection.getClosableHttpClient;
 import static org.loklak.http.ClientConnection.getHTML;
 
 import org.loklak.objects.AbstractObjectEntry;
@@ -507,7 +507,7 @@ public class TwitterScraper {
 
     private static String[] getConversationVideos(String tweetId, String bearerToken, String guestToken) throws IOException {
         String conversationApiUrl = "https://api.twitter.com/2/timeline/conversation/" + tweetId + ".json";
-        CloseableHttpClient httpClient = getCustomClosableHttpClient();
+        CloseableHttpClient httpClient = getClosableHttpClient();
         HttpGet req = new HttpGet(conversationApiUrl);
         req.setHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.98 Safari/537.36");
         req.setHeader("Authorization", "Bearer " + bearerToken);
