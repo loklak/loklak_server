@@ -106,7 +106,7 @@ public class PushServlet extends HttpServlet {
                 Map<String, byte[]> post = new HashMap<String, byte[]>();
                 post.put("data", UTF8.getBytes(data)); // optionally implement a gzipped form here
                 JsonSignature.addSignature(post,DAO.private_settings.getPrivateKey());
-                connection = new ClientConnection(hoststub + "/api/push.json", post, !"peers".equals(DAO.getConfig("httpsclient.trustselfsignedcerts", "peers")));
+                connection = new ClientConnection(hoststub + "/api/push.json", post);
                 DAO.log("SUCCESS push " + timeline.size() + " messages to backend " + hoststub);
                 transmittedToAtLeastOnePeer = true;
                 break pushattempts;

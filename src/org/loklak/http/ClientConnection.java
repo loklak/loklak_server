@@ -126,7 +126,7 @@ public class ClientConnection {
      * @throws ClientProtocolException
      * @throws IOException
      */
-    public ClientConnection(String urlstring, Map<String, byte[]> map, boolean useAuthentication) throws ClientProtocolException, IOException {
+    public ClientConnection(String urlstring, Map<String, byte[]> map) throws ClientProtocolException, IOException {
     	HttpRequestBase request = new HttpPost(urlstring);
         MultipartEntityBuilder entityBuilder = MultipartEntityBuilder.create();
         entityBuilder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
