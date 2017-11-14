@@ -24,14 +24,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableMap;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.loklak.data.DAO.IndexName;
 import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.harvester.Post;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
@@ -41,131 +37,17 @@ import org.loklak.susi.SusiThought;
  * A timeline2 is a structure which holds tweet for the purpose of presentation
  * There is no tweet retrieval method here, just an iterator which returns the tweets in reverse appearing order
  */
-//TODO: remove TwitterTweet
-public class Timeline2 implements Iterable<Post> {
+public class Timeline2 extends BasicTimeline<Post> implements Iterable<Post> {
 
-    public static enum Order {
-        CREATED_AT("date"),
-        TIMESTAMP("long"),
-        RETWEET_COUNT("long"),
-        FAVOURITES_COUNT("long");
-        String field_type;
-
-        Order(String field_type) {this.field_type = field_type;}
-
-        public String getMessageFieldName() {
-            return this.name().toLowerCase();
-        }
-
-        public String getMessageFieldType() {
-            return this.field_type;
-        }
-    }
-    //TODO: remove tweets
-    // the key is the date plus id of the post
-    private NavigableMap<String, Post> posts;
-    private Map<String, UserEntry> users;
     private long lastKey = 0;
-    private int hits = -1;
-    private String scraperInfo = "";
-    final private Order order;
-    private String query;
-    private IndexName indexName;
-    private int cursor; // used for pagination, set this to the number of tweets returned so far to the user; they should be considered as unchangable
-    private long accessTime;
-    private final Map<Integer, Post> precursorPostCache = new ConcurrentHashMap<>();
     public boolean dump = false;
 
     public Timeline2(Order order) {
-        this.posts = new ConcurrentSkipListMap<String, Post>();
-        this.users = new ConcurrentHashMap<String, UserEntry>();
-        this.order = order;
-        this.query = null;
-        this.indexName = null;
-        this.cursor = 0;
-        this.accessTime = System.currentTimeMillis();
+        super(order);
     }
 
     public Timeline2(Order order, String scraperInfo) {
-        this(order);
-        this.scraperInfo = scraperInfo;
-    }
-
-    public static Order parseOrder(String order) {
-        try {
-            return Order.valueOf(order.toUpperCase());
-        } catch (Throwable e) {
-            return Order.TIMESTAMP;
-        }
-    }
-
-    public void clear() {
-        this.posts.clear();
-        this.users.clear();
-        // we keep the other details (like order, scraperInfo and query) to be able to test with zero-size pushes
-    }
-
-    public Timeline2 setResultIndex(IndexName index) {
-        this.indexName = index;
-        return this;
-    }
-
-    public IndexName getResultIndex() {
-        return this.indexName;
-    }
-
-    public Timeline2 setScraperInfo(String info) {
-        this.scraperInfo = info;
-        return this;
-    }
-
-    public String getScraperInfo() {
-        return this.scraperInfo;
-    }
-
-    public long getAccessTime() {
-        return this.accessTime;
-    }
-
-    public Timeline2 updateAccessTime() {
-        this.accessTime = System.currentTimeMillis();
-        return this;
-    }
-
-    public Order getOrder() {
-        return this.order;
-    }
-
-    public String getQuery() {
-        return this.query;
-    }
-
-    public Timeline2 setQuery(String query) {
-        this.query = query;
-        return this;
-    }
-
-    /**
-     * gets the outer bound of the tweets returned to the user so far
-     * @return the cursor, the next starting point for tweet retrieval from the list, not shown so far to the user
-     */
-    public int getCursor() {
-        return this.cursor;
-    }
-
-    /**
-     * sets the cursor to the outer bound of the visible tweet number.
-     * That means if no tweets had been shown to the user, the number is 0.
-     * @param newCursor the new cursor position which must be higher than the previous one.
-     * @return this
-     */
-    public Timeline2 setCursor(int newCursor) {
-        if (newCursor > this.cursor) this.cursor = newCursor;
-        return this;
-    }
-
-    public int size() {
-        return this.posts.size();
+        super(order, scraperInfo);
     }
 
     //TODO: to fix this
@@ -203,44 +85,9 @@ public class Timeline2 implements Iterable<Post> {
         return t;
     }
 
-    public void add(Post post, UserEntry user) {
-        this.addUser(user);
-        this.addPost(post);
-    }
-
     public void add(Post post) {
         this.addPost(post);
     }
-
-    private void addUser(UserEntry user) {
-        assert user != null;
-        if (user != null) {
-            this.users.put(user.getScreenName(), user);
-        }
-    }
-
-/*  //TODO: remove this
-    private Timeline2 addTweet(TwitterTweet tweet) {
-        String key = "";
-        if (this.order == Order.RETWEET_COUNT) {
-            key = Long.toHexString(tweet.getRetweetCount());
-            while (key.length() < 16) key = "0" + key;
-            key = key + "_" + tweet.getPostId();
-        } else if (this.order == Order.FAVOURITES_COUNT) {
-            key = Long.toHexString(tweet.getFavouritesCount());
-            while (key.length() < 16) key = "0" + key;
-            key = key + "_" + tweet.getPostId();
-        } else {
-            key = Long.toHexString(tweet.getCreatedAt().getTime()) + "_" + tweet.getPostId();
-        }
-        synchronized (tweets) {
-            TwitterTweet precursorTweet = getPrecursorTweet();
-            if (precursorTweet != null && tweet.getCreatedAt().before(precursorTweet.getCreatedAt())) return this; // ignore this tweet in case it would change the list of shown tweets
-            this.tweets.put(key, tweet);
-        }
-        return this;
-    }
-*/
 
     public Timeline2 addPost(Post post) {
         String key = "";
@@ -282,7 +129,7 @@ public class Timeline2 implements Iterable<Post> {
     public void collectMetadata(JSONObject metadata) {
         int hits = 0;
         int count = 0;
-        Set scrapers = new HashSet<String>();
+        Set<Object> scrapers = new HashSet<>();
 
         List<String> listKeys = new ArrayList<String>(this.posts.keySet());
         int n = listKeys.size();
@@ -299,10 +146,6 @@ public class Timeline2 implements Iterable<Post> {
         metadata.put("scrapers", scrapers);
     }
 
-    protected UserEntry getUser(String user_screen_name) {
-        return this.users.get(user_screen_name);
-    }
-
     public UserEntry getUser(Post fromPost) {
         return this.users.get(fromPost.get("ScreenName"));
     }
@@ -317,79 +160,6 @@ public class Timeline2 implements Iterable<Post> {
             }
         }
         for (Post t: other) this.addPost(t);
-    }
-
-    public Post getBottomTweet() {
-        synchronized (posts) {
-            return this.posts.firstEntry().getValue();
-        }
-    }
-
-    public Post getTopTweet() {
-        synchronized (posts) {
-            return this.posts.lastEntry().getValue();
-        }
-    }
-
-    /**
-     * get the precursor tweet, which is the latest tweet that the user has seen.
-     * It is the tweet which appears at the end of the list.
-     * This tweet may be used to compute the insert date which is valid for new tweets.
-     * Therefore there is a cache which contains the latest tweet shown to the user so fa.
-     * New tweets must have an entry date after that last tweet to create a stable list
-     * @return the last tweet that a user has seen. It is also the oldest tweet that the user has seen.
-     */
-/*
-    private TwitterTweet getPrecursorTweet() {
-        if (this.cursor == 0) return null;
-        TwitterTweet m = this.precursorTweetCache.get(this.cursor);
-        if (m != null) return m;
-        synchronized (TwitterTweet) {
-            int count = 0;
-            for (TwitterTweet TwitterTweet: this) {
-                if (++count == this.cursor) {
-                    this.precursorTweetCache.put(this.cursor, TwitterTweet);
-                    return TwitterTweet;
-                }
-            }
-        }
-        return null;
-    }
-*/
-    private Post getPrecursorPost() {
-        if (this.cursor == 0) {
-            return null;
-        }
-        Post post = this.precursorPostCache.get(this.cursor);
-
-        if (post != null) {
-            return post;
-        }
-        synchronized (posts) {
-            int count = 0;
-            for (Post p: this) {
-                if (++count == this.cursor) {
-                    this.precursorPostCache.put(this.cursor, p);
-                    post = p;
-                    break;
-                }
-            }
-        }
-        return post;
-    }
-
-    public List<Post> getNextTweets(int start, int maxCount) {
-        List<Post> posts = new ArrayList<>();
-        synchronized (posts) {
-            int count = 0;
-            for (Post post: this) {
-                if (count >= start) posts.add(post);
-                if (posts.size() >= maxCount) break;
-                count++;
-            }
-            if (start >= this.cursor) this.cursor = start + posts.size();
-        }
-        return posts;
     }
 
     public SusiThought toSusi(boolean withEnrichedData) throws JSONException {
@@ -413,14 +183,6 @@ public class Timeline2 implements Iterable<Post> {
         }
         json.setData(statuses);
         return json;
-    }
-
-    /**
-     * the tweet iterator returns tweets in descending appearance order (top first)
-     */
-    @Override
-    public Iterator<Post> iterator() {
-        return this.posts.descendingMap().values().iterator();
     }
 
     /**
@@ -466,14 +228,6 @@ public class Timeline2 implements Iterable<Post> {
         IncomingMessageBuffer.addScheduler(this);
     }
 
-    public Timeline2 setHits(int hits) {
-        this.hits = hits;
-        return this;
-    }
-
-    public int getHits() {
-        return this.hits == -1 ? this.size() : this.hits;
-    }
 
     public Timeline toTimeline() {
 

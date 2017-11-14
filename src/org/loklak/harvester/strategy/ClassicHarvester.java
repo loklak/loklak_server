@@ -38,7 +38,7 @@ import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.ResultList;
 import org.loklak.objects.Timeline;
-import org.loklak.objects.Timeline.Order;
+import org.loklak.objects.BasicTimeline.Order;
 import org.loklak.tools.DateParser;
 
 public class ClassicHarvester implements Harvester {

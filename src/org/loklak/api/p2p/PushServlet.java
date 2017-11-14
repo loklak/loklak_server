@@ -45,7 +45,7 @@ import org.loklak.objects.ProviderType;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
-import org.loklak.objects.Timeline.Order;
+import org.loklak.objects.BasicTimeline.Order;
 import org.loklak.server.Query;
 import org.loklak.tools.UTF8;
 import org.loklak.tools.JsonSignature;
