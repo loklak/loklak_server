@@ -40,7 +40,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
-import org.loklak.objects.Timeline2;
+import org.loklak.objects.PostTimeline;
 import org.loklak.server.BaseUserRole;
 import org.loklak.tools.CharacterCoding;
 
@@ -165,7 +165,7 @@ public class YoutubeScraper extends BaseScraper {
     @Override
     protected Post scrape(BufferedReader br, String type, String url) {
         Post out = new Post(true);
-        Timeline2 postList = new Timeline2(this.order);
+        PostTimeline postList = new PostTimeline(this.order);
         switch (type) {
             case "user":
                 //TODO: Add scraper

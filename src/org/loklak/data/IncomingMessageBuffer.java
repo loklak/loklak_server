@@ -29,7 +29,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.objects.TwitterTimeline;
-import org.loklak.objects.Timeline2;
+import org.loklak.objects.PostTimeline;
 import org.loklak.objects.UserEntry;
 
 public class IncomingMessageBuffer extends Thread {
@@ -37,7 +37,7 @@ public class IncomingMessageBuffer extends Thread {
     private final static int MESSAGE_QUEUE_MAXSIZE = 20000;
     private final static int bufferLimit = MESSAGE_QUEUE_MAXSIZE * 3 / 4;
     private static BlockingQueue<DAO.MessageWrapper> messageQueue = new ArrayBlockingQueue<DAO.MessageWrapper>(MESSAGE_QUEUE_MAXSIZE);
-    private static BlockingQueue<Timeline2> postQueue = new ArrayBlockingQueue<Timeline2>(MESSAGE_QUEUE_MAXSIZE);
+    private static BlockingQueue<PostTimeline> postQueue = new ArrayBlockingQueue<PostTimeline>(MESSAGE_QUEUE_MAXSIZE);
     private static AtomicInteger queueClients = new AtomicInteger(0);
 
     private boolean shallRun = true, isBusy = false;
@@ -110,8 +110,8 @@ public class IncomingMessageBuffer extends Thread {
 
     private void indexPosts() {
         int maxBulkSize = 1;
-        Timeline2 postListObj = null;
-        Set<Timeline2> bulk = new HashSet<Timeline2>();
+        PostTimeline postListObj = null;
+        Set<PostTimeline> bulk = new HashSet<PostTimeline>();
 
         while((postListObj = postQueue.poll()) != null) {
             bulk.add(postListObj);
@@ -174,7 +174,7 @@ public class IncomingMessageBuffer extends Thread {
         doubleMessageCounter.set(0);
     }
 
-    private void dumpbulk(Set<Timeline2> bulk) {
+    private void dumpbulk(Set<PostTimeline> bulk) {
         //TODO: use this
         int notWrittenDouble = DAO.writeMessageBulk(bulk).size();
         DAO.log("dumped timelines: "  + postQueue.size());
@@ -194,7 +194,7 @@ public class IncomingMessageBuffer extends Thread {
         }
     }
 
-    public static void addScheduler(Timeline2 postList) {
+    public static void addScheduler(PostTimeline postList) {
         queueClients.incrementAndGet();
        try {
             postQueue.put(postList);

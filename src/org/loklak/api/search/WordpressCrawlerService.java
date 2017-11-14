@@ -30,7 +30,7 @@ import org.jsoup.select.Elements;
 import org.loklak.data.DAO;
 import org.loklak.harvester.BaseScraper;
 import org.loklak.harvester.Post;
-import org.loklak.objects.Timeline2;
+import org.loklak.objects.PostTimeline;
 import org.loklak.server.BaseUserRole;
 
 public class WordpressCrawlerService extends BaseScraper {
@@ -88,9 +88,9 @@ public class WordpressCrawlerService extends BaseScraper {
         return typeArray;
     }
 
-    public Timeline2 crawlWordpress(String blogURL, BufferedReader br) {
+    public PostTimeline crawlWordpress(String blogURL, BufferedReader br) {
         Post blogPost = null;
-        Timeline2 blogList = new Timeline2(this.order);
+        PostTimeline blogList = new PostTimeline(this.order);
 
         Document blogHTML = null;
         Elements articles = null;

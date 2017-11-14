@@ -85,7 +85,7 @@ import org.loklak.objects.QueryEntry;
 import org.loklak.objects.ResultList;
 import org.loklak.objects.SourceType;
 import org.loklak.objects.TwitterTimeline;
-import org.loklak.objects.Timeline2;
+import org.loklak.objects.PostTimeline;
 import org.loklak.objects.TimelineCache;
 import org.loklak.objects.UserEntry;
 import org.loklak.server.*;
@@ -738,8 +738,8 @@ public class DAO {
         return createdIDs;
     }
 
-    public static Set<String> writeMessageBulk(Set<Timeline2> postBulk) {
-        for (Timeline2 postList: postBulk) {
+    public static Set<String> writeMessageBulk(Set<PostTimeline> postBulk) {
+        for (PostTimeline postList: postBulk) {
             if (postList.size() < 1) continue;
             if(postList.dump) {
                 writeMessageBulkDump(postList);
@@ -750,7 +750,7 @@ public class DAO {
         return new HashSet<>();
     }
 
-    private static Set<String> writeMessageBulkNoDump(Timeline2 postList) {
+    private static Set<String> writeMessageBulkNoDump(PostTimeline postList) {
         if (postList.size() == 0) return new HashSet<>();
         List<Post> messageBulk = new ArrayList<>();
 
@@ -894,7 +894,7 @@ public class DAO {
         return created;
     }
 
-    private static Set<String> writeMessageBulkDump(Timeline2 postList) {
+    private static Set<String> writeMessageBulkDump(PostTimeline postList) {
         Set<String> created = writeMessageBulkNoDump(postList);
 
         for (Post post: postList) try {
@@ -1061,7 +1061,7 @@ public class DAO {
 
     public static class SearchLocalMessages {
         public TwitterTimeline timeline;
-        public Timeline2 postList;
+        public PostTimeline postList;
         public Map<String, List<Map.Entry<String, Long>>> aggregations;
         public ElasticsearchClient.Query query;
 
@@ -1156,10 +1156,10 @@ public class DAO {
 
         public SearchLocalMessages (
                 Map<String, Map<String, String>> inputMap,
-                final Timeline2.Order orderField,
+                final PostTimeline.Order orderField,
                 final int resultCount
         ) {
-            this.postList = new Timeline2(orderField);
+            this.postList = new PostTimeline(orderField);
             IndexName resultIndex;
             QueryEntry.ElasticsearchQuery sq = new QueryEntry.ElasticsearchQuery(
                     inputMap.get("get"), inputMap.get("not_get"), inputMap.get("also_get"));
@@ -1423,8 +1423,8 @@ public class DAO {
             boolean byUserQuery,
             boolean recordQuery,
             JSONObject metadata) {
-        Timeline2.Order order= getOrder(inputMap.get("order"));
-        Timeline2 dataSet = new Timeline2(order);
+        PostTimeline.Order order= getOrder(inputMap.get("order"));
+        PostTimeline dataSet = new PostTimeline(order);
         List<String> scraperList = Arrays.asList(inputMap.get("scraper").trim().split("\\s*,\\s*"));
         List<BaseScraper> scraperObjList = getScraperObjects(scraperList, inputMap);
         ExecutorService scraperRunner = Executors.newFixedThreadPool(scraperObjList.size());
@@ -1479,9 +1479,9 @@ public class DAO {
         return scraperObjList;
     }
 
-    public static Timeline2.Order getOrder(String orderString) {
+    public static PostTimeline.Order getOrder(String orderString) {
         //TODO: order set according to input
-        return Timeline2.parseOrder("timestamp");
+        return PostTimeline.parseOrder("timestamp");
     }
 
     public static final Random random = new Random(System.currentTimeMillis());

@@ -33,7 +33,7 @@ import org.loklak.data.DAO;
 import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.harvester.Post;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
-import org.loklak.objects.Timeline2;
+import org.loklak.objects.PostTimeline;
 import org.loklak.susi.SusiThought;
 
 /**
@@ -178,8 +178,8 @@ public class TwitterTimeline extends BasicTimeline<TwitterTweet> implements Iter
     }
 
     //TODO: temporary method to prevent issues related to Timeline class popping-up till next PR
-    public Timeline2 toPostTimeline() {
-        Timeline2 postList = new Timeline2(Timeline2.Order.TIMESTAMP);
+    public PostTimeline toPostTimeline() {
+        PostTimeline postList = new PostTimeline(Order.TIMESTAMP);
         for (TwitterTweet me : this) {
             assert me instanceof Post;
             postList.add(me);

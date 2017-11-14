@@ -15,7 +15,7 @@ import org.json.JSONObject;
 import org.json.JSONArray;
 import org.loklak.objects.ProviderType;
 import org.loklak.objects.SourceType;
-import org.loklak.objects.Timeline2;
+import org.loklak.objects.PostTimeline;
 import org.loklak.server.*;
 
 /**
@@ -46,7 +46,7 @@ public abstract class BaseScraper extends AbstractAPIHandler {
     protected ProviderType provider_type;
     protected Map<String, String> extra = null;
     protected Map<String, Map<String, String>> cacheMap = null;
-    protected final Timeline2.Order order = Timeline2.parseOrder("timestamp");
+    protected final PostTimeline.Order order = PostTimeline.parseOrder("timestamp");
     protected int hits = 0;
     protected int count = 0;
 
@@ -188,7 +188,7 @@ public abstract class BaseScraper extends AbstractAPIHandler {
 
     protected abstract Post scrape(BufferedReader br, String type, String url);
 
-    protected Post putData(Post typeArray, String key, Timeline2 postList) {
+    protected Post putData(Post typeArray, String key, PostTimeline postList) {
         if(!"cache".equals(this.source)) {
             //TODO: base it on SourceType
             postList.writeToIndex();

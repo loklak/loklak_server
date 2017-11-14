@@ -41,14 +41,14 @@ import org.jsoup.select.Elements;
 import org.loklak.data.DAO;
 import org.loklak.harvester.BaseScraper;
 import org.loklak.harvester.Post;
-import org.loklak.objects.Timeline2;
+import org.loklak.objects.PostTimeline;
 import org.loklak.server.BaseUserRole;
 
 public class GithubProfileScraper extends BaseScraper {
 
     private final long serialVersionUID = -4166800345379685202L;
     private static final String GITHUB_API_BASE = "https://api.github.com/users/";
-    private Timeline2 postList = new Timeline2(this.order);
+    private PostTimeline postList = new PostTimeline(this.order);
     public List<String> termsList = null;
 
     public GithubProfileScraper() {
@@ -156,7 +156,7 @@ public class GithubProfileScraper extends BaseScraper {
 
     protected Post scrape(BufferedReader br, String type, String url) {
         Post typeArray = new Post(true);
-        Timeline2 postList = new Timeline2(this.order);
+        PostTimeline postList = new PostTimeline(this.order);
 
         if ("all".equals(type) || "user".equals(type)) {
             postList.addPost(this.scrapeGithub(this.query, br));

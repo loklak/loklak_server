@@ -6,7 +6,7 @@ import org.junit.Test;
 import org.loklak.api.search.QuoraProfileScraper;
 import org.loklak.data.DAO;
 import org.loklak.http.ClientConnection;
-import org.loklak.objects.Timeline2;
+import org.loklak.objects.PostTimeline;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import static org.hamcrest.core.Is.is;
@@ -24,7 +24,7 @@ public class QuoraProfileScraperTest {
     public void quoraProfileScraperUserTest() {
 
         QuoraProfileScraper quoraScraper = new QuoraProfileScraper();
-        Timeline2 profileListTimeLine = null;
+        PostTimeline profileListTimeLine = null;
         String url = "https://www.quora.com/profile/Saptak-Sengupta";
         BufferedReader br = null;
         
@@ -49,7 +49,7 @@ public class QuoraProfileScraperTest {
         }
 
         try {
-            profileListTimeLine = (Timeline2)TwitterScraperTest.executePrivateMethod(QuoraProfileScraper.class, quoraScraper, "scrapeProfile", new Class[]{BufferedReader.class, String.class}, br, url);
+            profileListTimeLine = (PostTimeline)TwitterScraperTest.executePrivateMethod(QuoraProfileScraper.class, quoraScraper, "scrapeProfile", new Class[]{BufferedReader.class, String.class}, br, url);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -72,7 +72,7 @@ public class QuoraProfileScraperTest {
     public void quoraQuestionScraperUserTest() {
 
         QuoraProfileScraper quoraScraper = new QuoraProfileScraper();
-        Timeline2 questionListTimeLine = null;
+        PostTimeline questionListTimeLine = null;
         String url = "https://www.quora.com/search/?q=fossasia&type=question";
         String postType = "question";
         BufferedReader br = null;
@@ -88,7 +88,7 @@ public class QuoraProfileScraperTest {
         }
 
         try {
-            questionListTimeLine = (Timeline2)TwitterScraperTest.executePrivateMethod(QuoraProfileScraper.class, quoraScraper, "scrapeQues", new Class[]{BufferedReader.class, String.class}, br, url);
+            questionListTimeLine = (PostTimeline)TwitterScraperTest.executePrivateMethod(QuoraProfileScraper.class, quoraScraper, "scrapeQues", new Class[]{BufferedReader.class, String.class}, br, url);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }

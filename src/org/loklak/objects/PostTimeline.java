@@ -37,23 +37,23 @@ import org.loklak.susi.SusiThought;
  * A timeline2 is a structure which holds tweet for the purpose of presentation
  * There is no tweet retrieval method here, just an iterator which returns the tweets in reverse appearing order
  */
-public class Timeline2 extends BasicTimeline<Post> implements Iterable<Post> {
+public class PostTimeline extends BasicTimeline<Post> implements Iterable<Post> {
 
     private long lastKey = 0;
     public boolean dump = false;
 
-    public Timeline2(Order order) {
+    public PostTimeline(Order order) {
         super(order);
     }
 
-    public Timeline2(Order order, String scraperInfo) {
+    public PostTimeline(Order order, String scraperInfo) {
         super(order, scraperInfo);
     }
 
     //TODO: to fix this
-    public Timeline2 reduceToMaxsize(final int maxsize) {
+    public PostTimeline reduceToMaxsize(final int maxsize) {
         List<Post> m = new ArrayList<>();
-        Timeline2 t = new Timeline2(this.order);
+        PostTimeline t = new PostTimeline(this.order);
         if (maxsize < 0) return t;
 
         // remove tweets from this timeline2
@@ -89,7 +89,7 @@ public class Timeline2 extends BasicTimeline<Post> implements Iterable<Post> {
         this.addPost(post);
     }
 
-    public Timeline2 addPost(Post post) {
+    public PostTimeline addPost(Post post) {
         String key = "";
         if (this.order == Order.TIMESTAMP) {
             if(post.has("id_str")) {
@@ -104,12 +104,12 @@ public class Timeline2 extends BasicTimeline<Post> implements Iterable<Post> {
         return this;
     }
 
-    public Timeline2 addPost(JSONObject post) {
+    public PostTimeline addPost(JSONObject post) {
         this.addPost(new Post(post));
         return this;
     }
 
-    public void mergePost(Timeline2 list) {
+    public void mergePost(PostTimeline list) {
         for (Post post: list) {
             this.add(post);
         }
@@ -120,8 +120,8 @@ public class Timeline2 extends BasicTimeline<Post> implements Iterable<Post> {
 
     }
 
-    public void mergePost(Timeline2[] lists) {
-        for (Timeline2 list: lists) {
+    public void mergePost(PostTimeline[] lists) {
+        for (PostTimeline list: lists) {
             this.mergePost(list);
         }
     }
@@ -150,7 +150,7 @@ public class Timeline2 extends BasicTimeline<Post> implements Iterable<Post> {
         return this.users.get(fromPost.get("ScreenName"));
     }
 
-    public void putAll(Timeline2 other) {
+    public void putAll(PostTimeline other) {
         if (other == null) return;
         assert this.order.equals(other.order);
         for (Map.Entry<String, UserEntry> u: other.users.entrySet()) {
