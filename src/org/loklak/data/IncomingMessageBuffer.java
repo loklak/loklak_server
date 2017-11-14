@@ -93,12 +93,12 @@ public class IncomingMessageBuffer extends Thread {
                 // if the shard has content, turn this into messages again
 
                 // if such content does not exist, simply sleep a while
-                try {Thread.sleep(10000);} catch (InterruptedException e) {}
+                try {Thread.sleep(2000);} catch (InterruptedException e) {}
                 continue loop;
             }
             this.isBusy = true;
             if (messageQueue.size() > 0) indexTweets();
-            else if (postQueue.size() > 0) indexPosts();
+            if (postQueue.size() > 0) indexPosts();
             this.isBusy = false;
 
         } catch (Throwable e) {
@@ -113,12 +113,13 @@ public class IncomingMessageBuffer extends Thread {
         PostTimeline postListObj = null;
         Set<PostTimeline> bulk = new HashSet<PostTimeline>();
 
-        while((postListObj = postQueue.poll()) != null) {
+        pollloop: while((postListObj = postQueue.poll()) != null) {
             bulk.add(postListObj);
-            if (bulk.size() >= maxBulkSize) {
-                dumpbulk(bulk);
-                bulk.clear();
-            }
+            if (bulk.size() >= maxBulkSize) break pollloop;
+        }
+        if (bulk.size() >= 0) {
+            dumpPostBulk(bulk);
+            bulk.clear();
         }
     }
 
@@ -152,18 +153,15 @@ public class IncomingMessageBuffer extends Thread {
 
             mw.t.enrich(); // we enrich here again because the remote peer may have done this with an outdated version or not at all
             bulk.add(mw);
-            if (bulk.size() >= maxBulkSize) {
-                dumpbulk(bulk, newMessageCounter, doubleMessageCounter);
-                bulk.clear();
-            }
+            if (bulk.size() >= maxBulkSize) break pollloop;
         }
         if (bulk.size() >= 0) {
-            dumpbulk(bulk, newMessageCounter, doubleMessageCounter);
+            dumpMessageBulk(bulk, newMessageCounter, doubleMessageCounter);
             bulk.clear();
         }
     }
 
-    private void dumpbulk(List<DAO.MessageWrapper> bulk, AtomicInteger newMessageCounter, AtomicInteger doubleMessageCounter) {
+    private void dumpMessageBulk(List<DAO.MessageWrapper> bulk, AtomicInteger newMessageCounter, AtomicInteger doubleMessageCounter) {
         long dumpstart = System.currentTimeMillis();
         int newWritten = DAO.writeMessageBulk(bulk).size();
         doubleMessageCounter.addAndGet(bulk.size() - newWritten);
@@ -174,7 +172,7 @@ public class IncomingMessageBuffer extends Thread {
         doubleMessageCounter.set(0);
     }
 
-    private void dumpbulk(Set<PostTimeline> bulk) {
+    private void dumpPostBulk(Set<PostTimeline> bulk) {
         //TODO: use this
         int notWrittenDouble = DAO.writeMessageBulk(bulk).size();
         DAO.log("dumped timelines: "  + postQueue.size());
