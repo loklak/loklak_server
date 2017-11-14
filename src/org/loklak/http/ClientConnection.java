@@ -141,8 +141,11 @@ public class ClientConnection {
     public final static CloseableHttpClient getClosableHttpClient() {
         boolean trustAllCerts = !"none".equals(DAO.getConfig("httpsclient.trustselfsignedcerts", "peers"))
                 && ("all".equals(DAO.getConfig("httpsclient.trustselfsignedcerts", "peers")));
+        System.setProperty("http.keepAlive", "true"); // ensure that the keep alive strategy is used when default is built
+        System.setProperty("http.maxConnections", "200");
+        System.setProperty("http.agent", USER_AGENT);
         return HttpClients.custom()
-                .useSystemProperties()
+                .useSystemProperties() // makes it possible to inject properties
                 .setConnectionManager(getConnctionManager(trustAllCerts))
                 .setDefaultRequestConfig(defaultRequestConfig)
                 .setMaxConnPerRoute(200)
@@ -415,7 +418,7 @@ public class ClientConnection {
             if (connection.inputStream == null) return null;
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             int count;
-            byte[] buffer = new byte[2048];
+            byte[] buffer = new byte[4096];
             try {
                 while ((count = connection.inputStream.read(buffer)) > 0) baos.write(buffer, 0, count);
             } catch (IOException e) {
@@ -432,5 +435,45 @@ public class ClientConnection {
 
     public int getStatusCode() {
         return this.httpResponse.getStatusLine().getStatusCode();
+    }
+    
+    public static void main(String[] args) {
+        // lets make a read-world test to find out which closing-methods cause less traffic
+        String url[] = new String[]{
+                "http://yacy.net/index.html",
+                "http://yacy.net/de/index.html",
+                "http://yacy.net/de/Bildschirmfotos.html",
+                "http://yacy.net/de/Lehrfilme.html",
+                "http://yacy.net/de/Philosophie.html",
+                "http://yacy.net/de/Suchportal.html",
+                "http://yacy.net/de/Anwendungen.html",
+                "http://loklak.org/index.html",
+                "http://yacy.net/de/API.html",
+                "http://yacy.net/de/Technik.html",
+                "http://yacy.net/de/Mitmachen.html",
+                "http://yacy.net/en/index.html",
+                "http://yacy.net/en/Screenshots.html",
+                "http://yacy.net/en/Tutorials.html",
+                "http://yacy.net/en/Philosophy.html",
+                "http://yacy.net/en/Searchportal.html",
+                "http://yacy.net/en/Applications.html",
+                "http://yacy.net/en/API.html",
+                "http://yacy.net/en/Technology.html",
+                "http://yacy.net/en/Join.html"
+        };
+        long s = System.currentTimeMillis();
+        for (int i = 0; i< url.length; i++) {
+            try {
+                long start = System.currentTimeMillis();
+                byte[] b = download(url[i]);
+                long stop = System.currentTimeMillis();
+                long t = stop - start;
+                System.out.println(b.length + " bytes in " + t + " milliseconds, " + (b.length * 1000 / (t + 1)) + " bytes/s");
+                //if (i == 7) try {Thread.sleep(30000);} catch (InterruptedException e) {}
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        System.out.println("total time: " + (System.currentTimeMillis() - s) + " milliseconds");
     }
 }
