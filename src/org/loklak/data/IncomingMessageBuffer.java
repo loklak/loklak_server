@@ -28,7 +28,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
-import org.loklak.objects.Timeline;
+import org.loklak.objects.TwitterTimeline;
 import org.loklak.objects.Timeline2;
 import org.loklak.objects.UserEntry;
 
@@ -180,7 +180,7 @@ public class IncomingMessageBuffer extends Thread {
         DAO.log("dumped timelines: "  + postQueue.size());
     }
 
-    public static void addScheduler(Timeline tl, final boolean dump) {
+    public static void addScheduler(TwitterTimeline tl, final boolean dump) {
         queueClients.incrementAndGet();
         for (TwitterTweet me: tl) addScheduler(me, tl.getUser(me), dump);
         queueClients.decrementAndGet();

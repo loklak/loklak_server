@@ -31,7 +31,7 @@ import org.loklak.server.ClientIdentity;
 public class TimelineCache {
 
     private final long ttl;
-    private final Map<String, Timeline> cache;
+    private final Map<String, TwitterTimeline> cache;
     
     
     public TimelineCache(long ttl) {
@@ -40,7 +40,7 @@ public class TimelineCache {
     }
     
     public TimelineCache clean() {
-        Iterator<Map.Entry<String, Timeline>> i = this.cache.entrySet().iterator();
+        Iterator<Map.Entry<String, TwitterTimeline>> i = this.cache.entrySet().iterator();
         long duetime = System.currentTimeMillis() - this.ttl;
         while (i.hasNext()) {
             if (i.next().getValue().getAccessTime() < duetime) i.remove();
@@ -48,15 +48,15 @@ public class TimelineCache {
         return this;
     }
 
-    public Timeline getOrCreate(ClientIdentity identity, String query, boolean head, Timeline.Order order) {
-        Timeline t = null;
+    public TwitterTimeline getOrCreate(ClientIdentity identity, String query, boolean head, TwitterTimeline.Order order) {
+        TwitterTimeline t = null;
         String cacheID = toKey(identity, query);
         if (!head) {
             t = this.cache.get(cacheID);
             if (t != null) t.updateAccessTime();
         }
         if (t == null) {
-            t = new Timeline(order);
+            t = new TwitterTimeline(order);
             this.cache.put(cacheID, t);
         }
         this.clean();

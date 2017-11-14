@@ -39,7 +39,8 @@ import org.loklak.data.DAO.IndexName;
 import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.harvester.TwitterAPI;
 import org.loklak.objects.QueryEntry;
-import org.loklak.objects.Timeline;
+import org.loklak.objects.TwitterTimeline;
+import org.loklak.objects.BasicTimeline.Order;
 import org.loklak.tools.DateParser;
 import org.loklak.tools.OS;
 
@@ -113,7 +114,7 @@ public class Caretaker extends Thread {
             //DAO.log("connection pool: " + ClientConnection.cm.getTotalStats().toString());
             
             // peer-to-peer operation
-            Timeline tl = DAO.outgoingMessages.takeTimelineMin(Timeline.Order.CREATED_AT, TIMELINE_PUSH_MINSIZE, TIMELINE_PUSH_MAXSIZE);
+            TwitterTimeline tl = DAO.outgoingMessages.takeTimelineMin(Order.CREATED_AT, TIMELINE_PUSH_MINSIZE, TIMELINE_PUSH_MAXSIZE);
             if (tl != null && tl.size() > 0 && backends.length > 0) {
                 // transmit the timeline
                 long start = System.currentTimeMillis();
@@ -207,12 +208,12 @@ public class Caretaker extends Thread {
                         DAO.deleteQuery(qe.getQuery(), qe.getSourceType());
                         continue queriesloop;
                     }
-                    Timeline t;
+                    TwitterTimeline t;
                     try {
                         t = DAO.scrapeTwitter(
                                 null,
                                 qe.getQuery(),
-                                Timeline.Order.CREATED_AT,
+                                Order.CREATED_AT,
                                 qe.getTimezoneOffset(),
                                 false,
                                 10000,
@@ -222,7 +223,7 @@ public class Caretaker extends Thread {
                     } catch (NullPointerException e) {
                         DAO.severe("TwitterScraper.search() returns null (no twitter results)"
                                 + " or any other issue in DAO.scrapeTwitter() method", e);
-                        t = new Timeline(Timeline.Order.CREATED_AT);
+                        t = new TwitterTimeline(Order.CREATED_AT);
                     }
                     DAO.log("retrieval of " + t.size() + " new messages for q = \"" + qe.getQuery() + "\"");
 

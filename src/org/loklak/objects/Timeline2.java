@@ -229,9 +229,9 @@ public class Timeline2 extends BasicTimeline<Post> implements Iterable<Post> {
     }
 
 
-    public Timeline toTimeline() {
+    public TwitterTimeline toTimeline() {
 
-        Timeline postList = new Timeline(Timeline.Order.CREATED_AT);
+        TwitterTimeline postList = new TwitterTimeline(Order.CREATED_AT);
         for (Post post : this) {
             assert post instanceof TwitterTweet;
             TwitterTweet tweet = (TwitterTweet)post;

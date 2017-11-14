@@ -41,8 +41,9 @@ import org.loklak.data.DAO;
 import org.loklak.http.ClientConnection;
 import org.loklak.http.RemoteAccess;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
+import org.loklak.objects.BasicTimeline.Order;
 import org.loklak.objects.QueryEntry;
-import org.loklak.objects.Timeline;
+import org.loklak.objects.TwitterTimeline;
 import org.loklak.objects.UserEntry;
 import org.loklak.rss.RSSFeed;
 import org.loklak.rss.RSSMessage;
@@ -72,8 +73,8 @@ public class SearchServlet extends HttpServlet {
     public final static String frontpeer_hash = Integer.toHexString(Integer.MAX_VALUE - 1);
 
     // possible values: cache, twitter, all
-    public static Timeline search(final String[] protocolhostportstubs, final String query, final ArrayList<String> filterList, final Timeline.Order order, final String source, final int count, final int timezoneOffset, final String provider_hash, final long timeout) throws IOException {
-        Timeline tl = new Timeline(order);
+    public static TwitterTimeline search(final String[] protocolhostportstubs, final String query, final ArrayList<String> filterList, final TwitterTimeline.Order order, final String source, final int count, final int timezoneOffset, final String provider_hash, final long timeout) throws IOException {
+        TwitterTimeline tl = new TwitterTimeline(order);
         if ("".equals(query)) return tl;
         String urlstring = "";
         String filterString = "";
@@ -127,8 +128,8 @@ public class SearchServlet extends HttpServlet {
         return tl;
     }
 
-    public static Timeline search(
-            final String[] protocolhostportstubs, final String query, final Timeline.Order order,
+    public static TwitterTimeline search(
+            final String[] protocolhostportstubs, final String query, final TwitterTimeline.Order order,
             final String source, final int count, final int timezoneOffset,
             final String provider_hash, final long timeout) throws IOException {
         return search(protocolhostportstubs, query, new ArrayList<>(), order, source, count, timezoneOffset, provider_hash, timeout);
@@ -190,9 +191,9 @@ public class SearchServlet extends HttpServlet {
             ArrayList<String> filterList = new ArrayList<String>(Arrays.asList(filter.split(",")));
 
             // create tweet timeline
-            final String ordername = post.get("order", Timeline.Order.CREATED_AT.getMessageFieldName());
-            final Timeline.Order order = Timeline.parseOrder(ordername);
-            Timeline tl = DAO.timelineCache.getOrCreate(identity, query, startRecord <= 1, order);
+            final String ordername = post.get("order", Order.CREATED_AT.getMessageFieldName());
+            final TwitterTimeline.Order order = TwitterTimeline.parseOrder(ordername);
+            TwitterTimeline tl = DAO.timelineCache.getOrCreate(identity, query, startRecord <= 1, order);
             JSONObject hits = new JSONObject(true);
             final JSONObject[] aggregations = new JSONObject[]{null};
 
@@ -232,7 +233,7 @@ public class SearchServlet extends HttpServlet {
                         public void run() {
                             final String scraper_query = tokens.translate4scraper();
                             DAO.log(request.getServletPath() + " scraping with query: " + scraper_query);
-                            Timeline twitterTl = DAO.scrapeTwitter(post, filterList, scraper_query, order, timezoneOffsetf, true, timeout, true);
+                            TwitterTimeline twitterTl = DAO.scrapeTwitter(post, filterList, scraper_query, order, timezoneOffsetf, true, timeout, true);
                             count_twitter_new.set(twitterTl.size());
                             tl.putAll(QueryEntry.applyConstraint(twitterTl, tokens, false)); // pre-localized results are not filtered with location constraint any more
                             tl.setScraperInfo(twitterTl.getScraperInfo());
@@ -287,7 +288,7 @@ public class SearchServlet extends HttpServlet {
                     }
                     Thread backendThread = tokens.original.length() == 0 || !start_backend_thread ? null : new Thread() {
                         public void run() {
-                            Timeline backendTl = DAO.searchBackend(tokens.original, filterList, order, maximumRecords, timezoneOffsetf, "cache", timeout);
+                            TwitterTimeline backendTl = DAO.searchBackend(tokens.original, filterList, order, maximumRecords, timezoneOffsetf, "cache", timeout);
                             if (backendTl != null) {
                                 tl.putAll(QueryEntry.applyConstraint(backendTl, tokens, true));
                                 count_backend.set(tl.size());
@@ -320,7 +321,7 @@ public class SearchServlet extends HttpServlet {
                 } else if ("twitter".equals(source) && tokens.raw.length() > 0) {
                     final String scraper_query = tokens.translate4scraper();
                     DAO.log(request.getServletPath() + " scraping with query: " + scraper_query);
-                    Timeline twitterTl = DAO.scrapeTwitter(post, filterList, scraper_query, order, timezoneOffset, true, timeout, true);
+                    TwitterTimeline twitterTl = DAO.scrapeTwitter(post, filterList, scraper_query, order, timezoneOffset, true, timeout, true);
 
                     count_twitter_new.set(twitterTl.size());
                     tl.putAll(QueryEntry.applyConstraint(twitterTl, tokens, false)); // pre-localized results are not filtered with location constraint any more
@@ -350,7 +351,7 @@ public class SearchServlet extends HttpServlet {
                     post.recordEvent("cache_time", time);
 
                 } else if ("backend".equals(source) && query.length() > 0) {
-                    Timeline backendTl = DAO.searchBackend(query, filterList, order, maximumRecords, timezoneOffset, "cache", timeout);
+                    TwitterTimeline backendTl = DAO.searchBackend(query, filterList, order, maximumRecords, timezoneOffset, "cache", timeout);
                     if (backendTl != null) {
                         tl.putAll(QueryEntry.applyConstraint(backendTl, tokens, true));
                         tl.setScraperInfo(backendTl.getScraperInfo());
@@ -392,7 +393,7 @@ public class SearchServlet extends HttpServlet {
 
     private static void dataOutput(HttpServletResponse response, JSONArray dataArray,
             String query, int startRecord, int maximumRecords, boolean minified,
-            String callType, boolean jsonp, Query post, Timeline tl, JSONObject aggregations,
+            String callType, boolean jsonp, Query post, TwitterTimeline tl, JSONObject aggregations,
             JSONObject hits, String callback, String shortlink_urlstub,
             int shortlink_iflinkexceedslength, String filter, JSONObject metadata) throws IOException {
         if ("json".equals(callType)) {
@@ -505,7 +506,7 @@ public class SearchServlet extends HttpServlet {
     }
 
     private static void setTwitterMetaData(JSONObject metadata, final int startRecord,
-            final int maximumRecords, Timeline tl, String query, String filter, Query post, JSONObject hits) {
+            final int maximumRecords, TwitterTimeline tl, String query, String filter, Query post, JSONObject hits) {
         // the number of the first record (according to SRU set to 1 for very first)
         metadata.put("startRecord", startRecord);
         // number of records within this json result set returned in the api call
@@ -514,7 +515,7 @@ public class SearchServlet extends HttpServlet {
         metadata.put("count", tl.size());
         // number of records in the search index (so far, may be increased later as well)
         metadata.put("hits", tl.getHits());
-        if (tl.getOrder() == Timeline.Order.CREATED_AT) metadata.put("period", tl.period());
+        if (tl.getOrder() == Order.CREATED_AT) metadata.put("period", tl.period());
         metadata.put("query", query);
         metadata.put("filter", filter);
         metadata.put("client", post.getClientHost());
@@ -530,7 +531,7 @@ public class SearchServlet extends HttpServlet {
 
     public static void main(String[] args) {
         try {
-            Timeline tl = search(new String[]{"http://root.loklak.org"}, "beer", Timeline.Order.CREATED_AT, "cache", 20, -120, backend_hash, 10000);
+            TwitterTimeline tl = search(new String[]{"http://root.loklak.org"}, "beer", Order.CREATED_AT, "cache", 20, -120, backend_hash, 10000);
             System.out.println(tl.toJSON(false, "search_metadata", "statuses").toString(2));
         } catch (IOException e) {
             DAO.severe(e);

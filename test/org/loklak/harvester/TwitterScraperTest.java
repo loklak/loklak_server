@@ -16,7 +16,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import org.junit.Test;
-import org.loklak.objects.Timeline;
+import org.loklak.objects.TwitterTimeline;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.http.ClientConnection;
 import static org.hamcrest.core.Is.is;
@@ -88,10 +88,10 @@ public class TwitterScraperTest {
      */
     @Test
     public void testSimpleSearch() {
-        Timeline ftweet_list;
-        Timeline.Order order = Timeline.parseOrder("created_at");
+        TwitterTimeline ftweet_list;
+        TwitterTimeline.Order order = TwitterTimeline.parseOrder("created_at");
         String https_url = "https://twitter.com/search?f=tweets&vertical=default&q=from%3Aloklak_test&src=typd";
-        Timeline[] tweet_list = null;
+        TwitterTimeline[] tweet_list = null;
         ClientConnection connection;
         BufferedReader br;
         // Tweet data to check with TwitterTweet object
@@ -121,7 +121,7 @@ public class TwitterScraperTest {
                 br = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8));
 
                 // Fetch list of tweets and set in ftweet_list
-                tweet_list = (Timeline[])executePrivateMethod(TwitterScraper.class, "search",new Class[]{BufferedReader.class, Timeline.Order.class, boolean.class, boolean.class},br, order, true, true);
+                tweet_list = (TwitterTimeline[])executePrivateMethod(TwitterScraper.class, "search",new Class[]{BufferedReader.class, TwitterTimeline.Order.class, boolean.class, boolean.class},br, order, true, true);
             } catch (Exception e) {
                 System.out.println(e.getMessage());
             } finally {
@@ -129,7 +129,7 @@ public class TwitterScraperTest {
             }
         } catch (IOException e) {
             // This could mean that twitter rejected the connection (DoS protection?) or we are offline (we should be silent then)
-            tweet_list = new Timeline[]{new Timeline(order), new Timeline(order)};
+            tweet_list = new TwitterTimeline[]{new TwitterTimeline(order), new TwitterTimeline(order)};
         }
 
         //compare no. of tweets with fetched no. of tweets
@@ -164,7 +164,7 @@ public class TwitterScraperTest {
     /**
      * This method merges 2 arrays of Timeline Objects(containing array of TwitterTweet objects) into one Timeline object
      */
-    public Timeline processTweetList(Timeline[] tweet_list) {
+    public TwitterTimeline processTweetList(TwitterTimeline[] tweet_list) {
 
         for (TwitterTweet me: tweet_list[1]) {
             assert me instanceof TwitterTweet;

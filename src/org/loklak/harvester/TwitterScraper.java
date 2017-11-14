@@ -24,6 +24,8 @@ import static org.loklak.http.ClientConnection.getClosableHttpClient;
 import static org.loklak.http.ClientConnection.getHTML;
 
 import org.loklak.objects.AbstractObjectEntry;
+import org.loklak.objects.BasicTimeline.Order;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -69,7 +71,7 @@ import org.loklak.http.ClientConnection;
 import org.loklak.objects.MessageEntry;
 import org.loklak.objects.ProviderType;
 import org.loklak.objects.SourceType;
-import org.loklak.objects.Timeline;
+import org.loklak.objects.TwitterTimeline;
 import org.loklak.objects.UserEntry;
 
 
@@ -81,14 +83,14 @@ public class TwitterScraper {
     private static final Pattern guestTokenRegex = Pattern.compile("document\\.cookie \\= decodeURIComponent\\(\\\"gt\\=([0-9]+);");
     private static final Pattern bearerTokenRegex = Pattern.compile("BEARER_TOKEN:\\\"(.*?)\\\"");
 
-    public static Timeline search(
+    public static TwitterTimeline search(
             final String query,
             final ArrayList<String> filterList,
-            final Timeline.Order order,
+            final TwitterTimeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend,
             int jointime) {
-        Timeline[] tl = search(query, filterList, order, writeToIndex, writeToBackend);
+        TwitterTimeline[] tl = search(query, filterList, order, writeToIndex, writeToBackend);
         long timeout = System.currentTimeMillis() + jointime;
         long remainingWait = 0;
         for (TwitterTweet tt: tl[1]) {
@@ -101,9 +103,9 @@ public class TwitterScraper {
         return tl[0];
     }
 
-    public static Timeline search(
+    public static TwitterTimeline search(
             final String query,
-            final Timeline.Order order,
+            final TwitterTimeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend,
             int jointime) {
@@ -147,25 +149,25 @@ public class TwitterScraper {
     }
 
     @SuppressWarnings("unused")
-    private static Timeline[] search(
+    private static TwitterTimeline[] search(
             final String query,
-            final Timeline.Order order,
+            final TwitterTimeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend) {
         return search(query, new ArrayList<>(), order, writeToIndex, writeToBackend);
     }
 
-    private static Timeline[] search(
+    private static TwitterTimeline[] search(
             final String query,
             final ArrayList<String> filterList,
-            final Timeline.Order order,
+            final TwitterTimeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend) {
         // check
         // https://twitter.com/search-advanced for a better syntax
         // https://support.twitter.com/articles/71577-how-to-use-advanced-twitter-search#
         String https_url = prepareSearchUrl(query, filterList);
-        Timeline[] timelines = null;
+        TwitterTimeline[] timelines = null;
         try {
             ClientConnection connection = new ClientConnection(https_url);
             if (connection.getInputStream() == null) return null;
@@ -181,13 +183,13 @@ public class TwitterScraper {
         } catch (IOException e) {
             // this could mean that twitter rejected the connection (DoS protection?) or we are offline (we should be silent then)
             // DAO.severe(e);
-            if (timelines == null) timelines = new Timeline[]{new Timeline(order), new Timeline(order)};
+            if (timelines == null) timelines = new TwitterTimeline[]{new TwitterTimeline(order), new TwitterTimeline(order)};
         };
 
         // wait until all messages in the timeline are ready
         if (timelines == null) {
             // timeout occurred
-            timelines = new Timeline[]{new Timeline(order), new Timeline(order)};
+            timelines = new TwitterTimeline[]{new TwitterTimeline(order), new TwitterTimeline(order)};
         }
         if (timelines != null) {
             if (timelines[0] != null) timelines[0].setScraperInfo("local");
@@ -196,28 +198,28 @@ public class TwitterScraper {
         return timelines;
     }
 
-    private static Timeline[] parse(
+    private static TwitterTimeline[] parse(
             final File file,
-            final Timeline.Order order,
+            final TwitterTimeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend) {
         return parse(file, new ArrayList<>(), order, writeToIndex, writeToBackend);
     }
 
-    private static Timeline[] parse(
+    private static TwitterTimeline[] parse(
             final File file,
             final ArrayList<String> filterList,
-            final Timeline.Order order,
+            final TwitterTimeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend) {
-        Timeline[] timelines = null;
+        TwitterTimeline[] timelines = null;
         try {
             BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
             timelines = search(br, filterList, order, writeToIndex, writeToBackend);
         } catch (IOException e) {
             DAO.severe(e);
         } finally {
-            if (timelines == null) timelines = new Timeline[]{new Timeline(order), new Timeline(order)};
+            if (timelines == null) timelines = new TwitterTimeline[]{new TwitterTimeline(order), new TwitterTimeline(order)};
         }
 
         if (timelines[0] != null) timelines[0].setScraperInfo("local");
@@ -227,9 +229,9 @@ public class TwitterScraper {
 
 
 
-    private static Timeline[] search(
+    private static TwitterTimeline[] search(
             final BufferedReader br,
-            final Timeline.Order order,
+            final TwitterTimeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend) throws IOException {
 
@@ -243,14 +245,14 @@ public class TwitterScraper {
      * @return two timelines in one array: Timeline[0] is the one which is finished to be used, Timeline[1] contains messages which are in postprocessing
      * @throws IOException
      */
-    private static Timeline[] search(
+    private static TwitterTimeline[] search(
             final BufferedReader br,
             final ArrayList<String> filterList,
-            final Timeline.Order order,
+            final TwitterTimeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend) throws IOException {
-        Timeline timelineReady = new Timeline(order);
-        Timeline timelineWorking = new Timeline(order);
+        TwitterTimeline timelineReady = new TwitterTimeline(order);
+        TwitterTimeline timelineWorking = new TwitterTimeline(order);
         String input;
         Map<String, prop> props = new HashMap<String, prop>();
         Set<String> images = null;
@@ -451,7 +453,7 @@ public class TwitterScraper {
         //for (prop p: props.values()) System.out.println(p);
         br.close();
 
-        return new Timeline[]{timelineReady, timelineWorking};
+        return new TwitterTimeline[]{timelineReady, timelineWorking};
     }
 
     public static String[] fetchTwitterVideos(String tweetUrl) {
@@ -1441,11 +1443,11 @@ public class TwitterScraper {
         //wget --no-check-certificate "https://twitter.com/search?q=eifel&src=typd&f=realtime"
         ArrayList<String> filterList = new ArrayList<String>();
         filterList.add("image");
-        Timeline[] result = null;
+        TwitterTimeline[] result = null;
         if (args[0].startsWith("/"))
-            result = parse(new File(args[0]),Timeline.Order.CREATED_AT, true, true);
+            result = parse(new File(args[0]),Order.CREATED_AT, true, true);
         else
-            result = TwitterScraper.search(args[0], filterList, Timeline.Order.CREATED_AT, true, true);
+            result = TwitterScraper.search(args[0], filterList, Order.CREATED_AT, true, true);
         int all = 0;
         for (int x = 0; x < 2; x++) {
             if (x == 0) System.out.println("Timeline[0] - finished to be used:");

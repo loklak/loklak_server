@@ -37,7 +37,7 @@ import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.http.ClientConnection;
 import org.loklak.http.RemoteAccess;
 import org.loklak.objects.ProviderType;
-import org.loklak.objects.Timeline;
+import org.loklak.objects.TwitterTimeline;
 import org.loklak.objects.UserEntry;
 import org.loklak.server.Query;
 
@@ -45,8 +45,8 @@ public class PeersServlet extends HttpServlet {
 
     private static final long serialVersionUID = -2577184683745091648L;
 
-    public static Timeline peers(final String protocolhostportstub, final String query, final Timeline.Order order, final String source, final int count, final int timezoneOffset, final String provider_hash) throws IOException {
-        Timeline tl = new Timeline(order);
+    public static TwitterTimeline peers(final String protocolhostportstub, final String query, final TwitterTimeline.Order order, final String source, final int count, final int timezoneOffset, final String provider_hash) throws IOException {
+        TwitterTimeline tl = new TwitterTimeline(order);
         String urlstring = "";
         urlstring = protocolhostportstub + "/api/peers.json";
         byte[] response = ClientConnection.download(urlstring);

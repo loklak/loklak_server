@@ -2,12 +2,12 @@ package org.loklak.harvester;
 
 import org.loklak.api.p2p.PushServlet;
 import org.loklak.data.DAO;
-import org.loklak.objects.Timeline;
+import org.loklak.objects.TwitterTimeline;
 
 public class PushThread implements Runnable {
     private String[] peers;
-    private Timeline tl;
-    public PushThread(String[] peers, Timeline tl) {
+    private TwitterTimeline tl;
+    public PushThread(String[] peers, TwitterTimeline tl) {
         this.peers = peers;
         this.tl = tl;
     }

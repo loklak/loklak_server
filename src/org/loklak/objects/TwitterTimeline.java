@@ -40,19 +40,19 @@ import org.loklak.susi.SusiThought;
  * A timeline is a structure which holds tweet for the purpose of presentation
  * There is no tweet retrieval method here, just an iterator which returns the tweets in reverse appearing order
  */
-public class Timeline extends BasicTimeline<TwitterTweet> implements Iterable<TwitterTweet> {
+public class TwitterTimeline extends BasicTimeline<TwitterTweet> implements Iterable<TwitterTweet> {
     
-    public Timeline(Order order) {
+    public TwitterTimeline(Order order) {
         super(order);
     }
     
-    public Timeline(Order order, String scraperInfo) {
+    public TwitterTimeline(Order order, String scraperInfo) {
         super(order, scraperInfo);
     }
     
-    public Timeline reduceToMaxsize(final int maxsize) {
+    public TwitterTimeline reduceToMaxsize(final int maxsize) {
         List<TwitterTweet> m = new ArrayList<>();
-        Timeline t = new Timeline(this.order);
+        TwitterTimeline t = new TwitterTimeline(this.order);
         if (maxsize < 0) return t;
         
         // remove tweets from this timeline
@@ -79,13 +79,13 @@ public class Timeline extends BasicTimeline<TwitterTweet> implements Iterable<Tw
         return t;
     }
     
-    public Timeline add(TwitterTweet tweet, UserEntry user) {
+    public TwitterTimeline add(TwitterTweet tweet, UserEntry user) {
         this.addUser(user);
         this.addTweet(tweet);
         return this;
     }
     
-    private Timeline addTweet(TwitterTweet tweet) {
+    private TwitterTimeline addTweet(TwitterTweet tweet) {
         String key = "";
         if (this.order == Order.RETWEET_COUNT) {
             key = Long.toHexString(tweet.getRetweetCount());
@@ -106,7 +106,7 @@ public class Timeline extends BasicTimeline<TwitterTweet> implements Iterable<Tw
         return this;
     }
     
-    public void putAll(Timeline other) {
+    public void putAll(TwitterTimeline other) {
         if (other == null) return;
         assert this.order.equals(other.order);
         for (Map.Entry<String, UserEntry> u: other.users.entrySet()) {

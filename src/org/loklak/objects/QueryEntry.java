@@ -368,9 +368,9 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
         }
     }
     
-    public static Timeline applyConstraint(Timeline tl0, Tokens tokens, boolean applyLocationConstraint) {
+    public static TwitterTimeline applyConstraint(TwitterTimeline tl0, Tokens tokens, boolean applyLocationConstraint) {
          if (tokens.constraints_positive.size() == 0 && tokens.constraints_negative.size() == 0 && tokens.modifier.size() == 0) return tl0;
-        Timeline tl1 = new Timeline(tl0.getOrder());
+        TwitterTimeline tl1 = new TwitterTimeline(tl0.getOrder());
         messageloop: for (TwitterTweet message: tl0) {
 
             // check modifier

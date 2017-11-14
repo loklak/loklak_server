@@ -12,7 +12,8 @@ import java.util.concurrent.LinkedBlockingDeque;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
-import org.loklak.objects.Timeline;
+import org.loklak.objects.TwitterTimeline;
+import org.loklak.objects.BasicTimeline.Order;
 import org.loklak.tools.DateParser;
 
 public class Crawler {
@@ -76,7 +77,7 @@ public class Crawler {
         }
 
         // execute the query
-        Timeline tl = DAO.scrapeTwitter(null, term.query, Timeline.Order.CREATED_AT, 0, false, 10000, false);
+        TwitterTimeline tl = DAO.scrapeTwitter(null, term.query, Order.CREATED_AT, 0, false, 10000, false);
 
         // if depth of query was 0, terminate
         if (term.depth == 0) {

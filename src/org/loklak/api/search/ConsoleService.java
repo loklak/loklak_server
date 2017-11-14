@@ -30,9 +30,9 @@ import org.loklak.api.cms.TwitterAnalysisService;
 import org.loklak.data.DAO;
 import org.loklak.geo.GeoMark;
 import org.loklak.objects.AccountEntry;
+import org.loklak.objects.BasicTimeline.Order;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.ResultList;
-import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
 import org.loklak.server.APIException;
 import org.loklak.server.APIHandler;
@@ -117,7 +117,7 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
         });
         dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?messages +?WHERE +?query ??= ??'([^']*?)' +?GROUP +?BY +?(.*?) *?;"), matcher -> {
             String group = matcher.group(3);
-            DAO.SearchLocalMessages messages = new DAO.SearchLocalMessages(matcher.group(2), Timeline.Order.CREATED_AT, 0, 0, 100, group);
+            DAO.SearchLocalMessages messages = new DAO.SearchLocalMessages(matcher.group(2), Order.CREATED_AT, 0, 0, 100, group);
             JSONArray array = new JSONArray();
             JSONObject aggregation = messages.getAggregations().getJSONObject(group);
 
@@ -127,13 +127,13 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
             return json.setData(transfer.conclude(array));
         });
         dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?messages +?WHERE +?query ??= ??'([^']*?)' ??;"), matcher -> {
-            DAO.SearchLocalMessages messages = new DAO.SearchLocalMessages(matcher.group(2), Timeline.Order.CREATED_AT, 0, 100, 0);
+            DAO.SearchLocalMessages messages = new DAO.SearchLocalMessages(matcher.group(2), Order.CREATED_AT, 0, 100, 0);
             SusiThought json = messages.timeline.toSusi(true);
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
             return json.setData(transfer.conclude(json.getJSONArray("data")));
         });
         dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?messages +?WHERE +?query ??= ??'([^']*?)' +?ORDER BY (.*?) ??;"), matcher -> {
-            DAO.SearchLocalMessages messages = new DAO.SearchLocalMessages(matcher.group(2), Timeline.Order.valueOf(matcher.group(3)), 0, 100, 0);
+            DAO.SearchLocalMessages messages = new DAO.SearchLocalMessages(matcher.group(2), Order.valueOf(matcher.group(3)), 0, 100, 0);
             SusiThought json = messages.timeline.toSusi(true);
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
             return json.setData(transfer.conclude(json.getJSONArray("data")));

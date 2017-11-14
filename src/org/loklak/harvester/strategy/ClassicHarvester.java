@@ -37,7 +37,7 @@ import org.loklak.harvester.TwitterScraper;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.ResultList;
-import org.loklak.objects.Timeline;
+import org.loklak.objects.TwitterTimeline;
 import org.loklak.objects.BasicTimeline.Order;
 import org.loklak.tools.DateParser;
 
@@ -56,7 +56,7 @@ public class ClassicHarvester implements Harvester {
 
     private int hitsOnBackend = 100;
 
-    public void checkContext(Timeline tl, boolean front) {
+    public void checkContext(TwitterTimeline tl, boolean front) {
         for (TwitterTweet tweet: tl) {
             for (String user: tweet.getMentions()) checkContext("from:" + user, front);
             for (String hashtag: tweet.getHashtags()) checkContext(hashtag, front);
@@ -79,7 +79,7 @@ public class ClassicHarvester implements Harvester {
             // harvest using the collected keys instead using the queries
             String q = pendingContext.removeFirst();
             harvestedContext.add(q);
-            Timeline tl = TwitterScraper.search(q, Timeline.Order.CREATED_AT, true, true, 400);
+            TwitterTimeline tl = TwitterScraper.search(q, Order.CREATED_AT, true, true, 400);
             if (tl == null || tl.size() == 0) return -1;
 
             // find content query strings and store them in the context cache
@@ -103,7 +103,7 @@ public class ClassicHarvester implements Harvester {
                     if (pendingContext.size() == 0) {
                         // try to fill the pendingContext using a matchall-query from the cache
                         // http://loklak.org/api/search.json?source=cache&q=
-                        Timeline tl = SearchServlet.search(backend, "", Timeline.Order.CREATED_AT, "cache", 100, 0, SearchServlet.backend_hash, 60000);
+                        TwitterTimeline tl = SearchServlet.search(backend, "", Order.CREATED_AT, "cache", 100, 0, SearchServlet.backend_hash, 60000);
                         checkContext(tl, false);
                     }
                     // if we still don't have any context, we are a bit helpless and hope that this situation
@@ -125,11 +125,11 @@ public class ClassicHarvester implements Harvester {
             pendingQueries.remove(q);
             pendingContext.remove(q);
             harvestedContext.add(q);
-            Timeline tl = TwitterScraper.search(q, Timeline.Order.CREATED_AT, true, false, 400);
+            TwitterTimeline tl = TwitterScraper.search(q, Order.CREATED_AT, true, false, 400);
 
             if (tl == null || tl.size() == 0) {
                 // even if the result is empty, we must push this to the backend to make it possible that the query gets an update
-                if (tl == null) tl = new Timeline(Order.CREATED_AT);
+                if (tl == null) tl = new TwitterTimeline(Order.CREATED_AT);
                 tl.setQuery(q);
                 PushThread pushThread = new PushThread(backend, tl);
                 DAO.log( "starting push to backend; pendingQueries = " + pendingQueries.size() + ", pendingContext = " +

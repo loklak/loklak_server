@@ -7,9 +7,10 @@ import org.loklak.harvester.PushThread;
 import org.loklak.harvester.TwitterAPI;
 import org.loklak.harvester.TwitterScraper;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
+import org.loklak.objects.BasicTimeline.Order;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.ResultList;
-import org.loklak.objects.Timeline;
+import org.loklak.objects.TwitterTimeline;
 import twitter4j.Location;
 import twitter4j.Trend;
 import twitter4j.Twitter;
@@ -74,7 +75,7 @@ public class KaizenHarvester implements Harvester {
         this(KaizenQueries.getDefaultKaizenQueries(DAO.getConfig("harvester.kaizen.queries_limit", 500)));
     }
 
-    private void grabInformation(Timeline timeline) {
+    private void grabInformation(TwitterTimeline timeline) {
         String query = timeline.getQuery();
         if (VERBOSE) {
             DAO.log("Kaizen is going to grab more information" +
@@ -120,7 +121,7 @@ public class KaizenHarvester implements Harvester {
         }
     }
 
-    private void pushToBackend(Timeline timeline) {
+    private void pushToBackend(TwitterTimeline timeline) {
         DAO.log("Pushing " + timeline.size() + " to backend ..." );
         executorService.execute(new PushThread(BACKEND, timeline));
     }
@@ -135,10 +136,10 @@ public class KaizenHarvester implements Harvester {
         if (VERBOSE)
             DAO.log("Kaizen is going to harvest messages with query '" + query + "'");
 
-        Timeline timeline = TwitterScraper.search(query, Timeline.Order.CREATED_AT, true, false, 400);
+        TwitterTimeline timeline = TwitterScraper.search(query, Order.CREATED_AT, true, false, 400);
 
         if (timeline == null)
-            timeline = new Timeline(Timeline.Order.CREATED_AT);
+            timeline = new TwitterTimeline(Order.CREATED_AT);
 
         if (timeline.size() == 0) {
             if (VERBOSE)
@@ -201,7 +202,7 @@ public class KaizenHarvester implements Harvester {
                             "Grabbing relevant context from backend collected messages ...");
                 }
 
-                Timeline timeline = SearchServlet.search(BACKEND, "", Timeline.Order.CREATED_AT, "cache",
+                TwitterTimeline timeline = SearchServlet.search(BACKEND, "", Order.CREATED_AT, "cache",
                         SUGGESTIONS_RANDOM, 0, SearchServlet.backend_hash, 60000);
 
                 grabInformation(timeline);
