@@ -772,7 +772,7 @@ public class DAO {
             for(Post post : messageBulk) {
                 if(hourLong <= post.getTimestamp()) macc.add(post);
             }
-            
+
             result = messages_hour.writeEntries(macc);
             for (Post i: macc) if (!(result.getCreated().contains(i.getPostId()))) existed.add(i.getPostId());
 
@@ -1115,7 +1115,7 @@ public class DAO {
                         orderField.getMessageFieldName(),
                         resultCount
                 );
-                
+
             timeline.setHits(query.hitCount);
             timeline.setResultIndex(resultIndex);
 
@@ -1266,6 +1266,19 @@ public class DAO {
         Map<String, Object> map = elasticsearch_client.query(IndexName.users.name(), UserEntry.field_user_id, user_id);
         if (map == null) return null;
         return new UserEntry(new JSONObject(map));
+    }
+
+    /**
+     * Find and return tweet from elasticsearch if exists
+     *
+     * @param tweet_id - Tweet id to search
+     * @return
+     */
+
+    public static JSONObject searchLocalTweetById(final String tweet_id) {
+        Map<String, Object> map = elasticsearch_client.query(IndexName.messages.name(), "id_str", tweet_id);
+        JSONObject o = new JSONObject(map);
+        return o;
     }
 
     /**
@@ -1433,7 +1446,7 @@ public class DAO {
             for (BaseScraper scraper : scraperObjList) {
                 scraperRunner.execute(() -> {
                     dataSet.add(scraper.getData());
-                    
+
                 });
             }
         } finally {
@@ -1544,7 +1557,7 @@ public class DAO {
     public static String[] getBackend() {
         return DAO.getConfig("backend", new String[0], ",");
     }
-    
+
     public static List<String> getBackendPeers() {
         List<String> testpeers = new ArrayList<>();
         if (backendPeerCache.size() == 0) {
