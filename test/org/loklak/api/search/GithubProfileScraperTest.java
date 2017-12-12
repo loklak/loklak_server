@@ -32,7 +32,7 @@ public class GithubProfileScraperTest {
         String userName = "fossasia";
         String userId = "6295529";
         String location = "Singapore";
-        String specialLink = "http://fossasia.org";
+        String specialLink = "https://fossasia.org";
 
         try {
             ClientConnection connection = new ClientConnection(url);
@@ -46,11 +46,11 @@ public class GithubProfileScraperTest {
 
         Post fetchedProfile = githubScraper.scrapeGithub(profile, br);
 
-        assertEquals(fetchedProfile.getString("short_description"), shortDescription);
-        assertEquals(fetchedProfile.getString("user"), userName);
-        assertEquals(fetchedProfile.getString("user_id"), userId);
-        assertEquals(fetchedProfile.getString("location"), location);
-        assertEquals(fetchedProfile.getString("special_link"), specialLink);
+        assertEquals(shortDescription, fetchedProfile.getString("short_description"));
+        assertEquals(userName, fetchedProfile.getString("user"));
+        assertEquals(userId, fetchedProfile.getString("user_id"));
+        assertEquals(location, fetchedProfile.getString("location"));
+        assertEquals(specialLink, fetchedProfile.getString("special_link"));
 
     }
 
@@ -81,10 +81,10 @@ public class GithubProfileScraperTest {
 
             Post fetchedProfile = githubScraper.scrapeGithub(profile, br);
 
-            assertEquals(fetchedProfile.getString("user"), userName);
-            assertEquals(fetchedProfile.getString("full_name"), fullName);
-            assertEquals(fetchedProfile.getString("special_link"), specialLink);
-            assertEquals(fetchedProfile.getString("user_id"), userId);
+            assertEquals(userName, fetchedProfile.getString("user"));
+            assertEquals(fullName, fetchedProfile.getString("full_name"));
+            assertEquals(specialLink, fetchedProfile.getString("special_link"));
+            assertEquals(userId, fetchedProfile.getString("user_id"));
     }
 
 }
