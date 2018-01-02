@@ -79,6 +79,7 @@ import org.eclipse.jetty.security.authentication.BasicAuthenticator;
 import org.loklak.api.admin.AccessServlet;
 import org.loklak.api.admin.CampaignServlet;
 import org.loklak.api.admin.CrawlerServlet;
+import org.loklak.api.admin.LogServlet;
 import org.loklak.api.admin.SettingsServlet;
 import org.loklak.api.admin.StatusService;
 import org.loklak.api.admin.ThreaddumpServlet;
@@ -713,6 +714,7 @@ public class LoklakServer {
         servletHandler.addServlet(assetServletHolder, "/api/asset");
         servletHandler.addServlet(Sitemap.class, "/api/sitemap.xml");
         servletHandler.addServlet(ThreaddumpServlet.class, "/api/threaddump.txt");
+        servletHandler.addServlet(LogServlet.class, "/api/log.txt");
         servletHandler.addServlet(MarkdownServlet.class, "/vis/markdown.gif");
         servletHandler.addServlet(MarkdownServlet.class, "/vis/markdown.gif.base64");
         servletHandler.addServlet(MarkdownServlet.class, "/vis/markdown.png");

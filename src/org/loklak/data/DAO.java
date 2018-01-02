@@ -136,7 +136,7 @@ public class DAO {
     public final static int CACHE_MAXSIZE =   10000;
     public final static int EXIST_MAXSIZE = 4000000;
 
-    public  static File conf_dir, bin_dir, html_dir;
+    public  static File data_dir, conf_dir, bin_dir, html_dir;
     private static File external_data, assets, dictionaries;
     public static Settings public_settings, private_settings;
     private static Path message_dump_dir, account_dump_dir, import_profile_dump_dir;
@@ -201,6 +201,7 @@ public class DAO {
         log("initializing loklak DAO");
 
         config = configMap;
+        data_dir = dataPath.toFile();
         conf_dir = new File("conf");
         bin_dir = new File("bin");
         html_dir = new File("html");
