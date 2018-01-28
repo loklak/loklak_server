@@ -78,14 +78,14 @@ import org.loklak.data.DAO;
  */
 public class ClientConnection {
 
-    public static String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.98 Safari/537.36";
+    public static String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.89 Safari/537.36";
 
     public  static final String CHARSET = "UTF-8";
     private static final byte LF = 10;
     private static final byte CR = 13;
     public static final byte[] CRLF = {CR, LF};
     private static final boolean debugLog = DAO.getConfig("flag.debug.redirect_unshortener", "false").equals("true");
-    
+
     private static RequestConfig defaultRequestConfig = RequestConfig.custom()
             .setSocketTimeout(60000)
             .setConnectTimeout(60000)
@@ -95,7 +95,7 @@ public class ClientConnection {
             .build();
 
     private final static CloseableHttpClient httpClient = getClosableHttpClient();
-    
+
     private int status;
     private BufferedInputStream inputStream;
     private CloseableHttpResponse httpResponse;
@@ -152,11 +152,11 @@ public class ClientConnection {
                 .setMaxConnTotal(500)
                 .build();
     }
-    
+
     public InputStream getInputStream() {
         return this.inputStream;
     }
-    
+
     /**
      * get a connection manager
      * @param trustAllCerts allow opportunistic encryption if needed
@@ -189,7 +189,7 @@ public class ClientConnection {
         cm.setDefaultMaxPerRoute(20);
         cm.setMaxPerRoute(new HttpRoute(new HttpHost("twitter.com", 80)), 50);
         cm.setMaxPerRoute(new HttpRoute(new HttpHost("twitter.com", 443)), 50);
-    	
+
         return cm;
     }
 
@@ -383,7 +383,7 @@ public class ClientConnection {
             this.inputStream = null;
         }
     }
-    
+
     public void finalize() {
         this.close();
     }
@@ -436,7 +436,7 @@ public class ClientConnection {
     public int getStatusCode() {
         return this.httpResponse.getStatusLine().getStatusCode();
     }
-    
+
     public static void main(String[] args) {
         // lets make a read-world test to find out which closing-methods cause less traffic
         String url[] = new String[]{
