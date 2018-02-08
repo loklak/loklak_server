@@ -40,7 +40,6 @@ import org.eclipse.jetty.server.session.HashSessionIdManager;
 import org.eclipse.jetty.server.session.HashSessionManager;
 import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.eclipse.jetty.util.security.Constraint;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
@@ -65,13 +64,14 @@ import java.security.cert.X509Certificate;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.loklak.LoklakServer.readConfig;
 
 
 public class LoklakInstallation {
 	
-    public final static Set<String> blacklistedHosts = new ConcurrentHashSet<>();
+    public final static Set<String> blacklistedHosts = ConcurrentHashMap.newKeySet();
     
     public static Server server = null;
     private static HttpsMode httpsMode = HttpsMode.OFF;

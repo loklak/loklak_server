@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
@@ -64,7 +65,6 @@ import org.eclipse.jetty.server.handler.gzip.GzipHandler;
 import org.eclipse.jetty.server.session.HashSessionIdManager;
 import org.eclipse.jetty.server.session.HashSessionManager;
 import org.eclipse.jetty.server.session.SessionHandler;
-import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.security.Constraint;
@@ -149,7 +149,7 @@ public class LoklakServer {
 
     private final static String[] FOLDER_TO_EXTRACT = { "conf", "html", "installation", "ssi"};
 
-    public final static Set<String> blacklistedHosts = new ConcurrentHashSet<>();
+    public final static Set<String> blacklistedHosts = ConcurrentHashMap.newKeySet();
 
     private static Server server = null;
     private static Caretaker caretaker = null;

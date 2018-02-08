@@ -3,11 +3,11 @@ package org.loklak.tools.storage;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import junit.framework.TestCase;
 
-import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.junit.After;
 import org.junit.Before;
 import org.loklak.tools.ASCII;
@@ -37,7 +37,7 @@ public class JsonRandomAccessFileTest  extends TestCase {
         final Thread readerThread = new Thread(reader);
         readerThread.start();
         Thread[] t = new Thread[concurrency];
-        final ConcurrentHashSet<String> names = new ConcurrentHashSet<>();
+        final Set<String> names = ConcurrentHashMap.newKeySet();
         for (int i = 0; i < concurrency; i++) {
             t[i] = new Thread() {
                 public void run() {

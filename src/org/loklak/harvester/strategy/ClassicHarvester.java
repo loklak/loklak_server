@@ -24,11 +24,11 @@ import java.util.LinkedHashSet;
 import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.loklak.api.search.SearchServlet;
 import org.loklak.api.search.SuggestServlet;
 import org.loklak.data.DAO;
@@ -52,7 +52,7 @@ public class ClassicHarvester implements Harvester {
 
     private LinkedHashSet<String> pendingQueries = new LinkedHashSet<>();
     private ConcurrentLinkedDeque<String> pendingContext = new ConcurrentLinkedDeque<>();
-    private Set<String> harvestedContext = new ConcurrentHashSet<>();
+    private Set<String> harvestedContext = ConcurrentHashMap.newKeySet();
 
     private int hitsOnBackend = 100;
 

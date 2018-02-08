@@ -48,10 +48,10 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
 import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.logging.slf4j.Slf4jESLoggerFactory;
@@ -1594,7 +1594,7 @@ public class DAO {
         return null;
     }
 
-    public final static Set<Number> newUserIds = new ConcurrentHashSet<>();
+    public final static Set<Number> newUserIds = ConcurrentHashMap.newKeySet();
 
     public static void announceNewUserId(TwitterTimeline tl) {
         for (TwitterTweet message: tl) {
