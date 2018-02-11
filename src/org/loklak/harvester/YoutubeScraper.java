@@ -51,7 +51,7 @@ public class YoutubeScraper extends BaseScraper {
     //public final static ExecutorService executor = Executors.newFixedThreadPool(40);
 
     /**
-     * 
+     *
      */
     private static final long serialVersionUID = 3324726267150935678L;
     private final static String[] html_tags = new String[]{"title"};
@@ -214,7 +214,7 @@ public class YoutubeScraper extends BaseScraper {
     public Post parseVideo(final BufferedReader br, String type, String url) {
         String input = "";
         Post json = new Post();
-        boolean parse_span = false, parse_license = false;
+        boolean parse_span = false, parse_license = false, parse_channel_name = false;
         // values for span
         String itemprop= "";
         String itemtype = "";
@@ -356,6 +356,16 @@ public class YoutubeScraper extends BaseScraper {
                         text = CharacterCoding.html2unicode(text);
                         json.put("youtube_description", text);
                         continue;
+                    }
+                    if (parse_channel_name) {
+                        p = input.indexOf(">", p);
+                        int q = input.indexOf("</a>", p);
+                        String text = input.substring(p + 1, q);
+                        json.put("youtube_channel_name", text);
+                        parse_channel_name = false;
+                    }
+                    if ((p = input.indexOf("yt-user-info")) >= 0) {
+                        parse_channel_name = true;
                     }
                 }
             }
