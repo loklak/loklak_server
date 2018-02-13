@@ -30,7 +30,7 @@ public class QuoraProfileScraperTest {
         
         String userName = "Saptak Sengupta";
         String rssFeedLink = "https://www.quora.com/profile/Saptak-Sengupta/rss";
-        String profileImage = "https://qph.ec.quoracdn.net/main-thumb-24728160-200-igibbfdmibqxdtrjlrdnejpvjqepxpnn.jpeg";
+        String profileImagePath = "/main-thumb-24728160-200-igibbfdmibqxdtrjlrdnejpvjqepxpnn.jpeg";
         String topicsUrl = "https://www.quora.com/profile/Saptak-Sengupta/topics";
         String followingUrl = "https://www.quora.com/profile/Saptak-Sengupta/following";
         String blogsUrl = "https://www.quora.com/profile/Saptak-Sengupta/blogs";
@@ -59,7 +59,7 @@ public class QuoraProfileScraperTest {
         assertEquals(quoraProfile.getString("search_url"), url);
         assertEquals(quoraProfile.getString("user_name"), userName);
         assertEquals(quoraProfile.getString("rss_feed_link"), rssFeedLink);
-        assertEquals(quoraProfile.getString("profileImage"), profileImage);
+        assertEquals(quoraProfile.getString("profileImage").substring(quoraProfile.getString("profileImage").length()-profileImagePath.length()), profileImagePath);
         assertEquals(quoraProfile.getJSONObject("feeds").getString("topics_url"), topicsUrl);
         assertEquals(quoraProfile.getJSONObject("feeds").getString("following_url"), followingUrl);
         assertEquals(quoraProfile.getJSONObject("feeds").getString("blogs_url"), blogsUrl);
