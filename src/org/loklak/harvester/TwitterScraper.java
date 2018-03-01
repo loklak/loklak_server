@@ -997,7 +997,7 @@ public class TwitterScraper {
                 this.enrich();
 
                 //DAO.log("TwitterTweet [" + this.postId + "] enrich    after " + (System.currentTimeMillis() - start) + "ms");
-                if (this.writeToIndex) IncomingMessageBuffer.addScheduler(this, this.user, true);
+                if (this.writeToIndex) IncomingMessageBuffer.addScheduler(this, this.user, true, true);
                 //DAO.log("TwitterTweet [" + this.postId + "] write     after " + (System.currentTimeMillis() - start) + "ms");
                 if (this.writeToBackend) DAO.outgoingMessages.transmitMessage(this, this.user);
                 //DAO.log("TwitterTweet [" + this.postId + "] transmit  after " + (System.currentTimeMillis() - start) + "ms");
