@@ -416,7 +416,7 @@ public class TwitterScraper {
                     continue;
                 }
                 
-                if (DAO.messages == null || !DAO.messages.existsCache(tweet.getPostId())) {
+                //if (DAO.messages == null || !DAO.messages.existsCache(tweet.getPostId())) {
                     // checking against the exist cache is incomplete. A false negative would just cause that a tweet is
                     // indexed again.
                     if (tweet.willBeTimeConsuming()) {
@@ -436,7 +436,7 @@ public class TwitterScraper {
                         tweet.run();
                         timelineReady.add(tweet, user);
                     }
-                }
+                //}
                 continue;
             }
         }
