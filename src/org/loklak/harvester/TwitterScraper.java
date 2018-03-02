@@ -227,17 +227,6 @@ public class TwitterScraper {
         return timelines;
     }
 
-
-
-    private static TwitterTimeline[] search(
-            final BufferedReader br,
-            final TwitterTimeline.Order order,
-            final boolean writeToIndex,
-            final boolean writeToBackend) throws IOException {
-
-        return search(br, new ArrayList<>(), order, writeToIndex, writeToBackend);
-    }
-
     /**
      * scrape messages from the reader stream: this already checks if a message is new. There are only new messages returned
      * @param br
@@ -426,6 +415,7 @@ public class TwitterScraper {
                     tweet = null;
                     continue;
                 }
+                
                 if (DAO.messages == null || !DAO.messages.existsCache(tweet.getPostId())) {
                     // checking against the exist cache is incomplete. A false negative would just cause that a tweet is
                     // indexed again.
@@ -588,10 +578,6 @@ public class TwitterScraper {
 
     private static class prop {
         public String key, value = null;
-        public prop(String value) {
-            this.key = null;
-            this.value = value;
-        }
         public prop(String line, int start, String key) {
             this.key = key;
             if (key == null) {
