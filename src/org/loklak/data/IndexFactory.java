@@ -42,6 +42,8 @@ public interface IndexFactory<Entry extends ObjectEntry> {
     public boolean delete(String id, SourceType sourceType);
 
     public JSONObject readJSON(String id);
+    
+    public JSONObject readJSONCache(String id);
 
     public boolean writeEntry(IndexEntry<Entry> entry) throws IOException;
 

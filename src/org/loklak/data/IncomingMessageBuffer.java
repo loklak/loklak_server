@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.objects.TwitterTimeline;
@@ -36,7 +37,7 @@ public class IncomingMessageBuffer extends Thread {
 
     private final static int MESSAGE_QUEUE_MAXSIZE = 20000;
     private final static int bufferLimit = MESSAGE_QUEUE_MAXSIZE * 3 / 4;
-    private static BlockingQueue<DAO.MessageWrapper> messageQueue = new ArrayBlockingQueue<DAO.MessageWrapper>(MESSAGE_QUEUE_MAXSIZE);
+    private static LinkedBlockingDeque<DAO.MessageWrapper> messageQueue = new LinkedBlockingDeque<DAO.MessageWrapper>(MESSAGE_QUEUE_MAXSIZE);
     private static BlockingQueue<PostTimeline> postQueue = new ArrayBlockingQueue<PostTimeline>(MESSAGE_QUEUE_MAXSIZE);
     private static AtomicInteger queueClients = new AtomicInteger(0);
 
@@ -178,15 +179,24 @@ public class IncomingMessageBuffer extends Thread {
         DAO.log("dumped timelines: "  + postQueue.size());
     }
 
-    public static void addScheduler(TwitterTimeline tl, final boolean dump) {
+    public static void addScheduler(TwitterTimeline tl, final boolean dump, boolean priority) {
         queueClients.incrementAndGet();
-        for (TwitterTweet me: tl) addScheduler(me, tl.getUser(me), dump);
+        for (TwitterTweet me: tl) addScheduler(me, tl.getUser(me), dump, priority);
         queueClients.decrementAndGet();
     }
 
-    public static void addScheduler(final TwitterTweet t, final UserEntry u, final boolean dump) {
+    public static void addScheduler(final TwitterTweet t, final UserEntry u, final boolean dump, boolean priority) {
         try {
-            messageQueue.put(new DAO.MessageWrapper(t, u, dump));
+            if (priority) {
+                try {
+                    messageQueue.addFirst(new DAO.MessageWrapper(t, u, dump));
+                } catch (IllegalStateException ee) {
+                    // case where the queue is full
+                    messageQueue.put(new DAO.MessageWrapper(t, u, dump));
+                }
+            } else {
+                messageQueue.put(new DAO.MessageWrapper(t, u, dump));
+            }
         } catch (InterruptedException e) {
         	DAO.severe(e);
         }

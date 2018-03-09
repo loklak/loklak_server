@@ -28,10 +28,12 @@ import org.loklak.objects.BasicTimeline.Order;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,6 +41,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.json.JSONObject;
+import org.json.JSONTokener;
 import org.loklak.data.Classifier;
 import org.loklak.data.DAO;
 import org.loklak.data.Classifier.Category;
@@ -61,6 +64,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -141,8 +145,7 @@ public class TwitterScraper {
             }
 
             // building url
-            httpsUrl = "https://twitter.com/search?f="
-                    + type + "&vertical=default&q=" + q + "&src=typd";
+            httpsUrl = "https://twitter.com/search?f=" + type + "&vertical=default&q=" + q + "&src=typd";
 
         } catch (UnsupportedEncodingException e) {}
         return httpsUrl;
@@ -227,17 +230,6 @@ public class TwitterScraper {
         return timelines;
     }
 
-
-
-    private static TwitterTimeline[] search(
-            final BufferedReader br,
-            final TwitterTimeline.Order order,
-            final boolean writeToIndex,
-            final boolean writeToBackend) throws IOException {
-
-        return search(br, new ArrayList<>(), order, writeToIndex, writeToBackend);
-    }
-
     /**
      * scrape messages from the reader stream: this already checks if a message is new. There are only new messages returned
      * @param br
@@ -259,6 +251,7 @@ public class TwitterScraper {
         Set<String> videos = null;
         String place_id = "";
         String place_name = "";
+        Set<String> mentions = new LinkedHashSet<>();
         boolean parsing_favourite = false, parsing_retweet = false;
         int line = 0; // first line is 1, according to emacs which numbers the first line also as 1
         boolean debuglog = DAO.getConfig("flag.debug.twitter_scraper", "false").equals("true");
@@ -268,13 +261,27 @@ public class TwitterScraper {
             input = input.trim();
 
             if (input.length() == 0) continue;
-
+            
             // debug
             if (debuglog) DAO.log(line + ": " + input);
             //if (input.indexOf("ProfileTweet-actionCount") > 0) DAO.log(input);
-
+            
             // parse
             int p;
+            if ((p = input.indexOf("data-reply-to-users-json=")) >= 0) {
+                prop mentions_prop = new prop(input, p, "data-reply-to-users-json");
+                String decoded = StringEscapeUtils.unescapeHtml4(mentions_prop.value);
+                JSONArray a = new JSONArray(new JSONTokener(decoded));
+                for (int i = 0; i < a.length(); i++) {
+                	mentions.add(a.getJSONObject(i).getString("screen_name"));
+                }
+                continue;
+            }
+            if ((p = input.indexOf("data-mentions=")) >= 0) {
+                prop mentions_prop = new prop(input, p, "data-mentions");
+                for (String s: mentions_prop.value.split(" ")) mentions.add(s);
+                continue;
+            }
             if ((p = input.indexOf("=\"account-group")) > 0) {
                 props.put("userid", new prop(input, p, "data-user-id"));
                 continue;
@@ -383,6 +390,9 @@ public class TwitterScraper {
                     props = new HashMap<String, prop>();
                     place_id = "";
                     place_name = "";
+                    mentions.clear();
+                    videos = null;
+                    images = null;
                     continue;
                 }
 
@@ -404,6 +414,15 @@ public class TwitterScraper {
                 prop tweettimems = props.get("tweettimems");
                 prop tweetretweetcount = props.get("tweetretweetcount");
                 prop tweetfavouritecount = props.get("tweetfavouritecount");
+                
+                // patch text with non-mentioned mentions (twitter obviously cuts that away)
+                String rawtext = props.get("tweettext").value;
+                mentions.remove(user.getScreenName());
+                for (String mention: mentions) {
+                	String m = "@" + mention;
+                	if (rawtext.indexOf(m) < 0) rawtext = rawtext + " " + m;
+                }
+                
                 TwitterTweet tweet;
                 try {
                     tweet = new TwitterTweet(
@@ -411,13 +430,16 @@ public class TwitterScraper {
                             Long.parseLong(tweettimems.value),
                             props.get("tweettimename").value,
                             props.get("tweetstatusurl").value,
-                            props.get("tweettext").value,
+                            rawtext,
                             Long.parseLong(tweetretweetcount.value),
                             Long.parseLong(tweetfavouritecount.value),
                             images, videos, place_name, place_id,
                             user, writeToIndex,  writeToBackend
                     );
 
+                    place_id = "";
+                    place_name = "";
+                    mentions.clear();
                     videos = null;
                     images = null;
                     props.clear();
@@ -426,7 +448,8 @@ public class TwitterScraper {
                     tweet = null;
                     continue;
                 }
-                if (DAO.messages == null || !DAO.messages.existsCache(tweet.getPostId())) {
+                
+                //if (DAO.messages == null || !DAO.messages.existsCache(tweet.getPostId())) {
                     // checking against the exist cache is incomplete. A false negative would just cause that a tweet is
                     // indexed again.
                     if (tweet.willBeTimeConsuming()) {
@@ -446,7 +469,7 @@ public class TwitterScraper {
                         tweet.run();
                         timelineReady.add(tweet, user);
                     }
-                }
+                //}
                 continue;
             }
         }
@@ -588,10 +611,6 @@ public class TwitterScraper {
 
     private static class prop {
         public String key, value = null;
-        public prop(String value) {
-            this.key = null;
-            this.value = value;
-        }
         public prop(String line, int start, String key) {
             this.key = key;
             if (key == null) {
@@ -997,7 +1016,7 @@ public class TwitterScraper {
                 this.enrich();
 
                 //DAO.log("TwitterTweet [" + this.postId + "] enrich    after " + (System.currentTimeMillis() - start) + "ms");
-                if (this.writeToIndex) IncomingMessageBuffer.addScheduler(this, this.user, true);
+                if (this.writeToIndex) IncomingMessageBuffer.addScheduler(this, this.user, true, true);
                 //DAO.log("TwitterTweet [" + this.postId + "] write     after " + (System.currentTimeMillis() - start) + "ms");
                 if (this.writeToBackend) DAO.outgoingMessages.transmitMessage(this, this.user);
                 //DAO.log("TwitterTweet [" + this.postId + "] transmit  after " + (System.currentTimeMillis() - start) + "ms");

@@ -174,7 +174,7 @@ public class TwitterTimeline extends BasicTimeline<TwitterTweet> implements Iter
     }    
     
     public void writeToIndex() {
-        IncomingMessageBuffer.addScheduler(this, true);
+        IncomingMessageBuffer.addScheduler(this, true, true);
     }
 
     //TODO: temporary method to prevent issues related to Timeline class popping-up till next PR
