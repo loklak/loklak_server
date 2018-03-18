@@ -27,7 +27,7 @@ public class QuoraProfileScraperTest {
         PostTimeline profileListTimeLine = null;
         String url = "https://www.quora.com/profile/Saptak-Sengupta";
         BufferedReader br = null;
-        
+
         String userName = "Saptak Sengupta";
         String rssFeedLink = "https://www.quora.com/profile/Saptak-Sengupta/rss";
         String profileImagePath = "/main-thumb-24728160-200-igibbfdmibqxdtrjlrdnejpvjqepxpnn.jpeg";
@@ -37,7 +37,7 @@ public class QuoraProfileScraperTest {
         String editsUrl = "https://www.quora.com/profile/Saptak-Sengupta/log";
         String postsUrl = "https://www.quora.com/profile/Saptak-Sengupta/all_posts";
         String questionsUrl = "https://www.quora.com/profile/Saptak-Sengupta/questions";
-        
+
         try {
             ClientConnection connection = new ClientConnection(url);
             //Check Network issue
@@ -76,7 +76,7 @@ public class QuoraProfileScraperTest {
         String url = "https://www.quora.com/search/?q=fossasia&type=question";
         String postType = "question";
         BufferedReader br = null;
-                
+
         try {
             ClientConnection connection = new ClientConnection(url);
             //Check Network issue
@@ -93,13 +93,13 @@ public class QuoraProfileScraperTest {
             System.out.println(e.getMessage());
         }
         JSONArray qList = questionListTimeLine.toArray();
-        
+
         assertFalse(qList.length() == 0);
 
         for (int i = 0; i < qList.length(); i++) {
             JSONObject question = (JSONObject)qList.get(i);
             assertEquals(question.getString("post_type"), postType);
             assertEquals(question.getString("search_url"), url);
-        } 
+        }
     }
 }
