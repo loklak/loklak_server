@@ -44,6 +44,7 @@ import org.loklak.susi.SusiProcedures;
 import org.loklak.susi.SusiThought;
 import org.loklak.susi.SusiTransfer;
 import org.loklak.harvester.BaseScraper;
+import org.loklak.harvester.Post;
 
 import org.loklak.tools.storage.JSONObjectWithDefault;
 
@@ -214,7 +215,9 @@ public class ConsoleService extends AbstractAPIHandler implements APIHandler {
         });
         dbAccess.put(Pattern.compile("SELECT +?(.*?) +?FROM +?githubProfile +?WHERE +?profile ??= ??'(.*?)' ??;"), matcher -> {
             BaseScraper githubScrape = new GithubProfileScraper(matcher.group(2));
-            SusiThought json = new SusiThought(githubScrape.getData());
+            Post postObj = githubScrape.getData();
+            postObj.put("data", postObj.get("user")).remove("user");
+            SusiThought json = new SusiThought(postObj);
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
             json.setData(transfer.conclude(json.getData()));
             return json;
