@@ -5,7 +5,7 @@
     <title>loklak Streaming Example</title>
     <script type="text/javascript">
         var origin = 'some-origin';  // Replace with proper host
-        var eventSource = new EventSouce(origin + '/api/stream.json?channel=twitter');
+        var eventSource = new EventSource(origin + '/api/stream.json?channel=twitter');
         eventSource.onmessage = function (event) {
             console.log(event.data);
         }
