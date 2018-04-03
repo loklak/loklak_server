@@ -2,17 +2,13 @@ package org.loklak.api.search;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import org.junit.Test;
 import org.loklak.api.search.InstagramProfileScraper;
 import org.loklak.data.DAO;
-import org.loklak.harvester.Post;
 import org.loklak.http.ClientConnection;
 import org.json.JSONArray;
-import org.json.JSONObject;
 
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertNotNull;
 
