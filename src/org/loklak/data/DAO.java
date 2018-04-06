@@ -358,16 +358,19 @@ public class DAO {
 
         File user_dump_dir = new File(datadir, "accounts");
         user_dump_dir.mkdirs();
+        log("initializing user dump ...");
         user_dump = new JsonDataset(
                 user_dump_dir,USER_DUMP_FILE_PREFIX,
                 new JsonDataset.Column[]{new JsonDataset.Column("id_str", false), new JsonDataset.Column("screen_name", true)},
                 "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
                 JsonRepository.REWRITABLE_MODE, false, Integer.MAX_VALUE);
+        log("initializing followers dump ...");
         followers_dump = new JsonDataset(
                 user_dump_dir, FOLLOWERS_DUMP_FILE_PREFIX,
                 new JsonDataset.Column[]{new JsonDataset.Column("screen_name", true)},
                 "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
                 JsonRepository.REWRITABLE_MODE, false, Integer.MAX_VALUE);
+        log("initializing following dump ...");
         following_dump = new JsonDataset(
                 user_dump_dir, FOLLOWING_DUMP_FILE_PREFIX,
                 new JsonDataset.Column[]{new JsonDataset.Column("screen_name", true)},
