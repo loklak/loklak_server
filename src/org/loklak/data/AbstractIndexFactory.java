@@ -145,6 +145,13 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
     }
 
     @Override
+    public JSONObject readJSONCache(String id) {
+    	ObjectEntry oe = this.objectCache.get(id);
+    	if (oe == null) return null;
+    	return oe.toJSON();
+    }
+
+    @Override
     public boolean writeEntry(IndexEntry<IndexObject> entry) throws IOException {
         this.objectCache.put(entry.getId(), entry.getObject());
         this.existCache.add(entry.getId());

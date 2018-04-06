@@ -49,7 +49,7 @@ public class GithubProfileScraper extends BaseScraper {
     private final long serialVersionUID = -4166800345379685202L;
     private static final String GITHUB_API_BASE = "https://api.github.com/users/";
     private PostTimeline postList = new PostTimeline(this.order);
-    public List<String> termsList = null;
+    public List<String> termsList = Arrays.asList("all");
 
     public GithubProfileScraper() {
         super();
@@ -116,10 +116,10 @@ public class GithubProfileScraper extends BaseScraper {
     protected void setParam() {
         this.query = this.getExtraValue("query");
         if(!"".equals(this.getExtraValue("terms"))) {
+            // Replace the default value of termsList with the terms provided as parameters
             this.termsList = Arrays.asList(this.getExtraValue("terms").trim().split("\\s*,\\s*"));
         } else {
-            this.termsList = new ArrayList<String>();
-            this.termsList.add("all");
+            // No "terms" are provided as parameters, use the default value of termsList to set extras
             this.setExtraValue("terms", String.join(",", this.termsList));
         }
     }
@@ -202,7 +202,7 @@ public class GithubProfileScraper extends BaseScraper {
             JSONArray starredData = getDataFromApi(starredUrl);
             githubProfile.put("starred_data", starredData);
 
-            int starred = Integer.parseInt(html.getElementsByAttributeValue("class", "Counter").get(1).text());
+            String starred = html.getElementsByAttributeValue("class", "Counter").get(1).text();
             githubProfile.put("starred", starred);
         }
 
@@ -211,7 +211,7 @@ public class GithubProfileScraper extends BaseScraper {
             JSONArray followersData = getDataFromApi(followersUrl);
             githubProfile.put("followers_data", followersData);
 
-            int followers = Integer.parseInt(html.getElementsByAttributeValue("class", "Counter").get(2).text());
+            String followers = html.getElementsByAttributeValue("class", "Counter").get(2).text();
             githubProfile.put("followers", followers);
         }
 
@@ -220,7 +220,7 @@ public class GithubProfileScraper extends BaseScraper {
             JSONArray followingData = getDataFromApi(followingUrl);
             githubProfile.put("following_data", followingData);
 
-            int following = Integer.parseInt(html.getElementsByAttributeValue("class", "Counter").get(3).text());
+            String following = html.getElementsByAttributeValue("class", "Counter").get(3).text();
             githubProfile.put("following", following);
         }
 

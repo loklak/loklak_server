@@ -121,7 +121,7 @@ public class TwitterScraperTest {
                 br = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8));
 
                 // Fetch list of tweets and set in ftweet_list
-                tweet_list = (TwitterTimeline[])executePrivateMethod(TwitterScraper.class, "search",new Class[]{BufferedReader.class, TwitterTimeline.Order.class, boolean.class, boolean.class},br, order, true, true);
+                tweet_list = (TwitterTimeline[])executePrivateMethod(TwitterScraper.class, "search",new Class[]{BufferedReader.class, ArrayList.class, TwitterTimeline.Order.class, boolean.class, boolean.class}, br, new ArrayList<>(), order, true, true);
             } catch (Exception e) {
                 System.out.println(e.getMessage());
             } finally {
