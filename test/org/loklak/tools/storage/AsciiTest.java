@@ -23,11 +23,11 @@ public class AsciiTest {
         int returnedValue3 = ascii.compare(null, null);
         int returnedValue4 = ascii.compare(s0, null);
         int returnedValue5 = ascii.compare(null, s1);
-        assertEquals(returnedValue1, -1);
-        assertEquals(returnedValue2, 1);
-        assertEquals(returnedValue3, 0);
-        assertEquals(returnedValue4, 1);
-        assertEquals(returnedValue5, -1);
+        assertEquals(-1, returnedValue1);
+        assertEquals(1, returnedValue2);
+        assertEquals(0, returnedValue3);
+        assertEquals(1, returnedValue4);
+        assertEquals(-1, returnedValue5);
     }
 
     /**
@@ -45,10 +45,10 @@ public class AsciiTest {
         boolean returnedValue3 = ascii.equals(null, null);
         boolean returnedValue4 = ascii.equals(s0, null);
         boolean returnedValue5 = ascii.equals(null, s1);
-        assertEquals(returnedValue1, false);
-        assertEquals(returnedValue2, false);
-        assertEquals(returnedValue3, true);
-        assertEquals(returnedValue4, false);
-        assertEquals(returnedValue5, false);
+        assertEquals(false, returnedValue1);
+        assertEquals(false, returnedValue2);
+        assertEquals(true, returnedValue3);
+        assertEquals(false, returnedValue4);
+        assertEquals(false, returnedValue5);
     }
 }
