@@ -56,16 +56,16 @@ public class QuoraProfileScraperTest {
         JSONArray profileList = profileListTimeLine.toArray();
         JSONObject quoraProfile = (JSONObject)profileList.get(0);
 
-        assertEquals(quoraProfile.getString("search_url"), url);
-        assertEquals(quoraProfile.getString("user_name"), userName);
-        assertEquals(quoraProfile.getString("rss_feed_link"), rssFeedLink);
-        assertEquals(quoraProfile.getString("profileImage").substring(quoraProfile.getString("profileImage").length()-profileImagePath.length()), profileImagePath);
-        assertEquals(quoraProfile.getJSONObject("feeds").getString("topics_url"), topicsUrl);
-        assertEquals(quoraProfile.getJSONObject("feeds").getString("following_url"), followingUrl);
-        assertEquals(quoraProfile.getJSONObject("feeds").getString("blogs_url"), blogsUrl);
-        assertEquals(quoraProfile.getJSONObject("feeds").getString("edits_url"), editsUrl);
-        assertEquals(quoraProfile.getJSONObject("feeds").getString("posts_url"), postsUrl);
-        assertEquals(quoraProfile.getJSONObject("feeds").getString("questions_url"), questionsUrl);
+        assertEquals(url, quoraProfile.getString("search_url"));
+        assertEquals(userName, quoraProfile.getString("user_name"));
+        assertEquals(rssFeedLink, quoraProfile.getString("rss_feed_link"));
+        assertEquals(profileImagePath, quoraProfile.getString("profileImage").substring(quoraProfile.getString("profileImage").length()-profileImagePath.length()));
+        assertEquals(topicsUrl, quoraProfile.getJSONObject("feeds").getString("topics_url"));
+        assertEquals(followingUrl, quoraProfile.getJSONObject("feeds").getString("following_url"));
+        assertEquals(blogsUrl, quoraProfile.getJSONObject("feeds").getString("blogs_url"));
+        assertEquals(editsUrl, quoraProfile.getJSONObject("feeds").getString("edits_url"));
+        assertEquals(postsUrl, quoraProfile.getJSONObject("feeds").getString("posts_url"));
+        assertEquals(questionsUrl, quoraProfile.getJSONObject("feeds").getString("questions_url"));
     }
 
     @Test
@@ -98,8 +98,8 @@ public class QuoraProfileScraperTest {
 
         for (int i = 0; i < qList.length(); i++) {
             JSONObject question = (JSONObject)qList.get(i);
-            assertEquals(question.getString("post_type"), postType);
-            assertEquals(question.getString("search_url"), url);
+            assertEquals(postType, question.getString("post_type"));
+            assertEquals(url, question.getString("search_url"));
         }
     }
 }

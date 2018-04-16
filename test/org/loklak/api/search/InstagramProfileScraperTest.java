@@ -57,7 +57,7 @@ public class InstagramProfileScraperTest {
 				assertTrue(entry_data.has("ProfilePage"));			
 				assertTrue(config.has("viewer"));
 				assertTrue(config.has("csrf_token"));
-				assertEquals(json.getString("hostname"), hostname);
+				assertEquals(hostname, json.getString("hostname"));
 			} catch (Exception e) {
 				DAO.log("InstagramProfileScraperTest.instagramProfileScraperUserTest() assert error");
 			}

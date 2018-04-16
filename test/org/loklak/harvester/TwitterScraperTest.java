@@ -140,17 +140,17 @@ public class TwitterScraperTest {
         TwitterTweet tweet = (TwitterTweet) ftweet_list.iterator().next();
 
         assertThat(String.valueOf(tweet.getUser()), containsString(tweet_check.get("user")));
-        assertEquals(String.valueOf(tweet.getStatusIdUrl()), tweet_check.get("status_id_url"));
+        assertEquals(tweet_check.get("status_id_url"), String.valueOf(tweet.getStatusIdUrl()));
 
         String created_date = dateFormatChange(String.valueOf(tweet.getCreatedAt()));
         assertThat(created_date, is(tweet_check.get("created_at")));
 
-        assertEquals(tweet.getScreenName(), tweet_check.get("screen_name"));
-        assertEquals(String.valueOf(tweet.getSourceType()), tweet_check.get("source_type"));
-        assertEquals(String.valueOf(tweet.getProviderType()), tweet_check.get("provider_type"));
-        assertEquals(tweet.getText(), tweet_check.get("text"));
-        assertEquals(tweet.getPlaceId(), tweet_check.get("place_name"));
-        assertEquals(tweet.getPlaceName(), tweet_check.get("place_id"));
+        assertEquals(tweet_check.get("screen_name"), tweet.getScreenName());
+        assertEquals(tweet_check.get("source_type"), String.valueOf(tweet.getSourceType()));
+        assertEquals(tweet_check.get("provider_type"), String.valueOf(tweet.getProviderType()));
+        assertEquals(tweet_check.get("text"), tweet.getText());
+        assertEquals(tweet_check.get("place_name"), tweet.getPlaceId());
+        assertEquals(tweet_check.get("place_id"), tweet.getPlaceName());
 
         try {
             // Other parameters of twittertweet(used )
