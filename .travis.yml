@@ -15,6 +15,7 @@ cache:
   directories:
     - $HOME/.gradle/caches/
     - $HOME/.gradle/wrapper/
+    - $HOME/.cache/pip
 install:
 - pip install --user flake8
 script:
