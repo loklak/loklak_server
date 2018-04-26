@@ -51,29 +51,51 @@ public class GithubProfileScraper extends BaseScraper {
     private PostTimeline postList = new PostTimeline(this.order);
     public List<String> termsList = Arrays.asList("all");
 
+    /**
+     * Constructor to set baseUrl and scraperName in the super(Base-Interface) for
+     * current Search-Scrapper
+     */
     public GithubProfileScraper() {
         super();
         this.baseUrl = "https://github.com/";
         this.scraperName = "github";
-   }
+    }
 
+    /**
+     * Constructor to set the given query and map _extra
+     * @param _extra
+     * A map with key and value as string
+     * @param _query
+     * _query in form for string value
+     */
     public GithubProfileScraper(String _query, Map<String, String> _extra) {
         this();
         this.setExtra(_extra);
         this.query = _query;
     }
 
+    /**
+     * Constructor to map the given _extra param with key and value as String
+     */
     public GithubProfileScraper(Map<String, String> _extra) {
         this();
         this.setExtra(_extra);
     }
 
+    /**
+     * Constructor to set String query
+     * @param _query as string
+     */
     public GithubProfileScraper(String _query) {
         this();
         this.query = _query;
         this.setExtraValue("query", this.query);
     }
 
+    /**
+     * Method to get api path of the Github Profile Scraper
+     * @return api endpoint of Github Profile Scraper in form of String
+     */
     @Override
     public String getAPIPath() {
         return "/api/githubprofilescraper.json";
@@ -84,12 +106,20 @@ public class GithubProfileScraper extends BaseScraper {
         return BaseUserRole.ANONYMOUS;
     }
 
+    /**
+     * @return null when asked for the default permissions
+     * of the given base user role in form of JSONObject
+     */
     @Override
     public JSONObject getDefaultPermissions(BaseUserRole baseUserRole) {
         // TODO Auto-generated method stub
         return null;
     }
 
+    /**
+     * Method to generate url for search using URIBuilder
+     * @return URL in string format
+     */
     protected String prepareSearchUrl(String type) {
         URIBuilder url = null;
         String midUrl = "search/";
@@ -113,6 +143,10 @@ public class GithubProfileScraper extends BaseScraper {
         return url.toString();
     }
 
+    /**
+     * Method to replace the default value of termsList with "terms" provided as parameters
+     * if the "terms" key is empty/null else set the "query" key with default value of termsList
+     */
     protected void setParam() {
         this.query = this.getExtraValue("query");
         if(!"".equals(this.getExtraValue("terms"))) {
@@ -124,6 +158,10 @@ public class GithubProfileScraper extends BaseScraper {
         }
     }
 
+    /**
+    * Method to set cacheMap with a single key "get" mapping to
+    * a getMap having keys "user", "post_type", and "post_scraper" with respective values "query", "user", and "scraperName"
+    */
     @Override
     protected void setCacheMap() {
         this.cacheMap = new HashMap<String, Map<String, String>>();
@@ -136,6 +174,11 @@ public class GithubProfileScraper extends BaseScraper {
         this.cacheMap.put("get", getMap);
     }
 
+    /**
+    * Method to get data from api
+    * @param url String url to fetch data from
+    * @return arr: Return result in form of JSONArray object
+    */
     private JSONArray getDataFromApi(String url) {
         URI uri = null;
         try {
@@ -154,6 +197,13 @@ public class GithubProfileScraper extends BaseScraper {
         return arr;
     }
 
+    /**
+    * Method to scrape the github url and put data in typeArray
+    * @param br BufferedReader variable
+    * @param type String variable for specifying type
+    * @param url String variable specifying the url to be scraped
+    * @return Post: Return result stored in typeArray as of type Post 
+    */
     protected Post scrape(BufferedReader br, String type, String url) {
         Post typeArray = new Post(true);
         PostTimeline postList = new PostTimeline(this.order);
@@ -170,6 +220,12 @@ public class GithubProfileScraper extends BaseScraper {
         //TODO: add search scrapers
     }
 
+    /**
+    * Method to scrape the given github user profile and put the required data in githubProfile Post
+    * @param githubProfile the Post to hold the scraped data
+    * @param profile String variable holding the profile/user to be scraped
+    * @param html the given html page to be scraped accoring to the required attributes
+    */
     private void scrapeGithubUser(
         Post githubProfile,
         String profile,
@@ -248,6 +304,12 @@ public class GithubProfileScraper extends BaseScraper {
         }
     }
 
+    /**
+    * Method to scrape the given github organization and put the required data in githubProfile Post
+    * @param githubProfile the Post to hold the scraped data
+    * @param profile String variable holding the profile to be scraped
+    * @param html the given html page to be scraped accoring to the required attributes
+    */
     private void scrapeGithubOrg(
         String profile,
         Post githubProfile,
@@ -274,6 +336,12 @@ public class GithubProfileScraper extends BaseScraper {
         }
     }
 
+    /**
+    * Method to scrape the given github profile/user
+    * @param profile String variable holding the profile/user to be scraped
+    * @param br BufferedReader variable
+    * @return githubProfile of type Post containing general information of github profile/user
+    */
     public Post scrapeGithub(String profile, BufferedReader br) {
 
         Document html = null;
@@ -330,6 +398,10 @@ public class GithubProfileScraper extends BaseScraper {
         return githubProfile;
     }
 
+    /**
+    * Method to scrape the terms of the given github profile/user
+    * @param githubProfile of type Post used to store the details of terms
+    */
     private void scrapeTerms(Post githubProfile) {
 
         final String GistsEndpoint = "/gists";
@@ -372,6 +444,10 @@ public class GithubProfileScraper extends BaseScraper {
         private String githubId;
         private int githubPostNo;
 
+        /** Constructor to set githubId and githubPostNo
+        * @param _githubId String variable holding particular githubId
+        * @param _githubPostNo int variable holding particular githubPostNo
+        */
         public GithubPost(String _githubId, int _githubPostNo) {
             //not UTC, may be error prone
             super();
@@ -380,14 +456,25 @@ public class GithubProfileScraper extends BaseScraper {
             this.setPostId(this.githubId);
         }
 
+        /**
+        * Method to set the githubId
+        * @param _githubId String value with a particular githubId
+        */
         public void setGithubId(String _githubId) {
             this.githubId = _githubId;
         }
 
+        /**
+        * Method to set the githubPostNo
+        * @param _githubPostNo int value with a particular githubPostNo
+        */
         public void setGithubPostNo(int _githubPostNo) {
             this.githubPostNo = _githubPostNo;
         }
 
+        /**
+        * Method to get postId as a String value
+        */
         public String getPostId() {
             return String.valueOf(this.postId);
         }
