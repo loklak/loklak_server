@@ -13,6 +13,7 @@ import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import org.loklak.harvester.TwitterScraperTest;
 
 /**
@@ -29,7 +30,6 @@ public class QuoraProfileScraperTest {
         BufferedReader br = null;
 
         String userName = "Saptak Sengupta";
-        String rssFeedLink = "https://www.quora.com/profile/Saptak-Sengupta/rss";
         String profileImagePath = "/main-thumb-24728160-200-igibbfdmibqxdtrjlrdnejpvjqepxpnn.jpeg";
         String topicsUrl = "https://www.quora.com/profile/Saptak-Sengupta/topics";
         String followingUrl = "https://www.quora.com/profile/Saptak-Sengupta/following";
@@ -56,9 +56,9 @@ public class QuoraProfileScraperTest {
         JSONArray profileList = profileListTimeLine.toArray();
         JSONObject quoraProfile = (JSONObject)profileList.get(0);
 
+        assertNotNull(quoraProfile.getString("bio"));
         assertEquals(url, quoraProfile.getString("search_url"));
         assertEquals(userName, quoraProfile.getString("user_name"));
-        assertEquals(rssFeedLink, quoraProfile.getString("rss_feed_link"));
         assertEquals(profileImagePath, quoraProfile.getString("profileImage").substring(quoraProfile.getString("profileImage").length()-profileImagePath.length()));
         assertEquals(topicsUrl, quoraProfile.getJSONObject("feeds").getString("topics_url"));
         assertEquals(followingUrl, quoraProfile.getJSONObject("feeds").getString("following_url"));
