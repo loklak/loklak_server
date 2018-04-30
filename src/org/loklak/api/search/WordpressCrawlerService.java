@@ -37,24 +37,39 @@ public class WordpressCrawlerService extends BaseScraper {
 
 	private static final long serialVersionUID = -5357182691897402354L;
 
+    /**
+     * Constructor to set baseUrl and scraperName in the super(Base-Interface) for
+     * current Search-Scrapper
+     */
     public WordpressCrawlerService() {
         super();
         this.baseUrl = "";
         this.scraperName = "wordpress";
     }
 
+    /**
+     * Constructor to map the given _extra param with key and value as String
+     */
     public WordpressCrawlerService(Map<String, String> _extra) {
         this();
         this.setExtra(_extra);
         this.query = this.getExtraValue("query");
     }
 
+    /**
+     * Constructor to set String query
+     * @param query as string
+     */
     public WordpressCrawlerService(String _query) {
         this();
         this.query = _query;
         this.setExtraValue("query", this.query);
     }
 
+    /**
+     * Method to get api path of Wordpress Crawler Service
+     * @return api endpoint of Wordpress Crawler Service in form of String
+     */
 	@Override
 	public String getAPIPath() {
 		return "/api/wordpresscrawler.json";
@@ -65,15 +80,28 @@ public class WordpressCrawlerService extends BaseScraper {
 		return BaseUserRole.ANONYMOUS;
 	}
 
+    /**
+     * @return null when asked for the default permissions
+     * of the given base user role in form of JSONObject
+     */
 	@Override
 	public JSONObject getDefaultPermissions(BaseUserRole baseUserRole) {
 		return null;
 	}
 
+    /**
+     * Method to to prepare search url
+     * @param type as String input
+     * @return query in string format
+     */
     protected String prepareSearchUrl(String type) {
         return this.query;
     }
 
+    /**
+     * Method to set the "url" key with value of query if the "url" key is empty/null
+     * else to set the "query" key with value of query
+     */
     protected void setParam() {
         if ("".equals(this.getExtraValue("url"))) {
             this.setExtraValue("url", this.query);
@@ -82,12 +110,22 @@ public class WordpressCrawlerService extends BaseScraper {
         }
     }
 
-   protected Post scrape(BufferedReader br, String type, String url) {
+    /**
+     * Method to scrape the given url and store the result with key as "blogs"
+     * @return typeArray as a Post object 
+     */
+    protected Post scrape(BufferedReader br, String type, String url) {
         Post typeArray = new Post(true);
         this.putData(typeArray, "blogs", this.crawlWordpress(this.query, br));
         return typeArray;
     }
 
+    /**
+     * Method to parse the result with Jsoup and extract the blog details from it.
+     * The extracted result is put on the blogPost and each blogPost is 
+     * added to blogList which is returned as result of type 'PostTimeline'.
+     * @return blogList as a PostTimeline object containing each blogPost.
+     */
     public PostTimeline crawlWordpress(String blogURL, BufferedReader br) {
         Post blogPost = null;
         PostTimeline blogList = new PostTimeline(this.order);
