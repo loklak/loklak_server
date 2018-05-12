@@ -38,6 +38,7 @@ public class QuoraProfileScraperTest {
         String postsUrl = "https://www.quora.com/profile/Saptak-Sengupta/all_posts";
         String questionsUrl = "https://www.quora.com/profile/Saptak-Sengupta/questions";
         String postType = "user";
+        String post_scraper = "quora";
 
         try {
             ClientConnection connection = new ClientConnection(url);
@@ -55,10 +56,10 @@ public class QuoraProfileScraperTest {
             System.out.println(e.getMessage());
         }
         JSONArray profileList = profileListTimeLine.toArray();
-        JSONObject quoraProfile = (JSONObject)profileList.get(0);
+        JSONObject quoraProfile = profileList.getJSONObject(0);
 
         assertNotNull(quoraProfile.getString("bio"));
-        assertNotNull(quoraProfile.getString("works_at"));
+        assertEquals(post_scraper, quoraProfile.getString("post_scraper"));
         assertEquals(postType, quoraProfile.getString("post_type"));
         assertEquals(url, quoraProfile.getString("search_url"));
         assertEquals(userName, quoraProfile.getString("user_name"));
