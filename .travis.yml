@@ -8,6 +8,14 @@ env:
   - secure: w5VfIJI0RC27fUcVC/tB63Z1IOIkFCz3khmrrBSMwDjmKFWEplnkm1Yhs379yqohsSHE18SqY4MgLzOu9KJShoP1cur9ozhta+osSjXOZpiES/fQyRLRrCDSQR0ZLX0MBubJIGysFJrlPmMuue9AhcNzOLR6wwYrmZr9mIWMQcc=
 addons:
   ssh_known_hosts: 104.155.231.103
+before_cache:
+  - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+  - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
+cache:
+  directories:
+    - $HOME/.gradle/caches/
+    - $HOME/.gradle/wrapper/
+    - $HOME/.cache/pip
 install:
 - pip install --user flake8
 script:
