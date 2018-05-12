@@ -20,3 +20,10 @@ dist/loklak.jar
 
 /docs/_build
 .DS_Store
+
+bin/org/
+bin/queries/
+bin/log4j2.properties
+bin/api_test.sh
+.sts4-cache/
+.vscode/
