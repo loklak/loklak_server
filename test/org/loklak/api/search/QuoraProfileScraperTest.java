@@ -12,7 +12,6 @@ import org.json.JSONObject;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import org.loklak.harvester.TwitterScraperTest;
 
@@ -98,7 +97,7 @@ public class QuoraProfileScraperTest {
         }
         JSONArray qList = questionListTimeLine.toArray();
 
-        assertFalse(qList.length() == 0);
+        assertNotNull(qList.length());
 
         for (int i = 0; i < qList.length(); i++) {
             JSONObject question = (JSONObject)qList.get(i);
