@@ -19,6 +19,12 @@ import static org.junit.Assert.assertThat;
 public class GithubProfileScraperTest {
 
     @Test
+    public void apiPathTest() {
+        GithubProfileScraper githubScraper = new GithubProfileScraper();
+        assertEquals("/api/githubprofilescraper.json", githubScraper.getAPIPath());
+    }
+
+    @Test
     public void githubProfileScraperOrgTest() {
 
         GithubProfileScraper githubScraper = new GithubProfileScraper();

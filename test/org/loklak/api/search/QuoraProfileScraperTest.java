@@ -21,6 +21,12 @@ import org.loklak.harvester.TwitterScraperTest;
 public class QuoraProfileScraperTest {
 
     @Test
+    public void apiPathTest() {
+        QuoraProfileScraper quoraScraper = new QuoraProfileScraper();
+        assertEquals("/api/quoraprofilescraper.json", quoraScraper.getAPIPath());
+    }
+
+    @Test
     public void quoraProfileScraperUserTest() {
 
         QuoraProfileScraper quoraScraper = new QuoraProfileScraper();

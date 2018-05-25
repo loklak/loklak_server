@@ -6,6 +6,7 @@ import org.junit.Test;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.loklak.api.search.WordpressCrawlerService;
@@ -16,6 +17,13 @@ import org.loklak.http.ClientConnection;
  * These unit-tests test org.loklak.api.search.WordpressCrawlerService
  */
 public class WordpressCrawlerServiceTest {
+
+    @Test
+    public void apiPathTest() {
+        WordpressCrawlerService wordpressCrawler = new WordpressCrawlerService();
+        assertEquals("/api/wordpresscrawler.json", wordpressCrawler.getAPIPath());
+    }
+
 	@Test
 	public void wordpressCrawlerServiceTest() {
         BufferedReader br = null;
