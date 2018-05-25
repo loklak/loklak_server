@@ -77,7 +77,7 @@ public class YoutubeScraper extends BaseScraper {
 
     @Override
     public String getAPIPath() {
-        return "/api/youtubescraper";
+        return "/api/youtubescraper.json";
     }
 
     @Override

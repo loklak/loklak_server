@@ -21,6 +21,12 @@ import static org.junit.Assert.assertNotNull;
 
 public class InstagramProfileScraperTest {
 
+    @Test
+    public void apiPathTest() {
+        InstagramProfileScraper instagramScraper = new InstagramProfileScraper();
+        assertEquals("/api/instagramprofilescraper.json", instagramScraper.getAPIPath());
+    }
+
 	@Test
 	public void instagramProfileScraperUserTest() {
 
