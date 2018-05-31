@@ -15,7 +15,6 @@ public class AsciiTest {
     public void testCompare() {
 
         ASCII ascii = new ASCII(true);
-
         String s0 = "abc";
         String s1 = "xyz";
         int returnedValue1 = ascii.compare(s0, s1);
@@ -37,7 +36,6 @@ public class AsciiTest {
     public void testEquals() {
 
         ASCII ascii = new ASCII(true);
-
         String s0 = "abc";
         String s1 = "xyz";
         boolean returnedValue1 = ascii.equals(s0, s1);
