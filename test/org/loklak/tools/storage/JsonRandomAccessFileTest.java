@@ -98,6 +98,5 @@ public class JsonRandomAccessFileTest  extends TestCase {
             assertTrue(ASCII.String(b).equals(json));
         }
         reader.close();
-    }
-    
+    }   
 }

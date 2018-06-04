@@ -73,7 +73,5 @@ public class YoutubeScraperTest {
         } catch (IOException e) {
             DAO.log("YoutubeScraperTest.parseFromBufferedReaderTest()() failed to connect to network. url:" + url);
         }
-
     }
-
 }

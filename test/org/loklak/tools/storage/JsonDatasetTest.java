@@ -48,5 +48,4 @@ public class JsonDatasetTest extends TestCase {
             e.printStackTrace();
         }
     }
-    
 }
