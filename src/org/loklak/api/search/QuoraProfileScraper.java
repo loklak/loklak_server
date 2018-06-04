@@ -112,7 +112,7 @@ public class QuoraProfileScraper extends BaseScraper {
 
     @Override
     public String getAPIPath() {
-        return "/api/quoraprofilescraper";
+        return "/api/quoraprofilescraper.json";
     }
 
     @Override

@@ -19,7 +19,13 @@ import static org.junit.Assert.assertThat;
 public class GithubProfileScraperTest {
 
     @Test
-    public void githubProfileScraperOrgTest() {
+    public void apiPathTest() {
+        GithubProfileScraper githubScraper = new GithubProfileScraper();
+        assertEquals("/api/githubprofilescraper.json", githubScraper.getAPIPath());
+    }
+
+    @Test
+    public void githubProfileScraperOrgTest() throws NullPointerException {
 
         GithubProfileScraper githubScraper = new GithubProfileScraper();
         String url = "https://github.com/fossasia/";
@@ -44,18 +50,22 @@ public class GithubProfileScraperTest {
             DAO.log("GithubProfileScraperTest.githubProfileScraperUserTest() failed to connect to network. url:" + url);
         }
 
-        Post fetchedProfile = githubScraper.scrapeGithub(profile, br);
+        Post fetchedProfile = new Post();
+        try {
+            fetchedProfile = githubScraper.scrapeGithub(profile, br);
+        } catch (NullPointerException e) {
+            DAO.log("GithubProfileScraperTest.githubProfileScraperOrgTest() failed with a NullPointerException");
+        }
 
         assertEquals(shortDescription, fetchedProfile.getString("short_description"));
         assertEquals(userName, fetchedProfile.getString("user"));
         assertEquals(userId, fetchedProfile.getString("user_id"));
         assertEquals(location, fetchedProfile.getString("location"));
         assertEquals(specialLink, fetchedProfile.getString("special_link"));
-
     }
 
     @Test
-    public void githubProfileScraperUserTest() {
+    public void githubProfileScraperUserTest() throws NullPointerException {
 
         GithubProfileScraper githubScraper = new GithubProfileScraper();
         String url = "https://github.com/djmgit/";
@@ -79,12 +89,16 @@ public class GithubProfileScraperTest {
                 DAO.log("GithubProfileScraperTest.githubProfileScraperUserTest() failed to connect to network. url:" + url);
         }
 
-            Post fetchedProfile = githubScraper.scrapeGithub(profile, br);
+        Post fetchedProfile = new Post();
+        try {
+            fetchedProfile = githubScraper.scrapeGithub(profile, br);
+        } catch (NullPointerException e) {
+            DAO.log("GithubProfileScraperTest.githubProfileScraperUserTest() failed with a NullPointerException");
+        }
 
-            assertEquals(userName, fetchedProfile.getString("user"));
-            assertEquals(fullName, fetchedProfile.getString("full_name"));
-            assertEquals(specialLink, fetchedProfile.getString("special_link"));
-            assertEquals(userId, fetchedProfile.getString("user_id"));
+        assertEquals(userName, fetchedProfile.getString("user"));
+        assertEquals(fullName, fetchedProfile.getString("full_name"));
+        assertEquals(specialLink, fetchedProfile.getString("special_link"));
+        assertEquals(userId, fetchedProfile.getString("user_id"));
     }
-
 }

@@ -6,6 +6,7 @@ import org.junit.Test;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.loklak.api.search.WordpressCrawlerService;
@@ -16,8 +17,15 @@ import org.loklak.http.ClientConnection;
  * These unit-tests test org.loklak.api.search.WordpressCrawlerService
  */
 public class WordpressCrawlerServiceTest {
+
+    @Test
+    public void apiPathTest() {
+        WordpressCrawlerService wordpressCrawler = new WordpressCrawlerService();
+        assertEquals("/api/wordpresscrawler.json", wordpressCrawler.getAPIPath());
+    }
+
 	@Test
-	public void wordpressCrawlerServiceTest() {
+	public void wordpressCrawlerServiceTest() throws NullPointerException {
         BufferedReader br = null;
 		String url = "http://blog.fossasia.org/author/saptaks/";
 		String author = "saptaks";
@@ -32,16 +40,21 @@ public class WordpressCrawlerServiceTest {
             DAO.log("WordpressCrawlerServiceTest.WordpressCrawlerServiceTest() failed to connect to network. url:" + url);
         }
 
-		JSONArray blogs = wordpressCrawler.crawlWordpress(url, br).toArray();
+        JSONArray blogs = new JSONArray();
+        try {
+            blogs = wordpressCrawler.crawlWordpress(url, br).toArray();
+        } catch (NullPointerException e) {
+            DAO.log("WordpressCrawlerServiceTest.wordpressCrawlerServiceTest() failed with a NullPointerException");
+        }
 
-		for(int i = 0;i < blogs.length(); i++) {
-			JSONObject blog = (JSONObject)blogs.get(i);
-			assertTrue(blog.has("blog_url"));
-			assertTrue(blog.has("title"));
-			assertTrue(blog.has("posted_on"));
-			assertTrue(blog.has("content"));
-			assertTrue(blog.has("author"));
-			assertThat(blog.getString("author"), is(author));
-		}
+        for(int i = 0;i < blogs.length(); i++) {
+            JSONObject blog = (JSONObject)blogs.get(i);
+            assertTrue(blog.has("blog_url"));
+            assertTrue(blog.has("title"));
+            assertTrue(blog.has("posted_on"));
+            assertTrue(blog.has("content"));
+            assertTrue(blog.has("author"));
+            assertThat(blog.getString("author"), is(author));
+        }
 	}
 }
