@@ -1,4 +1,4 @@
-FROM alpine:latest
+FROM openjdk:8-alpine
 
 # Env Vars
 ENV LANG=en_US.UTF-8
@@ -6,7 +6,7 @@ ENV JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8
 
 WORKDIR /loklak_server
 
-RUN apk update && apk add openjdk8 git bash && \
+RUN apk update && apk add --no-cache git bash && \
     git clone https://github.com/loklak/loklak_server.git /loklak_server && \
     git checkout origin/master && \
     ./gradlew build -x test -x checkstyleTest -x checkstyleMain -x jacocoTestReport && \
