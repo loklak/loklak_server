@@ -35,7 +35,7 @@ public class QuoraProfileScraperTest {
         BufferedReader br = null;
 
         String userName = "Saptak Sengupta";
-        String profileImagePath = "/main-thumb-24728160-200-igibbfdmibqxdtrjlrdnejpvjqepxpnn.jpeg";
+        String profileImagePath = "t/main-thumb-24728160-50-igibbfdmibqxdtrjlrdnejpvjqepxpnn.jpeg";
         String topicsUrl = "https://www.quora.com/profile/Saptak-Sengupta/topics";
         String followingUrl = "https://www.quora.com/profile/Saptak-Sengupta/following";
         String blogsUrl = "https://www.quora.com/profile/Saptak-Sengupta/blogs";
