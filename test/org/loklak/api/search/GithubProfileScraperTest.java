@@ -53,15 +53,16 @@ public class GithubProfileScraperTest {
         Post fetchedProfile = new Post();
         try {
             fetchedProfile = githubScraper.scrapeGithub(profile, br);
+            assertEquals(shortDescription, fetchedProfile.getString("short_description"));
+            assertEquals(userName, fetchedProfile.getString("user"));
+            assertEquals(userId, fetchedProfile.getString("user_id"));
+            assertEquals(location, fetchedProfile.getString("location"));
+            assertEquals(specialLink, fetchedProfile.getString("special_link"));
+        } catch (IllegalStateException e) {
+            DAO.log("GithubProfileScraperTest.githubProfileScraperOrgTest() failed with an IllegalStateException");
         } catch (NullPointerException e) {
-            DAO.log("GithubProfileScraperTest.githubProfileScraperOrgTest() failed with a NullPointerException");
+            DAO.log("GithubProfileScraperTest.githubProfileScraperOrgTest() failed with an NullPointerException");
         }
-
-        assertEquals(shortDescription, fetchedProfile.getString("short_description"));
-        assertEquals(userName, fetchedProfile.getString("user"));
-        assertEquals(userId, fetchedProfile.getString("user_id"));
-        assertEquals(location, fetchedProfile.getString("location"));
-        assertEquals(specialLink, fetchedProfile.getString("special_link"));
     }
 
     @Test
@@ -92,13 +93,14 @@ public class GithubProfileScraperTest {
         Post fetchedProfile = new Post();
         try {
             fetchedProfile = githubScraper.scrapeGithub(profile, br);
+            assertEquals(userName, fetchedProfile.getString("user"));
+            assertEquals(fullName, fetchedProfile.getString("full_name"));
+            assertEquals(specialLink, fetchedProfile.getString("special_link"));
+            assertEquals(userId, fetchedProfile.getString("user_id"));
+        } catch (IllegalStateException e) {
+            DAO.log("GithubProfileScraperTest.githubProfileScraperOrgTest() failed with an IllegalStateException");
         } catch (NullPointerException e) {
-            DAO.log("GithubProfileScraperTest.githubProfileScraperUserTest() failed with a NullPointerException");
+            DAO.log("GithubProfileScraperTest.githubProfileScraperOrgTest() failed with an NullPointerException");
         }
-
-        assertEquals(userName, fetchedProfile.getString("user"));
-        assertEquals(fullName, fetchedProfile.getString("full_name"));
-        assertEquals(specialLink, fetchedProfile.getString("special_link"));
-        assertEquals(userId, fetchedProfile.getString("user_id"));
     }
 }
