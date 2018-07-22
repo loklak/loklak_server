@@ -9,7 +9,11 @@
 Development: [![Build Status](https://travis-ci.org/loklak/loklak_server.svg?branch=development)](https://travis-ci.org/loklak/loklak_server)
 Master: [![Build Status](https://travis-ci.org/loklak/loklak_server.svg?branch=master)](https://travis-ci.org/loklak/loklak_server)
 
-loklak is a server application which is able to collect messages from various sources, including twitter. The server contains a search index and a peer-to-peer index sharing interface. All messages are stored in an elasticsearch index. An automatic deployment from the development branch at GitHub is available for tests at https://loklak-server-dev.herokuapp.com and http://staging.loklak.org.
+loklak is a server application which is able to collect messages from various sources, including twitter. The server contains a search index and a peer-to-peer index sharing interface. All messages are stored in an elasticsearch index. 
+
+Automatic deployments from GitHub are available for testing:
+* Development Branch https://loklak-server-dev.herokuapp.com
+* Master Branch https://loklak-search.herokuapp.com
 
 'Lok Lak' is also a very tasty Cambodian stir-fry meat dish (usually beef) with a LOT of fresh black pepper. If you ever have the chance to eat Beef Lok Lak, please try it. I hope not to scare vegetarians with this name, currently I am one as well.
 
