@@ -4,7 +4,7 @@
 [![Percentage of issues still open](http://isitmaintained.com/badge/open/loklak/loklak_server.svg)](http://isitmaintained.com/project/loklak/loklak_server "Percentage of issues still open")
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/loklak/loklak_server.svg)](http://isitmaintained.com/project/loklak/loklak_server "Average time to resolve an issue")
 [![Twitter](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Wow%20Check%20Loklak%20on%20@gitHub%20@loklak_app%20@loklak_:%20https://github.com/loklak/loklak_server%20&url=%5Bobject%20Object%5D)
-[![Twitter Follow](https://img.shields.io/twitter/follow/lklknt.svg?style=social&label=Follow&maxAge=2592000?style=flat-square)](https://twitter.com/loklak_)
+[![Twitter Follow](https://img.shields.io/twitter/follow/loklak_.svg?style=social&label=Follow&maxAge=2592000?style=flat-square)](https://twitter.com/loklak_)
 
 Development: [![Build Status](https://travis-ci.org/loklak/loklak_server.svg?branch=development)](https://travis-ci.org/loklak/loklak_server)
 Master: [![Build Status](https://travis-ci.org/loklak/loklak_server.svg?branch=master)](https://travis-ci.org/loklak/loklak_server)
