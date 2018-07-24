@@ -16,5 +16,4 @@ public class JsonMinifierTest {
         JSONObject challenge = capsule.getJSON();
         assertEquals(json.toString(), challenge.toString());
     }
-
 }

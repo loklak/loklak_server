@@ -69,7 +69,7 @@ public class RSSReaderService extends AbstractAPIHandler implements APIHandler {
         
 		try {
             ClientConnection connection = new ClientConnection(url);
-		    XmlReader xmlreader = new XmlReader(connection.inputStream);
+		    XmlReader xmlreader = new XmlReader(connection.getInputStream());
 			feed = input.build(xmlreader);
 		} catch (Exception e) {
 			e.printStackTrace();

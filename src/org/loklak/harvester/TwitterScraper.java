@@ -20,16 +20,20 @@
 package org.loklak.harvester;
 
 import static org.apache.http.util.EntityUtils.consumeQuietly;
-import static org.loklak.http.ClientConnection.getCustomClosableHttpClient;
+import static org.loklak.http.ClientConnection.getClosableHttpClient;
 import static org.loklak.http.ClientConnection.getHTML;
 
 import org.loklak.objects.AbstractObjectEntry;
+import org.loklak.objects.BasicTimeline.Order;
+
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,6 +41,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.json.JSONObject;
+import org.json.JSONTokener;
 import org.loklak.data.Classifier;
 import org.loklak.data.DAO;
 import org.loklak.data.Classifier.Category;
@@ -59,6 +64,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -69,7 +75,7 @@ import org.loklak.http.ClientConnection;
 import org.loklak.objects.MessageEntry;
 import org.loklak.objects.ProviderType;
 import org.loklak.objects.SourceType;
-import org.loklak.objects.Timeline;
+import org.loklak.objects.TwitterTimeline;
 import org.loklak.objects.UserEntry;
 
 
@@ -81,14 +87,14 @@ public class TwitterScraper {
     private static final Pattern guestTokenRegex = Pattern.compile("document\\.cookie \\= decodeURIComponent\\(\\\"gt\\=([0-9]+);");
     private static final Pattern bearerTokenRegex = Pattern.compile("BEARER_TOKEN:\\\"(.*?)\\\"");
 
-    public static Timeline search(
+    public static TwitterTimeline search(
             final String query,
             final ArrayList<String> filterList,
-            final Timeline.Order order,
+            final TwitterTimeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend,
             int jointime) {
-        Timeline[] tl = search(query, filterList, order, writeToIndex, writeToBackend);
+        TwitterTimeline[] tl = search(query, filterList, order, writeToIndex, writeToBackend);
         long timeout = System.currentTimeMillis() + jointime;
         long remainingWait = 0;
         for (TwitterTweet tt: tl[1]) {
@@ -101,9 +107,9 @@ public class TwitterScraper {
         return tl[0];
     }
 
-    public static Timeline search(
+    public static TwitterTimeline search(
             final String query,
-            final Timeline.Order order,
+            final TwitterTimeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend,
             int jointime) {
@@ -139,38 +145,37 @@ public class TwitterScraper {
             }
 
             // building url
-            httpsUrl = "https://twitter.com/search?f="
-                    + type + "&vertical=default&q=" + q + "&src=typd";
+            httpsUrl = "https://twitter.com/search?f=" + type + "&vertical=default&q=" + q + "&src=typd";
 
         } catch (UnsupportedEncodingException e) {}
         return httpsUrl;
     }
 
     @SuppressWarnings("unused")
-    private static Timeline[] search(
+    private static TwitterTimeline[] search(
             final String query,
-            final Timeline.Order order,
+            final TwitterTimeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend) {
         return search(query, new ArrayList<>(), order, writeToIndex, writeToBackend);
     }
 
-    private static Timeline[] search(
+    private static TwitterTimeline[] search(
             final String query,
             final ArrayList<String> filterList,
-            final Timeline.Order order,
+            final TwitterTimeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend) {
         // check
         // https://twitter.com/search-advanced for a better syntax
         // https://support.twitter.com/articles/71577-how-to-use-advanced-twitter-search#
         String https_url = prepareSearchUrl(query, filterList);
-        Timeline[] timelines = null;
+        TwitterTimeline[] timelines = null;
         try {
             ClientConnection connection = new ClientConnection(https_url);
-            if (connection.inputStream == null) return null;
+            if (connection.getInputStream() == null) return null;
             try {
-                BufferedReader br = new BufferedReader(new InputStreamReader(connection.inputStream, StandardCharsets.UTF_8));
+                BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8));
 
                 timelines = search(br, filterList, order, writeToIndex, writeToBackend);
             } catch (IOException e) {
@@ -181,13 +186,13 @@ public class TwitterScraper {
         } catch (IOException e) {
             // this could mean that twitter rejected the connection (DoS protection?) or we are offline (we should be silent then)
             // DAO.severe(e);
-            if (timelines == null) timelines = new Timeline[]{new Timeline(order), new Timeline(order)};
+            if (timelines == null) timelines = new TwitterTimeline[]{new TwitterTimeline(order), new TwitterTimeline(order)};
         };
 
         // wait until all messages in the timeline are ready
         if (timelines == null) {
             // timeout occurred
-            timelines = new Timeline[]{new Timeline(order), new Timeline(order)};
+            timelines = new TwitterTimeline[]{new TwitterTimeline(order), new TwitterTimeline(order)};
         }
         if (timelines != null) {
             if (timelines[0] != null) timelines[0].setScraperInfo("local");
@@ -196,44 +201,33 @@ public class TwitterScraper {
         return timelines;
     }
 
-    private static Timeline[] parse(
+    private static TwitterTimeline[] parse(
             final File file,
-            final Timeline.Order order,
+            final TwitterTimeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend) {
         return parse(file, new ArrayList<>(), order, writeToIndex, writeToBackend);
     }
 
-    private static Timeline[] parse(
+    private static TwitterTimeline[] parse(
             final File file,
             final ArrayList<String> filterList,
-            final Timeline.Order order,
+            final TwitterTimeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend) {
-        Timeline[] timelines = null;
+        TwitterTimeline[] timelines = null;
         try {
             BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
             timelines = search(br, filterList, order, writeToIndex, writeToBackend);
         } catch (IOException e) {
             DAO.severe(e);
         } finally {
-            if (timelines == null) timelines = new Timeline[]{new Timeline(order), new Timeline(order)};
+            if (timelines == null) timelines = new TwitterTimeline[]{new TwitterTimeline(order), new TwitterTimeline(order)};
         }
 
         if (timelines[0] != null) timelines[0].setScraperInfo("local");
         if (timelines[1] != null) timelines[1].setScraperInfo("local");
         return timelines;
-    }
-
-
-
-    private static Timeline[] search(
-            final BufferedReader br,
-            final Timeline.Order order,
-            final boolean writeToIndex,
-            final boolean writeToBackend) throws IOException {
-
-        return search(br, new ArrayList<>(), order, writeToIndex, writeToBackend);
     }
 
     /**
@@ -243,20 +237,21 @@ public class TwitterScraper {
      * @return two timelines in one array: Timeline[0] is the one which is finished to be used, Timeline[1] contains messages which are in postprocessing
      * @throws IOException
      */
-    private static Timeline[] search(
+    private static TwitterTimeline[] search(
             final BufferedReader br,
             final ArrayList<String> filterList,
-            final Timeline.Order order,
+            final TwitterTimeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend) throws IOException {
-        Timeline timelineReady = new Timeline(order);
-        Timeline timelineWorking = new Timeline(order);
+        TwitterTimeline timelineReady = new TwitterTimeline(order);
+        TwitterTimeline timelineWorking = new TwitterTimeline(order);
         String input;
         Map<String, prop> props = new HashMap<String, prop>();
         Set<String> images = null;
         Set<String> videos = null;
         String place_id = "";
         String place_name = "";
+        Set<String> mentions = new LinkedHashSet<>();
         boolean parsing_favourite = false, parsing_retweet = false;
         int line = 0; // first line is 1, according to emacs which numbers the first line also as 1
         boolean debuglog = DAO.getConfig("flag.debug.twitter_scraper", "false").equals("true");
@@ -266,13 +261,27 @@ public class TwitterScraper {
             input = input.trim();
 
             if (input.length() == 0) continue;
-
+            
             // debug
             if (debuglog) DAO.log(line + ": " + input);
             //if (input.indexOf("ProfileTweet-actionCount") > 0) DAO.log(input);
-
+            
             // parse
             int p;
+            if ((p = input.indexOf("data-reply-to-users-json=")) >= 0) {
+                prop mentions_prop = new prop(input, p, "data-reply-to-users-json");
+                String decoded = StringEscapeUtils.unescapeHtml4(mentions_prop.value);
+                JSONArray a = new JSONArray(new JSONTokener(decoded));
+                for (int i = 0; i < a.length(); i++) {
+                	mentions.add(a.getJSONObject(i).getString("screen_name"));
+                }
+                continue;
+            }
+            if ((p = input.indexOf("data-mentions=")) >= 0) {
+                prop mentions_prop = new prop(input, p, "data-mentions");
+                for (String s: mentions_prop.value.split(" ")) mentions.add(s);
+                continue;
+            }
             if ((p = input.indexOf("=\"account-group")) > 0) {
                 props.put("userid", new prop(input, p, "data-user-id"));
                 continue;
@@ -313,6 +322,7 @@ public class TwitterScraper {
                 }
                 prop tweettext = new prop(input, p, null);
                 props.put("tweettext", tweettext);
+                
                 continue;
             }
             if ((p = input.indexOf("class=\"ProfileTweet-actionCount")) > 0) {
@@ -380,6 +390,9 @@ public class TwitterScraper {
                     props = new HashMap<String, prop>();
                     place_id = "";
                     place_name = "";
+                    mentions.clear();
+                    videos = null;
+                    images = null;
                     continue;
                 }
 
@@ -399,33 +412,44 @@ public class TwitterScraper {
                 );
 
                 prop tweettimems = props.get("tweettimems");
-                if (tweettimems == null) {
-                    if (debuglog) DAO.log("*** line " + line + " MISSING value tweettimems");
-                    continue;
-                }
                 prop tweetretweetcount = props.get("tweetretweetcount");
-                if (tweetretweetcount == null) {
-                    if (debuglog) DAO.log("*** line " + line + " MISSING value tweetretweetcount");
-                    continue;
-                }
                 prop tweetfavouritecount = props.get("tweetfavouritecount");
-                if (tweetfavouritecount == null) {
-                    if (debuglog) DAO.log("*** line " + line + " MISSING value tweetfavouritecount");
+                
+                // patch text with non-mentioned mentions (twitter obviously cuts that away)
+                String rawtext = props.get("tweettext").value;
+                mentions.remove(user.getScreenName());
+                for (String mention: mentions) {
+                	String m = "@" + mention;
+                	if (rawtext.indexOf(m) < 0) rawtext = rawtext + " " + m;
+                }
+                
+                TwitterTweet tweet;
+                try {
+                    tweet = new TwitterTweet(
+                            user.getScreenName(),
+                            Long.parseLong(tweettimems.value),
+                            props.get("tweettimename").value,
+                            props.get("tweetstatusurl").value,
+                            rawtext,
+                            Long.parseLong(tweetretweetcount.value),
+                            Long.parseLong(tweetfavouritecount.value),
+                            images, videos, place_name, place_id,
+                            user, writeToIndex,  writeToBackend
+                    );
+
+                    place_id = "";
+                    place_name = "";
+                    mentions.clear();
+                    videos = null;
+                    images = null;
+                    props.clear();
+                } catch (NullPointerException e) {
+                    DAO.severe(e);
+                    tweet = null;
                     continue;
                 }
-
-                TwitterTweet tweet = new TwitterTweet(
-                        user.getScreenName(),
-                        Long.parseLong(tweettimems.value),
-                        props.get("tweettimename").value,
-                        props.get("tweetstatusurl").value,
-                        props.get("tweettext").value,
-                        Long.parseLong(tweetretweetcount.value),
-                        Long.parseLong(tweetfavouritecount.value),
-                        images, videos, place_name, place_id,
-                        user, writeToIndex,  writeToBackend
-                );
-                if (DAO.messages == null || !DAO.messages.existsCache(tweet.getPostId())) {
+                
+                //if (DAO.messages == null || !DAO.messages.existsCache(tweet.getPostId())) {
                     // checking against the exist cache is incomplete. A false negative would just cause that a tweet is
                     // indexed again.
                     if (tweet.willBeTimeConsuming()) {
@@ -445,17 +469,14 @@ public class TwitterScraper {
                         tweet.run();
                         timelineReady.add(tweet, user);
                     }
-                }
-                videos = null;
-                images = null;
-                props.clear();
+                //}
                 continue;
             }
         }
         //for (prop p: props.values()) System.out.println(p);
         br.close();
 
-        return new Timeline[]{timelineReady, timelineWorking};
+        return new TwitterTimeline[]{timelineReady, timelineWorking};
     }
 
     public static String[] fetchTwitterVideos(String tweetUrl) {
@@ -466,7 +487,7 @@ public class TwitterScraper {
         String bearerToken = null;
         try {
             ClientConnection conn = new ClientConnection(mobileUrl);
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.inputStream, StandardCharsets.UTF_8));
+            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
             String line;
             while ((line = br.readLine()) != null) {
                 if (bearerJsUrl != null && guestToken != null) {
@@ -511,7 +532,7 @@ public class TwitterScraper {
 
     private static String[] getConversationVideos(String tweetId, String bearerToken, String guestToken) throws IOException {
         String conversationApiUrl = "https://api.twitter.com/2/timeline/conversation/" + tweetId + ".json";
-        CloseableHttpClient httpClient = getCustomClosableHttpClient(true);
+        CloseableHttpClient httpClient = getClosableHttpClient();
         HttpGet req = new HttpGet(conversationApiUrl);
         req.setHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.98 Safari/537.36");
         req.setHeader("Authorization", "Bearer " + bearerToken);
@@ -540,7 +561,7 @@ public class TwitterScraper {
 
     private static String getBearerTokenFromJs(String jsUrl) throws IOException {
         ClientConnection conn = new ClientConnection(jsUrl);
-        BufferedReader br = new BufferedReader(new InputStreamReader(conn.inputStream, StandardCharsets.UTF_8));
+        BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
         String line = br.readLine();
         Matcher m = bearerTokenRegex.matcher(line);
         if (m.find()) {
@@ -590,10 +611,6 @@ public class TwitterScraper {
 
     private static class prop {
         public String key, value = null;
-        public prop(String value) {
-            this.key = null;
-            this.value = value;
-        }
         public prop(String line, int start, String key) {
             this.key = key;
             if (key == null) {
@@ -879,6 +896,8 @@ public class TwitterScraper {
 
         //TODO: fix the location issue and shift to MessageEntry class
         public void getLocation() {
+            if (this.text == null) this.text = "";
+
             if ((this.location_point == null || this.location_point.length == 0) && DAO.geoNames != null) {
                 GeoMark loc = null;
                 if (place_name != null && this.place_name.length() > 0 &&
@@ -911,13 +930,14 @@ public class TwitterScraper {
         public void enrich() {
             if (this.enriched) return;
             this.moreData.classifier = Classifier.classify(this.text);
-enrichData(this.text);
+            enrichData(this.text);
             getLocation();
 
             this.enriched = true;
         }
 
         public void enrichData(String inputText) {
+            if (inputText == null) inputText = "";
             StringBuilder text = new StringBuilder(inputText);
             this.links = this.moreData.extractLinks(text.toString());
             text = new StringBuilder(MessageEntry.SPACEX_PATTERN.matcher(text).replaceAll(" ").trim());
@@ -996,7 +1016,7 @@ enrichData(this.text);
                 this.enrich();
 
                 //DAO.log("TwitterTweet [" + this.postId + "] enrich    after " + (System.currentTimeMillis() - start) + "ms");
-                if (this.writeToIndex) IncomingMessageBuffer.addScheduler(this, this.user, true);
+                if (this.writeToIndex) IncomingMessageBuffer.addScheduler(this, this.user, true, true);
                 //DAO.log("TwitterTweet [" + this.postId + "] write     after " + (System.currentTimeMillis() - start) + "ms");
                 if (this.writeToBackend) DAO.outgoingMessages.transmitMessage(this, this.user);
                 //DAO.log("TwitterTweet [" + this.postId + "] transmit  after " + (System.currentTimeMillis() - start) + "ms");
@@ -1442,11 +1462,11 @@ enrichData(this.text);
         //wget --no-check-certificate "https://twitter.com/search?q=eifel&src=typd&f=realtime"
         ArrayList<String> filterList = new ArrayList<String>();
         filterList.add("image");
-        Timeline[] result = null;
+        TwitterTimeline[] result = null;
         if (args[0].startsWith("/"))
-            result = parse(new File(args[0]),Timeline.Order.CREATED_AT, true, true);
+            result = parse(new File(args[0]),Order.CREATED_AT, true, true);
         else
-            result = TwitterScraper.search(args[0], filterList, Timeline.Order.CREATED_AT, true, true);
+            result = TwitterScraper.search(args[0], filterList, Order.CREATED_AT, true, true);
         int all = 0;
         for (int x = 0; x < 2; x++) {
             if (x == 0) System.out.println("Timeline[0] - finished to be used:");

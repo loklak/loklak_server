@@ -37,7 +37,7 @@ import org.loklak.data.DAO;
 import org.loklak.harvester.BaseScraper;
 import org.loklak.harvester.Post;
 import org.loklak.harvester.RedirectUnshortener;
-import org.loklak.objects.Timeline2;
+import org.loklak.objects.PostTimeline;
 import org.loklak.server.BaseUserRole;
 import java.net.URISyntaxException;
 import org.apache.http.client.utils.URIBuilder;
@@ -213,11 +213,11 @@ public class TweetScraper extends BaseScraper {
      * @return two timelines in one array: Timeline[0] is the one which is finished to be used, Timeline[1] contains messages which are in postprocessing
      * @throws IOException
      */
-    private Timeline2 search(
+    private PostTimeline search(
             final BufferedReader br,
             String url
     ) throws IOException {
-        Timeline2 timelineReady = new Timeline2(order);
+        PostTimeline timelineReady = new PostTimeline(order);
         String input;
         Map<String, prop> props = new HashMap<String, prop>();
         Set<String> images = null;

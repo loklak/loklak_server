@@ -78,7 +78,7 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
     
     public static JSONObject status(final String protocolhostportstub) throws IOException {
         final String urlstring = protocolhostportstub + "/api/status.json";
-        byte[] response = ClientConnection.downloadPeer(urlstring);
+        byte[] response = ClientConnection.download(urlstring);
         if (response == null || response.length == 0) {
             return new JSONObject();
         }
@@ -119,9 +119,9 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
         system.put("runtime", System.currentTimeMillis() - Caretaker.startupTime);
         system.put("time_to_restart", Caretaker.upgradeTime - System.currentTimeMillis());
         system.put("load_system_average", OS.getSystemLoadAverage());
-        double systemCpuLoad = OS.getSystemCpuLoad();
-        system.put("load_system_cpu", systemCpuLoad == Double.NaN ? 0 : systemCpuLoad);
-        system.put("load_process_cpu", systemCpuLoad == Double.NaN ? 0 : systemCpuLoad);
+        Double systemCpuLoad = OS.getSystemCpuLoad();
+        system.put("load_system_cpu", systemCpuLoad.isNaN() || systemCpuLoad.isInfinite() ? 0 : systemCpuLoad.doubleValue());
+        system.put("load_process_cpu", systemCpuLoad.isNaN() || systemCpuLoad.isInfinite() ? 0 : systemCpuLoad);
         system.put("server_threads", LoklakServer.getServerThreads());
         system.put("server_uri", LoklakServer.getServerURI());
         system.put("Xmx", xmx);
@@ -156,6 +156,8 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
         long countLocalDayMessagesTimestamp  = DAO.countLocalMessages(86400000L, false);
         long countLocalWeekMessagesCreated = DAO.countLocalMessages(604800000L, true);
         long countLocalWeekMessagesTimestamp = DAO.countLocalMessages(604800000L, false);
+        long countLocal10MinDump = DAO.message_dump.objectsPersSecond();
+        long countLocal10MinNotInIndex = DAO.message_dump.objectsNotInIndexPerSecond();
         float mps1mC  = countLocalMinMessagesCreated  / 60f;
         float mps1mT  = countLocalMinMessagesTimestamp  / 60f;
         float mps10mC = countLocal10MMessagesCreated  / 600f;
@@ -176,11 +178,17 @@ public class StatusService extends AbstractAPIHandler implements APIHandler {
         index.put("mps1dT", mps1dT);
         index.put("mps1wC", mps1wC);
         index.put("mps1wT", mps1wT);
+        index.put("mps10mD", countLocal10MinDump);
+        index.put("mps10mNII", countLocal10MinNotInIndex);
         index.put("mps", (int)  // best of 1d, 1h and 10m
                 Math.max(
+                    Math.max(
                         Math.max(mps1dC, Math.max(mps1hC, Math.max(mps10mC, mps1mC))),
                         Math.max(mps1dT, Math.max(mps1hT, Math.max(mps10mT, mps1mT)))
-                ));
+                    ),
+                    countLocal10MinDump
+                )
+        );
         JSONObject messages = new JSONObject(true);
         messages.put("size", local_messages + backend_messages);
         messages.put("size_local", local_messages);

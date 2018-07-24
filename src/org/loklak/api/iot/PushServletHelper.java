@@ -5,9 +5,9 @@ import org.json.JSONObject;
 import org.loklak.data.DAO;
 import org.loklak.harvester.HarvestingFrequency;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
+import org.loklak.objects.BasicTimeline.Order;
 import org.loklak.objects.ImportProfileEntry;
 import org.loklak.objects.SourceType;
-import org.loklak.objects.Timeline;
 import org.loklak.objects.UserEntry;
 import org.loklak.server.Query;
 
@@ -168,7 +168,7 @@ public class PushServletHelper {
         Double longitude = (Double) location_point.get(1);
         String query = "/source_type=" + source_type + " /location=" + latitude + "," + longitude;
         // search only latest message
-        DAO.SearchLocalMessages search = new DAO.SearchLocalMessages(query, Timeline.Order.CREATED_AT, 0, 1, 0);
+        DAO.SearchLocalMessages search = new DAO.SearchLocalMessages(query, Order.CREATED_AT, 0, 1, 0);
         Iterator<TwitterTweet> it = search.timeline.iterator();
         while (it.hasNext()) {
             TwitterTweet messageEntry = it.next();

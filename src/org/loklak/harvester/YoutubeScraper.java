@@ -40,7 +40,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.loklak.data.DAO;
-import org.loklak.objects.Timeline2;
+import org.loklak.objects.PostTimeline;
 import org.loklak.server.BaseUserRole;
 import org.loklak.tools.CharacterCoding;
 
@@ -51,7 +51,7 @@ public class YoutubeScraper extends BaseScraper {
     //public final static ExecutorService executor = Executors.newFixedThreadPool(40);
 
     /**
-     * 
+     *
      */
     private static final long serialVersionUID = 3324726267150935678L;
     private final static String[] html_tags = new String[]{"title"};
@@ -77,7 +77,7 @@ public class YoutubeScraper extends BaseScraper {
 
     @Override
     public String getAPIPath() {
-        return "/api/youtubescraper";
+        return "/api/youtubescraper.json";
     }
 
     @Override
@@ -165,7 +165,7 @@ public class YoutubeScraper extends BaseScraper {
     @Override
     protected Post scrape(BufferedReader br, String type, String url) {
         Post out = new Post(true);
-        Timeline2 postList = new Timeline2(this.order);
+        PostTimeline postList = new PostTimeline(this.order);
         switch (type) {
             case "user":
                 //TODO: Add scraper
@@ -214,7 +214,7 @@ public class YoutubeScraper extends BaseScraper {
     public Post parseVideo(final BufferedReader br, String type, String url) {
         String input = "";
         Post json = new Post();
-        boolean parse_span = false, parse_license = false;
+        boolean parse_span = false, parse_license = false, parse_channel_name = false;
         // values for span
         String itemprop= "";
         String itemtype = "";
@@ -356,6 +356,16 @@ public class YoutubeScraper extends BaseScraper {
                         text = CharacterCoding.html2unicode(text);
                         json.put("youtube_description", text);
                         continue;
+                    }
+                    if (parse_channel_name) {
+                        p = input.indexOf(">", p);
+                        int q = input.indexOf("</a>", p);
+                        String text = input.substring(p + 1, q);
+                        json.put("youtube_channel_name", text);
+                        parse_channel_name = false;
+                    }
+                    if ((p = input.indexOf("yt-user-info")) >= 0) {
+                        parse_channel_name = true;
                     }
                 }
             }

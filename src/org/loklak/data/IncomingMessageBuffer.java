@@ -26,18 +26,19 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
-import org.loklak.objects.Timeline;
-import org.loklak.objects.Timeline2;
+import org.loklak.objects.TwitterTimeline;
+import org.loklak.objects.PostTimeline;
 import org.loklak.objects.UserEntry;
 
 public class IncomingMessageBuffer extends Thread {
 
-    private final static int MESSAGE_QUEUE_MAXSIZE = 100000;
+    private final static int MESSAGE_QUEUE_MAXSIZE = 20000;
     private final static int bufferLimit = MESSAGE_QUEUE_MAXSIZE * 3 / 4;
-    private static BlockingQueue<DAO.MessageWrapper> messageQueue = new ArrayBlockingQueue<DAO.MessageWrapper>(MESSAGE_QUEUE_MAXSIZE);
-    private static BlockingQueue<Timeline2> postQueue = new ArrayBlockingQueue<Timeline2>(MESSAGE_QUEUE_MAXSIZE);
+    private static LinkedBlockingDeque<DAO.MessageWrapper> messageQueue = new LinkedBlockingDeque<DAO.MessageWrapper>(MESSAGE_QUEUE_MAXSIZE);
+    private static BlockingQueue<PostTimeline> postQueue = new ArrayBlockingQueue<PostTimeline>(MESSAGE_QUEUE_MAXSIZE);
     private static AtomicInteger queueClients = new AtomicInteger(0);
 
     private boolean shallRun = true, isBusy = false;
@@ -81,22 +82,24 @@ public class IncomingMessageBuffer extends Thread {
     @Override
     public void run() {
         // work loop
+        while (!DAO.wait_ready(1000)) {
+            try {Thread.sleep(10000);} catch (InterruptedException e) {}
+        }
         loop: while (this.shallRun) try {
             this.isBusy = false;
 
-            if ((messageQueue.isEmpty() && postQueue.isEmpty()) || !DAO.wait_ready(1000)) {
+            if (messageQueue.isEmpty() && postQueue.isEmpty()) {
                 // in case that the queue is empty, try to fill it with previously pushed content
                 //List<Map<String, Object>> shard = this.jsonBufferHandler.getBufferShard();
                 // if the shard has content, turn this into messages again
 
-
                 // if such content does not exist, simply sleep a while
-                try {Thread.sleep(10000);} catch (InterruptedException e) {}
+                try {Thread.sleep(2000);} catch (InterruptedException e) {}
                 continue loop;
             }
             this.isBusy = true;
-            if(messageQueue.size() > 0) indexTweets();
-            else if(postQueue.size() > 0) indexPosts();
+            if (messageQueue.size() > 0) indexTweets();
+            if (postQueue.size() > 0) indexPosts();
             this.isBusy = false;
 
         } catch (Throwable e) {
@@ -108,36 +111,37 @@ public class IncomingMessageBuffer extends Thread {
 
     private void indexPosts() {
         int maxBulkSize = 1;
-        Timeline2 postListObj = null;
-        Set<Timeline2> bulk = new HashSet<Timeline2>();
+        PostTimeline postListObj = null;
+        Set<PostTimeline> bulk = new HashSet<PostTimeline>();
 
-        while((postListObj = postQueue.poll()) != null) {
+        pollloop: while((postListObj = postQueue.poll()) != null) {
             bulk.add(postListObj);
-            if (bulk.size() >= maxBulkSize) {
-                dumpbulk(bulk);
-                bulk.clear();
-            }
+            if (bulk.size() >= maxBulkSize) break pollloop;
+        }
+        if (bulk.size() >= 0) {
+            dumpPostBulk(bulk);
+            bulk.clear();
         }
     }
 
     private void indexTweets() {
         DAO.MessageWrapper mw;
-        AtomicInteger candMessages = new AtomicInteger();
-        AtomicInteger knownMessagesCache = new AtomicInteger();
+        AtomicInteger newMessageCounter = new AtomicInteger();
+        AtomicInteger doubleMessageCounter = new AtomicInteger();
         int maxBulkSize = 200;
         List<DAO.MessageWrapper> bulk = new ArrayList<>();
         pollloop: while ((mw = messageQueue.poll()) != null) {
             if (DAO.messages.existsCache(mw.t.getPostId())) {
-                 knownMessagesCache.incrementAndGet();
+                 doubleMessageCounter.incrementAndGet();
                  continue pollloop;
             }
-            candMessages.incrementAndGet();
+            newMessageCounter.incrementAndGet();
 
             // in case that the message queue is too large, dump the queue into a file here
             // to make room that clients can continue to push without blocking
             if (messageQueue.size() > bufferLimit) {
                 try {
-                    DAO.message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
+                    DAO.message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""), false);
                     DAO.log("writing message directly to dump, messageQueue.size() = " + messageQueue.size() + ", bufferLimit = " + bufferLimit);
                 } catch (IOException e) {
                     DAO.severe("writing of dump failed", e);
@@ -150,49 +154,55 @@ public class IncomingMessageBuffer extends Thread {
 
             mw.t.enrich(); // we enrich here again because the remote peer may have done this with an outdated version or not at all
             bulk.add(mw);
-            if (bulk.size() >= maxBulkSize) {
-                dumpbulk(bulk, candMessages, knownMessagesCache);
-                bulk.clear();
-            }
+            if (bulk.size() >= maxBulkSize) break pollloop;
         }
         if (bulk.size() >= 0) {
-            dumpbulk(bulk, candMessages, knownMessagesCache);
+            dumpMessageBulk(bulk, newMessageCounter, doubleMessageCounter);
             bulk.clear();
         }
     }
 
-    private void dumpbulk(List<DAO.MessageWrapper> bulk, AtomicInteger candMessages, AtomicInteger knownMessagesCache) {
+    private void dumpMessageBulk(List<DAO.MessageWrapper> bulk, AtomicInteger newMessageCounter, AtomicInteger doubleMessageCounter) {
         long dumpstart = System.currentTimeMillis();
-        int notWrittenDouble = DAO.writeMessageBulk(bulk).size();
-        knownMessagesCache.addAndGet(notWrittenDouble);
-        candMessages.addAndGet(-notWrittenDouble);
+        int newWritten = DAO.writeMessageBulk(bulk).size();
+        doubleMessageCounter.addAndGet(bulk.size() - newWritten);
+        newMessageCounter.addAndGet(newWritten);
         long dumpfinish = System.currentTimeMillis();
-        DAO.log("dumped timelines: " + candMessages + " new " + knownMessagesCache + " known from cache, storage time: " + (dumpfinish - dumpstart) + " ms, remaining messages: " + messageQueue.size());
-        candMessages.set(0);
-        knownMessagesCache.set(0);
+        DAO.log("dumped timelines: " + newMessageCounter + " new, " + doubleMessageCounter + " known from cache, storage time: " + (dumpfinish - dumpstart) + " ms, remaining messages: " + messageQueue.size());
+        newMessageCounter.set(0);
+        doubleMessageCounter.set(0);
     }
 
-    private void dumpbulk(Set<Timeline2> bulk) {
+    private void dumpPostBulk(Set<PostTimeline> bulk) {
         //TODO: use this
         int notWrittenDouble = DAO.writeMessageBulk(bulk).size();
         DAO.log("dumped timelines: "  + postQueue.size());
     }
 
-    public static void addScheduler(Timeline tl, final boolean dump) {
+    public static void addScheduler(TwitterTimeline tl, final boolean dump, boolean priority) {
         queueClients.incrementAndGet();
-        for (TwitterTweet me: tl) addScheduler(me, tl.getUser(me), dump);
+        for (TwitterTweet me: tl) addScheduler(me, tl.getUser(me), dump, priority);
         queueClients.decrementAndGet();
     }
 
-    public static void addScheduler(final TwitterTweet t, final UserEntry u, final boolean dump) {
+    public static void addScheduler(final TwitterTweet t, final UserEntry u, final boolean dump, boolean priority) {
         try {
-            messageQueue.put(new DAO.MessageWrapper(t, u, dump));
+            if (priority) {
+                try {
+                    messageQueue.addFirst(new DAO.MessageWrapper(t, u, dump));
+                } catch (IllegalStateException ee) {
+                    // case where the queue is full
+                    messageQueue.put(new DAO.MessageWrapper(t, u, dump));
+                }
+            } else {
+                messageQueue.put(new DAO.MessageWrapper(t, u, dump));
+            }
         } catch (InterruptedException e) {
         	DAO.severe(e);
         }
     }
 
-    public static void addScheduler(Timeline2 postList) {
+    public static void addScheduler(PostTimeline postList) {
         queueClients.incrementAndGet();
        try {
             postQueue.put(postList);

@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
@@ -64,7 +65,6 @@ import org.eclipse.jetty.server.handler.gzip.GzipHandler;
 import org.eclipse.jetty.server.session.HashSessionIdManager;
 import org.eclipse.jetty.server.session.HashSessionManager;
 import org.eclipse.jetty.server.session.SessionHandler;
-import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.security.Constraint;
@@ -79,6 +79,7 @@ import org.eclipse.jetty.security.authentication.BasicAuthenticator;
 import org.loklak.api.admin.AccessServlet;
 import org.loklak.api.admin.CampaignServlet;
 import org.loklak.api.admin.CrawlerServlet;
+import org.loklak.api.admin.LogServlet;
 import org.loklak.api.admin.SettingsServlet;
 import org.loklak.api.admin.StatusService;
 import org.loklak.api.admin.ThreaddumpServlet;
@@ -148,7 +149,7 @@ public class LoklakServer {
 
     private final static String[] FOLDER_TO_EXTRACT = { "conf", "html", "installation", "ssi"};
 
-    public final static Set<String> blacklistedHosts = new ConcurrentHashSet<>();
+    public final static Set<String> blacklistedHosts = ConcurrentHashMap.newKeySet();
 
     private static Server server = null;
     private static Caretaker caretaker = null;
@@ -419,6 +420,7 @@ public class LoklakServer {
     private static void setupHttpServer(int httpPort, int httpsPort) throws Exception{
     	QueuedThreadPool pool = new QueuedThreadPool();
         pool.setMaxThreads(500);
+        pool.start();
         LoklakServer.server = new Server(pool);
         LoklakServer.server.setStopAtShutdown(true);
 
@@ -436,6 +438,7 @@ public class LoklakServer {
 	        connector.setPort(httpPort);
 	        connector.setName("httpd:" + httpPort);
 	        connector.setIdleTimeout(20000); // timout in ms when no bytes send / received
+	        connector.start();
 	        LoklakServer.server.addConnector(connector);
         }
 
@@ -711,6 +714,7 @@ public class LoklakServer {
         servletHandler.addServlet(assetServletHolder, "/api/asset");
         servletHandler.addServlet(Sitemap.class, "/api/sitemap.xml");
         servletHandler.addServlet(ThreaddumpServlet.class, "/api/threaddump.txt");
+        servletHandler.addServlet(LogServlet.class, "/api/log.txt");
         servletHandler.addServlet(MarkdownServlet.class, "/vis/markdown.gif");
         servletHandler.addServlet(MarkdownServlet.class, "/vis/markdown.gif.base64");
         servletHandler.addServlet(MarkdownServlet.class, "/vis/markdown.png");

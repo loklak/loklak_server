@@ -39,7 +39,7 @@ import org.jsoup.select.Elements;
 import org.loklak.data.DAO;
 import org.loklak.harvester.BaseScraper;
 import org.loklak.harvester.Post;
-import org.loklak.objects.Timeline2;
+import org.loklak.objects.PostTimeline;
 import org.loklak.objects.SourceType;
 import org.loklak.server.BaseUserRole;
 
@@ -112,7 +112,7 @@ public class QuoraProfileScraper extends BaseScraper {
 
     @Override
     public String getAPIPath() {
-        return "/api/quoraprofilescraper";
+        return "/api/quoraprofilescraper.json";
     }
 
     @Override
@@ -163,7 +163,7 @@ public class QuoraProfileScraper extends BaseScraper {
     public Post getResults() {
         String url;
         Thread[] dataThreads = new Thread[2];
-        Timeline2 postList = new Timeline2(this.order);
+        PostTimeline postList = new PostTimeline(this.order);
 
         if(this.typeList.contains("user") || this.typeList.contains("all")) {
             url = prepareSearchUrl("user");
@@ -201,9 +201,9 @@ public class QuoraProfileScraper extends BaseScraper {
 
         private String url = "";
         private String type = "all";
-        private Timeline2 postList = null;
+        private PostTimeline postList = null;
 
-        public ConcurrentScrape(String url, String type, Timeline2 postList) {
+        public ConcurrentScrape(String url, String type, PostTimeline postList) {
             this.url = url;
             this.type = type;
             this.postList = postList;
@@ -236,7 +236,7 @@ public class QuoraProfileScraper extends BaseScraper {
         DAO.severe("Couldn't complete all threads, stuck at scraper: " + this.scraperName + " dataThread: " + stuck_at);
     }
 
-    private Timeline2 scrapeQues(BufferedReader br, String url) {
+    private PostTimeline scrapeQues(BufferedReader br, String url) {
         Pattern resultBlock = Pattern.compile("<div[^>]*[^>\\s]*[^>]*class=['\"][^>'\"]*(results_list)");
         Pattern quesLink = Pattern.compile("<a[^>]*class=['\"][^>'\"]*question_link[^>'\"]*[\"'][^>]*href=['\"]([^>'\"]*)");
         Pattern quesStart = Pattern.compile("<span[^>]*class=[\'\"][^>\'\"]*question_text[^>\'\"]*[\'\"][^>]*>");
@@ -246,7 +246,7 @@ public class QuoraProfileScraper extends BaseScraper {
         String uptoTerm = "</a>";
         Post qPost = null;
 
-        Timeline2 quesList = new Timeline2(this.order);
+        PostTimeline quesList = new PostTimeline(this.order);
 
         String input = "";
         String _qPostId = "";
@@ -328,10 +328,10 @@ public class QuoraProfileScraper extends BaseScraper {
         return quesList;
     }
 
-    private Timeline2 scrapeProfile(BufferedReader br, String url) {
+    private PostTimeline scrapeProfile(BufferedReader br, String url) {
         String html;
         Post quoraProfile = new QuoraPost(this.query, 0);
-        Timeline2 usersList = new Timeline2(this.order);
+        PostTimeline usersList = new PostTimeline(this.order);
         try {
             html = bufferedReaderToString(br);
         } catch(IOException e) {

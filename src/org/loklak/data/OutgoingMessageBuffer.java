@@ -22,7 +22,8 @@ package org.loklak.data;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
-import org.loklak.objects.Timeline;
+import org.loklak.objects.BasicTimeline.Order;
+import org.loklak.objects.TwitterTimeline;
 import org.loklak.objects.UserEntry;
 
 /**
@@ -30,20 +31,20 @@ import org.loklak.objects.UserEntry;
  */
 public class OutgoingMessageBuffer {
 
-    private  BlockingQueue<Timeline> pushToBackendTimeline;
+    private  BlockingQueue<TwitterTimeline> pushToBackendTimeline;
 
     public OutgoingMessageBuffer() {
-        this.pushToBackendTimeline = new LinkedBlockingQueue<Timeline>();
+        this.pushToBackendTimeline = new LinkedBlockingQueue<TwitterTimeline>();
     }
 
-    public void transmitTimelineToBackend(Timeline tl) {
+    public void transmitTimelineToBackend(TwitterTimeline tl) {
         if (DAO.getBackend().length > 0) {
             boolean clone = false;
             for (TwitterTweet message: tl) {
                 if (!message.getSourceType().propagate()) {clone = true; break;}
             }
             if (clone) {
-                Timeline tlc = new Timeline(tl.getOrder(), tl.getScraperInfo());
+                TwitterTimeline tlc = new TwitterTimeline(tl.getOrder(), tl.getScraperInfo());
                 for (TwitterTweet message: tl) {
                     if (message.getSourceType().propagate()) tlc.add(message, tl.getUser(message));
                 }
@@ -58,8 +59,8 @@ public class OutgoingMessageBuffer {
         if (!tweet.getSourceType().propagate()) return;
         if (DAO.getBackend().length <= 0) return;
         if (!DAO.getConfig("backend.push.enabled", false)) return;
-        Timeline tl = this.pushToBackendTimeline.poll();
-        if (tl == null) tl = new Timeline(Timeline.Order.CREATED_AT);
+        TwitterTimeline tl = this.pushToBackendTimeline.poll();
+        if (tl == null) tl = new TwitterTimeline(Order.CREATED_AT);
         tl.add(tweet, user);
         this.pushToBackendTimeline.add(tl);
     }
@@ -71,12 +72,12 @@ public class OutgoingMessageBuffer {
      * @param minsize
      * @return
      */
-    public Timeline takeTimelineMin(final Timeline.Order order, final int minsize, final int maxsize) {
-        if (timelineSize() < minsize) return new Timeline(order);
-        Timeline tl = new Timeline(order);
+    public TwitterTimeline takeTimelineMin(final TwitterTimeline.Order order, final int minsize, final int maxsize) {
+        if (timelineSize() < minsize) return new TwitterTimeline(order);
+        TwitterTimeline tl = new TwitterTimeline(order);
         try {
             while (this.pushToBackendTimeline.size() > 0) {
-                Timeline tl0 = this.pushToBackendTimeline.take();
+                TwitterTimeline tl0 = this.pushToBackendTimeline.take();
                 if (tl0 == null) return tl;
                 tl.putAll(tl0);
                 if (tl.size() >= maxsize) break;
@@ -89,7 +90,7 @@ public class OutgoingMessageBuffer {
 
     public int timelineSize() {
         int c = 0;
-        for (Timeline tl: this.pushToBackendTimeline) c += tl.size();
+        for (TwitterTimeline tl: this.pushToBackendTimeline) c += tl.size();
         return c;
     }
 }

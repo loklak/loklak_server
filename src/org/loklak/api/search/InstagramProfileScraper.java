@@ -37,31 +37,58 @@ import org.loklak.server.BaseUserRole;
 
 public class InstagramProfileScraper extends BaseScraper {
 
-	private static final long serialVersionUID = -3360416757176406604L;
+    private static final long serialVersionUID = -3360416757176406604L;
+    
+    /**
+     * instaJsonData is a Pattern object which will be used to match the required pattern
+     * with the extracted elements from html page
+     */
     private Pattern instaJsonData = Pattern.compile("(\\{\"activity_counts\").*(\\});");
 
+    /**
+     * Constructor to set baseUrl and scraperName in the super(Base-Interface) for
+     * current Search-Scrapper
+     */
     public InstagramProfileScraper() {
         super();
         this.baseUrl = "https://www.instagram.com/";
         this.scraperName = "instagram";
-   }
+    }
 
+    /**
+     * Constructor to set the given query and map _extra
+     * @param _extra
+     * A map with key and value as string
+     * @param _query
+     * _query in form for string value
+     */
     public InstagramProfileScraper(String _query, Map<String, String> _extra) {
         this();
         this.setExtra(_extra);
         this.query = _query;
     }
 
+    /**
+     * Constructor to map the given _extra param with key and value as String
+     */
     public InstagramProfileScraper(Map<String, String> _extra) {
         this();
         this.setExtra(_extra);
     }
 
+    /**
+     * Constructor to set String query
+     * @param query as string
+     */
     public InstagramProfileScraper(String _query) {
         this();
         this.query = _query;
     }
 
+    /**
+     * Method to get api path of the Instagram Profile Scraper
+     * @return api endpoint of Instagram Profile Scraper in form of String
+     */
 	@Override
 	public String getAPIPath() {
 		return "/api/instagramprofilescraper.json";
@@ -72,11 +99,19 @@ public class InstagramProfileScraper extends BaseScraper {
 		return BaseUserRole.ANONYMOUS;
 	}
 
+    /**
+     * @return null when asked for the default permissions
+     * of the given base user role in form of JSONObject
+     */
 	@Override
 	public JSONObject getDefaultPermissions(BaseUserRole baseUserRole) {
 		return null;
 	}
 
+    /**
+     * Method to generate url for search using URIBuilder
+     * @return URL in string format
+     */
     protected String prepareSearchUrl(String type) {
         URIBuilder url = null;
         try {
@@ -89,6 +124,10 @@ public class InstagramProfileScraper extends BaseScraper {
         return url.toString();
     }
 
+    /**
+     * Method to set the "profile" key with value of query if the "profile" key is empty/null
+     * and set the "query" key with value of query
+     */
     protected void setParam() {
         if("".equals(this.getExtraValue("profile"))) {
             this.setExtraValue("profile", this.query);
@@ -96,12 +135,21 @@ public class InstagramProfileScraper extends BaseScraper {
         this.setExtraValue("query", this.query);
     }
 
+    /**
+     * Method to scrape the given url with key as "profile_posts"
+     * @return instaObj as a Post object 
+     */
     protected Post scrape(BufferedReader br, String type, String url) {
    	    Post instaObj = new Post(true);
         this.putData(instaObj, "profile_posts", this.scrapeInstagram(br, url));
         return instaObj;
     }
 
+    /**
+     * Method to match the given pattern with extracted elements of html page
+     * and parse the result for the posts on the given instagram page
+     * @return instaProfile as a JSONArray object containing all posts and details of viewer
+     */
 	public JSONArray scrapeInstagram(BufferedReader br, String url) {
 		Document htmlPage = null;
         Post instaObj = null;

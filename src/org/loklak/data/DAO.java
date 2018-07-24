@@ -48,10 +48,10 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
 import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.logging.slf4j.Slf4jESLoggerFactory;
@@ -84,8 +84,8 @@ import org.loklak.objects.Peers;
 import org.loklak.objects.QueryEntry;
 import org.loklak.objects.ResultList;
 import org.loklak.objects.SourceType;
-import org.loklak.objects.Timeline;
-import org.loklak.objects.Timeline2;
+import org.loklak.objects.TwitterTimeline;
+import org.loklak.objects.PostTimeline;
 import org.loklak.objects.TimelineCache;
 import org.loklak.objects.UserEntry;
 import org.loklak.server.*;
@@ -136,7 +136,7 @@ public class DAO {
     public final static int CACHE_MAXSIZE =   10000;
     public final static int EXIST_MAXSIZE = 4000000;
 
-    public  static File conf_dir, bin_dir, html_dir;
+    public  static File data_dir, conf_dir, bin_dir, html_dir;
     private static File external_data, assets, dictionaries;
     public static Settings public_settings, private_settings;
     private static Path message_dump_dir, account_dump_dir, import_profile_dump_dir;
@@ -175,6 +175,7 @@ public class DAO {
 
     public static MQTTPublisher mqttPublisher = null;
     public static boolean streamEnabled = false;
+    public static List<String> randomTerms = new ArrayList<>();
 
     public static enum IndexName {
     	messages_hour("messages.json"), messages_day("messages.json"), messages_week("messages.json"), messages, queries, users, accounts, import_profiles;
@@ -200,6 +201,7 @@ public class DAO {
         log("initializing loklak DAO");
 
         config = configMap;
+        data_dir = dataPath.toFile();
         conf_dir = new File("conf");
         bin_dir = new File("bin");
         html_dir = new File("html");
@@ -356,16 +358,19 @@ public class DAO {
 
         File user_dump_dir = new File(datadir, "accounts");
         user_dump_dir.mkdirs();
+        log("initializing user dump ...");
         user_dump = new JsonDataset(
                 user_dump_dir,USER_DUMP_FILE_PREFIX,
                 new JsonDataset.Column[]{new JsonDataset.Column("id_str", false), new JsonDataset.Column("screen_name", true)},
                 "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
                 JsonRepository.REWRITABLE_MODE, false, Integer.MAX_VALUE);
+        log("initializing followers dump ...");
         followers_dump = new JsonDataset(
                 user_dump_dir, FOLLOWERS_DUMP_FILE_PREFIX,
                 new JsonDataset.Column[]{new JsonDataset.Column("screen_name", true)},
                 "retrieval_date", DateParser.PATTERN_ISO8601MILLIS,
                 JsonRepository.REWRITABLE_MODE, false, Integer.MAX_VALUE);
+        log("initializing following dump ...");
         following_dump = new JsonDataset(
                 user_dump_dir, FOLLOWING_DUMP_FILE_PREFIX,
                 new JsonDataset.Column[]{new JsonDataset.Column("screen_name", true)},
@@ -445,6 +450,11 @@ public class DAO {
         File harvestingPath = new File(datadir, "queries");
         if (!harvestingPath.exists()) harvestingPath.mkdirs();
         String[] list = harvestingPath.list();
+        if (list.length < 10) {
+            // use the test data instead
+            harvestingPath = new File(new File(datadir.getParentFile(), "test"), "queries");
+            list = harvestingPath.list();
+        }
         for (String queryfile: list) {
             if (queryfile.startsWith(".") || queryfile.endsWith("~")) continue;
             try {
@@ -462,6 +472,7 @@ public class DAO {
                     }
                     // write line into query database
                     if (!existQuery(line)) {
+                        randomTerms.add(line);
                         bulkEntries.add(
                             new IndexEntry<QueryEntry>(
                                 line,
@@ -704,7 +715,7 @@ public class DAO {
 
                 // record tweet into text file
                 if (mw.dump && writeDump) {
-                    message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
+                    message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""), true);
                 }
                 mw.t.publishToMQTT();
              }
@@ -731,8 +742,8 @@ public class DAO {
         return createdIDs;
     }
 
-    public static Set<String> writeMessageBulk(Set<Timeline2> postBulk) {
-        for (Timeline2 postList: postBulk) {
+    public static Set<String> writeMessageBulk(Set<PostTimeline> postBulk) {
+        for (PostTimeline postList: postBulk) {
             if (postList.size() < 1) continue;
             if(postList.dump) {
                 writeMessageBulkDump(postList);
@@ -743,7 +754,7 @@ public class DAO {
         return new HashSet<>();
     }
 
-    private static Set<String> writeMessageBulkNoDump(Timeline2 postList) {
+    private static Set<String> writeMessageBulkNoDump(PostTimeline postList) {
         if (postList.size() == 0) return new HashSet<>();
         List<Post> messageBulk = new ArrayList<>();
 
@@ -813,6 +824,7 @@ public class DAO {
             Classifier.learnPhrase(mw.t.getText());
         }
         ElasticsearchClient.BulkWriteResult result = null;
+        Set<String> created_ids = new HashSet<>();
         try {
             final Date limitDate = new Date();
             List<IndexEntry<Post>> macc;
@@ -824,6 +836,7 @@ public class DAO {
             macc = messageBulk.stream().filter(i -> i.getObject().getCreated().after(limitDate)).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for HOUR: " + macc.size());
             result = messages_hour.writeEntries(macc);
+            created_ids.addAll(result.getCreated());
             //DAO.log("***DEBUG messages for HOUR: " + result.getCreated().size() + "  created");
             for (IndexEntry<Post> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for HOUR: " + existed.size() + "  existed");
@@ -832,6 +845,7 @@ public class DAO {
             macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getPostId()))).filter(i -> i.getObject().getCreated().after(limitDate)).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for  DAY : " + macc.size());
             result = messages_day.writeEntries(macc);
+            created_ids.addAll(result.getCreated());
             //DAO.log("***DEBUG messages for  DAY: " + result.getCreated().size() + " created");
             for (IndexEntry<Post> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for  DAY: " + existed.size()  + "  existed");
@@ -840,6 +854,7 @@ public class DAO {
             macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getPostId()))).filter(i -> i.getObject().getCreated().after(limitDate)).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for WEEK: " + macc.size());
             result = messages_week.writeEntries(macc);
+            created_ids.addAll(result.getCreated());
             //DAO.log("***DEBUG messages for WEEK: " + result.getCreated().size() + "  created");
             for (IndexEntry<Post> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for WEEK: " + existed.size()  + "  existed");
@@ -847,6 +862,7 @@ public class DAO {
             macc = messageBulk.stream().filter(i -> !(existed.contains(i.getObject().getPostId()))).collect(Collectors.toList());
             //DAO.log("***DEBUG messages for  ALL : " + macc.size());
             result = messages.writeEntries(macc);
+            created_ids.addAll(result.getCreated());
             //DAO.log("***DEBUG messages for  ALL: " + result.getCreated().size() + "  created");
             for (IndexEntry<Post> i: macc) if (!(result.getCreated().contains(i.getId()))) existed.add(i.getId());
             //DAO.log("***DEBUG messages for  ALL: " + existed.size()  + "  existed");
@@ -856,8 +872,7 @@ public class DAO {
         } catch (IOException e) {
         	DAO.severe(e);
         }
-        if (result == null) return new HashSet<String>();
-        return result.getCreated();
+        return created_ids;
     }
 
     private static Set<String> writeMessageBulkDump(Collection<MessageWrapper> mws) {
@@ -867,14 +882,15 @@ public class DAO {
             mw.t.publishToMQTT();
             if (!created.contains(mw.t.getPostId())) continue;
             synchronized (DAO.class) {
+                
                 // record tweet into text file
                 if (writeDump) {
-                    message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""));
+                    message_dump.write(mw.t.toJSON(mw.u, false, Integer.MAX_VALUE, ""), true);
                 }
             }
 
             // teach the classifier
-            Classifier.learnPhrase(mw.t.getText());
+            if (randomPicker.nextInt(100) == 0) Classifier.learnPhrase(mw.t.getText());
         } catch (IOException e) {
         	DAO.severe(e);
         }
@@ -882,7 +898,7 @@ public class DAO {
         return created;
     }
 
-    private static Set<String> writeMessageBulkDump(Timeline2 postList) {
+    private static Set<String> writeMessageBulkDump(PostTimeline postList) {
         Set<String> created = writeMessageBulkNoDump(postList);
 
         for (Post post: postList) try {
@@ -890,7 +906,7 @@ public class DAO {
             synchronized (DAO.class) {
                 // record tweet into text file
                 if (writeDump) {
-                    message_dump.write(post);
+                    message_dump.write(post, true);
                 }
             }
         } catch (IOException e) {
@@ -910,7 +926,7 @@ public class DAO {
         try {
             // record account into text file
             if (dump && writeDump) {
-                account_dump.write(a.toJSON(null));
+                account_dump.write(a.toJSON(null), true);
             }
 
             // record account into search index
@@ -931,7 +947,7 @@ public class DAO {
         try {
             // record import profile into text file
             if (dump && writeDump) {
-                import_profile_dump.write(i.toJSON());
+                import_profile_dump.write(i.toJSON(), true);
             }
             // record import profile into search index
             importProfiles.writeEntry(new IndexEntry<ImportProfileEntry>(i.getId(), i.getSourceType(), i));
@@ -942,38 +958,44 @@ public class DAO {
     }
 
     private static long countLocalHourMessages(final long millis, boolean created_at) {
-        if (millis > 3600000L) return countLocalDayMessages(millis, created_at);
-        if (created_at && millis == 3600000L) return elasticsearch_client.count(IndexName.messages_hour.name());
+        if (millis > DateParser.HOUR_MILLIS) return countLocalDayMessages(millis, created_at);
+        if (created_at && millis == DateParser.HOUR_MILLIS) return elasticsearch_client.count(IndexName.messages_hour.name());
         return elasticsearch_client.count(
-                created_at ? IndexName.messages_hour.name() : IndexName.messages_week.name(),
+                created_at ? IndexName.messages_hour.name() : IndexName.messages_day.name(),
                 created_at ? AbstractObjectEntry.CREATED_AT_FIELDNAME : AbstractObjectEntry.TIMESTAMP_FIELDNAME,
                 millis);
     }
 
     private static long countLocalDayMessages(final long millis, boolean created_at) {
-        if (millis > 86400000L) return countLocalWeekMessages(millis, created_at);
-        if (created_at && millis == 86400000L) return elasticsearch_client.count(IndexName.messages_hour.name());
+        if (millis > DateParser.DAY_MILLIS) return countLocalWeekMessages(millis, created_at);
+        if (created_at && millis == DateParser.DAY_MILLIS) return elasticsearch_client.count(IndexName.messages_day.name());
         return elasticsearch_client.count(
-                created_at ? IndexName.messages_day.name() : IndexName.messages.name(),
+                created_at ? IndexName.messages_day.name() : IndexName.messages_week.name(),
                 created_at ? AbstractObjectEntry.CREATED_AT_FIELDNAME : AbstractObjectEntry.TIMESTAMP_FIELDNAME,
                 millis);
     }
 
     private static long countLocalWeekMessages(final long millis, boolean created_at) {
-        if (millis > 604800000L) return countLocalMessages(millis, created_at);
-        if (created_at && millis == 604800000L) return elasticsearch_client.count(IndexName.messages_hour.name());
+        if (millis > DateParser.WEEK_MILLIS) return countLocalMessages(millis, created_at);
+        if (created_at && millis == DateParser.WEEK_MILLIS) return elasticsearch_client.count(IndexName.messages_week.name());
         return elasticsearch_client.count(
                 created_at ? IndexName.messages_week.name() : IndexName.messages.name(),
                 created_at ? AbstractObjectEntry.CREATED_AT_FIELDNAME : AbstractObjectEntry.TIMESTAMP_FIELDNAME,
                 millis);
     }
 
+    /**
+     * count the messages in the local index
+     * @param millis number of milliseconds in the past
+     * @param created_at field selector: true -> use CREATED_AT, the time when the tweet was created; false -> use TIMESTAMP, the time when the tweet was harvested
+     * @return the number of messages in that time span
+     */
     public static long countLocalMessages(final long millis, boolean created_at) {
         if (millis == 0) return 0;
         if (millis > 0) {
-            if (millis <= 3600000L) return countLocalHourMessages(millis, created_at);
-            if (millis <= 86400000L) return countLocalDayMessages(millis, created_at);
-            if (millis <= 604800000L) return countLocalWeekMessages(millis, created_at);
+            if (millis <= DateParser.HOUR_MILLIS) return countLocalHourMessages(millis, created_at);
+            if (millis <= DateParser.DAY_MILLIS) return countLocalDayMessages(millis, created_at);
+            if (millis <= DateParser.WEEK_MILLIS) return countLocalWeekMessages(millis, created_at);
         }
         return elasticsearch_client.count(
                 IndexName.messages.name(),
@@ -1027,6 +1049,10 @@ public class DAO {
     public static boolean deleteQuery(String id, SourceType sourceType) {
         return queries.delete(id, sourceType);
     }
+    
+    public static String getRandomTerm() {
+        return randomTerms.size() == 0 ? null : randomTerms.get(randomPicker.nextInt(randomTerms.size()));
+    }
 
     public static boolean deleteImportProfile(String id, SourceType sourceType) {
         return importProfiles.delete(id, sourceType);
@@ -1038,8 +1064,8 @@ public class DAO {
     }
 
     public static class SearchLocalMessages {
-        public Timeline timeline;
-        public Timeline2 postList;
+        public TwitterTimeline timeline;
+        public PostTimeline postList;
         public Map<String, List<Map.Entry<String, Long>>> aggregations;
         public ElasticsearchClient.Query query;
 
@@ -1055,14 +1081,14 @@ public class DAO {
          */
         public SearchLocalMessages (
                 final String q,
-                final Timeline.Order orderField,
+                final TwitterTimeline.Order orderField,
                 final int timezoneOffset,
                 final int resultCount,
                 final int aggregationLimit,
                 final ArrayList<String> filterList,
                 final String... aggregationFields
         ) {
-            this.timeline = new Timeline(orderField);
+            this.timeline = new TwitterTimeline(orderField);
             QueryEntry.ElasticsearchQuery sq = new QueryEntry.ElasticsearchQuery(q, timezoneOffset, filterList);
             long interval = sq.until.getTime() - sq.since.getTime();
             IndexName resultIndex;
@@ -1115,7 +1141,7 @@ public class DAO {
 
         public SearchLocalMessages (
                 final String q,
-                final Timeline.Order orderField,
+                final TwitterTimeline.Order orderField,
                 final int timezoneOffset,
                 final int resultCount,
                 final int aggregationLimit,
@@ -1134,10 +1160,10 @@ public class DAO {
 
         public SearchLocalMessages (
                 Map<String, Map<String, String>> inputMap,
-                final Timeline2.Order orderField,
+                final PostTimeline.Order orderField,
                 final int resultCount
         ) {
-            this.postList = new Timeline2(orderField);
+            this.postList = new PostTimeline(orderField);
             IndexName resultIndex;
             QueryEntry.ElasticsearchQuery sq = new QueryEntry.ElasticsearchQuery(
                     inputMap.get("get"), inputMap.get("not_get"), inputMap.get("also_get"));
@@ -1316,10 +1342,10 @@ public class DAO {
         return latests.values();
     }
 
-    public static Timeline scrapeTwitter(
+    public static TwitterTimeline scrapeTwitter(
             final Query post,
             final String q,
-            final Timeline.Order order,
+            final TwitterTimeline.Order order,
             final int timezoneOffset,
             boolean byUserQuery,
             long timeout,
@@ -1328,11 +1354,11 @@ public class DAO {
         return scrapeTwitter(post, new ArrayList<>(), q, order, timezoneOffset, byUserQuery, timeout, recordQuery);
     }
 
-    public static Timeline scrapeTwitter(
+    public static TwitterTimeline scrapeTwitter(
             final Query post,
             final ArrayList<String> filterList,
             final String q,
-            final Timeline.Order order,
+            final TwitterTimeline.Order order,
             final int timezoneOffset,
             boolean byUserQuery,
             long timeout,
@@ -1340,7 +1366,7 @@ public class DAO {
         // retrieve messages from remote server
 
         ArrayList<String> remote = DAO.getFrontPeers();
-        Timeline tl;
+        TwitterTimeline tl;
         if (remote.size() > 0 && (peerLatency.get(remote.get(0)) == null || peerLatency.get(remote.get(0)).longValue() < 3000)) {
             long start = System.currentTimeMillis();
             tl = searchOnOtherPeers(remote, q, filterList, order, 100, timezoneOffset, "all", SearchServlet.frontpeer_hash, timeout); // all must be selected here to catch up missing tweets between intervals
@@ -1401,8 +1427,8 @@ public class DAO {
             boolean byUserQuery,
             boolean recordQuery,
             JSONObject metadata) {
-        Timeline2.Order order= getOrder(inputMap.get("order"));
-        Timeline2 dataSet = new Timeline2(order);
+        PostTimeline.Order order= getOrder(inputMap.get("order"));
+        PostTimeline dataSet = new PostTimeline(order);
         List<String> scraperList = Arrays.asList(inputMap.get("scraper").trim().split("\\s*,\\s*"));
         List<BaseScraper> scraperObjList = getScraperObjects(scraperList, inputMap);
         ExecutorService scraperRunner = Executors.newFixedThreadPool(scraperObjList.size());
@@ -1457,9 +1483,9 @@ public class DAO {
         return scraperObjList;
     }
 
-    public static Timeline2.Order getOrder(String orderString) {
+    public static PostTimeline.Order getOrder(String orderString) {
         //TODO: order set according to input
-        return Timeline2.parseOrder("timestamp");
+        return PostTimeline.parseOrder("timestamp");
     }
 
     public static final Random random = new Random(System.currentTimeMillis());
@@ -1533,11 +1559,11 @@ public class DAO {
         return getBestPeers(testpeers);
     }
 
-    public static Timeline searchBackend(final String q,final ArrayList<String> filterList, final Timeline.Order order, final int count, final int timezoneOffset, final String where, final long timeout) {
+    public static TwitterTimeline searchBackend(final String q,final ArrayList<String> filterList, final TwitterTimeline.Order order, final int count, final int timezoneOffset, final String where, final long timeout) {
         List<String> remote = getBackendPeers();
 
         if (remote.size() > 0 /*&& (peerLatency.get(remote.get(0)) == null || peerLatency.get(remote.get(0)) < 3000)*/) { // condition deactivated because we need always at least one peer
-            Timeline tt = searchOnOtherPeers(remote, q, filterList, order, count, timezoneOffset, where, SearchServlet.backend_hash, timeout);
+            TwitterTimeline tt = searchOnOtherPeers(remote, q, filterList, order, count, timezoneOffset, where, SearchServlet.backend_hash, timeout);
             if (tt != null) tt.writeToIndex();
             return tt;
         }
@@ -1546,14 +1572,14 @@ public class DAO {
 
     private final static Random randomPicker = new Random(System.currentTimeMillis());
 
-    public static Timeline searchOnOtherPeers(final List<String> remote, final String q, final ArrayList<String> filterList,final Timeline.Order order, final int count, final int timezoneOffset, final String source, final String provider_hash, final long timeout) {
+    public static TwitterTimeline searchOnOtherPeers(final List<String> remote, final String q, final ArrayList<String> filterList,final TwitterTimeline.Order order, final int count, final int timezoneOffset, final String source, final String provider_hash, final long timeout) {
         // select remote peer
         while (remote.size() > 0) {
             int pick = randomPicker.nextInt(remote.size());
             String peer = remote.get(pick);
             long start = System.currentTimeMillis();
             try {
-                Timeline tl = SearchServlet.search(new String[]{peer}, q, filterList, order, source, count, timezoneOffset, provider_hash, timeout);
+                TwitterTimeline tl = SearchServlet.search(new String[]{peer}, q, filterList, order, source, count, timezoneOffset, provider_hash, timeout);
                 peerLatency.put(peer, System.currentTimeMillis() - start);
                 // to show which peer was used for the retrieval, we move the picked peer to the front of the list
                 if (pick != 0) remote.add(0, remote.remove(pick));
@@ -1562,7 +1588,7 @@ public class DAO {
             } catch (IOException e) {
                 DAO.log("searchOnOtherPeers: no IO to scraping target: " + e.getMessage());
                 // the remote peer seems to be unresponsive, remove it (temporary) from the remote peer list
-                peerLatency.put(peer, 3600000L);
+                peerLatency.put(peer, DateParser.HOUR_MILLIS);
                 frontPeerCache.remove(peer);
                 backendPeerCache.remove(peer);
                 remote.remove(pick);
@@ -1571,9 +1597,9 @@ public class DAO {
         return null;
     }
 
-    public final static Set<Number> newUserIds = new ConcurrentHashSet<>();
+    public final static Set<Number> newUserIds = ConcurrentHashMap.newKeySet();
 
-    public static void announceNewUserId(Timeline tl) {
+    public static void announceNewUserId(TwitterTimeline tl) {
         for (TwitterTweet message: tl) {
             UserEntry user = tl.getUser(message);
             assert user != null;
@@ -1605,7 +1631,7 @@ public class DAO {
      * For logging informational events
      */
     public static void log(String line) {
-        if(DAO.getConfig("flag.log.dao", "true").equals("true")) {
+        if (DAO.getConfig("flag.log.dao", "true").equals("true")) {
             logger.info(line);
         }
     }
@@ -1614,19 +1640,19 @@ public class DAO {
      * For events serious enough to inform and log, but not fatal.
      */
     public static void severe(String line) {
-        if(DAO.getConfig("flag.severe.dao", "true").equals("true")) {
+        if (DAO.getConfig("flag.severe.dao", "true").equals("true")) {
             logger.warn(line);
         }
     }
 
     public static void severe(String line, Throwable e) {
-        if(DAO.getConfig("flag.severe.dao", "true").equals("true")) {
-            logger.warn(line);
+        if (DAO.getConfig("flag.severe.dao", "true").equals("true")) {
+            logger.warn(line, e);
         }
     }
 
     public static void severe(Throwable e) {
-        if(DAO.getConfig("flag.severe.dao", "true").equals("true")) {
+        if (DAO.getConfig("flag.severe.dao", "true").equals("true")) {
             logger.warn("", e);
         }
     }
@@ -1635,7 +1661,7 @@ public class DAO {
      * For Debugging events (very noisy).
      */
     public static void debug(Throwable e) {
-        if(DAO.getConfig("flag.debug.dao", "true").equals("true")) {
+        if (DAO.getConfig("flag.debug.dao", "true").equals("true")) {
             DAO.severe(e);
         }
     }

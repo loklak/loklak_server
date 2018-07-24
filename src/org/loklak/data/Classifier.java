@@ -28,7 +28,8 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
-import org.loklak.objects.Timeline;
+import org.loklak.objects.BasicTimeline.Order;
+import org.loklak.objects.TwitterTimeline;
 import org.loklak.tools.bayes.BayesClassifier;
 import org.loklak.tools.bayes.Classification;
 
@@ -125,6 +126,8 @@ public class Classifier {
     }
 
     public static List<String> normalize(String phrase) {
+        if (phrase == null) phrase = "";
+
         String cleanphrase = NON_WORD_PATTERN.matcher(phrase.toLowerCase()).replaceAll(" ");
         String[] rawtokens = WHITESPACE_PATTERN.split(cleanphrase, 0);
         List<String> tokens = new ArrayList<>();
@@ -138,6 +141,8 @@ public class Classifier {
     }
 
     public static Map<Context, Classification<String, Category>> classify(String phrase) {
+        if (phrase == null) phrase = "";
+
         Map<Context, Classification<String, Category>> map = new HashMap<>();
         for (Context c: Context.values()) {
             Classification<String, Category> classification = c.classify(phrase);
@@ -170,8 +175,8 @@ public class Classifier {
         // load a test set
         if (DAO.countLocalMessages(-1, true) > 0) {
             DAO.log("Classifier: loading test set for " + initsize + " messages...");
-            DAO.SearchLocalMessages testset = new DAO.SearchLocalMessages("", Timeline.Order.CREATED_AT, 0, initsize, 0);
-            Timeline tl = testset.timeline;
+            DAO.SearchLocalMessages testset = new DAO.SearchLocalMessages("", Order.CREATED_AT, 0, initsize, 0);
+            TwitterTimeline tl = testset.timeline;
             DAO.log("Classifier: awaiting " + tl.size() * Context.values().length + " learn steps...");
             int count = 0;
             for (Context c: Context.values()) {

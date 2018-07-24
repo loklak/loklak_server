@@ -6,13 +6,13 @@ import org.junit.Test;
 import org.loklak.api.search.QuoraProfileScraper;
 import org.loklak.data.DAO;
 import org.loklak.http.ClientConnection;
-import org.loklak.objects.Timeline2;
+import org.loklak.objects.PostTimeline;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import org.loklak.harvester.TwitterScraperTest;
 
 /**
@@ -21,23 +21,30 @@ import org.loklak.harvester.TwitterScraperTest;
 public class QuoraProfileScraperTest {
 
     @Test
+    public void apiPathTest() {
+        QuoraProfileScraper quoraScraper = new QuoraProfileScraper();
+        assertEquals("/api/quoraprofilescraper.json", quoraScraper.getAPIPath());
+    }
+
+    @Test
     public void quoraProfileScraperUserTest() {
 
         QuoraProfileScraper quoraScraper = new QuoraProfileScraper();
-        Timeline2 profileListTimeLine = null;
+        PostTimeline profileListTimeLine = null;
         String url = "https://www.quora.com/profile/Saptak-Sengupta";
         BufferedReader br = null;
-        
+
         String userName = "Saptak Sengupta";
-        String rssFeedLink = "https://www.quora.com/profile/Saptak-Sengupta/rss";
-        String profileImage = "https://qph.ec.quoracdn.net/main-thumb-24728160-200-igibbfdmibqxdtrjlrdnejpvjqepxpnn.jpeg";
+        String profileImagePath = "/main-thumb-24728160-200-igibbfdmibqxdtrjlrdnejpvjqepxpnn.jpeg";
         String topicsUrl = "https://www.quora.com/profile/Saptak-Sengupta/topics";
         String followingUrl = "https://www.quora.com/profile/Saptak-Sengupta/following";
         String blogsUrl = "https://www.quora.com/profile/Saptak-Sengupta/blogs";
         String editsUrl = "https://www.quora.com/profile/Saptak-Sengupta/log";
         String postsUrl = "https://www.quora.com/profile/Saptak-Sengupta/all_posts";
         String questionsUrl = "https://www.quora.com/profile/Saptak-Sengupta/questions";
-        
+        String postType = "user";
+        String post_scraper = "quora";
+
         try {
             ClientConnection connection = new ClientConnection(url);
             //Check Network issue
@@ -49,34 +56,36 @@ public class QuoraProfileScraperTest {
         }
 
         try {
-            profileListTimeLine = (Timeline2)TwitterScraperTest.executePrivateMethod(QuoraProfileScraper.class, quoraScraper, "scrapeProfile", new Class[]{BufferedReader.class, String.class}, br, url);
+            profileListTimeLine = (PostTimeline)TwitterScraperTest.executePrivateMethod(QuoraProfileScraper.class, quoraScraper, "scrapeProfile", new Class[]{BufferedReader.class, String.class}, br, url);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
         JSONArray profileList = profileListTimeLine.toArray();
-        JSONObject quoraProfile = (JSONObject)profileList.get(0);
+        JSONObject quoraProfile = profileList.getJSONObject(0);
 
-        assertEquals(quoraProfile.getString("search_url"), url);
-        assertEquals(quoraProfile.getString("user_name"), userName);
-        assertEquals(quoraProfile.getString("rss_feed_link"), rssFeedLink);
-        assertEquals(quoraProfile.getString("profileImage"), profileImage);
-        assertEquals(quoraProfile.getJSONObject("feeds").getString("topics_url"), topicsUrl);
-        assertEquals(quoraProfile.getJSONObject("feeds").getString("following_url"), followingUrl);
-        assertEquals(quoraProfile.getJSONObject("feeds").getString("blogs_url"), blogsUrl);
-        assertEquals(quoraProfile.getJSONObject("feeds").getString("edits_url"), editsUrl);
-        assertEquals(quoraProfile.getJSONObject("feeds").getString("posts_url"), postsUrl);
-        assertEquals(quoraProfile.getJSONObject("feeds").getString("questions_url"), questionsUrl);
+        assertNotNull(quoraProfile.getString("bio"));
+        assertEquals(post_scraper, quoraProfile.getString("post_scraper"));
+        assertEquals(postType, quoraProfile.getString("post_type"));
+        assertEquals(url, quoraProfile.getString("search_url"));
+        assertEquals(userName, quoraProfile.getString("user_name"));
+        assertEquals(profileImagePath, quoraProfile.getString("profileImage").substring(quoraProfile.getString("profileImage").length()-profileImagePath.length()));
+        assertEquals(topicsUrl, quoraProfile.getJSONObject("feeds").getString("topics_url"));
+        assertEquals(followingUrl, quoraProfile.getJSONObject("feeds").getString("following_url"));
+        assertEquals(blogsUrl, quoraProfile.getJSONObject("feeds").getString("blogs_url"));
+        assertEquals(editsUrl, quoraProfile.getJSONObject("feeds").getString("edits_url"));
+        assertEquals(postsUrl, quoraProfile.getJSONObject("feeds").getString("posts_url"));
+        assertEquals(questionsUrl, quoraProfile.getJSONObject("feeds").getString("questions_url"));
     }
 
     @Test
     public void quoraQuestionScraperUserTest() {
 
         QuoraProfileScraper quoraScraper = new QuoraProfileScraper();
-        Timeline2 questionListTimeLine = null;
+        PostTimeline questionListTimeLine = null;
         String url = "https://www.quora.com/search/?q=fossasia&type=question";
         String postType = "question";
         BufferedReader br = null;
-                
+
         try {
             ClientConnection connection = new ClientConnection(url);
             //Check Network issue
@@ -88,18 +97,18 @@ public class QuoraProfileScraperTest {
         }
 
         try {
-            questionListTimeLine = (Timeline2)TwitterScraperTest.executePrivateMethod(QuoraProfileScraper.class, quoraScraper, "scrapeQues", new Class[]{BufferedReader.class, String.class}, br, url);
+            questionListTimeLine = (PostTimeline)TwitterScraperTest.executePrivateMethod(QuoraProfileScraper.class, quoraScraper, "scrapeQues", new Class[]{BufferedReader.class, String.class}, br, url);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
         JSONArray qList = questionListTimeLine.toArray();
-        
-        assertFalse(qList.length() == 0);
+
+        assertNotNull(qList.length());
 
         for (int i = 0; i < qList.length(); i++) {
             JSONObject question = (JSONObject)qList.get(i);
-            assertEquals(question.getString("post_type"), postType);
-            assertEquals(question.getString("search_url"), url);
-        } 
+            assertEquals(postType, question.getString("post_type"));
+            assertEquals(url, question.getString("search_url"));
+        }
     }
 }

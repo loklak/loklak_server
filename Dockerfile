@@ -1,9 +1,14 @@
-FROM alpine:latest
-MAINTAINER Ansgar Schmidt <ansgar.schmidt@gmx.net>
+FROM openjdk:8-alpine
+LABEL maintainer="Ansgar Schmidt <ansgar.schmidt@gmx.net>"
+# Create Volume for persistence
+VOLUME ["/loklak_server/data"]
+
+# start loklak
+CMD ["/loklak_server/bin/start.sh", "-Idn"]
 
 # setup locales
-ENV LANG=en_US.UTF-8
 
+ENV LANG=en_US.UTF-8
 # Expose the web interface ports
 EXPOSE 80 443
 
@@ -18,24 +23,14 @@ ADD gradle /loklak_server/gradle/
 ADD gradlew /loklak_server/
 ADD build.gradle /loklak_server/
 ADD settings.gradle /loklak_server/
+ADD test/queries /loklak_server/test/queries/
 
-# install OpenJDK 8 JDK, Ant, and Bash
-RUN apk update && apk add openjdk8 git bash && \
+RUN apk update && apk add --no-cache git bash && \
     # compile loklak
     cd /loklak_server && ./gradlew build -x checkstyleMain -x checkstyleTest -x jacocoTestReport && \
     # change config file
     sed -i 's/^\(port.http=\).*/\180/;s/^\(port.https=\).*/\1443/;s/^\(upgradeInterval=\).*/\186400000000/' \
-        conf/config.properties && \
-    # remove OpenJDK 8 JDK and Ant
-    apk del openjdk8 git && \
-    # install OpenJDK 8 JRE without GUI support
-    apk add openjdk8-jre-base
+        conf/config.properties
 
 # set current working directory to loklak_server
 WORKDIR /loklak_server
-
-# Create Volume for persistence
-VOLUME ["/loklak_server/data"]
-
-# start loklak
-CMD ["/loklak_server/bin/start.sh", "-Idn"]

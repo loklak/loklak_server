@@ -125,7 +125,7 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
 
     @Override
     public boolean existsCache(String id) {
-        return this.objectCache.exist(id) || this.existCache.contains(id);
+        return this.existCache.contains(id) || this.objectCache.exist(id);
     }
     
     @Override
@@ -142,6 +142,13 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
         if (map == null) return null;
         this.existCache.add(id);
         return new JSONObject(map);
+    }
+
+    @Override
+    public JSONObject readJSONCache(String id) {
+    	ObjectEntry oe = this.objectCache.get(id);
+    	if (oe == null) return null;
+    	return oe.toJSON();
     }
 
     @Override

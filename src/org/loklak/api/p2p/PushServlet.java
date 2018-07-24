@@ -43,9 +43,9 @@ import org.loklak.http.RemoteAccess;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
 import org.loklak.objects.ProviderType;
 import org.loklak.objects.QueryEntry;
-import org.loklak.objects.Timeline;
+import org.loklak.objects.TwitterTimeline;
 import org.loklak.objects.UserEntry;
-import org.loklak.objects.Timeline.Order;
+import org.loklak.objects.BasicTimeline.Order;
 import org.loklak.server.Query;
 import org.loklak.tools.UTF8;
 import org.loklak.tools.JsonSignature;
@@ -94,23 +94,26 @@ public class PushServlet extends HttpServlet {
      * @param peerMessage if message is send to a peer
      * @return true if the data was transmitted to at least one target peer
      */
-    public static boolean push(String[] hoststubs, Timeline timeline, boolean peerMessage) {
+    public static boolean push(String[] hoststubs, TwitterTimeline timeline, boolean peerMessage) {
         // transmit the timeline
         String data = timeline.toJSON(false, "search_metadata", "statuses").toString();
         assert data != null;
         boolean transmittedToAtLeastOnePeer = false;
-        for (String hoststub: hoststubs) {
+        pushattempts: for (String hoststub: hoststubs) {
             ClientConnection connection = null;
             try {
                 if (hoststub.endsWith("/")) hoststub = hoststub.substring(0, hoststub.length() - 1);
                 Map<String, byte[]> post = new HashMap<String, byte[]>();
                 post.put("data", UTF8.getBytes(data)); // optionally implement a gzipped form here
                 JsonSignature.addSignature(post,DAO.private_settings.getPrivateKey());
-                connection = new ClientConnection(hoststub + "/api/push.json", post, !"peers".equals(DAO.getConfig("httpsclient.trustselfsignedcerts", "peers")));
+                connection = new ClientConnection(hoststub + "/api/push.json", post);
+                DAO.log("SUCCESS push " + timeline.size() + " messages to backend " + hoststub);
                 transmittedToAtLeastOnePeer = true;
+                break pushattempts;
             } catch (IOException | JSONException | SignatureException | InvalidKeyException e) {
                 DAO.log("FAILED to push " + timeline.size() + " messages to backend " + hoststub);
                 DAO.severe(e);
+                try {Thread.sleep(1000);} catch (InterruptedException e1) {} // sleep to prevent that same hosts are requested too fast causing a "frequency too high" exception
             } finally {
                 if (connection != null) connection.close();
             }
@@ -118,7 +121,7 @@ public class PushServlet extends HttpServlet {
         return transmittedToAtLeastOnePeer;
     }
 
-    public static boolean push(String[] hoststubs, Timeline timeline) {
+    public static boolean push(String[] hoststubs, TwitterTimeline timeline) {
         return push(hoststubs, timeline, true);
     }
 
@@ -190,7 +193,7 @@ public class PushServlet extends HttpServlet {
         // read statuses
         JSONArray statuses = map.has("statuses") ? map.getJSONArray("statuses") : null;
         if (statuses != null) {
-            Timeline tl = new Timeline(Order.CREATED_AT);
+            TwitterTimeline tl = new TwitterTimeline(Order.CREATED_AT);
             for (Object tweet_obj: statuses) {
                 JSONObject tweet = (JSONObject) tweet_obj;
                 recordCount++;
@@ -205,7 +208,7 @@ public class PushServlet extends HttpServlet {
                 //boolean newtweet = DAO.writeMessage(t, u, true, true, true);
                 //if (newtweet) newCount++; else knownCount++;
             }
-            IncomingMessageBuffer.addScheduler(tl, true);
+            IncomingMessageBuffer.addScheduler(tl, true, false);
             //try {DAO.users.bulkCacheFlush();} catch (IOException e) {}
             //try {DAO.messages.bulkCacheFlush();} catch (IOException e) {}
 
@@ -213,24 +216,28 @@ public class PushServlet extends HttpServlet {
 
             // update query database if query was given in the result list
             if (metadata != null) {
-                query = metadata.has("query") ? (String) metadata.get("query") : null;
-                if (query != null) {
-                    // update query database
-                    QueryEntry qe = null;
-                    try {
-                        qe = DAO.queries.read(query);
-                    } catch (IOException e1) {
-                        e1.printStackTrace();
-                    }
-                    if (qe != null) {
-                        // existing queries are updated
-                        qe.update(tl.period(), false);
-                        try {
-                            DAO.queries.writeEntry(new IndexEntry<QueryEntry>(query, qe.getSourceType(), qe));
-                        } catch (IOException e) {
-                        	DAO.severe(e);
+                final String querys = metadata.has("query") ? (String) metadata.get("query") : null;
+                if (querys != null) {
+                    // update query database concurrently
+                    new Thread() {
+                        public void run() {
+                            QueryEntry qe = null;
+                            try {
+                                qe = DAO.queries.read(querys);
+                            } catch (IOException e1) {
+                                e1.printStackTrace();
+                            }
+                            if (qe != null) {
+                                // existing queries are updated
+                                qe.update(tl.period(), false);
+                                try {
+                                    DAO.queries.writeEntry(new IndexEntry<QueryEntry>(querys, qe.getSourceType(), qe));
+                                } catch (IOException e) {
+                                    DAO.severe(e);
+                                }
+                            }
                         }
-                    }
+                    }.start();
                 }
             }
 

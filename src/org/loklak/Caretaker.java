@@ -21,11 +21,13 @@ package org.loklak;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.elasticsearch.search.sort.SortOrder;
@@ -37,7 +39,8 @@ import org.loklak.data.DAO.IndexName;
 import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.harvester.TwitterAPI;
 import org.loklak.objects.QueryEntry;
-import org.loklak.objects.Timeline;
+import org.loklak.objects.TwitterTimeline;
+import org.loklak.objects.BasicTimeline.Order;
 import org.loklak.tools.DateParser;
 import org.loklak.tools.OS;
 
@@ -58,6 +61,7 @@ public class Caretaker extends Thread {
     public        static long upgradeTime = startupTime + upgradeWait;
     private final static long helloPeriod = 600000; // one ping each 10 minutes
     private       static long helloTime   = 0; // latest hello ping time
+    private       static long deletionTime = 0;
 
     private static final int TIMELINE_PUSH_MINSIZE = 200;
     private static final int TIMELINE_PUSH_MAXSIZE = 1000;
@@ -103,14 +107,14 @@ public class Caretaker extends Thread {
             if (SuggestServlet.cache.size() > 100) SuggestServlet.cache.clear();
             
             // sleep a bit to prevent that the DoS limit fires at backend server
-            try {Thread.sleep(busy ? 1000 : 5000);} catch (InterruptedException e) {}
+            try {Thread.sleep(busy ? 500 : 5000);} catch (InterruptedException e) {}
             if (!this.shallRun) break beat;
             busy = false;
             
             //DAO.log("connection pool: " + ClientConnection.cm.getTotalStats().toString());
             
             // peer-to-peer operation
-            Timeline tl = DAO.outgoingMessages.takeTimelineMin(Timeline.Order.CREATED_AT, TIMELINE_PUSH_MINSIZE, TIMELINE_PUSH_MAXSIZE);
+            TwitterTimeline tl = DAO.outgoingMessages.takeTimelineMin(Order.CREATED_AT, TIMELINE_PUSH_MINSIZE, TIMELINE_PUSH_MAXSIZE);
             if (tl != null && tl.size() > 0 && backends.length > 0) {
                 // transmit the timeline
                 long start = System.currentTimeMillis();
@@ -174,27 +178,42 @@ public class Caretaker extends Thread {
             }
             
             // run some crawl steps
-            for (int i = 0; i < 10; i++) {
-                if (Crawler.process() == 0) break; // this may produce tweets for the timeline push
-                try {Thread.sleep(random.nextInt(200));} catch (InterruptedException e) {}
-                busy = true;
+            if (Crawler.pending() > 0) {
+                crawler: for (int i = 0; i < 10; i++) {
+                    List<Thread> t = new ArrayList<>();
+                    final AtomicBoolean finished = new AtomicBoolean(false);
+                    for (int j = 0; j < 10; j++) {
+                        Thread u = new Thread() {
+                            public void run() {
+                                if (Crawler.process() == 0) finished.set(true);
+                            }
+                        };
+                        u.start();
+                        t.add(u);
+                        try {Thread.sleep(random.nextInt(20));} catch (InterruptedException e) {}
+                    }
+                    t.forEach(u -> {
+                        try {u.join(1000);} catch (InterruptedException e) {}
+                    });
+                    if (finished.get()) break crawler; else busy = true;
+                }
             }
             
             // run searches
             if (DAO.getConfig("retrieval.queries.enabled", false) && IncomingMessageBuffer.addSchedulerAvailable()) {
                 // execute some queries again: look out in the suggest database for queries with outdated due-time in field retrieval_next
                 List<QueryEntry> queryList = DAO.SearchLocalQueries("", 10, "retrieval_next", "date", SortOrder.ASC, null, new Date(), "retrieval_next");
-                for (QueryEntry qe: queryList) {
+                queriesloop: for (QueryEntry qe: queryList) {
                     if (!acceptQuery4Retrieval(qe.getQuery())) {
                         DAO.deleteQuery(qe.getQuery(), qe.getSourceType());
-                        continue;
+                        continue queriesloop;
                     }
-                    Timeline t;
+                    TwitterTimeline t;
                     try {
                         t = DAO.scrapeTwitter(
                                 null,
                                 qe.getQuery(),
-                                Timeline.Order.CREATED_AT,
+                                Order.CREATED_AT,
                                 qe.getTimezoneOffset(),
                                 false,
                                 10000,
@@ -204,7 +223,7 @@ public class Caretaker extends Thread {
                     } catch (NullPointerException e) {
                         DAO.severe("TwitterScraper.search() returns null (no twitter results)"
                                 + " or any other issue in DAO.scrapeTwitter() method", e);
-                        t = new Timeline(Timeline.Order.CREATED_AT);
+                        t = new TwitterTimeline(Order.CREATED_AT);
                     }
                     DAO.log("retrieval of " + t.size() + " new messages for q = \"" + qe.getQuery() + "\"");
 
@@ -226,20 +245,34 @@ public class Caretaker extends Thread {
                 }
             }
             
+            if (!busy) {
+                // start a crawler
+                String startTerm = DAO.getRandomTerm();
+                if (startTerm != null && startTerm.length() > 0) {
+                    Crawler.stack(startTerm, 3, true, true, true);
+                    DAO.log("started a crawler for term " + startTerm);
+                    busy = true;
+                }
+            }
+            
             // heal the latency to give peers with out-dated information a new chance
             DAO.healLatency(0.95f);
             
             // delete messages out of time frames
-            int d;
-            d = DAO.deleteOld(IndexName.messages_hour, DateParser.oneHourAgo());
-            if (d > 0) DAO.log("Deleted " + d + " outdated(hour) messages");
-            d = DAO.deleteOld(IndexName.messages_day, DateParser.oneDayAgo());
-            if (d > 0) DAO.log("Deleted " + d + " outdated(day) messages");
-            d = DAO.deleteOld(IndexName.messages_week, DateParser.oneWeekAgo());
-            if (d > 0) DAO.log("Deleted " + d + " outdated(week) messages");
-            if (DAO.getConfig("autodeletion", false)) {
-                d = DAO.deleteOld(IndexName.messages, DateParser.oneMonthAgo());
-                if (d > 0) DAO.log("Deleted " + d + " outdated(month) messages");
+            // this is IO heavy, so prevent to do this a lot
+            if (System.currentTimeMillis() - deletionTime > 60000) {
+                int d;
+                d = DAO.deleteOld(IndexName.messages_hour, DateParser.oneHourAgo());
+                if (d > 0) DAO.log("Deleted " + d + " outdated(hour) messages");
+                d = DAO.deleteOld(IndexName.messages_day, DateParser.oneDayAgo());
+                if (d > 0) DAO.log("Deleted " + d + " outdated(day) messages");
+                d = DAO.deleteOld(IndexName.messages_week, DateParser.oneWeekAgo());
+                if (d > 0) DAO.log("Deleted " + d + " outdated(week) messages");
+                if (DAO.getConfig("autodeletion", false)) {
+                    d = DAO.deleteOld(IndexName.messages, DateParser.oneMonthAgo());
+                    if (d > 0) DAO.log("Deleted " + d + " outdated(month) messages");
+                }
+                deletionTime = System.currentTimeMillis();
             }
         } catch (Throwable e) {
             DAO.severe("CARETAKER THREAD", e);
