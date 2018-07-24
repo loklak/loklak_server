@@ -13,7 +13,7 @@ loklak is a server application which is able to collect messages from various so
 
 Automatic deployments from GitHub are available for testing:
 * Development Branch https://loklak-server-dev.herokuapp.com
-* Master Branch https://loklak-search-api.herokuapp.com
+* Master Branch https://loklak-server-api.herokuapp.com
 
 'Lok Lak' is also a very tasty Cambodian stir-fry meat dish (usually beef) with a LOT of fresh black pepper. If you ever have the chance to eat Beef Lok Lak, please try it. I hope not to scare vegetarians with this name, currently I am one as well.
 
