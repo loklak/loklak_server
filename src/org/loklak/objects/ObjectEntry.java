@@ -23,10 +23,10 @@ import org.json.JSONObject;
 
 public interface ObjectEntry {
 
-    public String toString();
+    String toString();
     
     // TODO: convert to elasticsearch internal format directly
     
-    public JSONObject toJSON();
+    JSONObject toJSON();
     
 }
