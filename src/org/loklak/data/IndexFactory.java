@@ -31,28 +31,28 @@ import org.loklak.objects.SourceType;
 
 public interface IndexFactory<Entry extends ObjectEntry> {
 
-    public Entry init(JSONObject json) throws IOException;
+    Entry init(JSONObject json) throws IOException;
 
-    public boolean exists(String id);
-    
-    public boolean existsCache(String id);
-    
-    public Set<String> existsBulk(Collection<String> ids);
-    
-    public boolean delete(String id, SourceType sourceType);
+    boolean exists(String id);
 
-    public JSONObject readJSON(String id);
+    boolean existsCache(String id);
     
-    public JSONObject readJSONCache(String id);
-
-    public boolean writeEntry(IndexEntry<Entry> entry) throws IOException;
-
-    public boolean writeEntry(JSONObject json) throws IOException;
+    Set<String> existsBulk(Collection<String> ids);
     
-    public ElasticsearchClient.BulkWriteResult writeEntries(Collection<IndexEntry<Entry>> entries) throws IOException;
+    boolean delete(String id, SourceType sourceType);
 
-    public ElasticsearchClient.BulkWriteResult writeEntries(List<Post> entries) throws IOException;
+    JSONObject readJSON(String id);
     
-    public void close();
+    JSONObject readJSONCache(String id);
+
+    boolean writeEntry(IndexEntry<Entry> entry) throws IOException;
+
+    boolean writeEntry(JSONObject json) throws IOException;
+    
+    ElasticsearchClient.BulkWriteResult writeEntries(Collection<IndexEntry<Entry>> entries) throws IOException;
+
+    ElasticsearchClient.BulkWriteResult writeEntries(List<Post> entries) throws IOException;
+    
+    void close();
     
 }
