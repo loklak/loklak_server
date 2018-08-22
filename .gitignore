@@ -27,3 +27,6 @@ bin/log4j2.properties
 bin/api_test.sh
 .sts4-cache/
 .vscode/
+
+# Not needed for repository directory.
+/out
