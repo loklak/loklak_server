@@ -28,7 +28,6 @@ import org.loklak.objects.BasicTimeline.Order;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;

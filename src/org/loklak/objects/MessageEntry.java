@@ -23,6 +23,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -72,16 +73,18 @@ public class MessageEntry extends AbstractObjectEntry {
 
     public static List<String> extract(String text, Pattern p, int regexGroup) {
         Matcher m = p.matcher(text);
-        List<String> dataList = new ArrayList<String>();
+        Set<String> dataList = new LinkedHashSet<String>();
 
         while (m.find()) {
             dataList.add(m.group(regexGroup));
         }
         for (String r: dataList) {
-            //text.replaceAll(r, "");
-            text.replace(r, "");
+            text.replace(r, ""); // replaceAll??
         }
-        return dataList;
+        
+        List<String> result = new ArrayList<>(dataList.size());
+        result.addAll(dataList);
+        return result;
     }
 
    public List<String> extractLinks(String text) {
