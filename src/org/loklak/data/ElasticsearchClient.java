@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.elasticsearch.action.ActionWriteResponse;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
@@ -749,10 +750,53 @@ public class ElasticsearchClient {
     }
 
     public class Query {
-        public List<Map<String, Object>> result;
-        public int hitCount;
-        public Map<String, List<Map.Entry<String, Long>>> aggregations;
+        public List<Map<String, Object>> result; // a list of search results; each map entry contains all attributes of the search result
+        public int hitCount; // number of hits in the search process, not the number of results; the hitCount must be always larger or equal to the result list size
+        public Map<String, List<Map.Entry<String, AtomicLong>>> aggregations; // key is the field name and list is a list of key-value pairs, where each key names an entry that the key may contain and the value is a counter of the number of occurrences of that value
 
+        /**
+         * combine this query with another query
+         * @param other the other search result
+         */
+        public void add(Query other) {
+            
+            // add new hits
+            otherLoop: for (Map<String, Object> otherEntry: other.result) {
+                String otherID = (String) otherEntry.get("id_str");
+                if (otherID == null) continue otherLoop;
+                ownLoop: for (Map<String, Object> ownEntry: this.result) {
+                    String ownID = (String) ownEntry.get("id_str");
+                    if (ownID == null) continue ownLoop;
+                    if (ownID.equals(otherID)) continue otherLoop;
+                }
+                this.result.add(otherEntry); // this is a new one
+            }
+            
+            // check overall hits
+            this.hitCount = Math.max(Math.max(this.hitCount, other.hitCount), this.result.size());
+            
+            // expand the aggregations
+            for (Map.Entry<String, List<Map.Entry<String, AtomicLong>>> otherAggregationEntry: other.aggregations.entrySet()) {
+                String key = otherAggregationEntry.getKey();
+                List<Map.Entry<String, AtomicLong>> otherList = otherAggregationEntry.getValue();
+                if (!this.aggregations.containsKey(key)) {
+                    this.aggregations.put(key, otherList);
+                    continue;
+                }
+
+                List<Map.Entry<String, AtomicLong>> ownList = this.aggregations.get(key);
+                otherLoop: for (Map.Entry<String, AtomicLong> otherPair: otherList) {
+                    for (Map.Entry<String, AtomicLong> ownPair: ownList) {
+                        if (ownPair.getKey().equals(otherPair.getKey())) {
+                            ownPair.getValue().set(Math.max(ownPair.getValue().get(), otherPair.getValue().get())); // probably this is not correct but the correct value is also not computable. This is the lower approximation of the correct value.
+                            continue otherLoop;
+                        }
+                        ownList.add(otherPair); // because we did not see the key we can just add this here
+                    }
+                }
+            }
+        }
+        
         /**
          * Search the local message cache using a elasticsearch query.
          * @param q - the query, for aggregation this which should include a time frame in the form since:yyyy-MM-dd until:yyyy-MM-dd
@@ -818,13 +862,13 @@ public class ElasticsearchClient {
                         checkMap.put(k, v == null ? bucket.getDocCount() : v + bucket.getDocCount());
                     }
                 }
-                ArrayList<Map.Entry<String, Long>> list = new ArrayList<>(buckets.size());
+                ArrayList<Map.Entry<String, AtomicLong>> list = new ArrayList<>(buckets.size());
                 for (Bucket bucket: buckets) {
                     String key = bucket.getKeyAsString().trim();
                     if (key.length() > 0) {
                         Long v = checkMap.remove(key.toLowerCase());
                         if (v == null) continue;
-                        list.add(new AbstractMap.SimpleEntry<String, Long>(key, v));
+                        list.add(new AbstractMap.SimpleEntry<String, AtomicLong>(key, new AtomicLong(v)));
                     }
                 }
                 aggregations.put(field, list);
@@ -835,25 +879,24 @@ public class ElasticsearchClient {
             // date histogram:
             if (addTimeHistogram) {
                 InternalHistogram<InternalHistogram.Bucket> dateCounts = response.getAggregations().get(histogram_timefield);
-                ArrayList<Map.Entry<String, Long>> list = new ArrayList<>();
+                ArrayList<Map.Entry<String, AtomicLong>> list = new ArrayList<>();
                 for (InternalHistogram.Bucket bucket : dateCounts.getBuckets()) {
                     Calendar cal = Calendar.getInstance(DateParser.UTCtimeZone);
                     org.joda.time.DateTime k = (org.joda.time.DateTime) bucket.getKey();
                     cal.setTime(k.toDate());
                     cal.add(Calendar.MINUTE, -timezoneOffset);
                     long docCount = bucket.getDocCount();
-                    Map.Entry<String,Long> entry = new AbstractMap.SimpleEntry<String, Long>(
-                        (dateHistogrammInterval == DateHistogramInterval.DAY ?
-                            DateParser.dayDateFormat : DateParser.minuteDateFormat)
-                        .format(cal.getTime()), docCount);
+                    Map.Entry<String, AtomicLong> entry = new AbstractMap.SimpleEntry<>(
+                        (dateHistogrammInterval == DateHistogramInterval.DAY ? DateParser.dayDateFormat : DateParser.minuteDateFormat).format(cal.getTime()),
+                        new AtomicLong(docCount));
                     list.add(entry);
                 }
                 aggregations.put(histogram_timefield, list);
             }
         }
 
-    public Query(final String indexName, QueryBuilder queryBuilder, String order_field, int resultCount) {
-        //TODO: sort data using order_field
+        public Query(final String indexName, QueryBuilder queryBuilder, String order_field, int resultCount) {
+            //TODO: sort data using order_field
             // prepare request
             SearchRequestBuilder request = elasticsearchClient.prepareSearch(indexName)
                     .setSearchType(SearchType.QUERY_THEN_FETCH)
@@ -861,7 +904,7 @@ public class ElasticsearchClient {
                     .setFrom(0)
                     .setSize(resultCount);
             request.clearRescorers();
-
+    
             // get response
             SearchResponse response = request.execute().actionGet();
             hitCount = (int) response.getHits().getTotalHits();
@@ -872,7 +915,7 @@ public class ElasticsearchClient {
                 Map<String, Object> map = hit.getSource();
                 this.result.add(map);
             }
-
+    
         }
 
     }

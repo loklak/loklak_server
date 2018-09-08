@@ -30,6 +30,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.nio.file.Path;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -1066,7 +1067,7 @@ public class DAO {
     public static class SearchLocalMessages {
         public TwitterTimeline timeline;
         public PostTimeline postList;
-        public Map<String, List<Map.Entry<String, Long>>> aggregations;
+        public Map<String, List<Map.Entry<String, AtomicLong>>> aggregations;
         public ElasticsearchClient.Query query;
 
         /**
@@ -1106,19 +1107,15 @@ public class DAO {
                 // use only a time frame that is sufficient for a result
                 this.query = elasticsearch_client.query((resultIndex = IndexName.messages_hour).name(), sq.queryBuilder, orderField.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
                 if (!q.contains("since:hour") && insufficient(this.query, resultCount, aggregationLimit, aggregationFields)) {
-                    this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_day).name(), sq.queryBuilder, orderField.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
+                    ElasticsearchClient.Query aq = elasticsearch_client.query((resultIndex = IndexName.messages_day).name(), sq.queryBuilder, orderField.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
+                    this.query.add(aq);
                     if (!q.contains("since:day") && insufficient(this.query, resultCount, aggregationLimit, aggregationFields)) {
-                        this.query =  elasticsearch_client.query((resultIndex = IndexName.messages_week).name(), sq.queryBuilder, orderField.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
+                        this.query.add(aq);
                         if (!q.contains("since:week") && insufficient(this.query, resultCount, aggregationLimit, aggregationFields)) {
-                            this.query =  elasticsearch_client.query((resultIndex = IndexName.messages).name(), sq.queryBuilder, orderField.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
+                            aq = elasticsearch_client.query((resultIndex = IndexName.messages).name(), sq.queryBuilder, orderField.getMessageFieldName(), timezoneOffset, resultCount, interval, AbstractObjectEntry.CREATED_AT_FIELDNAME, aggregationLimit, aggregationFields);
+                            this.query.add(aq);
                 }}}
             }
-            this.query = elasticsearch_client.query(
-                        (resultIndex = IndexName.messages_day).name(),
-                        sq.queryBuilder,
-                        orderField.getMessageFieldName(),
-                        resultCount
-                );
                 
             timeline.setHits(query.hitCount);
             timeline.setResultIndex(resultIndex);
@@ -1229,21 +1226,21 @@ public class DAO {
         public JSONObject getAggregations() {
             JSONObject json = new JSONObject(true);
             if (aggregations == null) return json;
-            for (Map.Entry<String, List<Map.Entry<String, Long>>> aggregation: aggregations.entrySet()) {
+            for (Map.Entry<String, List<Map.Entry<String, AtomicLong>>> aggregation: aggregations.entrySet()) {
                 JSONObject facet = new JSONObject(true);
-                for (Map.Entry<String, Long> a: aggregation.getValue()) {
+                for (Map.Entry<String, AtomicLong> a: aggregation.getValue()) {
                     if (a.getValue().equals(query)) continue; // we omit obvious terms that cannot be used for faceting, like search for "#abc" -> most hashtag is "#abc"
-                    facet.put(a.getKey(), a.getValue());
+                    facet.put(a.getKey(), a.getValue().get());
                 }
                 json.put(aggregation.getKey(), facet);
             }
             return json;
         }
 
-        private static int getAggregationResultLimit(Map<String, List<Map.Entry<String, Long>>> agg) {
+        private static int getAggregationResultLimit(Map<String, List<Map.Entry<String, AtomicLong>>> agg) {
             if (agg == null) return 0;
             int l = 0;
-            for (List<Map.Entry<String, Long>> a: agg.values()) l = Math.max(l, a.size());
+            for (List<Map.Entry<String, AtomicLong>> a: agg.values()) l = Math.max(l, a.size());
             return l;
         }
     }
