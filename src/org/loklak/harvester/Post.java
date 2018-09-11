@@ -164,7 +164,16 @@ public class Post extends JSONObject implements ObjectEntry {
             DAO.mqttPublisher.publish(this.getStreamChannels(), this.toString());
         }
     }
-
+    
+    /**
+     * Publish data to MongoDB
+     */
+    public final void saveToMongoDB(String channel) {
+        if (DAO.mongoDBManager != null) {
+            DAO.mongoDBManager.saveChannelMessage(channel, this.toString());
+        }
+    }
+    
     public void setTimestamp(long timestamp) {
         this.put("timestamp_id", timestamp);
         this.timestamp = timestamp;
