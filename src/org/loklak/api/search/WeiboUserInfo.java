@@ -65,48 +65,48 @@ public class WeiboUserInfo extends HttpServlet {
 					profile=info.getElementsByAttributeValue("class","pt_detail").first().text().trim();
 					obj.put("pro", profile);
 					switch(info.getElementsByAttributeValue("class", "pt_title S_txt2").first().text()){
-					case "Nickname：":
+					case "Nickname\uff1a":
 						obj.put("username", profile);
 						break;
-					case "Location：":
+					case "Location\uff1a":
 						obj.put("Address", profile);
 						break;
-					case "Gender：":
+					case "Gender\uff1a":
 						obj.put("Gender", profile);
 						break;
-					case "性取向：":
+					case "\u6027\u53d6\u5411\uff1a":
 						obj.put("Sexuality", profile.replace("t", "").replace("rn", ""));
 						break;
-					case "感情状况：":
+					case "\u611f\u60c5\u72b6\u51b5\uff1a":
 						obj.put("Relationship", profile.replace("t", "").replace("rn", ""));
 						break;
-					case "Birthday：":
+					case "Birthday\uff1a":
 						obj.put("Birthday", profile);
 						break;
-					case "血型：":
+					case "\u8840\u578b\uff1a":
 						obj.put("Blood", profile);
 						break;
-					case "Domain Name：":
+					case "Domain Name\uff1a":
 						if(info.getElementsByAttributeValueContaining("href", "loc=infdomain").size()!=0)
 						profile=info.select("a").text();
 						obj.put("Personaldomain", profile);
 						break;
-					case "简介：":
+					case "\u7b80\u4ecb\uff1a":
 						obj.put("Profile", profile);
 						break;
-					case "Registration：":
+					case "Registration\uff1a":
 						obj.put("Registertime", profile.replace("t", "").replace("rn", ""));
 						break;
-					case "Email：":
+					case "Email\uff1a":
 						obj.put("Email", profile);
 						break;
-					case "QQ：":
+					case "QQ\uff1a":
 						obj.put("Qq", profile);
 						break;
-					case "大学：":
+					case "\u5927\u5b66\uff1a":
 						obj.put("College", profile.replace("t", "").replace("rn", ""));
 						break;
-					case "Tags：":
+					case "Tags\uff1a":
 						obj.put("Tag", profile.replace("t", "").replace("rn", ""));
 						break;
 					default:
