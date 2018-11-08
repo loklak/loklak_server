@@ -1,6 +1,6 @@
 # The `loklak` Architecture
 
-loklak is a java application which runs a jetty web server for the html interface and an Elasticsearch search server. The application contains a self-documentation which consists of the web pages you are looking at right now. There is also a [javadoc](javadoc.html).
+loklak is a java application which runs a jetty web server for the html interface and an Elasticsearch search server. The application contains a self-documentation which consists of the web pages you are looking at right now.
 
 - [File System Structure](#the-file-system-structure)
 - [Application Sockets and Ports](#application-sockets-and-ports)
