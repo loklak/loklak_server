@@ -1117,11 +1117,11 @@ public class DAO {
                 }}}
             }
                 
-            timeline.setHits(query.hitCount);
+            timeline.setHits(query.getHitCount());
             timeline.setResultIndex(resultIndex);
 
             // evaluate search result
-            for (Map<String, Object> map: query.result) {
+            for (Map<String, Object> map: query.getResult()) {
                 TwitterTweet tweet = new TwitterTweet(new JSONObject(map));
                 try {
                     UserEntry user = users.read(tweet.getScreenName());
@@ -1133,7 +1133,7 @@ public class DAO {
                 	DAO.severe(e);
                 }
             }
-            this.aggregations = query.aggregations;
+            this.aggregations = query.getAggregations();
         }
 
         public SearchLocalMessages (
@@ -1172,7 +1172,7 @@ public class DAO {
                     resultCount
             );
 
-            if (this.query.hitCount < resultCount) {
+            if (this.query.getHitCount() < resultCount) {
                 this.query =  elasticsearch_client.query(
                         (resultIndex = IndexName.messages_day).name(),
                         sq.queryBuilder,
@@ -1181,7 +1181,7 @@ public class DAO {
                 );
             }
 
-            if (this.query.hitCount < resultCount) {
+            if (this.query.getHitCount() < resultCount) {
                 this.query =  elasticsearch_client.query(
                         (resultIndex = IndexName.messages_week).name(),
                         sq.queryBuilder,
@@ -1190,7 +1190,7 @@ public class DAO {
                 );
             }
 
-            if (this.query.hitCount < resultCount) {
+            if (this.query.getHitCount() < resultCount) {
                 this.query =  elasticsearch_client.query(
                         (resultIndex = IndexName.messages).name(),
                         sq.queryBuilder,
@@ -1207,7 +1207,7 @@ public class DAO {
 
         private void addResults() {
             Post outputPost;
-            for (Map<String, Object> map: this.query.result) {
+            for (Map<String, Object> map: this.query.getResult()) {
                 outputPost = new Post(map);
                 this.postList.addPost(outputPost);
             }
@@ -1219,8 +1219,8 @@ public class DAO {
                 int aggregationLimit,
                 String... aggregationFields
         ) {
-            return query.hitCount < resultCount || (aggregationFields.length > 0
-                    && getAggregationResultLimit(query.aggregations) < aggregationLimit);
+            return query.getHitCount() < resultCount || (aggregationFields.length > 0
+                    && getAggregationResultLimit(query.getAggregations()) < aggregationLimit);
         }
 
         public JSONObject getAggregations() {

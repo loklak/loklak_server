@@ -42,10 +42,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.elasticsearch.action.ActionWriteResponse;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
-import org.elasticsearch.action.admin.cluster.stats.ClusterStatsAction;
-import org.elasticsearch.action.admin.cluster.stats.ClusterStatsNodes;
-import org.elasticsearch.action.admin.cluster.stats.ClusterStatsRequest;
-import org.elasticsearch.action.admin.cluster.stats.ClusterStatsRequestBuilder;
 import org.elasticsearch.action.admin.cluster.stats.ClusterStatsResponse;
 import org.elasticsearch.action.admin.cluster.tasks.PendingClusterTasksResponse;
 import org.elasticsearch.action.bulk.BulkItemResponse;
@@ -66,10 +62,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.VersionType;
-import org.elasticsearch.index.query.MatchQueryBuilder.Operator;
-import org.elasticsearch.index.query.MatchQueryBuilder.ZeroTermsQuery;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -147,23 +140,6 @@ public class ElasticsearchClient {
         this.elasticsearchClient = elasticsearchNode.client();
     }
 
-    public ClusterStatsNodes getClusterStatsNodes() {
-        ClusterStatsRequest clusterStatsRequest =
-            new ClusterStatsRequestBuilder(elasticsearchClient.admin().cluster(), ClusterStatsAction.INSTANCE).request();
-        ClusterStatsResponse clusterStatsResponse =
-            elasticsearchClient.admin().cluster().clusterStats(clusterStatsRequest).actionGet();
-        ClusterStatsNodes clusterStatsNodes = clusterStatsResponse.getNodesStats();
-        return clusterStatsNodes;
-    }
-
-    private boolean clusterReadyCache = false;
-    public boolean clusterReady() {
-        if (clusterReadyCache) return true;
-        ClusterHealthResponse chr = elasticsearchClient.admin().cluster().prepareHealth().get();
-        clusterReadyCache = chr.getStatus() != ClusterHealthStatus.RED;
-        return clusterReadyCache;
-    }
-
     public boolean wait_ready(long maxtimemillis, ClusterHealthStatus status) {
         // wait for yellow status
         long start = System.currentTimeMillis();
@@ -190,39 +166,6 @@ public class ElasticsearchClient {
         } else {
             //LOGGER.debug("Index with name {} already exists", indexName);
         }
-    }
-
-    public void setMapping(String indexName, XContentBuilder mapping) {
-        try {
-            this.elasticsearchClient.admin().indices().preparePutMapping(indexName)
-                .setSource(mapping)
-                .setUpdateAllTypes(true)
-                .setType("_default_").execute().actionGet();
-        } catch (Throwable e) {
-        	DAO.severe(e);
-        };
-    }
-
-    public void setMapping(String indexName, Map<String, Object> mapping) {
-        try {
-            this.elasticsearchClient.admin().indices().preparePutMapping(indexName)
-                .setSource(mapping)
-                .setUpdateAllTypes(true)
-                .setType("_default_").execute().actionGet();
-        } catch (Throwable e) {
-        	DAO.severe(e);
-        };
-    }
-
-    public void setMapping(String indexName, String mapping) {
-        try {
-            this.elasticsearchClient.admin().indices().preparePutMapping(indexName)
-                .setSource(mapping)
-                .setUpdateAllTypes(true)
-                .setType("_default_").execute().actionGet();
-        } catch (Throwable e) {
-        	DAO.severe(e);
-        };
     }
 
     public void setMapping(String indexName, File json) {
@@ -279,23 +222,6 @@ public class ElasticsearchClient {
         this.close(); // will not cause harm if this is the second call to close()
     }
 
-
-    /**
-     * Retrieve a statistic object from the connected elasticsearch cluster
-     *
-     * @return cluster stats from connected cluster
-     */
-    public ClusterStatsNodes getStats() {
-        final ClusterStatsRequest clusterStatsRequest =
-            new ClusterStatsRequestBuilder(elasticsearchClient.admin().cluster(), ClusterStatsAction.INSTANCE)
-                .request();
-        final ClusterStatsResponse clusterStatsResponse =
-            elasticsearchClient.admin().cluster().clusterStats(clusterStatsRequest).actionGet();
-        final ClusterStatsNodes clusterStatsNodes = clusterStatsResponse.getNodesStats();
-        return clusterStatsNodes;
-    }
-
-
     /**
      * Get the number of documents in the search index
      *
@@ -313,7 +239,7 @@ public class ElasticsearchClient {
      *            the query
      * @return the count of all documents in the index which matches with the query
      */
-    public long count(final QueryBuilder q, final String indexName) {
+    private long count(final QueryBuilder q, final String indexName) {
         SearchResponse response =
             elasticsearchClient.prepareSearch(indexName).setQuery(q).setSize(0).execute().actionGet();
         return response.getHits().getTotalHits();
@@ -397,22 +323,6 @@ public class ElasticsearchClient {
     }
 
     /**
-     * Get the type name of a document or null if the document does not exist.
-     * This is a replacement of the exist() method which does exactly the same as exist()
-     * but is able to return the type name in case that exist is successful.
-     * Please read the comment to exist() for details.
-     * @param indexName
-     *            the name of the index
-     * @param id
-     *            the unique identifier of a document
-     * @return the type name of the document if it exists, null otherwise
-     */
-    public String getType(String indexName, final String id) {
-        GetResponse getResponse = elasticsearchClient.prepareGet(indexName, null, id).execute().actionGet();
-        return getResponse.isExists() ? getResponse.getType() : null;
-    }
-
-    /**
      * Delete a document for a given id.
      * ATTENTION: deleted documents cannot be re-inserted again if version number
      * checking is used and the new document does not comply to the version number
@@ -436,7 +346,7 @@ public class ElasticsearchClient {
      *            a map from the unique identifier of a document to the document type
      * @return the number of deleted documents
      */
-    public int deleteBulk(String indexName, Map<String, String> ids) {
+    private int deleteBulk(String indexName, Map<String, String> ids) {
         // bulk-delete the ids
         if (ids == null || ids.size() == 0) return 0;
         BulkRequestBuilder bulkRequest = elasticsearchClient.prepareBulk();
@@ -479,22 +389,6 @@ public class ElasticsearchClient {
     }
 
     /**
-     * Read a document from the search index for a given id.
-     * This is the cheapest document retrieval from the '_source' field because
-     * elasticsearch does not do any json transformation or parsing. We
-     * get simply the text from the '_source' field. This might be useful to
-     * make a dump from the index content.
-     *
-     * @param id
-     *            the unique identifier of a document
-     * @return the document as source text
-     */
-    public byte[] readSource(String indexName, final String id) {
-        GetResponse response = elasticsearchClient.prepareGet(indexName, null, id).execute().actionGet();
-        return response.getSourceAsBytes();
-    }
-
-    /**
      * Read a json document from the search index for a given id.
      * Elasticsearch reads the '_source' field and parses the content as json.
      *
@@ -514,30 +408,6 @@ public class ElasticsearchClient {
             map.put("$type", response.getType());
         }
         return map;
-    }
-
-    /**
-     * Write a json document into the search index.
-     * Writing using a XContentBuilder is the most efficient way to add content to elasticsearch
-     *
-     * @param jsonMap
-     *            the json document to be indexed in elasticsearch
-     * @param id
-     *            the unique identifier of a document
-     * @param indexName
-     *            the name of the index
-     * @param typeName
-     *            the type of the index
-     */
-    public IndexResponse writeSource(String indexName, XContentBuilder json, String id, String typeName, long version, VersionType versionType) {
-        // put this to the index
-        IndexResponse r = elasticsearchClient.prepareIndex(indexName, typeName, id).setSource(json)
-            .setVersion(version).setVersionType(versionType).execute()
-            .actionGet();
-        // documentation about the versioning is available at
-        // https://www.elastic.co/blog/elasticsearch-versioning-support
-        // TODO: error handling
-        return r;
     }
 
     /**
@@ -636,7 +506,7 @@ public class ElasticsearchClient {
     public static class BulkWriteResult {
         private Map<String, String> errors;
         private Set<String> created;
-        public BulkWriteResult() {
+        private BulkWriteResult() {
             this.errors = new LinkedHashMap<>();
             this.created = new LinkedHashSet<>();
         }
@@ -654,7 +524,7 @@ public class ElasticsearchClient {
         private String id;
         private String type;
         private Long version;
-        public Map<String, Object> jsonMap;
+        private Map<String, Object> jsonMap;
 
         /**
          * initialize entry for bulk writes
@@ -673,40 +543,6 @@ public class ElasticsearchClient {
                 this.jsonMap.put(timestamp_fieldname, utcFormatter.print(System.currentTimeMillis()));
             }
         }
-    }
-
-    /**
-     * Query with a string and boundaries.
-     * The string is supposed to be something that the user types in without a technical syntax.
-     * The mapping of the search terms into the index can be different according
-     * to a search type. Please see
-     * https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-match-query.html.
-     * A better way to do this would be the usage of a cursor.
-     * See the delete method to find out how cursors work.
-     *
-     * @param q
-     *            a search query string
-     * @param operator
-     *            either AND or OR, the default operator for the query tokens
-     * @param offset
-     *            the first document number, 0 is the first one
-     * @param count
-     *            the number of documents to be returned
-     * @return a list of json objects, mapped as Map<String,Object> for each json
-     */
-    public List<Map<String, Object>> query(final String indexName, final String q, final Operator operator, final int offset, final int count) {
-        assert count > 1; // for smaller amounts, use the next method
-        SearchRequestBuilder request = elasticsearchClient.prepareSearch(indexName)
-            // .addFields("_all")
-            .setQuery(QueryBuilders.multiMatchQuery(q, "_all").operator(operator).zeroTermsQuery(ZeroTermsQuery.ALL)).setFrom(offset).setSize(count);
-        SearchResponse response = request.execute().actionGet();
-        SearchHit[] hits = response.getHits().getHits();
-        ArrayList<Map<String, Object>> result = new ArrayList<Map<String, Object>>();
-        for (SearchHit hit : hits) {
-            Map<String, Object> map = hit.getSource();
-            result.add(map);
-        }
-        return result;
     }
 
     public Map<String, Object> query(final String indexName, final String fieldKey, final String fieldValue) {
@@ -750,9 +586,9 @@ public class ElasticsearchClient {
     }
 
     public class Query {
-        public List<Map<String, Object>> result; // a list of search results; each map entry contains all attributes of the search result
-        public int hitCount; // number of hits in the search process, not the number of results; the hitCount must be always larger or equal to the result list size
-        public Map<String, List<Map.Entry<String, AtomicLong>>> aggregations; // key is the field name and list is a list of key-value pairs, where each key names an entry that the key may contain and the value is a counter of the number of occurrences of that value
+        private List<Map<String, Object>> result; // a list of search results; each map entry contains all attributes of the search result
+        private int hitCount; // number of hits in the search process, not the number of results; the hitCount must be always larger or equal to the result list size
+        private Map<String, List<Map.Entry<String, AtomicLong>>> aggregations; // key is the field name and list is a list of key-value pairs, where each key names an entry that the key may contain and the value is a counter of the number of occurrences of that value
 
         /**
          * combine this query with another query
@@ -807,7 +643,7 @@ public class ElasticsearchClient {
          * @param aggregationLimit - the maximum count of facet entities, not search results
          * @param aggregationFields - names of the aggregation fields. If no aggregation is wanted, pass no (zero) field(s)
          */
-        public Query(final String indexName, final QueryBuilder queryBuilder, String order_field, int timezoneOffset, int resultCount, long histogram_interval, String histogram_timefield, int aggregationLimit, String... aggregationFields) {
+        private Query(final String indexName, final QueryBuilder queryBuilder, String order_field, int timezoneOffset, int resultCount, long histogram_interval, String histogram_timefield, int aggregationLimit, String... aggregationFields) {
             // prepare request
             SearchRequestBuilder request = elasticsearchClient.prepareSearch(indexName)
                     .setSearchType(SearchType.QUERY_THEN_FETCH)
@@ -895,7 +731,7 @@ public class ElasticsearchClient {
             }
         }
 
-        public Query(final String indexName, QueryBuilder queryBuilder, String order_field, int resultCount) {
+        private Query(final String indexName, QueryBuilder queryBuilder, String order_field, int resultCount) {
             //TODO: sort data using order_field
             // prepare request
             SearchRequestBuilder request = elasticsearchClient.prepareSearch(indexName)
@@ -916,6 +752,18 @@ public class ElasticsearchClient {
                 this.result.add(map);
             }
     
+        }
+
+        public List<Map<String, Object>> getResult() {
+            return this.result;
+        }
+
+        public int getHitCount() {
+            return this.hitCount;
+        }
+
+        public Map<String, List<Map.Entry<String, AtomicLong>>> getAggregations() {
+            return this.aggregations;
         }
 
     }
@@ -1043,7 +891,7 @@ public class ElasticsearchClient {
      * @param classes Classes to consider
      * @return HashMap with required aggregations
      */
-    public final HashMap<String, HashMap<String, Double>> classifierScore(String index, String classifierName, List<String> classes) {
+    private final HashMap<String, HashMap<String, Double>> classifierScore(String index, String classifierName, List<String> classes) {
         SearchResponse response = getAggregationResponse(index, getClassifierAggregationBuilder(classifierName));
         Terms aggrs = response.getAggregations().get("by_class");
         return getAggregationByClass(aggrs, classes);
@@ -1058,7 +906,7 @@ public class ElasticsearchClient {
      * @param endDate End date for creation of row
      * @return HashMap with required aggregations
      */
-    public final HashMap<String, HashMap<String, Double>> classifierScore(
+    private final HashMap<String, HashMap<String, Double>> classifierScore(
         String index, String classifierName, List<String> classes, String startDate, String endDate) {
         if (startDate == null && endDate == null) {
             return classifierScore(index, classifierName, classes);
@@ -1093,67 +941,18 @@ public class ElasticsearchClient {
     }
 
     /**
-     * Get limited time aggregation by country code for required countries.
-     * @param index Name of ES index
-     * @param classifierName Name of classifier
-     * @param classes Classes to consider
-     * @param startDate Start date for creation of row
-     * @param endDate End date for creation of row
-     * @param countries Country codes to consider
-     * @return HashMap with required aggregations
-     */
-    public final HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(
-        String index, String classifierName, List<String> classes, String startDate, String endDate, List<String> countries) {
-        if (startDate == null && endDate == null) {
-            return classifierScoreForCountry(index, classifierName, classes, countries);
-        }
-        HashMap<String, HashMap<String, HashMap<String,Double>>> retMap = new HashMap<>();
-        HashMap<String, HashMap<String, HashMap<String,Double>>> copy = classifierScoreForCountry(index, classifierName, classes, startDate, endDate);
-        for (String key: copy.keySet()) {
-            if (!countries.contains(key) && !"GLOBAL".equals(key)) {
-                continue;
-            }
-            retMap.put(key, copy.get(key));
-        }
-        return retMap;
-    }
-
-    /**
      * Get all time aggregation by country for all available countries.
      * @param index Name of ES index
      * @param classifierName Name of classifier
      * @param classes Classes to consider
      * @return HashMap with required aggregations
      */
-    public final HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(String index, String classifierName, List<String> classes) {
+    private final HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(String index, String classifierName, List<String> classes) {
         SearchResponse response = getAggregationResponse(index, getClassifierAggregationBuilderByCountry("place_country_code", classifierName));
         Terms aggr = response.getAggregations().get("by_country");
         HashMap<String, HashMap<String, HashMap<String,Double>>> retMap = getAggregationByCountry(aggr, classes);
         // Put global score
         retMap.put("GLOBAL", classifierScore(index, classifierName, classes));
-        return retMap;
-    }
-
-    /**
-     * Get all time aggregation by country for required countries.
-     * @param index Name of ES index
-     * @param classifierName Name of classifier
-     * @param classes Classes to consider
-     * @param countries Countiries to consider
-     * @return HashMap with required aggregations
-     */
-    public final HashMap<String, HashMap<String, HashMap<String,Double>>> classifierScoreForCountry(
-        String index, String classifierName, List<String> classes, List<String> countries) {
-        HashMap<String, HashMap<String, HashMap<String,Double>>> retMap = new HashMap<>();
-
-        HashMap<String, HashMap<String, HashMap<String,Double>>> copy = classifierScoreForCountry(index, classifierName, classes);
-
-        for (String key: copy.keySet()) {
-            if (!countries.contains(key) && !"GLOBAL".equals(key)) {
-                continue;
-            }
-            retMap.put(key, copy.get(key));
-        }
         return retMap;
     }
 
