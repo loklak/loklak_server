@@ -69,8 +69,7 @@ public class JsonRandomAccessFile extends BufferedRandomAccessFile implements Js
                 try {
                     byte[] textb = line.getText();
                     if (textb == null || textb.length == 0) continue;
-                    JSONObject json = new JSONObject(new String(textb, StandardCharsets.UTF_8));
-                    this.jsonline.put(new JsonHandle(json, line.getPos(), textb.length));
+                    this.jsonline.put(new JsonHandle(textb, line.getPos(), textb.length));
                 } catch (Throwable e) {
                     DAO.severe("cannot parse line in file " + JsonRandomAccessFile.this.file + ": \"" + line + "\"", e);
                 }
@@ -89,16 +88,30 @@ public class JsonRandomAccessFile extends BufferedRandomAccessFile implements Js
      * seek location in the file and the length of bytes of the original json string
      */
     public static class JsonHandle implements JsonFactory {
-        private JSONObject json;
+        private Object obj;
         private long index;
         private int length;
-        public JsonHandle(JSONObject json, long index, int length) {
-            this.json = json;
+        public JsonHandle(Object obj, long index, int length) {
+            this.obj = obj;
             this.index = index;
             this.length = length;
         }
         public JSONObject getJSON() {
-            return json;
+            Object o = this.obj;
+            if (o == null) {
+                return null;
+            } else if (o instanceof JSONObject) {
+                return (JSONObject) o;
+            } else if (o instanceof byte[]) {
+                JSONObject json = new JSONObject(new String((byte[]) o, StandardCharsets.UTF_8));
+                this.obj = json;
+                return json;
+            } else if (o instanceof String) {
+                JSONObject json = new JSONObject((String) o);
+                this.obj = json;
+                return json;
+            }
+            return null;
         }
         public long getIndex() {
             return index;
@@ -107,7 +120,19 @@ public class JsonRandomAccessFile extends BufferedRandomAccessFile implements Js
             return length;
         }
         public String toString() {
-            return new JSONObject(this.json).toString();
+            Object o = this.obj;
+            if (o == null) {
+                return null;
+            } else if (o instanceof JSONObject) {
+                return ((JSONObject) o).toString();
+            } else if (o instanceof byte[]) {
+                String s = new String((byte[]) o, StandardCharsets.UTF_8);
+                this.obj = s;
+                return s;
+            } else if (o instanceof String) {
+                return (String) o;
+            }
+            return null;
         }
     }
     
