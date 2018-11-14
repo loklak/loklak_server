@@ -78,6 +78,13 @@ import org.loklak.harvester.BaseScraper;
 import org.loklak.http.AccessTracker;
 import org.loklak.http.ClientConnection;
 import org.loklak.http.RemoteAccess;
+import org.loklak.ir.AccountFactory;
+import org.loklak.ir.BulkWriteResult;
+import org.loklak.ir.ElasticsearchClient;
+import org.loklak.ir.ImportProfileFactory;
+import org.loklak.ir.MessageFactory;
+import org.loklak.ir.QueryFactory;
+import org.loklak.ir.UserFactory;
 import org.loklak.objects.AbstractObjectEntry;
 import org.loklak.objects.AccountEntry;
 import org.loklak.objects.ImportProfileEntry;
@@ -767,7 +774,7 @@ public class DAO {
                 messageBulk.add(post);
             }
         }
-        ElasticsearchClient.BulkWriteResult result = null;
+        BulkWriteResult result = null;
         try {
             Date limitDate = new Date();
             limitDate.setTime(DateParser.oneHourAgo().getTime());
@@ -824,7 +831,7 @@ public class DAO {
             // teach the classifier
             Classifier.learnPhrase(mw.t.getText());
         }
-        ElasticsearchClient.BulkWriteResult result = null;
+        BulkWriteResult result = null;
         Set<String> created_ids = new HashSet<>();
         try {
             final Date limitDate = new Date();

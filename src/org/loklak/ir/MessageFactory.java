@@ -17,7 +17,7 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.loklak.data;
+package org.loklak.ir;
 
 import org.json.JSONObject;
 import org.loklak.harvester.Post;

@@ -17,7 +17,7 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.loklak.data;
+package org.loklak.ir;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.json.JSONObject;
+import org.loklak.data.IndexEntry;
 import org.loklak.harvester.Post;
 import org.loklak.objects.AbstractObjectEntry;
 import org.loklak.objects.ObjectEntry;
@@ -188,9 +189,9 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
     }
 
     @Override
-    public ElasticsearchClient.BulkWriteResult writeEntries(Collection<IndexEntry<IndexObject>> entries) throws IOException {
+    public BulkWriteResult writeEntries(Collection<IndexEntry<IndexObject>> entries) throws IOException {
 
-        List<ElasticsearchClient.BulkEntry> jsonMapList = new ArrayList<ElasticsearchClient.BulkEntry>();
+        List<BulkWriteEntry> jsonMapList = new ArrayList<BulkWriteEntry>();
         
         for (IndexEntry<IndexObject> entry: entries) {
             this.objectCache.put(entry.getId(), entry.getObject());
@@ -199,21 +200,21 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
             Map<String, Object> jsonMap = entry.getObject().toJSON().toMap();
             assert jsonMap != null;
             if (jsonMap == null) continue;
-            ElasticsearchClient.BulkEntry be = new ElasticsearchClient.BulkEntry(entry.getId(), entry.getType().toString(), AbstractObjectEntry.TIMESTAMP_FIELDNAME, null, jsonMap);
+            BulkWriteEntry be = new BulkWriteEntry(entry.getId(), entry.getType().toString(), AbstractObjectEntry.TIMESTAMP_FIELDNAME, null, jsonMap);
 
             jsonMapList.add(be);
         }
         if (jsonMapList.size() == 0) return ElasticsearchClient.EMPTY_BULK_RESULT;
         
-        ElasticsearchClient.BulkWriteResult result = elasticsearch_client.writeMapBulk(this.index_name, jsonMapList);
+        BulkWriteResult result = elasticsearch_client.writeMapBulk(this.index_name, jsonMapList);
         this.indexWrite.addAndGet(jsonMapList.size());
         return result;
     }
 
     @Override
-    public ElasticsearchClient.BulkWriteResult writeEntries(List<Post> entries) throws IOException {
+    public BulkWriteResult writeEntries(List<Post> entries) throws IOException {
 
-        List<ElasticsearchClient.BulkEntry> jsonMapList = new ArrayList<ElasticsearchClient.BulkEntry>();
+        List<BulkWriteEntry> jsonMapList = new ArrayList<BulkWriteEntry>();
         for (Post entry: entries) {
             this.objectCache.put(entry.getPostId(), entry);
             this.existCache.add(entry.getPostId());
@@ -221,14 +222,14 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
             Map<String, Object> jsonMap = entry.toJSON().toMap();
             assert jsonMap != null;
             if (jsonMap == null) continue;
-            ElasticsearchClient.BulkEntry be = new ElasticsearchClient.BulkEntry(
+            BulkWriteEntry be = new BulkWriteEntry(
                     entry.getPostId(), "local", "timestamp_id", null, jsonMap);
 
             jsonMapList.add(be);
         }
         if (jsonMapList.size() == 0) return ElasticsearchClient.EMPTY_BULK_RESULT;
         
-        ElasticsearchClient.BulkWriteResult result = elasticsearch_client.writeMapBulk(this.index_name, jsonMapList);
+        BulkWriteResult result = elasticsearch_client.writeMapBulk(this.index_name, jsonMapList);
         this.indexWrite.addAndGet(jsonMapList.size());
         return result;
     }

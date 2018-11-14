@@ -17,7 +17,7 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.loklak.data;
+package org.loklak.ir;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,7 +33,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -84,8 +83,7 @@ import org.elasticsearch.search.aggregations.metrics.avg.Avg;
 import org.elasticsearch.search.aggregations.metrics.sum.Sum;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
+import org.loklak.data.DAO;
 import org.loklak.objects.ResultList;
 import org.loklak.tools.DateParser;
 
@@ -402,7 +400,7 @@ public class ElasticsearchClient {
         return map;
     }
 
-    protected static Map<String, Object> getMap(GetResponse response) {
+    private static Map<String, Object> getMap(GetResponse response) {
         Map<String, Object> map = null;
         if (response.isExists() && (map = response.getSourceAsMap()) != null) {
             map.put("$type", response.getType());
@@ -463,15 +461,15 @@ public class ElasticsearchClient {
      *            The method was only successful if this list is empty.
      *            This must be a list, because keys may appear several times.
      */
-    public BulkWriteResult writeMapBulk(final String indexName, final List<BulkEntry> jsonMapList) {
+    public BulkWriteResult writeMapBulk(final String indexName, final List<BulkWriteEntry> jsonMapList) {
         long start = System.currentTimeMillis();
         BulkRequestBuilder bulkRequest = elasticsearchClient.prepareBulk();
-        for (BulkEntry be: jsonMapList) {
-            if (be.id == null) continue;
+        for (BulkWriteEntry be: jsonMapList) {
+            if (be.getId() == null) continue;
             bulkRequest.add(
-                    elasticsearchClient.prepareIndex(indexName, be.type, be.id).setSource(be.jsonMap)
-                        .setVersion(be.version == null ? 1 : be.version.longValue())
-                        .setVersionType(be.version == null ? VersionType.FORCE : VersionType.EXTERNAL));
+                    elasticsearchClient.prepareIndex(indexName, be.getType(), be.getId()).setSource(be.getJsonMap())
+                        .setVersion(be.getVersion() == null ? 1 : be.getVersion().longValue())
+                        .setVersionType(be.getVersion() == null ? VersionType.FORCE : VersionType.EXTERNAL));
         }
         BulkResponse bulkResponse = bulkRequest.get();
         BulkWriteResult result = new BulkWriteResult();
@@ -479,70 +477,28 @@ public class ElasticsearchClient {
             String id = r.getId();
             ActionWriteResponse response = r.getResponse();
             if (response instanceof IndexResponse) {
-                if (((IndexResponse) response).isCreated()) result.created.add(id);
+                if (((IndexResponse) response).isCreated()) result.getCreated().add(id);
             }
             String err = r.getFailureMessage();
             if (err != null) {
-                result.errors.put(id, err);
+                result.getErrors().put(id, err);
             }
         }
         long duration = Math.max(1, System.currentTimeMillis() - start);
         long regulator = 0;
-        long ops = result.created.size() * 1000 / duration;
+        long ops = result.getCreated().size() * 1000 / duration;
         if (duration > throttling_time_threshold && ops < throttling_ops_threshold) {
             regulator = (long) (throttling_factor * duration);
             try {Thread.sleep(regulator);} catch (InterruptedException e) {}
         }
-        DAO.log("elastic write bulk to index " + indexName + ": " + jsonMapList.size() + " entries, " + result.created.size() + " created, " + result.errors.size() + " errors, " + duration + " ms" + (regulator == 0 ? "" : ", throttled with " + regulator + " ms") + ", " + ops + " objects/second");
-        if(result.errors.size() > 0) {
+        DAO.log("elastic write bulk to index " + indexName + ": " + jsonMapList.size() + " entries, " + result.getCreated().size() + " created, " + result.getErrors().size() + " errors, " + duration + " ms" + (regulator == 0 ? "" : ", throttled with " + regulator + " ms") + ", " + ops + " objects/second");
+        if(result.getErrors().size() > 0) {
             DAO.severe("Errors faced while indexing:");
-            for(String key : result.errors.keySet()) {
-                DAO.severe(result.errors.get(key));
+            for(String key : result.getErrors().keySet()) {
+                DAO.severe(result.getErrors().get(key));
             }
         }
         return result;
-    }
-
-    public static class BulkWriteResult {
-        private Map<String, String> errors;
-        private Set<String> created;
-        private BulkWriteResult() {
-            this.errors = new LinkedHashMap<>();
-            this.created = new LinkedHashSet<>();
-        }
-        public Map<String, String> getErrors() {
-            return this.errors;
-        }
-        public Set<String> getCreated() {
-            return this.created;
-        }
-    }
-
-    private final static DateTimeFormatter utcFormatter = ISODateTimeFormat.dateTime().withZoneUTC();
-
-    public static class BulkEntry {
-        private String id;
-        private String type;
-        private Long version;
-        private Map<String, Object> jsonMap;
-
-        /**
-         * initialize entry for bulk writes
-         * @param id the id of the entry
-         * @param type the type name
-         * @param timestamp_fieldname the name of the timestamp field, null for unused. If a name is given here, then this field is filled with the current time
-         * @param version the version number >= 0 for external versioning or null for forced updates without versioning
-         * @param jsonMap the payload object
-         */
-        public BulkEntry(final String id, final String type, final String timestamp_fieldname, final Long version, final Map<String, Object> jsonMap) {
-            this.id = id;
-            this.type = type;
-            this.version = version;
-            this.jsonMap = jsonMap;
-            if (timestamp_fieldname != null && !this.jsonMap.containsKey(timestamp_fieldname)) {
-                this.jsonMap.put(timestamp_fieldname, utcFormatter.print(System.currentTimeMillis()));
-            }
-        }
     }
 
     public Map<String, Object> query(final String indexName, final String fieldKey, final String fieldValue) {
@@ -590,49 +546,6 @@ public class ElasticsearchClient {
         private int hitCount; // number of hits in the search process, not the number of results; the hitCount must be always larger or equal to the result list size
         private Map<String, List<Map.Entry<String, AtomicLong>>> aggregations; // key is the field name and list is a list of key-value pairs, where each key names an entry that the key may contain and the value is a counter of the number of occurrences of that value
 
-        /**
-         * combine this query with another query
-         * @param other the other search result
-         */
-        public void add(Query other) {
-            
-            // add new hits
-            otherLoop: for (Map<String, Object> otherEntry: other.result) {
-                String otherID = (String) otherEntry.get("id_str");
-                if (otherID == null) continue otherLoop;
-                ownLoop: for (Map<String, Object> ownEntry: this.result) {
-                    String ownID = (String) ownEntry.get("id_str");
-                    if (ownID == null) continue ownLoop;
-                    if (ownID.equals(otherID)) continue otherLoop;
-                }
-                this.result.add(otherEntry); // this is a new one
-            }
-            
-            // check overall hits
-            this.hitCount = Math.max(Math.max(this.hitCount, other.hitCount), this.result.size());
-            
-            // expand the aggregations
-            for (Map.Entry<String, List<Map.Entry<String, AtomicLong>>> otherAggregationEntry: other.aggregations.entrySet()) {
-                String key = otherAggregationEntry.getKey();
-                List<Map.Entry<String, AtomicLong>> otherList = otherAggregationEntry.getValue();
-                if (!this.aggregations.containsKey(key)) {
-                    this.aggregations.put(key, otherList);
-                    continue;
-                }
-
-                List<Map.Entry<String, AtomicLong>> ownList = this.aggregations.get(key);
-                otherLoop: for (Map.Entry<String, AtomicLong> otherPair: otherList) {
-                    for (Map.Entry<String, AtomicLong> ownPair: ownList) {
-                        if (ownPair.getKey().equals(otherPair.getKey())) {
-                            ownPair.getValue().set(Math.max(ownPair.getValue().get(), otherPair.getValue().get())); // probably this is not correct but the correct value is also not computable. This is the lower approximation of the correct value.
-                            continue otherLoop;
-                        }
-                        ownList.add(otherPair); // because we did not see the key we can just add this here
-                    }
-                }
-            }
-        }
-        
         /**
          * Search the local message cache using a elasticsearch query.
          * @param q - the query, for aggregation this which should include a time frame in the form since:yyyy-MM-dd until:yyyy-MM-dd
@@ -740,7 +653,7 @@ public class ElasticsearchClient {
                     .setFrom(0)
                     .setSize(resultCount);
             request.clearRescorers();
-    
+
             // get response
             SearchResponse response = request.execute().actionGet();
             hitCount = (int) response.getHits().getTotalHits();
@@ -751,7 +664,50 @@ public class ElasticsearchClient {
                 Map<String, Object> map = hit.getSource();
                 this.result.add(map);
             }
-    
+
+        }
+
+        /**
+         * combine this query with another query
+         * @param other the other search result
+         */
+        public void add(Query other) {
+
+            // add new hits
+            otherLoop: for (Map<String, Object> otherEntry: other.result) {
+                String otherID = (String) otherEntry.get("id_str");
+                if (otherID == null) continue otherLoop;
+                ownLoop: for (Map<String, Object> ownEntry: this.result) {
+                    String ownID = (String) ownEntry.get("id_str");
+                    if (ownID == null) continue ownLoop;
+                    if (ownID.equals(otherID)) continue otherLoop;
+                }
+                this.result.add(otherEntry); // this is a new one
+            }
+
+            // check overall hits
+            this.hitCount = Math.max(Math.max(this.hitCount, other.hitCount), this.result.size());
+
+            // expand the aggregations
+            for (Map.Entry<String, List<Map.Entry<String, AtomicLong>>> otherAggregationEntry: other.aggregations.entrySet()) {
+                String key = otherAggregationEntry.getKey();
+                List<Map.Entry<String, AtomicLong>> otherList = otherAggregationEntry.getValue();
+                if (!this.aggregations.containsKey(key)) {
+                    this.aggregations.put(key, otherList);
+                    continue;
+                }
+
+                List<Map.Entry<String, AtomicLong>> ownList = this.aggregations.get(key);
+                otherLoop: for (Map.Entry<String, AtomicLong> otherPair: otherList) {
+                    for (Map.Entry<String, AtomicLong> ownPair: ownList) {
+                        if (ownPair.getKey().equals(otherPair.getKey())) {
+                            ownPair.getValue().set(Math.max(ownPair.getValue().get(), otherPair.getValue().get())); // probably this is not correct but the correct value is also not computable. This is the lower approximation of the correct value.
+                            continue otherLoop;
+                        }
+                        ownList.add(otherPair); // because we did not see the key we can just add this here
+                    }
+                }
+            }
         }
 
         public List<Map<String, Object>> getResult() {
