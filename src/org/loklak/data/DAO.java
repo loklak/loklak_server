@@ -310,14 +310,15 @@ public class DAO {
         if (index_dir.toFile().exists()) OS.protectPath(index_dir); // no other permissions to this path
 
         // define the index factories
-        messages = new MessageFactory(elasticsearch_client, IndexName.messages.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
-        messages_hour = new MessageFactory(elasticsearch_client, IndexName.messages_hour.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
-        messages_day = new MessageFactory(elasticsearch_client, IndexName.messages_day.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
-        messages_week = new MessageFactory(elasticsearch_client, IndexName.messages_week.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
-        users = new UserFactory(elasticsearch_client, IndexName.users.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
-        accounts = new AccountFactory(elasticsearch_client, IndexName.accounts.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
-        queries = new QueryFactory(elasticsearch_client, IndexName.queries.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
-        importProfiles = new ImportProfileFactory(elasticsearch_client, IndexName.import_profiles.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        boolean noio = configMap.containsValue("noio") && configMap.get("noio").equals("true");
+        messages = new MessageFactory(noio ? null : elasticsearch_client, IndexName.messages.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        messages_hour = new MessageFactory(noio ? null : elasticsearch_client, IndexName.messages_hour.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        messages_day = new MessageFactory(noio ? null : elasticsearch_client, IndexName.messages_day.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        messages_week = new MessageFactory(noio ? null : elasticsearch_client, IndexName.messages_week.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        users = new UserFactory(noio ? null : elasticsearch_client, IndexName.users.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        accounts = new AccountFactory(noio ? null : elasticsearch_client, IndexName.accounts.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        queries = new QueryFactory(noio ? null : elasticsearch_client, IndexName.queries.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        importProfiles = new ImportProfileFactory(noio ? null : elasticsearch_client, IndexName.import_profiles.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
 
         // create indices and set mapping (that shows how 'elastic' elasticsearch is: it's always good to define data types)
         File mappingsDir = new File(new File(conf_dir, "elasticsearch"), "mappings");
