@@ -89,9 +89,9 @@ import org.loklak.tools.DateParser;
 
 public class ElasticsearchClient {
 
-    private static long throttling_time_threshold = 2000L; // update time high limit
+    private static long throttling_time_threshold = 2000L; // if updates to the elasticsearch index exceeds this time, a throttling will be applied
     private static long throttling_ops_threshold = 1000L; // messages per second low limit
-    private static double throttling_factor = 1.0d; // factor applied on update duration if both thresholds are passed
+    private static double throttling_factor = 0.5d; // factor applied on update duration if both thresholds are passed
 
     public final static BulkWriteResult EMPTY_BULK_RESULT = new BulkWriteResult();
 
@@ -486,7 +486,7 @@ public class ElasticsearchClient {
         }
         long duration = Math.max(1, System.currentTimeMillis() - start);
         long regulator = 0;
-        long ops = result.getCreated().size() * 1000 / duration;
+        long ops = result.getCreated().size() * 1000 / duration; // this is the number of updates per second
         if (duration > throttling_time_threshold && ops < throttling_ops_threshold) {
             regulator = (long) (throttling_factor * duration);
             try {Thread.sleep(regulator);} catch (InterruptedException e) {}
