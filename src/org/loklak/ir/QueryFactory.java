@@ -1,6 +1,6 @@
 /**
- *  AccountFactory
- *  Copyright 27.05.2015 by Michael Peter Christen, @0rb1t3r
+ *  QueryFactory
+ *  Copyright 26.04.2015 by Michael Peter Christen, @0rb1t3r
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -17,22 +17,20 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.loklak.data;
-
-import java.io.IOException;
+package org.loklak.ir;
 
 import org.json.JSONObject;
-import org.loklak.objects.AccountEntry;
+import org.loklak.objects.QueryEntry;
 
-public class AccountFactory extends AbstractIndexFactory<AccountEntry> implements IndexFactory<AccountEntry> {
-    
-    public AccountFactory(final ElasticsearchClient elasticsearch_client, final String index_name, final int cacheSize, final int existSize) {
+public class QueryFactory extends AbstractIndexFactory<QueryEntry> implements IndexFactory<QueryEntry> {
+
+    public QueryFactory(final ElasticsearchClient elasticsearch_client, final String index_name, final int cacheSize, final int existSize) {
         super(elasticsearch_client, index_name, cacheSize, existSize);
     }
 
     @Override
-    public AccountEntry init(JSONObject map) throws IOException {
-        return new AccountEntry(map);
+    public QueryEntry init(JSONObject json) {
+        return new QueryEntry(json);
     }
     
 }

@@ -78,6 +78,13 @@ import org.loklak.harvester.BaseScraper;
 import org.loklak.http.AccessTracker;
 import org.loklak.http.ClientConnection;
 import org.loklak.http.RemoteAccess;
+import org.loklak.ir.AccountFactory;
+import org.loklak.ir.BulkWriteResult;
+import org.loklak.ir.ElasticsearchClient;
+import org.loklak.ir.ImportProfileFactory;
+import org.loklak.ir.MessageFactory;
+import org.loklak.ir.QueryFactory;
+import org.loklak.ir.UserFactory;
 import org.loklak.objects.AbstractObjectEntry;
 import org.loklak.objects.AccountEntry;
 import org.loklak.objects.ImportProfileEntry;
@@ -303,14 +310,15 @@ public class DAO {
         if (index_dir.toFile().exists()) OS.protectPath(index_dir); // no other permissions to this path
 
         // define the index factories
-        messages = new MessageFactory(elasticsearch_client, IndexName.messages.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
-        messages_hour = new MessageFactory(elasticsearch_client, IndexName.messages_hour.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
-        messages_day = new MessageFactory(elasticsearch_client, IndexName.messages_day.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
-        messages_week = new MessageFactory(elasticsearch_client, IndexName.messages_week.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
-        users = new UserFactory(elasticsearch_client, IndexName.users.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
-        accounts = new AccountFactory(elasticsearch_client, IndexName.accounts.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
-        queries = new QueryFactory(elasticsearch_client, IndexName.queries.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
-        importProfiles = new ImportProfileFactory(elasticsearch_client, IndexName.import_profiles.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        boolean noio = configMap.containsValue("noio") && configMap.get("noio").equals("true");
+        messages = new MessageFactory(noio ? null : elasticsearch_client, IndexName.messages.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        messages_hour = new MessageFactory(noio ? null : elasticsearch_client, IndexName.messages_hour.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        messages_day = new MessageFactory(noio ? null : elasticsearch_client, IndexName.messages_day.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        messages_week = new MessageFactory(noio ? null : elasticsearch_client, IndexName.messages_week.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        users = new UserFactory(noio ? null : elasticsearch_client, IndexName.users.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        accounts = new AccountFactory(noio ? null : elasticsearch_client, IndexName.accounts.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        queries = new QueryFactory(noio ? null : elasticsearch_client, IndexName.queries.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
+        importProfiles = new ImportProfileFactory(noio ? null : elasticsearch_client, IndexName.import_profiles.name(), CACHE_MAXSIZE, EXIST_MAXSIZE);
 
         // create indices and set mapping (that shows how 'elastic' elasticsearch is: it's always good to define data types)
         File mappingsDir = new File(new File(conf_dir, "elasticsearch"), "mappings");
@@ -767,7 +775,7 @@ public class DAO {
                 messageBulk.add(post);
             }
         }
-        ElasticsearchClient.BulkWriteResult result = null;
+        BulkWriteResult result = null;
         try {
             Date limitDate = new Date();
             limitDate.setTime(DateParser.oneHourAgo().getTime());
@@ -824,7 +832,7 @@ public class DAO {
             // teach the classifier
             Classifier.learnPhrase(mw.t.getText());
         }
-        ElasticsearchClient.BulkWriteResult result = null;
+        BulkWriteResult result = null;
         Set<String> created_ids = new HashSet<>();
         try {
             final Date limitDate = new Date();
@@ -1117,11 +1125,11 @@ public class DAO {
                 }}}
             }
                 
-            timeline.setHits(query.hitCount);
+            timeline.setHits(query.getHitCount());
             timeline.setResultIndex(resultIndex);
 
             // evaluate search result
-            for (Map<String, Object> map: query.result) {
+            for (Map<String, Object> map: query.getResult()) {
                 TwitterTweet tweet = new TwitterTweet(new JSONObject(map));
                 try {
                     UserEntry user = users.read(tweet.getScreenName());
@@ -1133,7 +1141,7 @@ public class DAO {
                 	DAO.severe(e);
                 }
             }
-            this.aggregations = query.aggregations;
+            this.aggregations = query.getAggregations();
         }
 
         public SearchLocalMessages (
@@ -1172,7 +1180,7 @@ public class DAO {
                     resultCount
             );
 
-            if (this.query.hitCount < resultCount) {
+            if (this.query.getHitCount() < resultCount) {
                 this.query =  elasticsearch_client.query(
                         (resultIndex = IndexName.messages_day).name(),
                         sq.queryBuilder,
@@ -1181,7 +1189,7 @@ public class DAO {
                 );
             }
 
-            if (this.query.hitCount < resultCount) {
+            if (this.query.getHitCount() < resultCount) {
                 this.query =  elasticsearch_client.query(
                         (resultIndex = IndexName.messages_week).name(),
                         sq.queryBuilder,
@@ -1190,7 +1198,7 @@ public class DAO {
                 );
             }
 
-            if (this.query.hitCount < resultCount) {
+            if (this.query.getHitCount() < resultCount) {
                 this.query =  elasticsearch_client.query(
                         (resultIndex = IndexName.messages).name(),
                         sq.queryBuilder,
@@ -1207,7 +1215,7 @@ public class DAO {
 
         private void addResults() {
             Post outputPost;
-            for (Map<String, Object> map: this.query.result) {
+            for (Map<String, Object> map: this.query.getResult()) {
                 outputPost = new Post(map);
                 this.postList.addPost(outputPost);
             }
@@ -1219,8 +1227,8 @@ public class DAO {
                 int aggregationLimit,
                 String... aggregationFields
         ) {
-            return query.hitCount < resultCount || (aggregationFields.length > 0
-                    && getAggregationResultLimit(query.aggregations) < aggregationLimit);
+            return query.getHitCount() < resultCount || (aggregationFields.length > 0
+                    && getAggregationResultLimit(query.getAggregations()) < aggregationLimit);
         }
 
         public JSONObject getAggregations() {
