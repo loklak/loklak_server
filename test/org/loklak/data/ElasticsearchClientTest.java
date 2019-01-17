@@ -12,8 +12,9 @@ import org.json.JSONObject;
 import org.json.JSONObjectTest;
 import org.junit.After;
 import org.junit.Before;
-import org.loklak.data.ElasticsearchClient.BulkEntry;
-import org.loklak.data.ElasticsearchClient.BulkWriteResult;
+import org.loklak.ir.BulkWriteResult;
+import org.loklak.ir.ElasticsearchClient;
+import org.loklak.ir.BulkWriteEntry;
 import org.loklak.tools.BufferedRandomAccessFile;
 
 public class ElasticsearchClientTest extends TestCase {
@@ -30,11 +31,11 @@ public class ElasticsearchClientTest extends TestCase {
         this.testFile.delete();
     }
 
-    private List<BulkEntry> testBulk(int from, int to) {
-        List<BulkEntry> bulk = new ArrayList<>();
+    private List<BulkWriteEntry> testBulk(int from, int to) {
+        List<BulkWriteEntry> bulk = new ArrayList<>();
         for (int i = from; i < to; i++) {
             JSONObject testJson = JSONObjectTest.testJson(true);
-            BulkEntry entry = new BulkEntry("id_" + i, "testtype", null, null, testJson.toMap());    
+            BulkWriteEntry entry = new BulkWriteEntry("id_" + i, "testtype", null, null, testJson.toMap());    
             bulk.add(entry);
         }
         return bulk;
@@ -47,7 +48,7 @@ public class ElasticsearchClientTest extends TestCase {
         settings.build();
         ElasticsearchClient client = new ElasticsearchClient(settings);
         String indexName = "test";
-        List<BulkEntry> bulk = testBulk(0, 1100);
+        List<BulkWriteEntry> bulk = testBulk(0, 1100);
         BulkWriteResult result = client.writeMapBulk(indexName, bulk);
         assertTrue(result.getCreated().size() == 1100);
         assertTrue(result.getErrors().size() == 0);

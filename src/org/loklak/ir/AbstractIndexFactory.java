@@ -17,7 +17,7 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.loklak.data;
+package org.loklak.ir;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.json.JSONObject;
+import org.loklak.data.IndexEntry;
 import org.loklak.harvester.Post;
 import org.loklak.objects.AbstractObjectEntry;
 import org.loklak.objects.ObjectEntry;
@@ -100,7 +101,7 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
     @Override
     public boolean exists(String id) {
         if (existsCache(id)) return true;
-        boolean exist = elasticsearch_client.exist(index_name, null, id);
+        boolean exist = this.elasticsearch_client == null ? false : this.elasticsearch_client.exist(index_name, null, id);
         this.indexExist.incrementAndGet();
         if (exist) this.existCache.add(id);
         return exist;
@@ -114,8 +115,8 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
             if (existsCache(id)) result.add(id); else check.add(id);
         }
         this.indexExist.addAndGet(ids.size());
-        Set<String> test = this.elasticsearch_client.existBulk(this.index_name, (String) null, check);
-        for (String id: test) {
+        Set<String> test = this.elasticsearch_client == null ? null : this.elasticsearch_client.existBulk(this.index_name, (String) null, check);
+        if (test != null) for (String id: test) {
             this.existCache.add(id);
             result.add(id);
             //assert elasticsearch_client.exist(index_name, null, id); // uncomment for production
@@ -132,12 +133,13 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
     public boolean delete(String id, SourceType sourceType) {
         this.objectCache.remove(id);
         this.existCache.remove(id);
-        return elasticsearch_client.delete(index_name, sourceType.toString(), id);
+        return this.elasticsearch_client == null ? false : this.elasticsearch_client.delete(index_name, sourceType.toString(), id);
     }
 
     @Override
     public JSONObject readJSON(String id) {
-        Map<String, Object> map = elasticsearch_client.readMap(index_name, id);
+        if (this.elasticsearch_client == null) return null;
+        Map<String, Object> map = this.elasticsearch_client.readMap(index_name, id);
         this.indexGet.incrementAndGet();
         if (map == null) return null;
         this.existCache.add(id);
@@ -153,20 +155,14 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
 
     @Override
     public boolean writeEntry(IndexEntry<IndexObject> entry) throws IOException {
-        this.objectCache.put(entry.getId(), entry.getObject());
+        boolean newDoc = this.objectCache.put(entry.getId(), entry.getObject()) == null;
         this.existCache.add(entry.getId());
         // record user into search index
         JSONObject json = entry.getObject().toJSON();
         if (json == null) return false;
-        
-        /*
-         * best data format here would be XContentBuilder because the data is converted into
-         * this format always; in this case with these lines
-         *   XContentBuilder builder = XContentFactory.contentBuilder(XContentType.JSON);
-         *   builder.map(source);
-         */
         if (!json.has(AbstractObjectEntry.TIMESTAMP_FIELDNAME)) json.put(AbstractObjectEntry.TIMESTAMP_FIELDNAME, AbstractObjectEntry.utcFormatter.print(System.currentTimeMillis()));
-        boolean newDoc = elasticsearch_client.writeMap(this.index_name, json.toMap(), entry.getType().toString(), entry.getId());
+        if (this.elasticsearch_client == null) return newDoc;
+        newDoc = this.elasticsearch_client.writeMap(this.index_name, json.toMap(), entry.getType().toString(), entry.getId());
         this.indexWrite.incrementAndGet();
         return newDoc;
     }
@@ -174,24 +170,17 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
     @Override
     public boolean writeEntry(JSONObject json) throws IOException {
         if (json == null) return false;
-        
-        /*
-         * best data format here would be XContentBuilder because the data is converted into
-         * this format always; in this case with these lines
-         *   XContentBuilder builder = XContentFactory.contentBuilder(XContentType.JSON);
-         *   builder.map(source);
-         */
+        if (this.elasticsearch_client == null) return true;
         if (!json.has(AbstractObjectEntry.TIMESTAMP_FIELDNAME)) json.put(AbstractObjectEntry.TIMESTAMP_FIELDNAME, AbstractObjectEntry.utcFormatter.print(System.currentTimeMillis()));
-        boolean newDoc = elasticsearch_client.writeMap(this.index_name, json.toMap(), "local", String.valueOf(json.get("id_str")));
+        boolean newDoc = this.elasticsearch_client.writeMap(this.index_name, json.toMap(), "local", String.valueOf(json.get("id_str")));
         this.indexWrite.incrementAndGet();
         return newDoc;
     }
 
     @Override
-    public ElasticsearchClient.BulkWriteResult writeEntries(Collection<IndexEntry<IndexObject>> entries) throws IOException {
+    public BulkWriteResult writeEntries(Collection<IndexEntry<IndexObject>> entries) throws IOException {
 
-        List<ElasticsearchClient.BulkEntry> jsonMapList = new ArrayList<ElasticsearchClient.BulkEntry>();
-        
+        List<BulkWriteEntry> jsonMapList = new ArrayList<BulkWriteEntry>();
         for (IndexEntry<IndexObject> entry: entries) {
             this.objectCache.put(entry.getId(), entry.getObject());
             this.existCache.add(entry.getId());
@@ -199,21 +188,22 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
             Map<String, Object> jsonMap = entry.getObject().toJSON().toMap();
             assert jsonMap != null;
             if (jsonMap == null) continue;
-            ElasticsearchClient.BulkEntry be = new ElasticsearchClient.BulkEntry(entry.getId(), entry.getType().toString(), AbstractObjectEntry.TIMESTAMP_FIELDNAME, null, jsonMap);
+            BulkWriteEntry be = new BulkWriteEntry(entry.getId(), entry.getType().toString(), AbstractObjectEntry.TIMESTAMP_FIELDNAME, null, jsonMap);
 
             jsonMapList.add(be);
         }
         if (jsonMapList.size() == 0) return ElasticsearchClient.EMPTY_BULK_RESULT;
-        
-        ElasticsearchClient.BulkWriteResult result = elasticsearch_client.writeMapBulk(this.index_name, jsonMapList);
+
+        if (this.elasticsearch_client == null) return new BulkWriteResult();
+        BulkWriteResult result = this.elasticsearch_client.writeMapBulk(this.index_name, jsonMapList);
         this.indexWrite.addAndGet(jsonMapList.size());
         return result;
     }
 
     @Override
-    public ElasticsearchClient.BulkWriteResult writeEntries(List<Post> entries) throws IOException {
+    public BulkWriteResult writeEntries(List<Post> entries) throws IOException {
 
-        List<ElasticsearchClient.BulkEntry> jsonMapList = new ArrayList<ElasticsearchClient.BulkEntry>();
+        List<BulkWriteEntry> jsonMapList = new ArrayList<BulkWriteEntry>();
         for (Post entry: entries) {
             this.objectCache.put(entry.getPostId(), entry);
             this.existCache.add(entry.getPostId());
@@ -221,18 +211,19 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
             Map<String, Object> jsonMap = entry.toJSON().toMap();
             assert jsonMap != null;
             if (jsonMap == null) continue;
-            ElasticsearchClient.BulkEntry be = new ElasticsearchClient.BulkEntry(
+            BulkWriteEntry be = new BulkWriteEntry(
                     entry.getPostId(), "local", "timestamp_id", null, jsonMap);
 
             jsonMapList.add(be);
         }
         if (jsonMapList.size() == 0) return ElasticsearchClient.EMPTY_BULK_RESULT;
-        
-        ElasticsearchClient.BulkWriteResult result = elasticsearch_client.writeMapBulk(this.index_name, jsonMapList);
+
+        if (this.elasticsearch_client == null) return new BulkWriteResult();
+        BulkWriteResult result = elasticsearch_client.writeMapBulk(this.index_name, jsonMapList);
         this.indexWrite.addAndGet(jsonMapList.size());
         return result;
     }
-    
+
     public void close() {
     }
 

@@ -17,7 +17,7 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.loklak.data;
+package org.loklak.ir;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.List;
 
 import org.json.JSONObject;
+import org.loklak.data.IndexEntry;
 import org.loklak.harvester.Post;
 import org.loklak.objects.ObjectEntry;
 import org.loklak.objects.SourceType;
@@ -49,9 +50,9 @@ public interface IndexFactory<Entry extends ObjectEntry> {
 
     public boolean writeEntry(JSONObject json) throws IOException;
     
-    public ElasticsearchClient.BulkWriteResult writeEntries(Collection<IndexEntry<Entry>> entries) throws IOException;
+    public BulkWriteResult writeEntries(Collection<IndexEntry<Entry>> entries) throws IOException;
 
-    public ElasticsearchClient.BulkWriteResult writeEntries(List<Post> entries) throws IOException;
+    public BulkWriteResult writeEntries(List<Post> entries) throws IOException;
     
     public void close();
     
