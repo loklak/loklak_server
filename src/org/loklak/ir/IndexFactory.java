@@ -35,29 +35,33 @@ public interface IndexFactory<Entry extends ObjectEntry> {
     public Entry init(JSONObject json) throws IOException;
 
     public boolean exists(String id);
-    
+
     public boolean existsCache(String id);
-    
+
     public Set<String> existsBulk(Collection<String> ids);
-    
+
     public boolean delete(String id, SourceType sourceType);
 
     public JSONObject readJSON(String id);
-    
+
     public JSONObject readJSONCache(String id);
 
     public boolean writeEntry(IndexEntry<Entry> entry) throws IOException;
-    
+
     public void writeEntryAsync(IndexEntry<Entry> entry) throws IOException;
 
     public boolean writeEntry(JSONObject json) throws IOException;
-    
+
     public void writeEntryAsync(JSONObject json) throws IOException;
-    
+
     public BulkWriteResult writeEntries(Collection<IndexEntry<Entry>> entries) throws IOException;
 
+    public void writeEntriesAsync(Collection<IndexEntry<Entry>> entries) throws IOException;
+
     public BulkWriteResult writeEntries(List<Post> entries) throws IOException;
-    
+
+    public void writeEntriesAsync(List<Post> entries) throws IOException;
+
     public void close();
-    
+
 }

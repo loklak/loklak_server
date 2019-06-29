@@ -720,7 +720,7 @@ public class DAO {
                 if (exists) return false;
 
                 // write the user into the index
-                users.writeEntry(new IndexEntry<UserEntry>(mw.u.getScreenName(), mw.t.getSourceType(), mw.u));
+                users.writeEntryAsync(new IndexEntry<UserEntry>(mw.u.getScreenName(), mw.t.getSourceType(), mw.u));
 
                 // record tweet into text file
                 if (mw.dump && writeDump) {
@@ -939,7 +939,7 @@ public class DAO {
             }
 
             // record account into search index
-            accounts.writeEntry(new IndexEntry<AccountEntry>(a.getScreenName(), a.getSourceType(), a));
+            accounts.writeEntryAsync(new IndexEntry<AccountEntry>(a.getScreenName(), a.getSourceType(), a));
         } catch (IOException e) {
         	DAO.severe(e);
         }
@@ -948,7 +948,6 @@ public class DAO {
 
     /**
      * Store an import profile into the search index
-     * This method is synchronized to prevent concurrent IO caused by this call.
      * @param i an import profile
      * @return true if the record was stored because it did not exist, false if it was not stored because the record existed already
      */
@@ -959,7 +958,7 @@ public class DAO {
                 import_profile_dump.write(i.toJSON(), true);
             }
             // record import profile into search index
-            importProfiles.writeEntry(new IndexEntry<ImportProfileEntry>(i.getId(), i.getSourceType(), i));
+            importProfiles.writeEntryAsync(new IndexEntry<ImportProfileEntry>(i.getId(), i.getSourceType(), i));
         } catch (IOException e) {
         	DAO.severe(e);
         }

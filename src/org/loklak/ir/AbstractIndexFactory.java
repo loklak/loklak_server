@@ -176,8 +176,8 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
         if (json == null) return;
         if (!json.has(AbstractObjectEntry.TIMESTAMP_FIELDNAME)) json.put(AbstractObjectEntry.TIMESTAMP_FIELDNAME, AbstractObjectEntry.utcFormatter.print(System.currentTimeMillis()));
         if (this.elasticsearch_client == null) return;
-        this.indexWrite.incrementAndGet();
         this.elasticsearch_client.writeMapAsync(this.index_name, json.toMap(), entry.getType().toString(), entry.getId());
+        this.indexWrite.incrementAndGet();
     }
 
     @Override
@@ -195,27 +195,14 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
         if (json == null) return;
         if (this.elasticsearch_client == null) return;
         if (!json.has(AbstractObjectEntry.TIMESTAMP_FIELDNAME)) json.put(AbstractObjectEntry.TIMESTAMP_FIELDNAME, AbstractObjectEntry.utcFormatter.print(System.currentTimeMillis()));
-        this.indexWrite.incrementAndGet();
         this.elasticsearch_client.writeMapAsync(this.index_name, json.toMap(), "local", String.valueOf(json.get("id_str")));
+        this.indexWrite.incrementAndGet();
     }
 
     @Override
     public BulkWriteResult writeEntries(Collection<IndexEntry<IndexObject>> entries) throws IOException {
-
-        List<BulkWriteEntry> jsonMapList = new ArrayList<BulkWriteEntry>();
-        for (IndexEntry<IndexObject> entry: entries) {
-            this.objectCache.put(entry.getId(), entry.getObject());
-            this.existCache.add(entry.getId());
-
-            Map<String, Object> jsonMap = entry.getObject().toJSON().toMap();
-            assert jsonMap != null;
-            if (jsonMap == null) continue;
-            BulkWriteEntry be = new BulkWriteEntry(entry.getId(), entry.getType().toString(), AbstractObjectEntry.TIMESTAMP_FIELDNAME, null, jsonMap);
-
-            jsonMapList.add(be);
-        }
+        List<BulkWriteEntry> jsonMapList = indexObject2bulkWriteEntryList(entries);
         if (jsonMapList.size() == 0) return ElasticsearchClient.EMPTY_BULK_RESULT;
-
         if (this.elasticsearch_client == null) return new BulkWriteResult();
         BulkWriteResult result = this.elasticsearch_client.writeMapBulk(this.index_name, jsonMapList);
         this.indexWrite.addAndGet(jsonMapList.size());
@@ -223,27 +210,60 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
     }
 
     @Override
-    public BulkWriteResult writeEntries(List<Post> entries) throws IOException {
+    public void writeEntriesAsync(Collection<IndexEntry<IndexObject>> entries) throws IOException {
+        List<BulkWriteEntry> jsonMapList = indexObject2bulkWriteEntryList(entries);
+        if (jsonMapList.size() == 0) return;
+        if (this.elasticsearch_client == null) return;
+        this.elasticsearch_client.writeMapBulkAsync(this.index_name, jsonMapList);
+        this.indexWrite.addAndGet(jsonMapList.size());
+    }
 
+    private List<BulkWriteEntry> indexObject2bulkWriteEntryList(Collection<IndexEntry<IndexObject>> entries) throws IOException {
         List<BulkWriteEntry> jsonMapList = new ArrayList<BulkWriteEntry>();
-        for (Post entry: entries) {
-            this.objectCache.put(entry.getPostId(), entry);
-            this.existCache.add(entry.getPostId());
-
-            Map<String, Object> jsonMap = entry.toJSON().toMap();
+        for (IndexEntry<IndexObject> entry: entries) {
+            this.objectCache.put(entry.getId(), entry.getObject());
+            this.existCache.add(entry.getId());
+            Map<String, Object> jsonMap = entry.getObject().toJSON().toMap();
             assert jsonMap != null;
             if (jsonMap == null) continue;
-            BulkWriteEntry be = new BulkWriteEntry(
-                    entry.getPostId(), "local", "timestamp_id", null, jsonMap);
+            BulkWriteEntry be = new BulkWriteEntry(entry.getId(), entry.getType().toString(), AbstractObjectEntry.TIMESTAMP_FIELDNAME, null, jsonMap);
 
             jsonMapList.add(be);
         }
-        if (jsonMapList.size() == 0) return ElasticsearchClient.EMPTY_BULK_RESULT;
+        return jsonMapList;
+    }
 
+    @Override
+    public BulkWriteResult writeEntries(List<Post> entries) throws IOException {
+        List<BulkWriteEntry> jsonMapList = post2bulkWriteEntryList(entries);
+        if (jsonMapList.size() == 0) return ElasticsearchClient.EMPTY_BULK_RESULT;
         if (this.elasticsearch_client == null) return new BulkWriteResult();
         BulkWriteResult result = elasticsearch_client.writeMapBulk(this.index_name, jsonMapList);
         this.indexWrite.addAndGet(jsonMapList.size());
         return result;
+    }
+
+    @Override
+    public void writeEntriesAsync(List<Post> entries) throws IOException {
+        List<BulkWriteEntry> jsonMapList = post2bulkWriteEntryList(entries);
+        if (jsonMapList.size() == 0) return;
+        if (this.elasticsearch_client == null) return;
+        elasticsearch_client.writeMapBulkAsync(this.index_name, jsonMapList);
+        this.indexWrite.addAndGet(jsonMapList.size());
+    }
+
+    private List<BulkWriteEntry> post2bulkWriteEntryList(List<Post> entries) throws IOException {
+        List<BulkWriteEntry> jsonMapList = new ArrayList<BulkWriteEntry>();
+        for (Post entry: entries) {
+            this.objectCache.put(entry.getPostId(), entry);
+            this.existCache.add(entry.getPostId());
+            Map<String, Object> jsonMap = entry.toJSON().toMap();
+            assert jsonMap != null;
+            if (jsonMap == null) continue;
+            BulkWriteEntry be = new BulkWriteEntry(entry.getPostId(), "local", "timestamp_id", null, jsonMap);
+            jsonMapList.add(be);
+        }
+        return jsonMapList;
     }
 
     public void close() {

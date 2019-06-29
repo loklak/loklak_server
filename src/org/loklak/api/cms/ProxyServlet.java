@@ -121,7 +121,7 @@ public class ProxyServlet extends HttpServlet {
                     user.setProfileImage(buffer);
                     try {
                         // record user into search index
-                        DAO.users.writeEntry(new IndexEntry<UserEntry>(user.getScreenName(), user.getType(), user));
+                        DAO.users.writeEntryAsync(new IndexEntry<UserEntry>(user.getScreenName(), user.getType(), user));
                     } catch (IOException e) {
                     	DAO.severe(e);
                     }

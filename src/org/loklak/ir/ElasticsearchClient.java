@@ -39,6 +39,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.action.ActionWriteResponse;
 import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
@@ -55,6 +56,7 @@ import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
+import org.elasticsearch.action.support.PlainListenableActionFuture;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
@@ -458,7 +460,7 @@ public class ElasticsearchClient {
         // https://www.elastic.co/blog/elasticsearch-versioning-support
         return future;
     }
-    
+
     /**
      * bulk message write
      * @param jsonMapList
@@ -474,15 +476,8 @@ public class ElasticsearchClient {
      */
     public BulkWriteResult writeMapBulk(final String indexName, final List<BulkWriteEntry> jsonMapList) {
         long start = System.currentTimeMillis();
-        BulkRequestBuilder bulkRequest = elasticsearchClient.prepareBulk();
-        for (BulkWriteEntry be: jsonMapList) {
-            if (be.getId() == null) continue;
-            bulkRequest.add(
-                    elasticsearchClient.prepareIndex(indexName, be.getType(), be.getId()).setSource(be.getJsonMap())
-                        .setVersion(be.getVersion() == null ? 1 : be.getVersion().longValue())
-                        .setVersionType(be.getVersion() == null ? VersionType.FORCE : VersionType.EXTERNAL));
-        }
-        BulkResponse bulkResponse = bulkRequest.get();
+        ListenableActionFuture<BulkResponse> future = writeMapBulkInternal(indexName, jsonMapList);
+        BulkResponse bulkResponse = future.actionGet();
         BulkWriteResult result = new BulkWriteResult();
         for (BulkItemResponse r: bulkResponse.getItems()) {
             String id = r.getId();
@@ -510,6 +505,24 @@ public class ElasticsearchClient {
             }
         }
         return result;
+    }
+
+    public void writeMapBulkAsync(final String indexName, final List<BulkWriteEntry> jsonMapList) {
+        writeMapBulkInternal(indexName, jsonMapList);
+    }
+
+    private ListenableActionFuture<BulkResponse> writeMapBulkInternal(final String indexName, final List<BulkWriteEntry> jsonMapList) {
+        final BulkRequestBuilder bulkRequest = elasticsearchClient.prepareBulk();
+        for (BulkWriteEntry be: jsonMapList) {
+            if (be.getId() == null) continue;
+            bulkRequest.add(
+                    elasticsearchClient.prepareIndex(indexName, be.getType(), be.getId()).setSource(be.getJsonMap())
+                        .setVersion(be.getVersion() == null ? 1 : be.getVersion().longValue())
+                        .setVersionType(be.getVersion() == null ? VersionType.FORCE : VersionType.EXTERNAL));
+        }
+
+        final ListenableActionFuture<BulkResponse> future = bulkRequest.execute();
+        return future;
     }
 
     public Map<String, Object> query(final String indexName, final String fieldKey, final String fieldValue) {
