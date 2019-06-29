@@ -40,6 +40,7 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.elasticsearch.action.ActionWriteResponse;
+import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.cluster.stats.ClusterStatsResponse;
 import org.elasticsearch.action.admin.cluster.tasks.PendingClusterTasksResponse;
@@ -426,16 +427,8 @@ public class ElasticsearchClient {
     public boolean writeMap(String indexName, final Map<String, Object> jsonMap, String typeName, String id) {
         long start = System.currentTimeMillis();
         // get the version number out of the json, if any is given
-        Long version = (Long) jsonMap.remove("_version");
-        // put this to the index
-        IndexResponse r = elasticsearchClient.prepareIndex(indexName, typeName, id).setSource(jsonMap)
-            .setVersion(version == null ? 1 : version.longValue())
-            .setVersionType(version == null ? VersionType.FORCE : VersionType.EXTERNAL)
-            .execute()
-            .actionGet();
-        if (version != null) jsonMap.put("_version", version); // to prevent side effects
-        // documentation about the versioning is available at
-        // https://www.elastic.co/blog/elasticsearch-versioning-support
+        ListenableActionFuture<IndexResponse> future = writeMapInternal(indexName, jsonMap, typeName, id);
+        IndexResponse r = future.actionGet();
         // TODO: error handling
         boolean created = r.isCreated(); // true means created, false means updated
         long duration = Math.max(1, System.currentTimeMillis() - start);
@@ -448,6 +441,24 @@ public class ElasticsearchClient {
         return created;
     }
 
+    public void writeMapAsync(String indexName, final Map<String, Object> jsonMap, String typeName, String id) {
+        writeMapInternal(indexName, jsonMap, typeName, id);
+    }
+
+    private ListenableActionFuture<IndexResponse> writeMapInternal(String indexName, final Map<String, Object> jsonMap, String typeName, String id) {
+        // get the version number out of the json, if any is given
+        Long version = (Long) jsonMap.remove("_version");
+        // put this to the index
+        ListenableActionFuture<IndexResponse> future = elasticsearchClient.prepareIndex(indexName, typeName, id).setSource(jsonMap)
+            .setVersion(version == null ? 1 : version.longValue())
+            .setVersionType(version == null ? VersionType.FORCE : VersionType.EXTERNAL)
+            .execute();
+        if (version != null) jsonMap.put("_version", version); // to prevent side effects
+        // documentation about the versioning is available at
+        // https://www.elastic.co/blog/elasticsearch-versioning-support
+        return future;
+    }
+    
     /**
      * bulk message write
      * @param jsonMapList

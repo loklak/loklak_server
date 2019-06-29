@@ -168,6 +168,19 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
     }
 
     @Override
+    public void writeEntryAsync(IndexEntry<IndexObject> entry) throws IOException {
+        this.objectCache.put(entry.getId(), entry.getObject());
+        this.existCache.add(entry.getId());
+        // record user into search index
+        JSONObject json = entry.getObject().toJSON();
+        if (json == null) return;
+        if (!json.has(AbstractObjectEntry.TIMESTAMP_FIELDNAME)) json.put(AbstractObjectEntry.TIMESTAMP_FIELDNAME, AbstractObjectEntry.utcFormatter.print(System.currentTimeMillis()));
+        if (this.elasticsearch_client == null) return;
+        this.indexWrite.incrementAndGet();
+        this.elasticsearch_client.writeMapAsync(this.index_name, json.toMap(), entry.getType().toString(), entry.getId());
+    }
+
+    @Override
     public boolean writeEntry(JSONObject json) throws IOException {
         if (json == null) return false;
         if (this.elasticsearch_client == null) return true;
@@ -175,6 +188,15 @@ public abstract class AbstractIndexFactory<IndexObject extends ObjectEntry> impl
         boolean newDoc = this.elasticsearch_client.writeMap(this.index_name, json.toMap(), "local", String.valueOf(json.get("id_str")));
         this.indexWrite.incrementAndGet();
         return newDoc;
+    }
+
+    @Override
+    public void writeEntryAsync(JSONObject json) throws IOException {
+        if (json == null) return;
+        if (this.elasticsearch_client == null) return;
+        if (!json.has(AbstractObjectEntry.TIMESTAMP_FIELDNAME)) json.put(AbstractObjectEntry.TIMESTAMP_FIELDNAME, AbstractObjectEntry.utcFormatter.print(System.currentTimeMillis()));
+        this.indexWrite.incrementAndGet();
+        this.elasticsearch_client.writeMapAsync(this.index_name, json.toMap(), "local", String.valueOf(json.get("id_str")));
     }
 
     @Override

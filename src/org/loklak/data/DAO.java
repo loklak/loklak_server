@@ -1412,7 +1412,7 @@ public class DAO {
                 qe.update(tl.period(), byUserQuery);
             }
             try {
-                queries.writeEntry(new IndexEntry<QueryEntry>(q, qe.source_type == null ? SourceType.TWITTER : qe.source_type, qe));
+                queries.writeEntryAsync(new IndexEntry<QueryEntry>(q, qe.source_type == null ? SourceType.TWITTER : qe.source_type, qe));
             } catch (IOException e) {
             	DAO.severe(e);
             }

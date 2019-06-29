@@ -47,8 +47,12 @@ public interface IndexFactory<Entry extends ObjectEntry> {
     public JSONObject readJSONCache(String id);
 
     public boolean writeEntry(IndexEntry<Entry> entry) throws IOException;
+    
+    public void writeEntryAsync(IndexEntry<Entry> entry) throws IOException;
 
     public boolean writeEntry(JSONObject json) throws IOException;
+    
+    public void writeEntryAsync(JSONObject json) throws IOException;
     
     public BulkWriteResult writeEntries(Collection<IndexEntry<Entry>> entries) throws IOException;
 
