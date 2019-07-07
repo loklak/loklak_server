@@ -74,6 +74,8 @@ public class SearchServlet extends HttpServlet {
 
     // possible values: cache, twitter, all
     public static TwitterTimeline search(final String[] protocolhostportstubs, final String query, final ArrayList<String> filterList, final TwitterTimeline.Order order, final String source, final int count, final int timezoneOffset, final String provider_hash, final long timeout) throws IOException {
+        String threadname = Thread.currentThread().getName();
+
         TwitterTimeline tl = new TwitterTimeline(order);
         if ("".equals(query)) return tl;
         String urlstring = "";
@@ -83,6 +85,7 @@ public class SearchServlet extends HttpServlet {
             byte[] jsonb = null;
             IOException ee = null;
             backendloop: for (String protocolhostportstub: protocolhostportstubs) {
+                Thread.currentThread().setName("searchOnOtherPeers on:" + protocolhostportstub);
                 ee = null;
                 try {
                     urlstring = protocolhostportstub + "/api/search.json?q=" + URLEncoder.encode(query.replace(' ', '+'), "UTF-8") + "&timezoneOffset=" + timezoneOffset + "&maximumRecords=" + count + "&source=" + (source == null ? "all" : source) + "&minified=true&shortlink=false&timeout=" + timeout;
@@ -125,6 +128,7 @@ public class SearchServlet extends HttpServlet {
             throw new IOException(e.getMessage());
         }
         //System.out.println(parser.text());
+        Thread.currentThread().setName(threadname);
         return tl;
     }
 
