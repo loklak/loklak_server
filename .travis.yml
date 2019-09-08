@@ -19,7 +19,7 @@ cache:
 install:
 - pip install --user flake8
 script:
-- gradle build -x checkstyleTest -x checkstyleMain
+- ./gradlew build -x checkstyleTest -x checkstyleMain
 - bin/start.sh
 - flake8 bin
 - docker build -t loklak_server .
