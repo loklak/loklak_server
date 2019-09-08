@@ -8,8 +8,12 @@ buildscript {
     }
 }
 
+plugins {
+  id 'com.github.johnrengelman.shadow' version '5.1.0'
+  id 'java'
+}
+
 apply plugin: 'java'
-apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'eclipse'
 apply plugin: 'checkstyle'
 apply plugin: 'jacoco'
