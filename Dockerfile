@@ -1,16 +1,23 @@
 FROM openjdk:8-alpine
-LABEL maintainer="Ansgar Schmidt <ansgar.schmidt@gmx.net>"
+LABEL maintainer="Michael Peter Christen <mc@yacy.net>"
+
+# build the image with (i.e.)
+# docker build -t loklak_server/latest .
+
+# start the image with (i.e.)
+# docker run -d -p 9000:9000 <image>
+
 # Create Volume for persistence
 VOLUME ["/loklak_server/data"]
 
-# start loklak
+# loklak start
 CMD ["/loklak_server/bin/start.sh", "-Idn"]
 
 # setup locales
-
 ENV LANG=en_US.UTF-8
+
 # Expose the web interface ports
-EXPOSE 80 443
+EXPOSE 9000 9443
 
 # copy the required parts of the source code
 ADD bin /loklak_server/bin/
@@ -25,12 +32,14 @@ ADD build.gradle /loklak_server/
 ADD settings.gradle /loklak_server/
 ADD test/queries /loklak_server/test/queries/
 
-RUN apk update && apk add --no-cache git bash && \
-    # compile loklak
-    cd /loklak_server && ./gradlew build -x checkstyleMain -x checkstyleTest -x jacocoTestReport && \
-    # change config file
-    sed -i 's/^\(port.http=\).*/\180/;s/^\(port.https=\).*/\1443/;s/^\(upgradeInterval=\).*/\186400000000/' \
-        conf/config.properties
+# install required software
+RUN apk update && apk add --no-cache bash
+
+# compile loklak
+RUN cd /loklak_server && ./gradlew build -x checkstyleMain -x checkstyleTest -x jacocoTestReport
+
+# change config file
+RUN sed -i 's/^\(upgradeInterval=\).*/\186400000000/' /loklak_server/conf/config.properties
 
 # set current working directory to loklak_server
 WORKDIR /loklak_server
