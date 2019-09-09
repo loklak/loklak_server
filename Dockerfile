@@ -18,7 +18,7 @@ ADD settings.gradle /loklak_server/
 RUN cd /loklak_server && ./gradlew build --no-daemon -x checkstyleMain -x checkstyleTest -x jacocoTestReport
 
 # Second Stage
-FROM openjdk:8-alpine
+FROM openjdk:8-jre-alpine
 
 # install required software
 RUN apk update && apk add --no-cache bash
