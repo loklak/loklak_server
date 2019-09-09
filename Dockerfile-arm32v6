@@ -1,11 +1,15 @@
 FROM arm32v6/openjdk:8-alpine
 LABEL maintainer="Michael Peter Christen <mc@yacy.net>"
 
+# This image is suitable for Raspberry Pi 1, 2, Compute Module 1 and Zero,
+# for a RPi 3, 4 and Compute Module 3 please use the arm32v7 image.
+# See also: https://en.wikipedia.org/wiki/Raspberry_Pi#Processor
+
 # create image on a Raspberry Pi with:
 # sudo apt-get install openjdk-8-jdk-headless:armhf
 # git clone https://github.com/loklak/loklak_server.git
 # cd loklak_server
-# docker build -t loklak_server-arm/latest -f Dockerfile-arm .
+# docker build -t loklak/loklak_server:latest-arm32v6 -f Dockerfile-arm32v6 .
 
 # start the image with (i.e.)
 # docker run -d -p 9000:9000 <image>
