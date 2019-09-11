@@ -21,7 +21,7 @@ RUN cd /loklak_server && ./gradlew build --no-daemon -x checkstyleMain -x checks
 FROM openjdk:8-alpine
 
 # install required software
-RUN apk update && apk add --no-cache bash
+RUN apk update && apk add --no-cache git bash
 
 # Create Volume for persistence
 VOLUME ["/loklak_server/data"]
