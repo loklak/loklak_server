@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 JARFILE="build/libs/loklak_server-all.jar"
 INSTALLATIONCONFIG="data/settings/installation.txt"

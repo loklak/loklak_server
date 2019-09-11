@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 # If you're looking for the variables, please go to bin/.preload.sh
 
