@@ -43,7 +43,7 @@ public class InstagramProfileScraper extends BaseScraper {
      * instaJsonData is a Pattern object which will be used to match the required pattern
      * with the extracted elements from html page
      */
-    private Pattern instaJsonData = Pattern.compile("(\\{\"activity_counts\").*(\\});");
+    private Pattern instaJsonData = Pattern.compile("(\\{\"config\").*(\\});");
 
     /**
      * Constructor to set baseUrl and scraperName in the super(Base-Interface) for

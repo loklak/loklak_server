@@ -55,11 +55,9 @@ public class InstagramProfileScraperTest {
 				assertNotNull(config);
 				assertNotNull(instaProfile);
 				assertNotNull(entry_data);
-				assertTrue(json.has("activity_counts"));
 				assertTrue(json.has("country_code"));
 				assertTrue(json.has("platform"));
 				assertTrue(json.has("language_code"));
-				assertTrue(json.has("gatekeepers"));
 				assertTrue(entry_data.has("ProfilePage"));			
 				assertTrue(config.has("viewer"));
 				assertTrue(config.has("csrf_token"));
