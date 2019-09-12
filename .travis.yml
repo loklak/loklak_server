@@ -24,7 +24,7 @@ script:
 - flake8 bin
 - docker build -t loklak_server .
 - docker images
-- docker run loklak_server bash /loklak_server/bin/start.sh -I
+- docker run loklak_server sh /loklak_server/bin/start.sh -I
 after_success:
 - bash <(curl -s https://codecov.io/bash)
 - gradle clean
