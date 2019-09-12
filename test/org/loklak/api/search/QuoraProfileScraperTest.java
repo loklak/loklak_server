@@ -36,11 +36,7 @@ public class QuoraProfileScraperTest {
 
         String userName = "Saptak Sengupta";
         String profileImagePath = "/main-thumb-24728160-200-igibbfdmibqxdtrjlrdnejpvjqepxpnn.jpeg";
-        String topicsUrl = "https://www.quora.com/profile/Saptak-Sengupta/topics";
         String followingUrl = "https://www.quora.com/profile/Saptak-Sengupta/following";
-        String blogsUrl = "https://www.quora.com/profile/Saptak-Sengupta/blogs";
-        String editsUrl = "https://www.quora.com/profile/Saptak-Sengupta/log";
-        String postsUrl = "https://www.quora.com/profile/Saptak-Sengupta/all_posts";
         String questionsUrl = "https://www.quora.com/profile/Saptak-Sengupta/questions";
         String postType = "user";
         String post_scraper = "quora";
@@ -69,11 +65,7 @@ public class QuoraProfileScraperTest {
         assertEquals(url, quoraProfile.getString("search_url"));
         assertEquals(userName, quoraProfile.getString("user_name"));
         assertEquals(profileImagePath, quoraProfile.getString("profileImage").substring(quoraProfile.getString("profileImage").length()-profileImagePath.length()));
-        assertEquals(topicsUrl, quoraProfile.getJSONObject("feeds").getString("topics_url"));
         assertEquals(followingUrl, quoraProfile.getJSONObject("feeds").getString("following_url"));
-        assertEquals(blogsUrl, quoraProfile.getJSONObject("feeds").getString("blogs_url"));
-        assertEquals(editsUrl, quoraProfile.getJSONObject("feeds").getString("edits_url"));
-        assertEquals(postsUrl, quoraProfile.getJSONObject("feeds").getString("posts_url"));
         assertEquals(questionsUrl, quoraProfile.getJSONObject("feeds").getString("questions_url"));
     }
 
