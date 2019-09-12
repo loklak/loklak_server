@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.zip.Deflater;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -41,7 +42,11 @@ public class Compression {
         in.close(); out.finish(); out.close();
         if (deleteSource && dest.exists()) source.delete();
     }
-    
+
+    public static byte[] gzip(String s) {
+        return gzip(s.getBytes(StandardCharsets.UTF_8));
+    }
+
     public static byte[] gzip(byte[] b) {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream(b.length);
@@ -53,7 +58,7 @@ public class Compression {
         } catch (IOException e) {}
         return null;
     }
-    
+
     public static void gunzip(File source, File dest, boolean deleteSource) throws IOException {
         byte[] buffer = new byte[2^20];
         FileOutputStream out = new FileOutputStream(dest);
@@ -62,8 +67,8 @@ public class Compression {
         in.close(); out.close();
         if (deleteSource && dest.exists()) source.delete();
     }
-    
-    public static byte[] gunzip(byte[] b) {
+
+    public static byte[] gunzipBytes(byte[] b) {
         byte[] buffer = new byte[Math.min(2^20, b.length)];
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream(b.length * 2);
@@ -75,5 +80,8 @@ public class Compression {
         } catch (IOException e) {}
         return null;
     }
-    
+
+    public static String gunzipString(byte[] b) {
+        return new String(gunzipBytes(b), StandardCharsets.UTF_8);
+    }
 }

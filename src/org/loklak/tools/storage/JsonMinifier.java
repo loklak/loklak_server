@@ -103,7 +103,7 @@ public class JsonMinifier {
             byte[] x = new byte[this.capsule.length - 1];
             System.arraycopy(this.capsule, 1, x, 0, this.capsule.length - 1);
             if (this.capsule[0] == 1) {
-                x = Compression.gunzip(x);
+                x = Compression.gunzipBytes(x);
             }
             try {
                 JSONObject json = new JSONObject(UTF8.String(x));
