@@ -25,6 +25,7 @@ import org.json.JSONObject;
 
 public interface JsonFactory {
 
+    public String getString() throws IOException;
     public JSONObject getJSON() throws IOException;
-    
+
 }

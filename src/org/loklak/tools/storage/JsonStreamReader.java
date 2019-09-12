@@ -58,11 +58,17 @@ public class JsonStreamReader implements JsonReader {
     }
     
     public static class WrapperJsonFactory implements JsonFactory {
-        JSONObject json;
-        public WrapperJsonFactory(final JSONObject json) {
+        private JSONObject json;
+        private String original;
+        private WrapperJsonFactory(final String original, final JSONObject json) {
+            this.original = original;
             this.json = json;
         }
-        
+
+        @Override
+        public String getString() throws IOException {
+            return this.original;
+        }
         @Override
         public JSONObject getJSON() throws IOException {
             return this.json;
@@ -77,7 +83,7 @@ public class JsonStreamReader implements JsonReader {
             while ((line = br.readLine()) != null) {
                 try {
                     JSONObject json = new JSONObject(line);
-                    this.jsonline.put(new WrapperJsonFactory(json));
+                    this.jsonline.put(new WrapperJsonFactory(line, json));
                 } catch (Throwable e) {
                 	DAO.severe(e);
                 }

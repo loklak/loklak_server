@@ -134,6 +134,9 @@ public class JsonRandomAccessFile extends BufferedRandomAccessFile implements Js
             }
             return null;
         }
+        public String getString() {
+            return this.toString();
+        }
     }
     
     public JsonFactory getJsonFactory(long index, int length) {
@@ -172,6 +175,9 @@ public class JsonRandomAccessFile extends BufferedRandomAccessFile implements Js
             	DAO.severe(e);
                 return "";
             }
+        }
+        public String getString() {
+            return this.toString();
         }
     }
     

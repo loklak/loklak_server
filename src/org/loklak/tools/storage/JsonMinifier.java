@@ -58,9 +58,9 @@ public class JsonMinifier {
         }
         return new JsonCapsuleFactory(minified);
     }
-    
+
     public class JsonCapsuleFactory implements JsonFactory {
-        
+
         byte[] capsule; // byte 0 is a flag: 0 = raw json, 1 = compressed json
 
         private JsonCapsuleFactory(JSONObject jo) {
@@ -83,7 +83,7 @@ public class JsonMinifier {
             //}
             //System.out.print("DEBUG " + this.getRawJson());
         }
-        
+
         public JSONObject getJSON() {
             JSONObject minified = getRawJSON();
             JSONObject original = new JSONObject(true);
@@ -94,7 +94,11 @@ public class JsonMinifier {
             }
             return original;
         }
-        
+
+        public String getString() {
+            return getJSON().toString(0);
+        }
+
         private JSONObject getRawJSON() {
             byte[] x = new byte[this.capsule.length - 1];
             System.arraycopy(this.capsule, 1, x, 0, this.capsule.length - 1);
