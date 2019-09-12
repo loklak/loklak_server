@@ -43,7 +43,7 @@ public class YoutubeScraperTest {
             fis = new URL(url).openStream();
             Post video = ytubeScrape.parseVideo(fis, "url", url);
             DAO.log(video.toString());
-            assertThat(video.get("html_title").toString(), is("[\"Iggy Azalea - Team (Explicit) - YouTube\"]"));
+            assertThat(video.get("html_title").toString(), is("[\"Iggy Azalea - Team (Official Music Video) - YouTube\"]"));
         } catch (IOException e) {
             DAO.log("YoutubeScraperTest.parseFromInputStreamTest() failed to connect to network. url:" + url);
         }
@@ -67,7 +67,7 @@ public class YoutubeScraperTest {
             BufferedReader br = new BufferedReader(new InputStreamReader((new URL(url)).openStream(), StandardCharsets.UTF_8));
             Post video = ytubeScrape.parseVideo(br, "url", "https://www.youtube.com/watch?v=KVGRN7Z7T1A");
             DAO.log(video.toString());
-            assertThat(video.get("html_title").toString(), is("[\"Iggy Azalea - Team (Explicit) - YouTube\"]"));
+            assertThat(video.get("html_title").toString(), is("[\"Iggy Azalea - Team (Official Music Video) - YouTube\"]"));
             assertThat(video.get("post_type"), is(postType));
             assertThat(video.get("post_scraper"), is(postScraper));
         } catch (IOException e) {
