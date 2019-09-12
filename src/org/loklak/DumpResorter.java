@@ -19,8 +19,8 @@ import org.loklak.data.DAO;
 import org.loklak.harvester.TwitterScraper;
 import org.loklak.objects.AbstractObjectEntry;
 import org.loklak.objects.MessageEntry;
+import org.loklak.tools.Compression;
 import org.loklak.tools.DateParser;
-import org.loklak.tools.GZip;
 import org.loklak.tools.storage.JsonFactory;
 import org.loklak.tools.storage.JsonStreamReader;
 
@@ -108,7 +108,7 @@ public class DumpResorter {
                                         ConcurrentHashMap<String, byte[]> previous = buffer.putIfAbsent(fileName, dayMap);
                                         if (previous != null) dayMap = previous;
                                     }
-                                    dayMap.put(sortKey, GZip.gzip(original));
+                                    dayMap.put(sortKey, Compression.gzip(original));
 
                                     //System.out.println(sortKey + ": " + json.toString());
                                     /*
@@ -154,7 +154,7 @@ public class DumpResorter {
             try {
                 FileWriter writer = new FileWriter(dump);
                 sorted.values().forEach(gzip -> {
-                    String tweet = GZip.gunzipString(gzip);
+                    String tweet = Compression.gunzipString(gzip);
                     try {
                         writer.write(tweet);
                         writer.write("\n");
