@@ -1,4 +1,4 @@
-FROM arm32v7/openjdk:8-alpine
+FROM arm32v7/openjdk:8-alpine AS builder
 LABEL maintainer="Michael Peter Christen <mc@yacy.net>"
 
 # This image is suitable for Raspberry Pi 3, 4 and Compute Module 3,
@@ -26,6 +26,9 @@ RUN cd /loklak_server && ./gradlew build --no-daemon -x checkstyleMain -x checks
 
 # Second Stage
 FROM arm32v7/openjdk:8-jre-alpine
+
+# install required software
+RUN apk update && apk add --no-cache bash
 
 # Create Volume for persistence
 VOLUME ["/loklak_server/data"]

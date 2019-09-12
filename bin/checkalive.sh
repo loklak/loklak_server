@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 cd "`dirname $0`"
 
 # for a production environment with high-availability requirement,
