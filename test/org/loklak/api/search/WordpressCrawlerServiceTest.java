@@ -51,10 +51,6 @@ public class WordpressCrawlerServiceTest {
             JSONObject blog = (JSONObject)blogs.get(i);
             assertTrue(blog.has("blog_url"));
             assertTrue(blog.has("title"));
-            assertTrue(blog.has("posted_on"));
-            assertTrue(blog.has("content"));
-            assertTrue(blog.has("author"));
-            assertThat(blog.getString("author"), is(author));
         }
 	}
 }
