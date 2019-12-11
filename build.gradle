@@ -140,6 +140,7 @@ dependencies {
     compile group: 'xerces', name: 'xerces', version: '2.4.0'
     compile group: 'org.unbescape', name: 'unbescape', version: '1.0'
     compile 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.0'
+    compile 'org.mongodb:mongodb-driver:3.4.3'
 }
 
 tasks.withType(Javadoc) {

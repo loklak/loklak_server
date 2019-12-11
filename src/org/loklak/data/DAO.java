@@ -182,7 +182,10 @@ public class DAO {
     public static TimelineCache timelineCache;
 
     public static MQTTPublisher mqttPublisher = null;
+    public static MongoDBManager mongoDBManager = null;
     public static boolean streamEnabled = false;
+    public static boolean mongoDBEnabled = false;
+    public static String twitterChannel = "twitter";
     public static List<String> randomTerms = new ArrayList<>();
 
     public static enum IndexName {
@@ -425,6 +428,13 @@ public class DAO {
         streamEnabled = getConfig("stream.enabled", false);
         if (streamEnabled) {
             mqttPublisher = new MQTTPublisher(mqttAddress);
+        }
+
+        // Connect to mongoDB database
+        String mongoAddress = getConfig("db.mongo.address", "mongodb://127.0.0.1:27017");
+        mongoDBEnabled = getConfig("db.mongo.enabled", false);
+        if (mongoDBEnabled) {
+            mongoDBManager = new MongoDBManager(mongoAddress);
         }
 
         // finally wait for healthy status of elasticsearch shards
@@ -889,6 +899,8 @@ public class DAO {
 
         for (MessageWrapper mw: mws) try {
             mw.t.publishToMQTT();
+            //Store message string to mongoDB document
+            mw.t.saveToMongoDB(DAO.twitterChannel);
             if (!created.contains(mw.t.getPostId())) continue;
             synchronized (DAO.class) {
                 
