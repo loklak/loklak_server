@@ -1,7 +1,7 @@
 package org.json;
 
 /*
-Copyright (c) 2002 JSON.org
+Copyright (c) 2018 JSON.org
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,22 +22,22 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
- */
+*/
 
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
+import java.lang.annotation.Documented;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
+
+@Documented
+@Retention(RUNTIME)
+@Target({METHOD})
 /**
- * The <code>JSONString</code> interface allows a <code>toJSONString()</code>
- * method so that a class can change the behavior of
- * <code>JSONObject.toString()</code>, <code>JSONArray.toString()</code>,
- * and <code>JSONWriter.value(</code>Object<code>)</code>. The
- * <code>toJSONString</code> method will be used instead of the default behavior
- * of using the Object's <code>toString()</code> method and quoting the result.
+ * Use this annotation on a getter method to override the Bean name
+ * parser for Bean -&gt; JSONObject mapping. If this annotation is
+ * present at any level in the class hierarchy, then the method will
+ * not be serialized from the bean into the JSONObject.
  */
-public interface JSONString {
-    /**
-     * The <code>toJSONString</code> method allows a class to produce its own JSON
-     * serialization.
-     *
-     * @return A strictly syntactically correct JSON text.
-     */
-    public String toJSONString();
-}
+public @interface JSONPropertyIgnore { }

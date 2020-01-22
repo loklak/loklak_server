@@ -1,7 +1,7 @@
 package org.json;
 
 /*
-Copyright (c) 2002 JSON.org
+Copyright (c) 2018 JSON.org
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,48 +22,26 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
- */
+*/
 
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
+import java.lang.annotation.Documented;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
+
+@Documented
+@Retention(RUNTIME)
+@Target({METHOD})
 /**
- * The JSONException is thrown by the JSON.org classes when things are amiss.
- *
- * @author JSON.org
- * @version 2015-12-09
+ * Use this annotation on a getter method to override the Bean name
+ * parser for Bean -&gt; JSONObject mapping. A value set to empty string <code>""</code>
+ * will have the Bean parser fall back to the default field name processing.
  */
-public class JSONException extends RuntimeException {
-    /** Serialization ID */
-    private static final long serialVersionUID = 0;
-
+public @interface JSONPropertyName {
     /**
-     * Constructs a JSONException with an explanatory message.
-     *
-     * @param message
-     *            Detail about the reason for the exception.
+     * @return The name of the property as to be used in the JSON Object.
      */
-    public JSONException(final String message) {
-        super(message);
-    }
-
-    /**
-     * Constructs a JSONException with an explanatory message and cause.
-     * 
-     * @param message
-     *            Detail about the reason for the exception.
-     * @param cause
-     *            The cause.
-     */
-    public JSONException(final String message, final Throwable cause) {
-        super(message, cause);
-    }
-
-    /**
-     * Constructs a new JSONException with the specified cause.
-     * 
-     * @param cause
-     *            The cause.
-     */
-    public JSONException(final Throwable cause) {
-        super(cause.getMessage(), cause);
-    }
-
+    String value();
 }
