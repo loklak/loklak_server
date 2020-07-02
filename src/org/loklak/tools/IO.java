@@ -7,6 +7,7 @@ import org.loklak.data.DAO;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
@@ -95,5 +96,68 @@ public final class IO {
 			DAO.severe(e);
 		}
 		return null;
+	}
+	
+	/**
+	 * Resolves an untrusted user-specified path against the API's base directory.
+	 * Paths that try to escape the base directory are rejected.
+	 *
+	 * @param baseDirPath  the absolute path of the base directory that all
+	 * user-specified paths should be within
+	 * @param userPath  the untrusted path provided by the API user, expected to be
+	 * relative to {@code baseDirPath}
+	 */
+	public static Path resolvePath(final Path baseDirPath, final Path userPath) {
+		if (!baseDirPath.isAbsolute()) {
+			throw new IllegalArgumentException("Base path must be absolute");
+		}
+
+		if (userPath.isAbsolute()) {
+			throw new IllegalArgumentException("User path must be relative");
+		}
+
+		// Join the two paths together, then normalize so that any ".." elements
+		// in the userPath can remove parts of baseDirPath.
+		// (e.g. "/foo/bar/baz" + "../attack" -> "/foo/bar/attack")
+		final Path resolvedPath = baseDirPath.resolve(userPath).normalize();
+
+		// Make sure the resulting path is still within the required directory.
+		// (In the example above, "/foo/bar/attack" is not.)
+		if (!resolvedPath.startsWith(baseDirPath)) {
+			throw new IllegalArgumentException("User path escapes the base path");
+		}
+
+		return resolvedPath;
+	}
+
+	public static Path resolvePath(final Path baseDirPath, final String userPath) {
+		return resolvePath(baseDirPath, Paths.get(userPath));
+	}
+
+	/**
+	 * Checks each subsequent path to be strictly within the baseDirPath so that
+	 * no path argument leads to directory traversal attack
+	 *
+	 * E.g. /models/ + req.model + '/' + req.lang + /images/ + req.image
+	 * Should be checked for ('models', req.model, req.lang, 'images', req.image)
+	 * that each subsequent element is within the previous and not breaking out by passing
+	 * req.model => ..
+	 * req.lang  => ..
+	 * req.image => ../../private/data.json
+	 *
+	 * Since just checking the last argument isn't enough
+	 *
+	 * @param baseDirPath the absolute path of the base directory that all
+	 * user-specified paths should be within
+	 * @param paths the untrusted paths provided by the API user, expected to be
+	 * relative to {@code baseDirPath}
+	 */
+	public static Path resolvePath(final Path baseDirPath, final String... paths) {
+		Path resolved = baseDirPath;
+		for (String path: paths) {
+			resolved = resolvePath(resolved, path);
+		}
+
+		return resolved;
 	}
 }

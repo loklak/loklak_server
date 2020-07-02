@@ -99,6 +99,7 @@ import org.loklak.objects.UserEntry;
 import org.loklak.server.*;
 import org.loklak.stream.MQTTPublisher;
 import org.loklak.tools.DateParser;
+import org.loklak.tools.IO;
 import org.loklak.tools.OS;
 import org.loklak.tools.storage.*;
 import org.slf4j.Logger;
@@ -340,7 +341,7 @@ public class DAO {
         // elasticsearch will probably take some time until it is started up. We do some other stuff meanwhile..
 
         // create and document the data dump dir
-        assets = new File(datadir, "assets");
+        assets = new File(datadir, "assets").getAbsoluteFile();
         external_data = new File(datadir, "external");
         dictionaries = new File(external_data, "dictionaries");
         dictionaries.mkdirs();
@@ -525,8 +526,8 @@ public class DAO {
     public static File getAssetFile(String screen_name, String id_str, String file) {
         String letter0 = ("" + screen_name.charAt(0)).toLowerCase();
         String letter1 = ("" + screen_name.charAt(1)).toLowerCase();
-        File storage_path = new File(new File(new File(assets, letter0), letter1), screen_name);
-        return new File(storage_path, id_str + "_" + file); // all assets for one user in one file
+        Path storage_path = IO.resolvePath(assets.toPath(), letter0, letter1, screen_name);
+        return IO.resolvePath(storage_path, id_str + "_" + file).toFile(); // all assets for one user in one file
     }
 
     public static Collection<File> getTweetOwnDumps(int count) {
