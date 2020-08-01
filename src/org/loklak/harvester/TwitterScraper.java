@@ -589,7 +589,7 @@ public class TwitterScraper {
             }
             this.reply_count = MessageEntry.parseLong((Number) lazyGet(json, "reply_count"));
             this.retweet_count = MessageEntry.parseLong((Number) lazyGet(json, "retweet_count"));
-            this.favourite_count = MessageEntry.parseLong((Number) lazyGet(json, "favourite_count"));
+            this.favourite_count = MessageEntry.parseLong((Number) lazyGet(json, "favourites_count")); // inconsitency in naming, but twitter api defines so
             this.images = MessageEntry.parseArrayList(lazyGet(json, "images"));
             this.audios = MessageEntry.parseArrayList(lazyGet(json, "audio"));
             this.videos = MessageEntry.parseArrayList(lazyGet(json, "videos"));
@@ -856,7 +856,8 @@ public class TwitterScraper {
             if (this.provider_hash != null && this.provider_hash.length() > 0) this.put("provider_hash", this.provider_hash);
             this.put("reply_count", this.reply_count);
             this.put("retweet_count", this.retweet_count);
-            this.put("favourite_count", this.favourite_count);
+            // there is a slight inconsistency here in the plural naming but thats how it is noted in the twitter api
+            this.put("favourites_count", this.favourite_count);
             this.put("place_name", this.place_name);
             this.put("place_id", this.place_id);
 
