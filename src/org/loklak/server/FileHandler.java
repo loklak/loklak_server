@@ -51,14 +51,12 @@ import org.loklak.tools.UTF8;
 public class FileHandler extends ResourceHandler implements Handler {
     
     private final long CACHE_LIMIT = 128L * 1024L;
-    private int expiresSeconds = 0;
     
     /**
      * cerate a custom ResourceHandler with more caching
      * @param expiresSeconds the time each file shall stay in the cache
      */
     public FileHandler(int expiresSeconds) {
-        this.expiresSeconds = expiresSeconds;
         //this.setMinMemoryMappedContentLength((int) CACHE_LIMIT);
     }
     
@@ -66,14 +64,6 @@ public class FileHandler extends ResourceHandler implements Handler {
     public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         // use the ResourceHandler to handle the request. This method calls doResponseHeaders internally
         super.handle(target, baseRequest, request, response);
-    }
-
-    @Override
-    protected void doResponseHeaders(HttpServletResponse response, Resource resource, String mimeType) {
-	if (mimeType == null && resource.getName().endsWith(".css")) mimeType = "text/css";
-        super.doResponseHeaders(response, resource, mimeType);
-        // modify the caching strategy of ResourceHandler
-        setCaching(response, this.expiresSeconds);
     }
     
     public static void setCaching(final HttpServletResponse response, final int expiresSeconds) {
@@ -221,7 +211,11 @@ public class FileHandler extends ResourceHandler implements Handler {
         public long length() {
             return this.buffer.length;
         }
-
+        
+        @Override public File getFile() throws IOException {
+            return null; // if this returns null, the caller will call getInputStream();
+        }
+        
         @Override
         public InputStream getInputStream() throws IOException {
             long l = actualLastModified();
@@ -243,7 +237,6 @@ public class FileHandler extends ResourceHandler implements Handler {
         @Override public String[] list() {throw new UnsupportedOperationException();}
         @Override public boolean delete() throws SecurityException {throw new UnsupportedOperationException();}
         @Override public Resource addPath(String arg0) throws IOException, MalformedURLException {throw new UnsupportedOperationException();}
-        @Override public File getFile() throws IOException {throw new UnsupportedOperationException();}
         @Override public URL getURL() {throw new UnsupportedOperationException();}
         @Override public boolean isContainedIn(Resource arg0) throws MalformedURLException {throw new UnsupportedOperationException();}
         @Override public boolean renameTo(Resource arg0) throws SecurityException {throw new UnsupportedOperationException();}

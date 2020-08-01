@@ -41,7 +41,7 @@ public class GithubProfileScraperTest {
         String specialLink = "https://fossasia.org";
 
         try {
-            ClientConnection connection = new ClientConnection(url);
+            ClientConnection connection = new ClientConnection(url, "");
             //Check Network issue
             assertThat(connection.getStatusCode(), is(200));
 
@@ -81,7 +81,7 @@ public class GithubProfileScraperTest {
         String userId = "16368427";
 
         try {
-            ClientConnection connection = new ClientConnection(url);
+            ClientConnection connection = new ClientConnection(url, "");
             //Check Network issue
             assertThat(connection.getStatusCode(), is(200));
 

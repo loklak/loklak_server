@@ -42,7 +42,7 @@ public class QuoraProfileScraperTest {
         String post_scraper = "quora";
 
         try {
-            ClientConnection connection = new ClientConnection(url);
+            ClientConnection connection = new ClientConnection(url, "");
             //Check Network issue
             assertThat(connection.getStatusCode(), is(200));
 
@@ -79,7 +79,7 @@ public class QuoraProfileScraperTest {
         BufferedReader br = null;
 
         try {
-            ClientConnection connection = new ClientConnection(url);
+            ClientConnection connection = new ClientConnection(url, "");
             //Check Network issue
             assertThat(connection.getStatusCode(), is(200));
 

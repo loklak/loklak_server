@@ -78,8 +78,9 @@ import org.loklak.data.DAO;
  */
 public class ClientConnection {
 
-    public static String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.89 Safari/537.36";
-
+    //public static String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.89 Safari/537.36";
+    public static String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:60.0) Gecko/20100101 Firefox/60.0"; // see https://developers.whatismybrowser.com/useragents/parse/607126-firefox-windows-gecko
+    
     public  static final String CHARSET = "UTF-8";
     private static final byte LF = 10;
     private static final byte CR = 13;
@@ -112,9 +113,14 @@ public class ClientConnection {
      * @param useAuthentication
      * @throws IOException
      */
-    public ClientConnection(String urlstring) throws IOException {
+    public ClientConnection(String urlstring, String q) throws IOException {
         HttpRequestBase request = new HttpGet(urlstring);
         request.setHeader("User-Agent", USER_AGENT);
+        request.setHeader("Cache-Control", "max-age=0");
+        request.setHeader("Accept", "application/json, text/javascript, */*; q=0.01");
+        request.setHeader("Accept-Language", "en-US,en;q=0.8,en-GB;q=0.6,es;q=0.4");
+        if (q != null && q.length() > 0) request.setHeader("Referer", "https://twitter.com/" + q);
+        request.setHeader("X-Requested-With", "XMLHttpRequest");
         this.executeRequest(request);
     }
 
@@ -390,7 +396,7 @@ public class ClientConnection {
 
     public static void download(String source_url, File target_file) {
         try {
-            ClientConnection connection = new ClientConnection(source_url);
+            ClientConnection connection = new ClientConnection(source_url, "");
             try {
                 OutputStream os = new BufferedOutputStream(new FileOutputStream(target_file));
                 int count;
@@ -414,7 +420,7 @@ public class ClientConnection {
 
     public static byte[] download(String source_url) throws IOException {
         try {
-            ClientConnection connection = new ClientConnection(source_url);
+            ClientConnection connection = new ClientConnection(source_url, "");
             if (connection.inputStream == null) return null;
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             int count;

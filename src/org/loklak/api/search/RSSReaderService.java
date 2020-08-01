@@ -68,7 +68,7 @@ public class RSSReaderService extends AbstractAPIHandler implements APIHandler {
 		SyndFeed feed = null;
         
 		try {
-            ClientConnection connection = new ClientConnection(url);
+            ClientConnection connection = new ClientConnection(url, "");
 		    XmlReader xmlreader = new XmlReader(connection.getInputStream());
 			feed = input.build(xmlreader);
 		} catch (Exception e) {

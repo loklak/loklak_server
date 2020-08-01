@@ -53,6 +53,7 @@ public class Post extends JSONObject implements ObjectEntry {
      * Default constructor with timestamp of Post object created
      */
     public Post() {
+        super(true);
         this.setTimestamp();
     }
 
@@ -64,6 +65,7 @@ public class Post extends JSONObject implements ObjectEntry {
      *          if wrapper=true, it is a wrapper else it isn't.
      */
     public Post(boolean wrapper) {
+        super(true);
         if(!wrapper) {
             this.setTimestamp();
         } else {

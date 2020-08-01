@@ -150,7 +150,7 @@ public abstract class BaseScraper extends AbstractAPIHandler {
     public Post getDataFromConnection(String url, String type) throws IOException {
         // This adds to hits count even if connection fails
         this.hits++;
-        ClientConnection connection = new ClientConnection(url);
+        ClientConnection connection = new ClientConnection(url, "");
         BufferedReader br;
         Post postArray = null;
         try {

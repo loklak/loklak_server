@@ -55,6 +55,7 @@ import org.eclipse.jetty.rewrite.handler.RewriteRegexRule;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SessionIdManager;
 import org.eclipse.jetty.server.handler.DefaultHandler;
 import org.eclipse.jetty.server.handler.ErrorHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -62,8 +63,7 @@ import org.eclipse.jetty.server.handler.IPAccessHandler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.server.handler.gzip.GzipHandler;
-import org.eclipse.jetty.server.session.HashSessionIdManager;
-import org.eclipse.jetty.server.session.HashSessionManager;
+import org.eclipse.jetty.server.session.DefaultSessionIdManager;
 import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
@@ -190,23 +190,6 @@ public class LoklakServer {
 
         return config;
     }
-
-    /*
-    public static void saveConfig() throws IOException {
-        Path data = FileSystems.getDefault().getPath("data");
-        Path settings_dir = data.resolve("settings");
-        settings_dir.toFile().mkdirs();
-        OS.protectPath(settings_dir);
-        File customized_config = new File(settings_dir.toFile(), "customized_config.properties");
-        Properties prop = new Properties();
-        for (String key : DAO.getConfigKeys()) {
-            prop.put(key, DAO.getConfig(key, ""));
-        }
-        Writer w = new OutputStreamWriter(new FileOutputStream(customized_config), StandardCharsets.UTF_8);
-        prop.store(w, "This file can be used to customize the configuration file conf/config.properties");
-        w.close();
-    }
-    */
 
     public static int getServerThreads() {
         return server.getThreadPool().getThreads() - server.getThreadPool().getIdleThreads();
@@ -609,7 +592,7 @@ public class LoklakServer {
         } catch (IllegalArgumentException e) {
             DAO.severe("bad blacklist:" + blacklist, e);
         }
-
+        
         WebAppContext htrootContext = new WebAppContext();
         htrootContext.setContextPath("/");
 
@@ -769,16 +752,14 @@ public class LoklakServer {
         gzipHandler.setIncludedMimeTypes("text/html,text/plain,text/xml,text/css,application/javascript,text/javascript,application/json");
         gzipHandler.setHandler(handlerlist2);
 
-        HashSessionIdManager idmanager = new HashSessionIdManager();
+        SessionIdManager idmanager = new DefaultSessionIdManager(LoklakServer.server);
         LoklakServer.server.setSessionIdManager(idmanager);
-        SessionHandler sessions = new SessionHandler(new HashSessionManager());
+        SessionHandler sessions = new SessionHandler();
         sessions.setHandler(gzipHandler);
         securityHandler.setHandler(sessions);
         ipaccess.setHandler(securityHandler);
 
         LoklakServer.server.setHandler(ipaccess);
-
-
     }
 
     private static void checkServerPorts(int httpPort, int httpsPort) throws IOException{
