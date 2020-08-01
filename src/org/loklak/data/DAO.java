@@ -53,6 +53,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
 import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.logging.slf4j.Slf4jESLoggerFactory;
@@ -1516,8 +1517,8 @@ public class DAO {
         }
     }
 
-    private static Set<String> frontPeerCache = new HashSet<String>();
-    private static Set<String> backendPeerCache = new HashSet<String>();
+    private static Set<String> frontPeerCache = ConcurrentHashMap.newKeySet();
+    private static Set<String> backendPeerCache = ConcurrentHashMap.newKeySet();
 
     public static void updateFrontPeerCache(RemoteAccess remoteAccess) {
         if (remoteAccess.getLocalHTTPPort() >= 80) {
