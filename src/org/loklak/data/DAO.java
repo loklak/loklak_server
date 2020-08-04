@@ -53,7 +53,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
 import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.logging.slf4j.Slf4jESLoggerFactory;
@@ -1095,7 +1094,7 @@ public class DAO {
                 final int timezoneOffset,
                 final int resultCount,
                 final int aggregationLimit,
-                final ArrayList<String> filterList,
+                final Set<String> filterList,
                 final String... aggregationFields
         ) {
             this.timeline = new TwitterTimeline(orderField);
@@ -1159,7 +1158,7 @@ public class DAO {
                 timezoneOffset,
                 resultCount,
                 aggregationLimit,
-                new ArrayList<>(),
+                new HashSet<>(),
                 aggregationFields
             );
         }
@@ -1357,12 +1356,24 @@ public class DAO {
             long timeout,
             boolean recordQuery) {
 
-        return scrapeTwitter(post, new ArrayList<>(), q, order, timezoneOffset, byUserQuery, timeout, recordQuery);
+        return scrapeTwitter(post, new HashSet<>(), q, order, timezoneOffset, byUserQuery, timeout, recordQuery);
     }
 
+    /**
+     * 
+     * @param post
+     * @param filterList empty or one/several of image, video
+     * @param q
+     * @param order
+     * @param timezoneOffset
+     * @param byUserQuery
+     * @param timeout
+     * @param recordQuery
+     * @return
+     */
     public static TwitterTimeline scrapeTwitter(
             final Query post,
-            final ArrayList<String> filterList,
+            final Set<String> filterList,
             final String q,
             final TwitterTimeline.Order order,
             final int timezoneOffset,
@@ -1565,7 +1576,7 @@ public class DAO {
         return getBestPeers(testpeers);
     }
 
-    public static TwitterTimeline searchBackend(final String q,final ArrayList<String> filterList, final TwitterTimeline.Order order, final int count, final int timezoneOffset, final String where, final long timeout) {
+    public static TwitterTimeline searchBackend(final String q,final Set<String> filterList, final TwitterTimeline.Order order, final int count, final int timezoneOffset, final String where, final long timeout) {
         List<String> remote = getBackendPeers();
 
         if (remote.size() > 0 /*&& (peerLatency.get(remote.get(0)) == null || peerLatency.get(remote.get(0)) < 3000)*/) { // condition deactivated because we need always at least one peer
@@ -1578,7 +1589,7 @@ public class DAO {
 
     private final static Random randomPicker = new Random(System.currentTimeMillis());
 
-    public static TwitterTimeline searchOnOtherPeers(final List<String> remote, final String q, final ArrayList<String> filterList,final TwitterTimeline.Order order, final int count, final int timezoneOffset, final String source, final String provider_hash, final long timeout) {
+    public static TwitterTimeline searchOnOtherPeers(final List<String> remote, final String q, final Set<String> filterList,final TwitterTimeline.Order order, final int count, final int timezoneOffset, final String source, final String provider_hash, final long timeout) {
         // select remote peer
         while (remote.size() > 0) {
             int pick = randomPicker.nextInt(remote.size());

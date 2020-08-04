@@ -25,8 +25,10 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Set;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -73,7 +75,7 @@ public class SearchServlet extends HttpServlet {
     public final static String frontpeer_hash = Integer.toHexString(Integer.MAX_VALUE - 1);
 
     // possible values: cache, twitter, all
-    public static TwitterTimeline search(final String[] protocolhostportstubs, final String query, final ArrayList<String> filterList, final TwitterTimeline.Order order, final String source, final int count, final int timezoneOffset, final String provider_hash, final long timeout) throws IOException {
+    public static TwitterTimeline search(final String[] protocolhostportstubs, final String query, final Set<String> filterList, final TwitterTimeline.Order order, final String source, final int count, final int timezoneOffset, final String provider_hash, final long timeout) throws IOException {
         String threadname = Thread.currentThread().getName();
 
         TwitterTimeline tl = new TwitterTimeline(order);
@@ -136,7 +138,7 @@ public class SearchServlet extends HttpServlet {
             final String[] protocolhostportstubs, final String query, final TwitterTimeline.Order order,
             final String source, final int count, final int timezoneOffset,
             final String provider_hash, final long timeout) throws IOException {
-        return search(protocolhostportstubs, query, new ArrayList<>(), order, source, count, timezoneOffset, provider_hash, timeout);
+        return search(protocolhostportstubs, query, new HashSet<>(), order, source, count, timezoneOffset, provider_hash, timeout);
     }
 
     @Override
@@ -192,7 +194,8 @@ public class SearchServlet extends HttpServlet {
                                     DAO.getConfig(SEARCH_MAX_PUBLIC_COUNT_NAME, 100)));
 
             String filter = post.get("filter", "").replaceAll("\\s","");
-            ArrayList<String> filterList = new ArrayList<String>(Arrays.asList(filter.split(",")));
+            Set<String> filterList = new HashSet<>();
+            Arrays.asList(filter.split(",")).forEach(f -> filterList.add(f));
 
             // create tweet timeline
             final String ordername = post.get("order", Order.CREATED_AT.getMessageFieldName());

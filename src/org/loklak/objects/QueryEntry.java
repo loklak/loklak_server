@@ -498,7 +498,7 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
         public Date since;
         public Date until;
 
-        public ElasticsearchQuery(String q, int timezoneOffset, ArrayList<String> filterList) {
+        public ElasticsearchQuery(String q, int timezoneOffset, Set<String> filterList) {
             // default values for since and util
             this.since = new Date(0);
             this.until = new Date(Long.MAX_VALUE);
@@ -520,10 +520,10 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
         }
 
         public ElasticsearchQuery(String q, int timezoneOffset) {
-            this(q, timezoneOffset, new ArrayList<>());
+            this(q, timezoneOffset, new HashSet<>());
         }
 
-        private QueryBuilder preparse(String q, int timezoneOffset, ArrayList<String> filterList) {
+        private QueryBuilder preparse(String q, int timezoneOffset, Set<String> filterList) {
             // detect usage of OR connector usage.
             q = QueryEntry.fixQueryMistakes(q);
             List<String> terms = splitIntoORGroups(q); // OR binds stronger than AND
@@ -567,13 +567,13 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
         }
 
         private QueryBuilder preparse(String q, int timezoneOffset) {
-            return preparse(q, timezoneOffset, new ArrayList<>());
+            return preparse(q, timezoneOffset, new HashSet<>());
         }
 
         private QueryBuilder parse (
                 String q,
                 int timezoneOffset, 
-                ArrayList<String> filterList
+                Set<String> filterList
         ) {
             // detect usage of OR ORconnective usage. Because of the preparse step we will have only OR or only AND here.
             q = q.replaceAll(" AND ", " "); // AND is default
@@ -908,7 +908,7 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
         }
 
         private QueryBuilder parse (String q, int timezoneOffset) {        
-            return parse(q, timezoneOffset, new ArrayList<>());
+            return parse(q, timezoneOffset, new HashSet<>());
         }
 
 

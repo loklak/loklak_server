@@ -119,7 +119,6 @@ import org.loklak.api.search.SuggestServlet;
 import org.loklak.api.search.TimeAndDateService;
 import org.loklak.api.search.TweetScraper;
 import org.loklak.api.search.UserServlet;
-import org.loklak.api.search.VideoUrlService;
 import org.loklak.api.search.WeiboUserInfo;
 import org.loklak.api.search.WikiGeoData;
 import org.loklak.api.search.WordpressCrawlerService;
@@ -671,7 +670,6 @@ public class LoklakServer {
         servletHandler.addServlet(SuggestServlet.class, "/api/suggest.json");
         servletHandler.addServlet(XMLServlet.class, "/api/xml2json.json");
         servletHandler.addServlet(CSVServlet.class, "/api/csv2json.json");
-        servletHandler.addServlet(VideoUrlService.class, "/api/videoUrlService.json");
         ServletHolder accountServletHolder = new ServletHolder(AccountService.class);
         accountServletHolder.getRegistration().setMultipartConfig(multipartConfig);
         servletHandler.addServlet(accountServletHolder, "/api/account.json");

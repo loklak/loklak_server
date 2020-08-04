@@ -182,6 +182,10 @@ public class Post extends JSONObject implements ObjectEntry {
         }
     }
 
+    /**
+     * a time stamp that is given in loklak upon the arrival of the tweet which is the current local time
+     * @return
+     */
     public long getTimestamp() {
         if(this.timestamp == 0 && this.has("timestamp_id")) {
             this.timestamp = Long.parseLong(String.valueOf(this.get("timestamp_id")));
@@ -204,6 +208,11 @@ public class Post extends JSONObject implements ObjectEntry {
         this.createdAt = _createdAt;
     }
 
+    /**
+     * the time given in the tweet which is the time when the user created it.
+     * This is also use to do the index partition into minute, hour, week
+     * @return
+     */
     public Date getCreated() {
         if(this.createdAt == null) {
             this.createdAt = this.getTimestampDate();
