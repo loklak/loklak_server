@@ -622,15 +622,8 @@ public class TwitterScraper {
         public void enrich() {
             if (this.enriched) return;
             this.moreData.classifier = Classifier.classify(this.text);
-            enrichData(this.text);
-            getLocation();
-
-            this.enriched = true;
-        }
-
-        public void enrichData(String inputText) {
-            if (inputText == null) inputText = "";
-            StringBuilder text = new StringBuilder(inputText);
+        
+            StringBuilder text = new StringBuilder(this.text);
             this.links = this.moreData.extractLinks(text.toString());
             text = new StringBuilder(MessageEntry.SPACEX_PATTERN.matcher(text).replaceAll(" ").trim());
             // Text's length without link
@@ -657,6 +650,8 @@ public class TwitterScraper {
             // Text's length without link, users and hashtags
             this.without_luh_len = text.length();
 
+            getLocation();
+            this.enriched = true;
         }
 
         /**

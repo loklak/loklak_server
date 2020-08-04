@@ -1,12 +1,5 @@
 package org.loklak.harvester;
 
-import java.io.IOException;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.NoSuchElementException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.time.ZonedDateTime;
@@ -19,12 +12,8 @@ import java.lang.reflect.Modifier;
 import org.junit.Test;
 import org.loklak.objects.TwitterTimeline;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
-import org.loklak.http.ClientConnection;
-import org.loklak.data.DAO;
 import static org.hamcrest.core.Is.is;
-import static org.hamcrest.core.StringContains.containsString;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertEquals;
 
 
 /**
@@ -82,89 +71,6 @@ public class TwitterScraperTest {
 
         }
 
-    }
-
-    /**
-     * This unit-test tests data fetched in TwitterScraper.search() method.
-     * This test uses TwitterTweet object to get and check tweets
-     */
-    @Test
-    public void testSimpleSearch() {
-        TwitterTimeline ftweet_list;
-        TwitterTimeline.Order order = TwitterTimeline.parseOrder("created_at");
-        String https_url = "https://twitter.com/search?f=tweets&vertical=default&q=from%3Aloklak_test&src=typd";
-        TwitterTimeline[] tweet_list = null;
-        ClientConnection connection;
-        BufferedReader br;
-        // Tweet data to check with TwitterTweet object
-        Map<String, String> tweet_check = new HashMap<String, String>();
-        tweet_check.put("user", "\"profile_image_url_https\":\"https://pbs.twimg.com/profile_images/855169412164444160/EU53XJwX_bigger.jpg\",\"screen_name\":\"loklak_test\",\"user_id\":\"849919296977416192\",\"name\":\"loklak test\",\"appearance_latest\":");
-        tweet_check.put("source_type", "TWITTER");
-        tweet_check.put("provider_type", "SCRAPED");
-        tweet_check.put("screen_name", "loklak_test");
-        tweet_check.put("created_at", "2017-06-02T07:03:23.000Z");
-        tweet_check.put("status_id_url", "https://twitter.com/loklak_test/status/870536303569289216");
-        tweet_check.put("place_name", "");
-        tweet_check.put("place_id", "");
-        tweet_check.put("text", "Tweet with a video");
-        tweet_check.put("writeToIndex", "true");
-        tweet_check.put("writeToBackend", "true");
-
-        try {
-            // Scrap all html from the https_url link
-            connection = new ClientConnection(https_url, "");
-
-            // Check Network
-            assertThat(connection.getStatusCode(), is(200));
-
-            if (connection.getInputStream() == null) return;
-            try {
-                // Read all scraped html data
-                br = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8));
-
-                // Fetch list of tweets and set in ftweet_list
-                tweet_list = (TwitterTimeline[])executePrivateMethod(TwitterScraper.class, "search",new Class[]{BufferedReader.class, ArrayList.class, TwitterTimeline.Order.class, boolean.class, boolean.class}, br, new ArrayList<>(), order, true, true);
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-            } finally {
-                connection.close();
-            }
-        } catch (IOException e) {
-            // This could mean that twitter rejected the connection (DoS protection?) or we are offline (we should be silent then)
-            tweet_list = new TwitterTimeline[]{new TwitterTimeline(order), new TwitterTimeline(order)};
-        }
-
-        //compare no. of tweets with fetched no. of tweets
-        ftweet_list = processTweetList(tweet_list);
-        if(ftweet_list.size()==6)
-            assertThat(ftweet_list.size(), is(6));
-
-        // Test tweets data with TwitterTweet object
-        try {
-            TwitterTweet tweet = (TwitterTweet) ftweet_list.iterator().next();
-
-            assertThat(String.valueOf(tweet.getUser()), containsString(tweet_check.get("user")));
-            assertEquals(tweet_check.get("status_id_url"), String.valueOf(tweet.getStatusIdUrl()));
-
-            String created_date = dateFormatChange(String.valueOf(tweet.getCreatedAt()));
-            assertThat(created_date, is(tweet_check.get("created_at")));
-
-            assertEquals(tweet_check.get("screen_name"), tweet.getScreenName());
-            assertEquals(tweet_check.get("source_type"), String.valueOf(tweet.getSourceType()));
-            assertEquals(tweet_check.get("provider_type"), String.valueOf(tweet.getProviderType()));
-            assertEquals(tweet_check.get("text"), tweet.getText());
-            assertEquals(tweet_check.get("place_name"), tweet.getPlaceId());
-            assertEquals(tweet_check.get("place_id"), tweet.getPlaceName());
-            try {
-                // Other parameters of twittertweet(used )
-                assertThat(getPrivateField(TwitterTweet.class, "writeToIndex", tweet), is(Boolean.parseBoolean(tweet_check.get("writeToIndex"))));
-                assertThat(getPrivateField(TwitterTweet.class, "writeToBackend", tweet), is(Boolean.parseBoolean(tweet_check.get("writeToBackend"))));
-            } catch(Exception e) {
-                System.out.println(e.getMessage());
-            }
-        } catch (NoSuchElementException e) {
-            DAO.log("TwitterScraperTest.testSimpleSearch() failed with NoSuchElementException");            
-        }
     }
 
     /**
