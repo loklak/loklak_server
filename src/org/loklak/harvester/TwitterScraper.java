@@ -828,6 +828,40 @@ public class TwitterScraper {
                                         ? Float.MAX_VALUE : c.getValue().getProbability());
                     }
                 }
+            } else {
+                this.remove("text_length");
+                this.remove("place_context");
+                this.remove("place_country");
+                this.remove("place_country_code");
+                this.remove("place_country_center");
+                this.remove("location_point");
+                this.remove("location_radius");
+                this.remove("location_mark");
+                this.remove("location_source");
+                this.remove("hosts");
+                this.remove("hosts_count");
+                this.remove("links");
+                this.remove("links_count");
+                this.remove("unshorten");
+                this.remove("images");
+                this.remove("images_count");
+                this.remove("audio");
+                this.remove("audio_count");
+                this.remove("videos");
+                this.remove("videos_count");
+                this.remove("mentions");
+                this.remove("mentions_count");
+                this.remove("hashtags");
+                this.remove("hashtags_count");
+                this.remove("without_l_len");
+                this.remove("without_lu_len");
+                this.remove("without_luh_len");
+                if (this.moreData.classifier != null) {
+                    for (Map.Entry<Context, Classification<String, Category>> c: this.moreData.classifier.entrySet()) {
+                        this.remove("classifier_" + c.getKey().name());
+                        this.remove("classifier_" + c.getKey().name() + "_probability");
+                    }
+                }
             }
 
             // add user
