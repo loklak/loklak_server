@@ -430,7 +430,7 @@ public class LoklakServer {
 	        connector.addConnectionFactory(new HttpConnectionFactory(http_config));
 	        connector.setPort(httpPort);
 	        connector.setName("httpd:" + httpPort);
-	        connector.setIdleTimeout(20000); // timout in ms when no bytes send / received
+	        connector.setIdleTimeout(30000); // timout in ms when no bytes send / received
 	        connector.start();
 	        LoklakServer.server.addConnector(connector);
         }
@@ -533,7 +533,7 @@ public class LoklakServer {
 	        ServerConnector sslConnector = new ServerConnector(LoklakServer.server, ssl, http1);
 	        sslConnector.setPort(httpsPort);
 	        sslConnector.setName("httpd:" + httpsPort);
-	        sslConnector.setIdleTimeout(20000); // timout in ms when no bytes send / received
+	        sslConnector.setIdleTimeout(30000); // timout in ms when no bytes send / received
 	        LoklakServer.server.addConnector(sslConnector);
         }
     }

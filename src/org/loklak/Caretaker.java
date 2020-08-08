@@ -122,8 +122,7 @@ public class Caretaker extends Thread {
                 boolean success = PushServlet.push(backends, tl);
                 if (success) {
                     DAO.log("success pushing " + tl.size() + " messages to backend " + Arrays.toString(backends) + " in 1st attempt in " + (System.currentTimeMillis() - start) + " ms");
-                }
-                if (!success) {
+                } else {
                     // we should try again.. but not an infinite number because then
                     // our timeline in RAM would fill up our RAM creating a memory leak
                     retrylook: for (int retry = 0; retry < maxRetries; retry++) {
