@@ -45,7 +45,7 @@ import org.loklak.server.BaseUserRole;
 
 public class QuoraProfileScraper extends BaseScraper {
 
-    private final long serialVersionUID = -3398701925784347312L;
+    private static final long serialVersionUID = -3398701925784347312L;
     private List<String> typeList = null;
 
     public QuoraProfileScraper() {
@@ -236,7 +236,7 @@ public class QuoraProfileScraper extends BaseScraper {
         DAO.severe("Couldn't complete all threads, stuck at scraper: " + this.scraperName + " dataThread: " + stuck_at);
     }
 
-    private PostTimeline scrapeQues(BufferedReader br, String url) {
+    public PostTimeline scrapeQues(BufferedReader br, String url) {
         Pattern resultBlock = Pattern.compile("<div[^>]*[^>\\s]*[^>]*class=['\"][^>'\"]*(results_list)");
         Pattern quesLink = Pattern.compile("<a[^>]*class=['\"][^>'\"]*question_link[^>'\"]*[\"'][^>]*href=['\"]([^>'\"]*)");
         Pattern quesStart = Pattern.compile("<span[^>]*class=[\'\"][^>\'\"]*question_text[^>\'\"]*[\'\"][^>]*>");
@@ -328,7 +328,7 @@ public class QuoraProfileScraper extends BaseScraper {
         return quesList;
     }
 
-    private PostTimeline scrapeProfile(BufferedReader br, String url) {
+    public PostTimeline scrapeProfile(BufferedReader br, String url) {
         String html;
         Post quoraProfile = new QuoraPost(this.query, 0);
         PostTimeline usersList = new PostTimeline(this.order);

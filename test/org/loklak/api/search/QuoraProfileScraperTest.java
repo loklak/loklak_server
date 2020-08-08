@@ -52,7 +52,7 @@ public class QuoraProfileScraperTest {
         }
 
         try {
-            profileListTimeLine = (PostTimeline)TwitterScraperTest.executePrivateMethod(QuoraProfileScraper.class, quoraScraper, "scrapeProfile", new Class[]{BufferedReader.class, String.class}, br, url);
+            profileListTimeLine = new QuoraProfileScraper().scrapeProfile(br, url);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -89,7 +89,7 @@ public class QuoraProfileScraperTest {
         }
 
         try {
-            questionListTimeLine = (PostTimeline)TwitterScraperTest.executePrivateMethod(QuoraProfileScraper.class, quoraScraper, "scrapeQues", new Class[]{BufferedReader.class, String.class}, br, url);
+            questionListTimeLine = new QuoraProfileScraper().scrapeQues(br, url);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }

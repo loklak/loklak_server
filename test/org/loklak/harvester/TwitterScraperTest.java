@@ -23,57 +23,6 @@ import static org.junit.Assert.assertThat;
 public class TwitterScraperTest {
 
     /**
-     * This unit-test tests twitter url creation
-     */
-    @Test
-    public void testPrepareSearchUrl() {
-        String url;
-        String[] query = {"fossasia", "from:loklak_test",
-                "spacex since:2017-04-03 until:2017-04-05"};
-        ArrayList<String>[] filterList = (ArrayList<String>[])new ArrayList[3];
-        for (int i = 0; i < filterList.length; i++) {
-            filterList[i] = new ArrayList<String>();
-        }
-        filterList[0].add("video");
-        filterList[1].addAll(Arrays.asList("image", "video"));
-        filterList[2].addAll(Arrays.asList("abc", "video"));
-
-        String[] out_url = {
-            "https://twitter.com/search?f=tweets&vertical=default&q=fossasia&src=typd",
-            "https://twitter.com/search?f=tweets&vertical=default&q=from%3Aloklak_test&src=typd",
-            "https://twitter.com/search?f=tweets&vertical=default&q=spacex+since%3A2017-04-03+until%3A2017-04-05&src=typd",
-            "https://twitter.com/search?f=videos&vertical=default&q=fossasia&src=typd",
-            "https://twitter.com/search?f=tweets&vertical=default&q=fossasia&src=typd",
-            "https://twitter.com/search?f=tweets&vertical=default&q=fossasia&src=typd",
-        };
-
-        // checking simple urls
-        for (int i = 0; i < query.length; i++) {
-            try {
-                url = (String)executePrivateMethod(TwitterScraper.class, "prepareSearchUrl",new Class[]{String.class, String.class}, query[i], "");
-
-                //compare urls with urls created
-                assertThat(out_url[i], is(url));
-            } catch(Exception e) {
-                System.out.println(e.getMessage());
-            }
-        }
-
-        // checking urls having filters
-        for (int i = 0; i < filterList.length; i++) {
-            try {
-                url = (String)executePrivateMethod(TwitterScraper.class, "prepareSearchUrl",new Class[]{String.class, String.class}, query[0], filterList[i]);
-                //compare urls with urls created
-                assertThat(out_url[i+3], is(url));
-            } catch(Exception e) {
-                System.out.println(e.getMessage());
-            }
-
-        }
-
-    }
-
-    /**
      * This method merges 2 arrays of Timeline Objects(containing array of TwitterTweet objects) into one Timeline object
      */
     public TwitterTimeline processTweetList(TwitterTimeline[] tweet_list) {
@@ -107,44 +56,6 @@ public class TwitterScraperTest {
         k = String.valueOf(output_format.format(final_time));
 
         return k;
-    }
-
-    public static Object executePrivateMethod(
-            Class<?> clazz,
-            Object instanceObj,
-            String methodName,
-            Class<?>[] parameterTypes,
-            Object ... args
-    ) throws Exception {
-
-        // Get declared Method for execution
-        Method privateMethod = clazz.getDeclaredMethod(methodName, parameterTypes);
-        privateMethod.setAccessible(true);
-
-        // Invoke method and return object
-        if (Modifier.isStatic(privateMethod.getModifiers())) {
-            return privateMethod.invoke(null, args);
-        } else if(instanceObj != null) {
-            return privateMethod.invoke(instanceObj, args);
-        } else {
-            return privateMethod.invoke(clazz.newInstance(), args);
-        }
-    }
-
-    public static Object executePrivateMethod(
-            Class<?> clazz,
-            String methodName,
-            Class<?>[] parameterTypes,
-            Object ... args
-    ) throws Exception {
-        return executePrivateMethod(
-            clazz,
-            null,
-            methodName,
-            parameterTypes,
-            args
-    );
-
     }
 
     public static Object getPrivateField(
