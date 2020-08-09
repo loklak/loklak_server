@@ -120,6 +120,7 @@ public class TwitterHarvester {
 
         if (tl != null && tl.size() > 0) {
             // find content query strings and store them in the context cache
+            tl.setQuery(q);
             checkContext(tl, true);
         }
 
