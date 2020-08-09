@@ -216,7 +216,7 @@ public class ClientConnection {
         	throw new IOException("client connection handshake error for domain " + request.getURI().getHost() + ": " + e.getMessage());
         } catch (Throwable e) {
             request.reset();
-            throw new IOException("server fail: " + e.getMessage());
+            throw new IOException("server failed " + request.getMethod() + " request: " + request.getURI().toString() + ": " + e.getMessage());
         }
         HttpEntity httpEntity = this.httpResponse.getEntity();
         if (httpEntity != null) {
