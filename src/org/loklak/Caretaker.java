@@ -140,43 +140,59 @@ public class Caretaker extends Thread {
                 }
                 busy = true;
             }
-            
+
             // scan dump input directory to import files
             try {
                 DAO.importAccountDumps(Integer.MAX_VALUE);
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
-            
+
             // run some harvesting steps
             boolean retrieval_forbackend_enabled = DAO.getConfig("retrieval.forbackend.enabled", false);
             boolean backend_push_enabled = DAO.getConfig("backend.push.enabled", false);
             int timeline_size = DAO.outgoingMessages.timelineSize();
             if (retrieval_forbackend_enabled && backend_push_enabled && backends.length > 0 && timeline_size < TIMELINE_PUSH_MAXSIZE) {
+
                 int retrieval_forbackend_concurrency = (int) DAO.getConfig("retrieval.forbackend.concurrency", 1);
                 int retrieval_forbackend_loops = (int) DAO.getConfig("retrieval.forbackend.loops", 10);
                 int retrieval_forbackend_sleep_base = (int) DAO.getConfig("retrieval.forbackend.sleep.base", 300);
                 int retrieval_forbackend_sleep_randomoffset = (int) DAO.getConfig("retrieval.forbackend.sleep.randomoffset", 100);
                 hloop: for (int i = 0; i < retrieval_forbackend_loops; i++) {
-                    Thread[] rts = new Thread[retrieval_forbackend_concurrency];
-                    final AtomicInteger acccount = new AtomicInteger(0);
-                    for (int j = 0; j < retrieval_forbackend_concurrency; j++) {
-                        rts[j] = new Thread() {
-                            public void run() {
-                                int count = LoklakServer.harvester.harvest();
-                                acccount.addAndGet(count);
-                            }
-                        };
-                        rts[j].start();
+
+                    // get more queries
+                    int pendingQueries = 0;
+                    try {
+                        pendingQueries = LoklakServer.harvester.get_harvest_queries();
+                    } catch (IOException e) {
+                    }
+
+                    // in case we have queries
+                    if (pendingQueries > 0) {
+                        Thread[] rts = new Thread[Math.min(pendingQueries, retrieval_forbackend_concurrency)];
+                        final AtomicInteger acccount = new AtomicInteger(0);
+                        for (int j = 0; j < rts.length; j++) {
+                            rts[j] = new Thread() {
+                                public void run() {
+                                    TwitterTimeline tl = LoklakServer.harvester.harvest_timeline();
+                                    if (tl != null && tl.getQuery() != null) {
+                                        /* Thread t = */ LoklakServer.harvester.push_timeline_to_backend(tl);
+                                    }
+                                    int count = tl == null ? 0 : tl.size();
+                                    acccount.addAndGet(count);
+                                }
+                            };
+                            rts[j].start();
+                            try {Thread.sleep(retrieval_forbackend_sleep_base + random.nextInt(retrieval_forbackend_sleep_randomoffset));} catch (InterruptedException e) {}
+                        }
+                        for (Thread t: rts) t.join();
+                        if (acccount.get() < 0) break hloop;
                         try {Thread.sleep(retrieval_forbackend_sleep_base + random.nextInt(retrieval_forbackend_sleep_randomoffset));} catch (InterruptedException e) {}
                     }
-                    for (Thread t: rts) t.join();
-                    if (acccount.get() < 0) break hloop;
-                    try {Thread.sleep(retrieval_forbackend_sleep_base + random.nextInt(retrieval_forbackend_sleep_randomoffset));} catch (InterruptedException e) {}
                 }
                 busy = true;
             }
-            
+
             // run some crawl steps
             if (Crawler.pending() > 0) {
                 crawler: for (int i = 0; i < 10; i++) {
@@ -198,7 +214,7 @@ public class Caretaker extends Thread {
                     if (finished.get()) break crawler; else busy = true;
                 }
             }
-            
+
             // run searches
             boolean retrieval_queries_enabled = DAO.getConfig("retrieval.queries.enabled", false);
             if (retrieval_queries_enabled && IncomingMessageBuffer.addSchedulerAvailable()) {

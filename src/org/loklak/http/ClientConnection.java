@@ -47,6 +47,7 @@ import javax.net.ssl.SSLSession;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
+import org.apache.http.StatusLine;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
@@ -97,7 +98,6 @@ public class ClientConnection {
 
     private final static CloseableHttpClient httpClient = getClosableHttpClient();
 
-    private int status;
     private BufferedInputStream inputStream;
     private CloseableHttpResponse httpResponse;
 
@@ -220,7 +220,9 @@ public class ClientConnection {
         }
         HttpEntity httpEntity = this.httpResponse.getEntity();
         if (httpEntity != null) {
-            if (this.httpResponse.getStatusLine().getStatusCode() == 200) {
+            StatusLine sl = this.httpResponse.getStatusLine();
+            int status = sl.getStatusCode();
+            if (status == 200) {
                 try {
                     this.inputStream = new BufferedInputStream(httpEntity.getContent());
                 } catch (IOException e) {
@@ -235,7 +237,7 @@ public class ClientConnection {
                 }
             } else {
                 request.reset();
-                throw new IOException("client connection to " + request.getURI() + " fail: " + status + ": " + httpResponse.getStatusLine().getReasonPhrase());
+                throw new IOException("client connection to " + request.getURI() + " fail: " + status + ": " + sl.getReasonPhrase());
             }
         } else {
             request.reset();

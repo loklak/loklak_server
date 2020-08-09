@@ -129,12 +129,9 @@ import org.loklak.api.vis.MarkdownServlet;
 import org.loklak.api.vis.PieChartServlet;
 import org.loklak.data.DAO;
 import org.loklak.data.IncomingMessageBuffer;
+import org.loklak.harvester.TwitterHarvester;
 import org.loklak.harvester.TwitterScraper;
 import org.loklak.harvester.YoutubeScraper;
-import org.loklak.harvester.strategy.ClassicHarvester;
-import org.loklak.harvester.strategy.Harvester;
-import org.loklak.harvester.strategy.KaizenHarvester;
-import org.loklak.harvester.strategy.PriorityKaizenHarvester;
 import org.loklak.http.RemoteAccess;
 import org.loklak.server.APIHandler;
 import org.loklak.server.FileHandler;
@@ -156,7 +153,7 @@ public class LoklakServer {
     private static DumpImporter dumpImporter = null;
     private static HttpsMode httpsMode = HttpsMode.OFF;
     public static Class<? extends Servlet>[] services;
-    public static Harvester harvester = null;
+    public static TwitterHarvester harvester = null;
 
     public static Map<String, String> readConfig(Path data) throws IOException {
         File conf_dir = new File("conf");
@@ -289,7 +286,7 @@ public class LoklakServer {
         setServerHandler(dataFile);
 
         // init the harvester
-        initializeHarvester();
+        harvester = new TwitterHarvester();
 
         LoklakServer.server.start();
         LoklakServer.caretaker = new Caretaker();
@@ -328,7 +325,6 @@ public class LoklakServer {
                     LoklakServer.server.stop();
                     DAO.close();
                     TwitterScraper.executor.shutdown();
-                    LoklakServer.harvester.stop();
                     DAO.log("main terminated, goodby.");
 
                     //LoklakServer.saveConfig();
@@ -390,23 +386,6 @@ public class LoklakServer {
         }
 
         Files.copy(jar.getInputStream(file), target.toPath());
-    }
-
-    // initialize harvester
-    private static void initializeHarvester() {
-        String type = DAO.getConfig("harvester.type", "classic");
-        switch (type) {
-            default:
-            case "classic":
-                harvester = new ClassicHarvester();
-                break;
-            case "kaizen":
-                harvester = new KaizenHarvester();
-                break;
-            case "priority_kaizen":
-                harvester = new PriorityKaizenHarvester();
-                break;
-        }
     }
 
     //initiate http server
