@@ -110,7 +110,7 @@ public class PushServlet extends HttpServlet {
                 transmittedToAtLeastOnePeer = true;
                 break pushattempts;
             } catch (IOException | JSONException | SignatureException | InvalidKeyException e) {
-                DAO.log("FAILED to push " + timeline.size() + " messages to backend " + hoststub + " - " + e.getMessage() + " - " + e.getCause().getMessage());
+                DAO.log("FAILED to push " + timeline.size() + " messages to backend " + hoststub + " - " + e.getMessage() + (e.getCause() == null ? "" : " - " + e.getCause().getMessage()));
                 DAO.severe(e);
                 try {Thread.sleep(1000);} catch (InterruptedException e1) {} // sleep to prevent that same hosts are requested too fast causing a "frequency too high" exception
             } finally {
