@@ -1550,6 +1550,7 @@ public class DAO {
             for (String peer: remote) testpeers.add(peer);
             return testpeers;
         }
+        /*
         if (frontPeerCache.size() == 0) {
             // add dynamically all peers that contacted myself
             for (Map<String, RemoteAccess> hmap: RemoteAccess.history.values()) {
@@ -1559,6 +1560,7 @@ public class DAO {
             }
         }
         testpeers.addAll(frontPeerCache);
+        */
         return getBestPeers(testpeers);
     }
 
