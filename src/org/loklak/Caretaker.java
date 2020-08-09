@@ -107,7 +107,7 @@ public class Caretaker extends Thread {
             if (SuggestServlet.cache.size() > 100) SuggestServlet.cache.clear();
             
             // sleep a bit to prevent that the DoS limit fires at backend server
-            try {Thread.sleep(busy ? 500 : 5000);} catch (InterruptedException e) {}
+            try {Thread.sleep(busy ? 500 : 10000);} catch (InterruptedException e) {}
             if (!this.shallRun) break beat;
             busy = false;
             
