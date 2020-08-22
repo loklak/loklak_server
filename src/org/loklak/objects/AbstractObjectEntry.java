@@ -35,8 +35,8 @@ import com.fasterxml.jackson.core.JsonGenerator;
 
 public abstract class AbstractObjectEntry extends Post implements ObjectEntry {
 
-    public  final static String TIMESTAMP_FIELDNAME = "timestamp";
-    public  final static String CREATED_AT_FIELDNAME = "created_at";
+    public  final static String TIMESTAMP_FIELDNAME = "timestamp";   // the harvesting time, NOT used for identification
+    public  final static String CREATED_AT_FIELDNAME = "created_at"; // the tweet time as embedded in the tweet, not used for identification either
     
     public AbstractObjectEntry() {
     }

@@ -218,7 +218,7 @@ public class TwitterScraper {
 
         // parse
         Elements items = doc.getElementsByClass("stream-item");
-        for (int itemc = 0; itemc < items.size(); itemc++) {
+        itemloop: for (int itemc = 0; itemc < items.size(); itemc++) {
             Element item = items.get(itemc);
             if (debuglog) System.out.println(item.toString());
     
@@ -258,10 +258,12 @@ public class TwitterScraper {
             }
             
             String tweettimes = timestamp.attr("data-time-ms");
+            if (tweettimes.length() == 0) continue itemloop; // sometimes tweets are not available any more
             long tweettime = Long.parseLong(tweettimes);
-            long snowflaketime = snowflake2millis(Long.parseLong(tweetID));
-            assert tweettime / 1000 == snowflaketime / 1000;
-            
+            // this assertion holds in most, but unfortunately not in all cases, so it is commented out
+            // long snowflaketime = snowflake2millis(Long.parseLong(tweetID));
+            // assert tweettime / 1000L == snowflaketime / 1000L : "tweettime = " + tweettime + ", snowflaketime = " + snowflaketime;
+
             Elements reply = item.getElementsByClass("ProfileTweet-action--reply").get(0).children();
             Elements retweet = item.getElementsByClass("ProfileTweet-action--retweet").get(0).children();
             Elements favourite = item.getElementsByClass("ProfileTweet-action--favorite").get(0).children();
@@ -747,7 +749,7 @@ public class TwitterScraper {
             // the tweet; the cleanup is a helper function which cleans mistakes from the past in scraping
             MessageEntry.TextLinkMap tlm = this.moreData.getText(iflinkexceedslength, urlstub, this.text, this.getLinks(), this.getPostId());
             this.put("text", tlm);
-            if (this.status_id_url != null) this.put("link", this.status_id_url.toExternalForm());
+            if (this.status_id_url != null) this.put("link", this.status_id_url.toExternalForm()); // this is the primary key for retrieval in elasticsearch
             this.put("id_str", this.postId);
             this.put("conversation_id", this.conversationID);
             this.put("conversation_user", this.conversationUserIDs);

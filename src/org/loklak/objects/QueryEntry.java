@@ -64,7 +64,7 @@ import com.google.common.collect.Multimap;
  */
 public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
     
-    private final static long DAY_MILLIS = 1000L * 60L * 60L * 24L;
+    public  final static long DAY_MILLIS = 1000L * 60L * 60L * 24L;
     private final static int RETRIEVAL_CONSTANT = 20; // the number of messages that we get with each retrieval at maximum
     
     protected String query;           // the query in the exact way as the user typed it in
@@ -144,7 +144,7 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
             this.query_last = this.retrieval_last;
         }
         long new_message_period = message_period; // can be Long.MAX_VALUE if less than 2 messages are in timeline!
-        int new_messages_per_day = (int) (DAY_MILLIS / new_message_period); // this is an interpolation based on the last tweet list, can be 0!
+        int new_messages_per_day = (int) (DAY_MILLIS / (new_message_period + 1)); // this is an interpolation based on the last tweet list, can be 0!
         if (new_message_period == Long.MAX_VALUE || new_messages_per_day == 0) {
             this.message_period = DAY_MILLIS;
         } else {
@@ -216,6 +216,10 @@ public class QueryEntry extends AbstractObjectEntry implements ObjectEntry {
 
     public int getRetrievalCount() {
         return this.retrieval_count;
+    }
+    
+    public long getMessagePeriod() {
+        return this.message_period;
     }
 
     public int getMessagesPerDay() {
