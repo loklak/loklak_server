@@ -91,10 +91,9 @@ public class PushServlet extends HttpServlet {
      * transmit the timeline to several hosts
      * @param timeline
      * @param hoststubs a list of host stubs, i.e. ["http://remoteserver.eu"]
-     * @param peerMessage if message is send to a peer
      * @return true if the data was transmitted to at least one target peer
      */
-    public static boolean push(String[] hoststubs, TwitterTimeline timeline, boolean peerMessage) {
+    public static boolean push(String[] hoststubs, TwitterTimeline timeline) {
         // transmit the timeline
         String data = timeline.toJSON(false, "search_metadata", "statuses").toString();
         assert data != null;
@@ -111,7 +110,7 @@ public class PushServlet extends HttpServlet {
                 transmittedToAtLeastOnePeer = true;
                 break pushattempts;
             } catch (IOException | JSONException | SignatureException | InvalidKeyException e) {
-                DAO.log("FAILED to push " + timeline.size() + " messages to backend " + hoststub);
+                DAO.log("FAILED to push " + timeline.size() + " messages to backend " + hoststub + " - " + e.getMessage() + (e.getCause() == null ? "" : " - " + e.getCause().getMessage()));
                 DAO.severe(e);
                 try {Thread.sleep(1000);} catch (InterruptedException e1) {} // sleep to prevent that same hosts are requested too fast causing a "frequency too high" exception
             } finally {
@@ -119,10 +118,6 @@ public class PushServlet extends HttpServlet {
             }
         }
         return transmittedToAtLeastOnePeer;
-    }
-
-    public static boolean push(String[] hoststubs, TwitterTimeline timeline) {
-        return push(hoststubs, timeline, true);
     }
 
     /*

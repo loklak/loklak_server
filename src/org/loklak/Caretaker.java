@@ -107,7 +107,7 @@ public class Caretaker extends Thread {
             if (SuggestServlet.cache.size() > 100) SuggestServlet.cache.clear();
             
             // sleep a bit to prevent that the DoS limit fires at backend server
-            try {Thread.sleep(busy ? 500 : 5000);} catch (InterruptedException e) {}
+            try {Thread.sleep(busy ? 500 : 10000);} catch (InterruptedException e) {}
             if (!this.shallRun) break beat;
             busy = false;
             
@@ -115,14 +115,14 @@ public class Caretaker extends Thread {
             
             // peer-to-peer operation
             TwitterTimeline tl = DAO.outgoingMessages.takeTimelineMin(Order.CREATED_AT, TIMELINE_PUSH_MINSIZE, TIMELINE_PUSH_MAXSIZE);
-            if (tl != null && tl.size() > 0 && backends.length > 0) {
+            int tl_size = tl == null ? 0 : tl.size();
+            if (tl_size > 0 && backends.length > 0) {
                 // transmit the timeline
                 long start = System.currentTimeMillis();
                 boolean success = PushServlet.push(backends, tl);
                 if (success) {
                     DAO.log("success pushing " + tl.size() + " messages to backend " + Arrays.toString(backends) + " in 1st attempt in " + (System.currentTimeMillis() - start) + " ms");
-                }
-                if (!success) {
+                } else {
                     // we should try again.. but not an infinite number because then
                     // our timeline in RAM would fill up our RAM creating a memory leak
                     retrylook: for (int retry = 0; retry < maxRetries; retry++) {
@@ -140,30 +140,49 @@ public class Caretaker extends Thread {
                 }
                 busy = true;
             }
-            
+
             // scan dump input directory to import files
             try {
                 DAO.importAccountDumps(Integer.MAX_VALUE);
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
-            
+
             // run some harvesting steps
-            if (DAO.getConfig("retrieval.forbackend.enabled", false) &&
-                DAO.getConfig("backend.push.enabled", false) &&
-                (DAO.getBackend().length > 0) &&
-                DAO.outgoingMessages.timelineSize() < TIMELINE_PUSH_MAXSIZE) {
+            boolean retrieval_forbackend_enabled = DAO.getConfig("retrieval.forbackend.enabled", false);
+            boolean backend_push_enabled = DAO.getConfig("backend.push.enabled", false);
+            int timeline_size = DAO.outgoingMessages.timelineSize();
+            if (retrieval_forbackend_enabled && backend_push_enabled && backends.length > 0 && timeline_size < TIMELINE_PUSH_MAXSIZE) {
+
                 int retrieval_forbackend_concurrency = (int) DAO.getConfig("retrieval.forbackend.concurrency", 1);
                 int retrieval_forbackend_loops = (int) DAO.getConfig("retrieval.forbackend.loops", 10);
                 int retrieval_forbackend_sleep_base = (int) DAO.getConfig("retrieval.forbackend.sleep.base", 300);
                 int retrieval_forbackend_sleep_randomoffset = (int) DAO.getConfig("retrieval.forbackend.sleep.randomoffset", 100);
                 hloop: for (int i = 0; i < retrieval_forbackend_loops; i++) {
-                    Thread[] rts = new Thread[retrieval_forbackend_concurrency];
+
+                    // get more queries
+                    int pendingQueries = 0;
+                    try {
+                        pendingQueries = LoklakServer.harvester.get_harvest_queries();
+                    } catch (IOException e) {
+                        DAO.severe("FAIL SUGGESTIONS cannot get queries from backend: " + e.getMessage(), e);
+                        break hloop;
+                    }
+
+                    // without queries we cannot do harvesting
+                    if (pendingQueries == 0) break hloop;
+                    
+                    // start harvesting
+                    Thread[] rts = new Thread[Math.min(pendingQueries, retrieval_forbackend_concurrency)];
                     final AtomicInteger acccount = new AtomicInteger(0);
-                    for (int j = 0; j < retrieval_forbackend_concurrency; j++) {
+                    for (int j = 0; j < rts.length; j++) {
                         rts[j] = new Thread() {
                             public void run() {
-                                int count = LoklakServer.harvester.harvest();
+                                TwitterTimeline tl = LoklakServer.harvester.harvest_timeline();
+                                if (tl != null && tl.getQuery() != null) {
+                                    /* Thread t = */ LoklakServer.harvester.push_timeline_to_backend(tl);
+                                }
+                                int count = tl == null ? 0 : tl.size();
                                 acccount.addAndGet(count);
                             }
                         };
@@ -173,10 +192,11 @@ public class Caretaker extends Thread {
                     for (Thread t: rts) t.join();
                     if (acccount.get() < 0) break hloop;
                     try {Thread.sleep(retrieval_forbackend_sleep_base + random.nextInt(retrieval_forbackend_sleep_randomoffset));} catch (InterruptedException e) {}
+                
+                    busy = true;
                 }
-                busy = true;
             }
-            
+
             // run some crawl steps
             if (Crawler.pending() > 0) {
                 crawler: for (int i = 0; i < 10; i++) {
@@ -198,9 +218,10 @@ public class Caretaker extends Thread {
                     if (finished.get()) break crawler; else busy = true;
                 }
             }
-            
+
             // run searches
-            if (DAO.getConfig("retrieval.queries.enabled", false) && IncomingMessageBuffer.addSchedulerAvailable()) {
+            boolean retrieval_queries_enabled = DAO.getConfig("retrieval.queries.enabled", false);
+            if (retrieval_queries_enabled && IncomingMessageBuffer.addSchedulerAvailable()) {
                 // execute some queries again: look out in the suggest database for queries with outdated due-time in field retrieval_next
                 List<QueryEntry> queryList = DAO.SearchLocalQueries("", 10, "retrieval_next", "date", SortOrder.ASC, null, new Date(), "retrieval_next");
                 queriesloop: for (QueryEntry qe: queryList) {
@@ -236,7 +257,8 @@ public class Caretaker extends Thread {
             
             // retrieve user data
             Set<Number> ids = DAO.getNewUserIdsChunk();
-            if (ids != null && DAO.getConfig("retrieval.user.enabled", false) && TwitterAPI.getAppTwitterFactory() != null) {
+            boolean retrieval_user_enabled = DAO.getConfig("retrieval.user.enabled", false);
+            if (ids != null && retrieval_user_enabled && TwitterAPI.getAppTwitterFactory() != null) {
                 try {
                     TwitterAPI.getScreenName(ids, 10000, false);
                 } catch (IOException | TwitterException e) {

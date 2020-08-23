@@ -212,7 +212,7 @@ public class PublicKeyRegistrationService extends AbstractAPIHandler implements 
 					keyGen.initialize(keySize);
 					keyPair = keyGen.genKeyPair();
 				} catch (NoSuchAlgorithmException e) {
-					throw new APIException(500, "Server error");
+					throw new APIException(500, "RSA Algorithm Error");
 				}
 
 				registerKey(authorization.getIdentity(), keyPair.getPublic());
@@ -257,8 +257,9 @@ public class PublicKeyRegistrationService extends AbstractAPIHandler implements 
 				if(type == null) type = "DER";
 
 				RSAPublicKey pub;
-				String encodedKey;
-				try { encodedKey = URLDecoder.decode(post.get("register", null), "UTF-8");} catch (Throwable e){throw new APIException(500, "Server error");}
+				String encodedKey = post.get("register", null);
+				if (encodedKey == null) throw new APIException(500, "missing register");
+				try { encodedKey = URLDecoder.decode(encodedKey, "UTF-8");} catch (Throwable e) {throw new APIException(500, "URLDecoder error: " + e.getMessage());}
 				DAO.log("Key (" + type + "): " + encodedKey);
 
 				if(type.equals("DER")) {

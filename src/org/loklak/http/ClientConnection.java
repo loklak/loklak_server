@@ -47,6 +47,7 @@ import javax.net.ssl.SSLSession;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
+import org.apache.http.StatusLine;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
@@ -78,8 +79,9 @@ import org.loklak.data.DAO;
  */
 public class ClientConnection {
 
-    public static String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.89 Safari/537.36";
-
+    //public static String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.89 Safari/537.36";
+    public static String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:60.0) Gecko/20100101 Firefox/60.0"; // see https://developers.whatismybrowser.com/useragents/parse/607126-firefox-windows-gecko
+    
     public  static final String CHARSET = "UTF-8";
     private static final byte LF = 10;
     private static final byte CR = 13;
@@ -96,7 +98,6 @@ public class ClientConnection {
 
     private final static CloseableHttpClient httpClient = getClosableHttpClient();
 
-    private int status;
     private BufferedInputStream inputStream;
     private CloseableHttpResponse httpResponse;
 
@@ -112,9 +113,14 @@ public class ClientConnection {
      * @param useAuthentication
      * @throws IOException
      */
-    public ClientConnection(String urlstring) throws IOException {
+    public ClientConnection(String urlstring, String q) throws IOException {
         HttpRequestBase request = new HttpGet(urlstring);
         request.setHeader("User-Agent", USER_AGENT);
+        request.setHeader("Cache-Control", "max-age=0");
+        request.setHeader("Accept", "application/json, text/javascript, */*; q=0.01");
+        request.setHeader("Accept-Language", "en-US,en;q=0.8,en-GB;q=0.6,es;q=0.4");
+        if (q != null && q.length() > 0) request.setHeader("Referer", "https://twitter.com/" + q);
+        request.setHeader("X-Requested-With", "XMLHttpRequest");
         this.executeRequest(request);
     }
 
@@ -210,11 +216,13 @@ public class ClientConnection {
         	throw new IOException("client connection handshake error for domain " + request.getURI().getHost() + ": " + e.getMessage());
         } catch (Throwable e) {
             request.reset();
-            throw new IOException("server fail: " + e.getMessage());
+            throw new IOException("server failed " + request.getMethod() + " request: " + request.getURI().toString() + ": " + e.getMessage());
         }
         HttpEntity httpEntity = this.httpResponse.getEntity();
         if (httpEntity != null) {
-            if (this.httpResponse.getStatusLine().getStatusCode() == 200) {
+            StatusLine sl = this.httpResponse.getStatusLine();
+            int status = sl.getStatusCode();
+            if (status == 200) {
                 try {
                     this.inputStream = new BufferedInputStream(httpEntity.getContent());
                 } catch (IOException e) {
@@ -229,7 +237,7 @@ public class ClientConnection {
                 }
             } else {
                 request.reset();
-                throw new IOException("client connection to " + request.getURI() + " fail: " + status + ": " + httpResponse.getStatusLine().getReasonPhrase());
+                throw new IOException("client connection to " + request.getURI() + " fail: " + status + ": " + sl.getReasonPhrase());
             }
         } else {
             request.reset();
@@ -390,7 +398,7 @@ public class ClientConnection {
 
     public static void download(String source_url, File target_file) {
         try {
-            ClientConnection connection = new ClientConnection(source_url);
+            ClientConnection connection = new ClientConnection(source_url, "");
             try {
                 OutputStream os = new BufferedOutputStream(new FileOutputStream(target_file));
                 int count;
@@ -413,24 +421,21 @@ public class ClientConnection {
     }
 
     public static byte[] download(String source_url) throws IOException {
+        ClientConnection connection = new ClientConnection(source_url, "");
+        if (connection.inputStream == null) return null;
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        int count;
+        byte[] buffer = new byte[4096];
+        IOException ee = null;
         try {
-            ClientConnection connection = new ClientConnection(source_url);
-            if (connection.inputStream == null) return null;
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            int count;
-            byte[] buffer = new byte[4096];
-            try {
-                while ((count = connection.inputStream.read(buffer)) > 0) baos.write(buffer, 0, count);
-            } catch (IOException e) {
-            	DAO.severe(e);
-            } finally {
-                connection.close();
-            }
-            return baos.toByteArray();
+            while ((count = connection.inputStream.read(buffer)) > 0) baos.write(buffer, 0, count);
         } catch (IOException e) {
-        	DAO.severe(e);
-            return null;
+        	ee = e;
+        } finally {
+            connection.close();
         }
+        if (ee != null) throw ee;
+        return baos.toByteArray();
     }
 
     public int getStatusCode() {

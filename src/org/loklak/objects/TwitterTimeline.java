@@ -131,10 +131,6 @@ public class TwitterTimeline extends BasicTimeline<TwitterTweet> implements Iter
         return json;
     }
     
-    public SusiThought toSusi(boolean withEnrichedData) throws JSONException {
-        return toSusi(withEnrichedData, new SusiThought());
-    }
-    
     private SusiThought toSusi(boolean withEnrichedData, SusiThought json) throws JSONException {
         json
             .setQuery(this.query)

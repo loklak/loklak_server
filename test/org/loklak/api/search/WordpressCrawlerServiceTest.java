@@ -31,7 +31,7 @@ public class WordpressCrawlerServiceTest {
 		String author = "saptaks";
         WordpressCrawlerService wordpressCrawler = new WordpressCrawlerService(url);
         try {
-            ClientConnection connection = new ClientConnection(url);
+            ClientConnection connection = new ClientConnection(url, "");
             //Check Network issue
             assertThat(connection.getStatusCode(), is(200));
 

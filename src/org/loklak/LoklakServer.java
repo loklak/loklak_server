@@ -55,6 +55,7 @@ import org.eclipse.jetty.rewrite.handler.RewriteRegexRule;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SessionIdManager;
 import org.eclipse.jetty.server.handler.DefaultHandler;
 import org.eclipse.jetty.server.handler.ErrorHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -62,8 +63,7 @@ import org.eclipse.jetty.server.handler.IPAccessHandler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.server.handler.gzip.GzipHandler;
-import org.eclipse.jetty.server.session.HashSessionIdManager;
-import org.eclipse.jetty.server.session.HashSessionManager;
+import org.eclipse.jetty.server.session.DefaultSessionIdManager;
 import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
@@ -104,7 +104,6 @@ import org.loklak.api.iot.EarthquakeServlet;
 import org.loklak.api.p2p.HelloService;
 import org.loklak.api.p2p.PeersServlet;
 import org.loklak.api.p2p.PushServlet;
-import org.loklak.api.search.ConsoleService;
 import org.loklak.api.search.EventBriteCrawlerService;
 import org.loklak.api.search.GenericScraper;
 import org.loklak.api.search.GithubProfileScraper;
@@ -119,7 +118,6 @@ import org.loklak.api.search.SuggestServlet;
 import org.loklak.api.search.TimeAndDateService;
 import org.loklak.api.search.TweetScraper;
 import org.loklak.api.search.UserServlet;
-import org.loklak.api.search.VideoUrlService;
 import org.loklak.api.search.WeiboUserInfo;
 import org.loklak.api.search.WikiGeoData;
 import org.loklak.api.search.WordpressCrawlerService;
@@ -130,12 +128,9 @@ import org.loklak.api.vis.MarkdownServlet;
 import org.loklak.api.vis.PieChartServlet;
 import org.loklak.data.DAO;
 import org.loklak.data.IncomingMessageBuffer;
+import org.loklak.harvester.TwitterHarvester;
 import org.loklak.harvester.TwitterScraper;
 import org.loklak.harvester.YoutubeScraper;
-import org.loklak.harvester.strategy.ClassicHarvester;
-import org.loklak.harvester.strategy.Harvester;
-import org.loklak.harvester.strategy.KaizenHarvester;
-import org.loklak.harvester.strategy.PriorityKaizenHarvester;
 import org.loklak.http.RemoteAccess;
 import org.loklak.server.APIHandler;
 import org.loklak.server.FileHandler;
@@ -157,7 +152,7 @@ public class LoklakServer {
     private static DumpImporter dumpImporter = null;
     private static HttpsMode httpsMode = HttpsMode.OFF;
     public static Class<? extends Servlet>[] services;
-    public static Harvester harvester = null;
+    public static TwitterHarvester harvester = null;
 
     public static Map<String, String> readConfig(Path data) throws IOException {
         File conf_dir = new File("conf");
@@ -190,23 +185,6 @@ public class LoklakServer {
 
         return config;
     }
-
-    /*
-    public static void saveConfig() throws IOException {
-        Path data = FileSystems.getDefault().getPath("data");
-        Path settings_dir = data.resolve("settings");
-        settings_dir.toFile().mkdirs();
-        OS.protectPath(settings_dir);
-        File customized_config = new File(settings_dir.toFile(), "customized_config.properties");
-        Properties prop = new Properties();
-        for (String key : DAO.getConfigKeys()) {
-            prop.put(key, DAO.getConfig(key, ""));
-        }
-        Writer w = new OutputStreamWriter(new FileOutputStream(customized_config), StandardCharsets.UTF_8);
-        prop.store(w, "This file can be used to customize the configuration file conf/config.properties");
-        w.close();
-    }
-    */
 
     public static int getServerThreads() {
         return server.getThreadPool().getThreads() - server.getThreadPool().getIdleThreads();
@@ -307,7 +285,7 @@ public class LoklakServer {
         setServerHandler(dataFile);
 
         // init the harvester
-        initializeHarvester();
+        harvester = new TwitterHarvester();
 
         LoklakServer.server.start();
         LoklakServer.caretaker = new Caretaker();
@@ -346,7 +324,6 @@ public class LoklakServer {
                     LoklakServer.server.stop();
                     DAO.close();
                     TwitterScraper.executor.shutdown();
-                    LoklakServer.harvester.stop();
                     DAO.log("main terminated, goodby.");
 
                     //LoklakServer.saveConfig();
@@ -410,23 +387,6 @@ public class LoklakServer {
         Files.copy(jar.getInputStream(file), target.toPath());
     }
 
-    // initialize harvester
-    private static void initializeHarvester() {
-        String type = DAO.getConfig("harvester.type", "classic");
-        switch (type) {
-            default:
-            case "classic":
-                harvester = new ClassicHarvester();
-                break;
-            case "kaizen":
-                harvester = new KaizenHarvester();
-                break;
-            case "priority_kaizen":
-                harvester = new PriorityKaizenHarvester();
-                break;
-        }
-    }
-
     //initiate http server
     private static void setupHttpServer(int httpPort, int httpsPort) throws Exception{
     	QueuedThreadPool pool = new QueuedThreadPool();
@@ -448,7 +408,7 @@ public class LoklakServer {
 	        connector.addConnectionFactory(new HttpConnectionFactory(http_config));
 	        connector.setPort(httpPort);
 	        connector.setName("httpd:" + httpPort);
-	        connector.setIdleTimeout(20000); // timout in ms when no bytes send / received
+	        connector.setIdleTimeout(30000); // timout in ms when no bytes send / received
 	        connector.start();
 	        LoklakServer.server.addConnector(connector);
         }
@@ -551,7 +511,7 @@ public class LoklakServer {
 	        ServerConnector sslConnector = new ServerConnector(LoklakServer.server, ssl, http1);
 	        sslConnector.setPort(httpsPort);
 	        sslConnector.setName("httpd:" + httpsPort);
-	        sslConnector.setIdleTimeout(20000); // timout in ms when no bytes send / received
+	        sslConnector.setIdleTimeout(30000); // timout in ms when no bytes send / received
 	        LoklakServer.server.addConnector(sslConnector);
         }
     }
@@ -609,7 +569,7 @@ public class LoklakServer {
         } catch (IllegalArgumentException e) {
             DAO.severe("bad blacklist:" + blacklist, e);
         }
-
+        
         WebAppContext htrootContext = new WebAppContext();
         htrootContext.setContextPath("/");
 
@@ -646,7 +606,6 @@ public class LoklakServer {
                 HelloService.class,
 
                 // search
-                ConsoleService.class,
                 EventBriteCrawlerService.class,
                 MeetupsCrawlerService.class,
                 RSSReaderService.class,
@@ -688,7 +647,6 @@ public class LoklakServer {
         servletHandler.addServlet(SuggestServlet.class, "/api/suggest.json");
         servletHandler.addServlet(XMLServlet.class, "/api/xml2json.json");
         servletHandler.addServlet(CSVServlet.class, "/api/csv2json.json");
-        servletHandler.addServlet(VideoUrlService.class, "/api/videoUrlService.json");
         ServletHolder accountServletHolder = new ServletHolder(AccountService.class);
         accountServletHolder.getRegistration().setMultipartConfig(multipartConfig);
         servletHandler.addServlet(accountServletHolder, "/api/account.json");
@@ -769,16 +727,14 @@ public class LoklakServer {
         gzipHandler.setIncludedMimeTypes("text/html,text/plain,text/xml,text/css,application/javascript,text/javascript,application/json");
         gzipHandler.setHandler(handlerlist2);
 
-        HashSessionIdManager idmanager = new HashSessionIdManager();
+        SessionIdManager idmanager = new DefaultSessionIdManager(LoklakServer.server);
         LoklakServer.server.setSessionIdManager(idmanager);
-        SessionHandler sessions = new SessionHandler(new HashSessionManager());
+        SessionHandler sessions = new SessionHandler();
         sessions.setHandler(gzipHandler);
         securityHandler.setHandler(sessions);
         ipaccess.setHandler(securityHandler);
 
         LoklakServer.server.setHandler(ipaccess);
-
-
     }
 
     private static void checkServerPorts(int httpPort, int httpsPort) throws IOException{

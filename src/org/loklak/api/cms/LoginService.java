@@ -276,7 +276,7 @@ public class LoginService extends AbstractAPIHandler implements APIHandler {
 				throw new APIException(400, "Bad Signature");
 			}
 		}
-		throw new APIException(500, "Server error");
+		throw new APIException(500, "Login error");
 	}
 
 	/**

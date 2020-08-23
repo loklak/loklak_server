@@ -297,7 +297,7 @@ public class JSONObject {
      */
     public JSONObject(Map<?, ?> m) {
         if (m == null) {
-            this.map = new HashMap<String, Object>();
+            this.map = new LinkedHashMap<String, Object>();
         } else {
             this.map = new HashMap<String, Object>(m.size());
         	for (final Entry<?, ?> e : m.entrySet()) {

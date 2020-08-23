@@ -19,10 +19,6 @@
 
 package org.loklak.harvester;
 
-import static org.apache.http.util.EntityUtils.consumeQuietly;
-import static org.loklak.http.ClientConnection.getClosableHttpClient;
-import static org.loklak.http.ClientConnection.getHTML;
-
 import org.loklak.objects.AbstractObjectEntry;
 import org.loklak.objects.BasicTimeline.Order;
 
@@ -30,7 +26,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -41,6 +36,7 @@ import java.util.regex.Pattern;
 
 import org.json.JSONObject;
 import org.json.JSONTokener;
+import org.jsoup.Jsoup;
 import org.loklak.data.Classifier;
 import org.loklak.data.DAO;
 import org.loklak.data.Classifier.Category;
@@ -51,8 +47,6 @@ import org.loklak.objects.QueryEntry.PlaceContext;
 import org.loklak.tools.bayes.Classification;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
@@ -63,11 +57,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang3.StringEscapeUtils;
-import org.apache.http.HttpEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.http.ClientConnection;
@@ -77,18 +66,18 @@ import org.loklak.objects.SourceType;
 import org.loklak.objects.TwitterTimeline;
 import org.loklak.objects.UserEntry;
 
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 public class TwitterScraper {
 
     public static final ExecutorService executor = Executors.newFixedThreadPool(40);
     public static final Pattern emoji_pattern_span = Pattern.compile("<span [^>]*class=\"Emoji Emoji--forLinks\" [^>]*>[\\n]*[^<]*</span>[\\n]*<span [^>]*class=\"visuallyhidden\" [^>]*aria-hidden=\"true\"[^>]*>[\\n]*([^<]*)[\\n]*</span>");
-    private static final Pattern bearerJsUrlRegex = Pattern.compile("showFailureMessage\\(\\'(.*?main.*?)\\'\\);");
-    private static final Pattern guestTokenRegex = Pattern.compile("document\\.cookie \\= decodeURIComponent\\(\\\"gt\\=([0-9]+);");
-    private static final Pattern bearerTokenRegex = Pattern.compile("BEARER_TOKEN:\\\"(.*?)\\\"");
 
     public static TwitterTimeline search(
             final String query,
-            final ArrayList<String> filterList,
+            final Set<String> filterList,
             final TwitterTimeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend,
@@ -113,75 +102,80 @@ public class TwitterScraper {
             final boolean writeToBackend,
             int jointime) {
 
-        return search(query, new ArrayList<>(), order, writeToIndex, writeToBackend, jointime);
+        return search(query, new HashSet<>(), order, writeToIndex, writeToBackend, jointime);
     }
 
-    private static String prepareSearchUrl(final String query, final ArrayList<String> filterList) {
-        // check
-        // https://twitter.com/search-advanced for a better syntax
-        // build queries like https://twitter.com/search?f=tweets&vertical=default&q=kaffee&src=typd
+    private enum FilterType {
+        tweets, image, video, geo, links, mentions, hashtags, media;
+    }
+    
+    private static String prepareSearchUrl(final String query, FilterType type) {
+        // check https://twitter.com/search-advanced for a better syntax
         // https://support.twitter.com/articles/71577-how-to-use-advanced-twitter-search#
-        String httpsUrl = "";
-        String type = "tweets";
+
+        // query q
+        StringBuilder t = new StringBuilder(query.length());
+        for (String s: query.replace('+', ' ').split(" ")) {
+            t.append(' ');
+            if (s.startsWith("since:") || s.startsWith("until:")) {
+                int u = s.indexOf('_');
+                t.append(u < 0 ? s : s.substring(0, u));
+            } else {
+                t.append(s);
+            }
+        }
+        if (type == FilterType.image && t.indexOf("has:images") < 0) t.append(" has:images");
+        if (type == FilterType.video && t.indexOf("has:videos") < 0) t.append(" has:videos");
+        
+        String q;
         try {
+            q = t.length() == 0 ? "*" : URLEncoder.encode(t.substring(1), "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            q = t.length() == 0 ? "*" : t.substring(1);
+        }
 
-            // query q
-            StringBuilder t = new StringBuilder(query.length());
-            for (String s: query.replace('+', ' ').split(" ")) {
-                t.append(' ');
-                if (s.startsWith("since:") || s.startsWith("until:")) {
-                    int u = s.indexOf('_');
-                    t.append(u < 0 ? s : s.substring(0, u));
-                } else {
-                    t.append(s);
-                }
-            }
-            String q = t.length() == 0 ? "*" : URLEncoder.encode(t.substring(1), "UTF-8");
-
-            // type of content to fetch
-            if (filterList.contains("video") && filterList.size() == 1) {
-                type = "videos";
-            }
-
-            // building url
-            httpsUrl = "https://twitter.com/search?f=" + type + "&vertical=default&q=" + q + "&src=typd";
-
-        } catch (UnsupportedEncodingException e) {}
-        return httpsUrl;
-    }
-
-    @SuppressWarnings("unused")
-    private static TwitterTimeline[] search(
-            final String query,
-            final TwitterTimeline.Order order,
-            final boolean writeToIndex,
-            final boolean writeToBackend) {
-        return search(query, new ArrayList<>(), order, writeToIndex, writeToBackend);
+        // building url
+        // see https://github.com/bisguzar/twitter-scraper/blob/master/twitter_scraper/modules/tweets.py#L12-L29
+        return "https://twitter.com/i/search/timeline?f=tweets&vertical=default&q=" + q + "&src=typd&reset_error_state=false&include_available_features=1&include_entities=1&include_new_items_bar=true";
     }
 
     private static TwitterTimeline[] search(
             final String query,
-            final ArrayList<String> filterList,
+            final Set<String> filterList,
             final TwitterTimeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend) {
         // check
         // https://twitter.com/search-advanced for a better syntax
         // https://support.twitter.com/articles/71577-how-to-use-advanced-twitter-search#
-        String https_url = prepareSearchUrl(query, filterList);
+        FilterType tt = FilterType.tweets;
+        if (filterList.contains("image")) tt = FilterType.image;
+        if (filterList.contains("video")) tt = FilterType.video;
+        String https_url = prepareSearchUrl(query, tt);
         TwitterTimeline[] timelines = null;
         try {
-            ClientConnection connection = new ClientConnection(https_url);
+            ClientConnection connection = new ClientConnection(https_url, query);
             if (connection.getInputStream() == null) return null;
             try {
                 BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8));
 
-                timelines = search(br, filterList, order, writeToIndex, writeToBackend);
+                JSONTokener t = new JSONTokener(br);
+                JSONObject j = new JSONObject(t);
+                String html = j.getString("items_html");
+                Document doc = Jsoup.parse(html);
+                
+                timelines = search(doc, filterList, order, writeToIndex, writeToBackend);
             } catch (IOException e) {
                 DAO.severe(e);
             } finally {
                 connection.close();
             }
+            /*
+            HtmlUnitLoader loader = new HtmlUnitLoader(https_url, "scraper");
+            ByteArrayInputStream bais = new ByteArrayInputStream(loader.getXml().getBytes(StandardCharsets.UTF_8));
+            BufferedReader br = new BufferedReader(new InputStreamReader(bais, StandardCharsets.UTF_8));
+            timelines = search(br, filterList, order, writeToIndex, writeToBackend);
+            */
         } catch (IOException e) {
             // this could mean that twitter rejected the connection (DoS protection?) or we are offline (we should be silent then)
             // DAO.severe(e);
@@ -200,35 +194,6 @@ public class TwitterScraper {
         return timelines;
     }
 
-    private static TwitterTimeline[] parse(
-            final File file,
-            final TwitterTimeline.Order order,
-            final boolean writeToIndex,
-            final boolean writeToBackend) {
-        return parse(file, new ArrayList<>(), order, writeToIndex, writeToBackend);
-    }
-
-    private static TwitterTimeline[] parse(
-            final File file,
-            final ArrayList<String> filterList,
-            final TwitterTimeline.Order order,
-            final boolean writeToIndex,
-            final boolean writeToBackend) {
-        TwitterTimeline[] timelines = null;
-        try {
-            BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
-            timelines = search(br, filterList, order, writeToIndex, writeToBackend);
-        } catch (IOException e) {
-            DAO.severe(e);
-        } finally {
-            if (timelines == null) timelines = new TwitterTimeline[]{new TwitterTimeline(order), new TwitterTimeline(order)};
-        }
-
-        if (timelines[0] != null) timelines[0].setScraperInfo("local");
-        if (timelines[1] != null) timelines[1].setScraperInfo("local");
-        return timelines;
-    }
-
     /**
      * scrape messages from the reader stream: this already checks if a message is new. There are only new messages returned
      * @param br
@@ -237,431 +202,148 @@ public class TwitterScraper {
      * @throws IOException
      */
     private static TwitterTimeline[] search(
-            final BufferedReader br,
-            final ArrayList<String> filterList,
+            final Document doc,
+            final Set<String> filterList,
             final TwitterTimeline.Order order,
             final boolean writeToIndex,
             final boolean writeToBackend) throws IOException {
         TwitterTimeline timelineReady = new TwitterTimeline(order);
         TwitterTimeline timelineWorking = new TwitterTimeline(order);
-        String input;
-        Map<String, prop> props = new HashMap<String, prop>();
         Set<String> images = null;
         Set<String> videos = null;
         String place_id = "";
         String place_name = "";
         Set<String> mentions = new LinkedHashSet<>();
-        boolean parsing_favourite = false, parsing_retweet = false;
-        int line = 0; // first line is 1, according to emacs which numbers the first line also as 1
         boolean debuglog = DAO.getConfig("flag.debug.twitter_scraper", "false").equals("true");
 
-        while ((input = br.readLine()) != null){
-            line++;
-            input = input.trim();
-
-            if (input.length() == 0) continue;
+        // parse
+        Elements items = doc.getElementsByClass("stream-item");
+        itemloop: for (int itemc = 0; itemc < items.size(); itemc++) {
+            Element item = items.get(itemc);
+            if (debuglog) System.out.println(item.toString());
+    
+            Elements streamitem = item.getElementsByClass("stream-item");
+            Element tweeti = streamitem.get(0).child(0);
+            String tweetID = tweeti.attr("data-tweet-id");
+            String conversationID = tweeti.attr("data-conversation-id"); // this is the parent in a conversation
+            String mentions_screenname = tweeti.attr("data-mentions"); // the conversationID does not have a link to the user name which produces the actual tweet link. This here is a hint. But several names can be listed here.
+            // the first nam in mentions_screenname is the latest in the conversation chain
+            Set<String> mentions_screennames = new LinkedHashSet<>(); // to preserve the order we use a linked hash set
+            String[] mss= mentions_screenname.split(" ");
+            for (int i = 0; i < mss.length; i++) mentions_screennames.add(mss[i]);
+            if (conversationID != null && conversationID.equals(tweetID)) {conversationID = ""; mentions_screennames.clear();}
             
-            // debug
-            if (debuglog) DAO.log(line + ": " + input);
-            //if (input.indexOf("ProfileTweet-actionCount") > 0) DAO.log(input);
+            Elements profile = item.getElementsByClass("js-profile-popup-actionable");
+            Elements avatare = item.getElementsByClass("js-action-profile-avatar");
             
-            // parse
-            int p;
-            if ((p = input.indexOf("data-reply-to-users-json=")) >= 0) {
-                prop mentions_prop = new prop(input, p, "data-reply-to-users-json");
-                String decoded = StringEscapeUtils.unescapeHtml4(mentions_prop.value);
-                JSONArray a = new JSONArray(new JSONTokener(decoded));
-                for (int i = 0; i < a.length(); i++) {
-                	mentions.add(a.getJSONObject(i).getString("screen_name"));
-                }
-                continue;
-            }
-            if ((p = input.indexOf("data-mentions=")) >= 0) {
-                prop mentions_prop = new prop(input, p, "data-mentions");
-                for (String s: mentions_prop.value.split(" ")) mentions.add(s);
-                continue;
-            }
-            if ((p = input.indexOf("=\"account-group")) > 0) {
-                props.put("userid", new prop(input, p, "data-user-id"));
-                continue;
-            }
-            if ((p = input.indexOf("class=\"avatar js-action-profile-avatar")) > 0) {
-                props.put("useravatarurl", new prop(input, p, "src"));
-                continue;
-            }
-            if ((p = input.indexOf("data-name=")) >= 0) {
-                props.put("userfullname", new prop(input, p, "data-name"));
-                // don't continue here, username is in the same line
-            }
-            if ((p = input.indexOf("data-screen-name=")) >= 0) {
-                props.put("usernickname", new prop(input, p, "data-screen-name"));
-                // don't continue here, fullname is in the same line
-            }
-            if ((p = input.indexOf("class=\"tweet-timestamp")) > 0) {
-                props.put("tweetstatusurl", new prop(input, 0, "href"));
-                props.put("tweettimename", new prop(input, p, "title"));
-                // don't continue here because "class=\"_timestamp" is in the same line
-            }
-            if ((p = input.indexOf("class=\"_timestamp")) > 0) {
-                props.put("tweettimems", new prop(input, p, "data-time-ms"));
-                continue;
-            }
-            if ((p = input.indexOf("class=\"ProfileTweet-action--retweet")) > 0) {
-                parsing_retweet = true;
-                continue;
-            }
-            if ((p = input.indexOf("class=\"ProfileTweet-action--favorite")) > 0) {
-                parsing_favourite = true;
-                continue;
-            }
-            if ((p = input.indexOf("class=\"TweetTextSize")) > 0) {
-                // read until closing p tag to account for new lines in tweets
-                while (input.lastIndexOf("</p>") == -1){
-                    input = input + ' ' + br.readLine();
-                }
-                prop tweettext = new prop(input, p, null);
-                props.put("tweettext", tweettext);
-                
-                continue;
-            }
-            if ((p = input.indexOf("class=\"ProfileTweet-actionCount")) > 0) {
-                if (parsing_retweet) {
-                    prop tweetretweetcount = new prop(input, p, "data-tweet-stat-count");
-                    props.put("tweetretweetcount", tweetretweetcount);
-                    parsing_retweet = false;
-                }
-                if (parsing_favourite) {
-                    props.put("tweetfavouritecount", new prop(input, p, "data-tweet-stat-count"));
-                    parsing_favourite = false;
-                }
-                continue;
-            }
-            // get images
-            if(videos == null) images = new HashSet<>();
-            if ((p = input.indexOf("<img")) >= 0) {
-                String img_link = new prop(input, p, "src").value;
-                if (img_link != null && img_link.contains("pbs.twimg.com/media/")) {
-                    images.add(img_link);
-                    continue;
+            String userid = profile.attr("data-user-id");
+            String usernickname = profile.attr("data-screen-name");
+            String useravatarurl = avatare.attr("src");
+            String userfullname = profile.attr("data-name");
+            
+            UserEntry user = new UserEntry(
+                    userid,
+                    usernickname,
+                    useravatarurl,
+                    MessageEntry.html2utf8(userfullname)
+            );
+    
+            Elements timestamp = item.getElementsByClass("_timestamp");
+            String rawtext = item.getElementsByClass("tweet-text").text();
+            if (mentions_screennames.size() > 0) {
+                // attention: this turns the order around! First entry will be conversation starter!
+                for (String screenname: mentions_screennames) {
+                    if (rawtext.indexOf(screenname) < 0) rawtext = "@" + screenname + " " + rawtext;
                 }
             }
-            // we have two opportunities to get video thumbnails == more images; images in the presence of video content should be treated as thumbnail for the video
-            if(videos == null) videos = new HashSet<>();
-            if ((p = input.indexOf("class=\"animated-gif-thumbnail\"")) > 0) {
-                String image_url = new prop(input, 0, "src").value;
-                images.add(image_url);
-                continue;
-            }
-            if ((p = input.indexOf("class=\"animated-gif\"")) > 0) {
-                String image_url = new prop(input, p, "poster").value;
-                images.add(image_url);
-                continue;
-            }
-            if ((p = input.indexOf("<source video-src")) >= 0 && input.indexOf("type=\"video/") > p) {
-                String video_url = new prop(input, p, "video-src").value;
-                videos.add(video_url);
-                continue;
-            }
-            if (input.indexOf("AdaptiveMedia-videoContainer") > 0) {
-                /* String tweetUrl = props.get("tweetstatusurl").value;
-                 * String[] videoUrls = fetchTwitterVideos(tweetUrl);
-                 * Collections.addAll(videos, videoUrls);
-                 *
-                 * Not a good idea to fetch video right now. Need to add another endpoint which
-                 * lets end users fetch complete videos from here.
-                 * See https://github.com/loklak/loklak_server/issues/1298
-                 **/
-            }
-            if ((p = input.indexOf("class=\"Tweet-geo")) > 0) {
-                prop place_name_prop = new prop(input, p, "title");
-                place_name = place_name_prop.value;
-                continue;
-            }
-            if ((p = input.indexOf("class=\"ProfileTweet-actionButton u-linkClean js-nav js-geo-pivot-link")) > 0) {
-                prop place_id_prop = new prop(input, p, "data-place-id");
-                place_id = place_id_prop.value;
-                continue;
-            }
+            
+            String tweettimes = timestamp.attr("data-time-ms");
+            if (tweettimes.length() == 0) continue itemloop; // sometimes tweets are not available any more
+            long tweettime = Long.parseLong(tweettimes);
+            // this assertion holds in most, but unfortunately not in all cases, so it is commented out
+            // long snowflaketime = snowflake2millis(Long.parseLong(tweetID));
+            // assert tweettime / 1000L == snowflaketime / 1000L : "tweettime = " + tweettime + ", snowflaketime = " + snowflaketime;
 
-            if (props.size() == 10 || (debuglog  && props.size() > 4 && input.indexOf("stream-item") > 0)) {
-
-                if(!filterPosts(filterList, props, videos, images)) {
-                    props = new HashMap<String, prop>();
-                    place_id = "";
-                    place_name = "";
-                    mentions.clear();
-                    videos = null;
-                    images = null;
-                    continue;
-                }
-
-                //TODO: Add more filters
-
-                // the tweet is complete, evaluate the result
-                if (debuglog) DAO.log("*** line " + line + " propss.size() = " + props.size());
-                prop userid = props.get("userid"); if (userid == null) {if (debuglog) DAO.log("*** line " + line + " MISSING value userid"); continue;}
-                prop usernickname = props.get("usernickname"); if (usernickname == null) {if (debuglog) DAO.log("*** line " + line + " MISSING value usernickname"); continue;}
-                prop useravatarurl = props.get("useravatarurl"); if (useravatarurl == null) {if (debuglog) DAO.log("*** line " + line + " MISSING value useravatarurl"); continue;}
-                prop userfullname = props.get("userfullname"); if (userfullname == null) {if (debuglog) DAO.log("*** line " + line + " MISSING value userfullname"); continue;}
-                UserEntry user = new UserEntry(
-                        userid.value,
-                        usernickname.value,
-                        useravatarurl.value,
-                        MessageEntry.html2utf8(userfullname.value)
+            Elements reply = item.getElementsByClass("ProfileTweet-action--reply").get(0).children();
+            Elements retweet = item.getElementsByClass("ProfileTweet-action--retweet").get(0).children();
+            Elements favourite = item.getElementsByClass("ProfileTweet-action--favorite").get(0).children();
+            String tweetreplycount = reply.attr("data-tweet-stat-count");
+            String tweetretweetcount = retweet.attr("data-tweet-stat-count");
+            String tweetfavouritecount = favourite.attr("data-tweet-stat-count");
+            
+            String tweetstatusurl = item.getElementsByClass("tweet-timestamp").attr("href");        
+            // evaluate
+            
+            // patch text with non-mentioned mentions (twitter obviously cuts that away)
+            mentions.remove(user.getScreenName());
+            for (String mention: mentions) {
+                String m = "@" + mention;
+                if (rawtext.indexOf(m) < 0) rawtext = rawtext + " " + m;
+            }
+            
+            TwitterTweet tweet;
+            try {
+                tweet = new TwitterTweet(
+                        user.getScreenName(),
+                        tweettime,
+                        tweetID, // like 1284585691259850753
+                        conversationID, // like 1284532773563359233
+                        mentions_screennames,
+                        tweetstatusurl, // like /yacy_search/status/1284585691259850753
+                        rawtext,
+                        Long.parseLong(tweetreplycount),
+                        Long.parseLong(tweetretweetcount),
+                        Long.parseLong(tweetfavouritecount),
+                        images, videos, place_name, place_id,
+                        user, writeToIndex, writeToBackend
                 );
-
-                prop tweettimems = props.get("tweettimems");
-                prop tweetretweetcount = props.get("tweetretweetcount");
-                prop tweetfavouritecount = props.get("tweetfavouritecount");
-                
-                // patch text with non-mentioned mentions (twitter obviously cuts that away)
-                String rawtext = props.get("tweettext").value;
-                mentions.remove(user.getScreenName());
-                for (String mention: mentions) {
-                	String m = "@" + mention;
-                	if (rawtext.indexOf(m) < 0) rawtext = rawtext + " " + m;
-                }
-                
-                TwitterTweet tweet;
-                try {
-                    tweet = new TwitterTweet(
-                            user.getScreenName(),
-                            Long.parseLong(tweettimems.value),
-                            props.get("tweettimename").value,
-                            props.get("tweetstatusurl").value,
-                            rawtext,
-                            Long.parseLong(tweetretweetcount.value),
-                            Long.parseLong(tweetfavouritecount.value),
-                            images, videos, place_name, place_id,
-                            user, writeToIndex,  writeToBackend
-                    );
-
-                    place_id = "";
-                    place_name = "";
-                    mentions.clear();
-                    videos = null;
-                    images = null;
-                    props.clear();
-                } catch (NullPointerException e) {
-                    DAO.severe(e);
-                    tweet = null;
-                    continue;
-                }
-                
-                //if (DAO.messages == null || !DAO.messages.existsCache(tweet.getPostId())) {
-                    // checking against the exist cache is incomplete. A false negative would just cause that a tweet is
-                    // indexed again.
-                    if (tweet.willBeTimeConsuming()) {
-                        executor.execute(tweet);
-                        //new Thread(tweet).start();
-                        // because the executor may run the thread in the current thread it could be possible that the result is here already
-                        if (tweet.isReady()) {
-
-                            timelineReady.add(tweet, user);
-                            //DAO.log("SCRAPERTEST: messageINIT is ready");
-                        } else {
-                            timelineWorking.add(tweet, user);
-                            //DAO.log("SCRAPERTEST: messageINIT unshortening");
-                        }
-                    } else {
-                        // no additional thread needed, run the postprocessing in the current thread
-                        tweet.run();
-                        timelineReady.add(tweet, user);
-                    }
-                //}
-                continue;
+    
+                place_id = "";
+                place_name = "";
+                mentions.clear();
+                videos = null;
+                images = null;
+            } catch (NullPointerException e) {
+                DAO.severe(e);
+                tweet = null;
             }
+            
+            //if (DAO.messages == null || !DAO.messages.existsCache(tweet.getPostId())) {
+                // checking against the exist cache is incomplete. A false negative would just cause that a tweet is
+                // indexed again.
+                if (tweet.willBeTimeConsuming()) {
+                    executor.execute(tweet);
+                    //new Thread(tweet).start();
+                    // because the executor may run the thread in the current thread it could be possible that the result is here already
+                    if (tweet.isReady()) {
+    
+                        timelineReady.add(tweet, user);
+                        //DAO.log("SCRAPERTEST: messageINIT is ready");
+                    } else {
+                        timelineWorking.add(tweet, user);
+                        //DAO.log("SCRAPERTEST: messageINIT unshortening");
+                    }
+                } else {
+                    // no additional thread needed, run the postprocessing in the current thread
+                    tweet.run();
+                    timelineReady.add(tweet, user);
+                }
+            //}
         }
-        //for (prop p: props.values()) System.out.println(p);
-        br.close();
 
         return new TwitterTimeline[]{timelineReady, timelineWorking};
     }
 
-    public static String[] fetchTwitterVideos(String tweetUrl) {
-        // Extract BEARER_TOKEN holding js and Guest token
-        String mobileUrl = "https://mobile.twitter.com" + tweetUrl;
-        String bearerJsUrl = null;
-        String guestToken = null;
-        String bearerToken = null;
-        try {
-            ClientConnection conn = new ClientConnection(mobileUrl);
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
-            String line;
-            while ((line = br.readLine()) != null) {
-                if (bearerJsUrl != null && guestToken != null) {
-                    // Both the entities are found
-                    break;
-                }
-                if (line.length() == 0) {
-                    continue;
-                }
-                Matcher m = bearerJsUrlRegex.matcher(line);
-                if (m.find()) {
-                    bearerJsUrl = m.group(1);
-                    continue;
-                }
-                m = guestTokenRegex.matcher(line);
-                if (m.find()) {
-                    guestToken = m.group(1);
-                }
-            }
-        } catch (IOException e) {
-            DAO.severe("Unable to open mobile URL: " + mobileUrl, e);
-            return new String[]{};
-        }
-
-        // Get BEARER_TOKEN from bearer token holder JS
-        try {
-            bearerToken = getBearerTokenFromJs(bearerJsUrl);
-        } catch (IOException e) {
-            DAO.severe("Error while fetching BEARER_TOKEN", e);
-            return new String[]{};
-        }
-
-        try {
-            int slashIndex = tweetUrl.lastIndexOf('/');
-            String tweetId = tweetUrl.substring(slashIndex + 1);
-            return getConversationVideos(tweetId, bearerToken, guestToken);
-        } catch (IOException e) {
-            DAO.severe("Error while getting data JSON for Tweet " + tweetUrl, e);
-        }
-        return new String[]{};
+    private static long snowflake2millis(long sf) {
+        return (sf >> 22) + 1288834974657L;
     }
-
-    private static String[] getConversationVideos(String tweetId, String bearerToken, String guestToken) throws IOException {
-        String conversationApiUrl = "https://api.twitter.com/2/timeline/conversation/" + tweetId + ".json";
-        CloseableHttpClient httpClient = getClosableHttpClient();
-        HttpGet req = new HttpGet(conversationApiUrl);
-        req.setHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.98 Safari/537.36");
-        req.setHeader("Authorization", "Bearer " + bearerToken);
-        req.setHeader("x-guest-token", guestToken);
-        HttpEntity entity = httpClient.execute(req).getEntity();
-        String html = getHTML(entity);
-        consumeQuietly(entity);
-        try {
-            JSONArray arr = (new JSONObject(html)).getJSONObject("globalObjects").getJSONObject("tweets")
-                    .getJSONObject(tweetId).getJSONObject("extended_entities").getJSONArray("media");
-            JSONObject obj2 = (JSONObject) arr.get(0);
-            JSONArray videos = obj2.getJSONObject("video_info").getJSONArray("variants");
-            ArrayList<String> urls = new ArrayList<>();
-            for (int i = 0; i < videos.length(); i++) {
-                String url = ((JSONObject) videos.get(i)).getString("url");
-                urls.add(url);
-            }
-            return urls.toArray(new String[urls.size()]);
-        } catch (JSONException e) {
-            // This is not an issue. Sometimes, there are videos in long conversations but other ones get media class
-            //  div, so this fetching process is triggered.
-            DAO.severe("Error while parsing videos from conversation JSON for " + tweetId, e);
-        }
-        return new String[]{};
-    }
-
-    private static String getBearerTokenFromJs(String jsUrl) throws IOException {
-        ClientConnection conn = new ClientConnection(jsUrl);
-        BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
-        String line = br.readLine();
-        Matcher m = bearerTokenRegex.matcher(line);
-        if (m.find()) {
-            return m.group(1);
-        }
-        throw new IOException("Couldn't get BEARER_TOKEN");
-    }
-
-    /**
-     * Filter Posts(here tweets) according to values.
-     *   image: filter tweets with images, neglect 'tweets without images'
-     *   video: filter tweets also having video and other values like image. For only value as video,
-     *          tweets with videos are filtered in prepareUrl() method
-     */
-    private static boolean filterPosts(
-            ArrayList<String> filterList,
-            Map<String, prop> props,
-            Set<String> videos,
-            Set<String> images
-    ) {
-        Matcher matchVideo1;
-        Matcher matchVideo2;
-        Pattern[] videoUrlPatterns = {
-                Pattern.compile("youtu.be\\/[0-9A-z]+"),
-                Pattern.compile("youtube.com\\/watch?v=[0-9A-z]+")
-        };
-
-        // Filter tweets with videos and others
-        if (filterList.contains("video") && filterList.size() > 1) {
-            matchVideo1 = videoUrlPatterns[0].matcher(props.get("tweettext").value);
-            matchVideo2 = videoUrlPatterns[1].matcher(props.get("tweettext").value);
-
-            if(!matchVideo1.find() && !matchVideo2.find() && videos.size() < 1) {
-                return false;
-            }
-        }
-
-        // Filter tweets with images
-        if (filterList.contains("image") && images.size() < 1) {
-            return false;
-        }
-
-        //TODO: Add more filters
-
-        return true;
-    }
-
-    private static class prop {
-        public String key, value = null;
-        public prop(String line, int start, String key) {
-            this.key = key;
-            if (key == null) {
-                int p = line.indexOf('>', start);
-                if (p > 0) {
-                    int c = 1;
-                    int q = p + 1;
-                    while (c > 0 && q < line.length()) {
-                        char a = line.charAt(q);
-                        if (a == '<') {
-                            if (line.charAt(q+1) != 'i') {
-                                if (line.charAt(q+1) == '/') c--; else c++;
-                            }
-                        }
-                        q++;
-                    }
-                    assert p >= -1;
-                    assert q > 0;
-                    try {
-                        value = line.substring(p + 1, q - 1);
-                    } catch (StringIndexOutOfBoundsException e) {
-                        DAO.debug(e);
-                    }
-                }
-            } else {
-                int p  = line.indexOf(key + "=\"", start);
-                if (p >= 0) {
-                    int q = line.indexOf('"', p + key.length() + 2);
-                    if (q > 0) {
-                        value = line.substring(p + key.length() + 2, q);
-                    }
-                }
-            }
-        }
-
-        @SuppressWarnings("unused")
-        public boolean success() {
-            return value != null;
-        }
-
-        public String toString() {
-            return this.key + "=" + (this.value == null ? "unknown" : this.value);
-        }
-    }
-
-
-    final static Pattern hashtag_pattern = Pattern.compile("<a href=\"/hashtag/.*?\".*?class=\"twitter-hashtag.*?\".*?><s>#</s><b>(.*?)</b></a>");
-    final static Pattern timeline_link_pattern = Pattern.compile("<a href=\"https://(.*?)\".*? data-expanded-url=\"(.*?)\".*?twitter-timeline-link.*?title=\"(.*?)\".*?>.*?</a>");
-    final static Pattern timeline_embed_pattern = Pattern.compile("<a href=\"(https://t.co/\\w+)\" class=\"twitter-timeline-link.*?>pic.twitter.com/(.*?)</a>");
-    final static Pattern emoji_pattern = Pattern.compile("<img .*?class=\"Emoji Emoji--forText\".*?alt=\"(.*?)\".*?>");
-    final static Pattern doublespace_pattern = Pattern.compile("  ");
-    final static Pattern cleanup_pattern = Pattern.compile(
+    
+    private final static Pattern hashtag_pattern = Pattern.compile("<a href=\"/hashtag/.*?\".*?class=\"twitter-hashtag.*?\".*?><s>#</s><b>(.*?)</b></a>");
+    private final static Pattern timeline_link_pattern = Pattern.compile("<a href=\"https://(.*?)\".*? data-expanded-url=\"(.*?)\".*?twitter-timeline-link.*?title=\"(.*?)\".*?>.*?</a>");
+    private final static Pattern timeline_embed_pattern = Pattern.compile("<a href=\"(https://t.co/\\w+)\" class=\"twitter-timeline-link.*?>pic.twitter.com/(.*?)</a>");
+    private final static Pattern emoji_pattern = Pattern.compile("<img .*?class=\"Emoji Emoji--forText\".*?alt=\"(.*?)\".*?>");
+    private final static Pattern doublespace_pattern = Pattern.compile("  ");
+    private final static Pattern cleanup_pattern = Pattern.compile(
             "</?(s|b|strong)>|" +
                     "<a href=\"/hashtag.*?>|" +
                     "<a.*?class=\"twitter-atreply.*?>|" +
@@ -691,9 +373,10 @@ public class TwitterScraper {
         // who created the message
         protected ProviderType provider_type;
 
-        public String provider_hash, screen_name, retweet_from, postId, canonical_id, parent, text;
+        public String provider_hash, screen_name, retweet_from, postId, conversationID, canonical_id, parent, text;
+        public Set<String> conversationUserIDs;
         protected URL status_id_url;
-        protected long retweet_count, favourites_count;
+        protected long reply_count, retweet_count, favourite_count;
         public Set<String> images, audios, videos;
         protected String place_name, place_id;
 
@@ -719,10 +402,12 @@ public class TwitterScraper {
         public TwitterTweet(
                 final String user_screen_name_raw,
                 final long created_at_raw,
-                // Not used here but should be compared to created_at_raw
-                final String created_at_name_raw,
+                final String tweetID, // the ID of the tweet
+                final String tweetConversationID, // the ID of a tweet where this is a reply-to tweet
+                final Set<String> mentions_screennames,
                 final String status_id_url_raw,
                 final String text_raw,
+                final long replies,
                 final long retweets,
                 final long favourites,
                 final Set<String> images,
@@ -740,8 +425,12 @@ public class TwitterScraper {
             this.status_id_url = new URL("https://twitter.com" + status_id_url_raw);
             int p = status_id_url_raw.lastIndexOf('/');
             this.postId = p >= 0 ? status_id_url_raw.substring(p + 1) : "-1";
+            assert this.postId.equals(tweetID);
+            this.conversationID = tweetConversationID;
+            this.conversationUserIDs = mentions_screennames;
+            this.reply_count = replies;
             this.retweet_count = retweets;
-            this.favourites_count = favourites;
+            this.favourite_count = favourites;
             this.place_name = place_name;
             this.place_id = place_id;
             this.images = images;
@@ -799,14 +488,17 @@ public class TwitterScraper {
             this.screen_name = (String) lazyGet(json, "screen_name");
             this.retweet_from = (String) lazyGet(json, "retweet_from");
             this.postId = (String) lazyGet(json, "id_str");
+            this.conversationID = (String) lazyGet(json, "conversationid_str");
+            this.conversationUserIDs = MessageEntry.parseArrayList(lazyGet(json, "conversation_user"));
             this.text = (String) lazyGet(json, "text");
             try {
                 this.status_id_url = new URL((String) lazyGet(json, "link"));
             } catch (MalformedURLException e) {
                 this.status_id_url = null;
             }
+            this.reply_count = MessageEntry.parseLong((Number) lazyGet(json, "reply_count"));
             this.retweet_count = MessageEntry.parseLong((Number) lazyGet(json, "retweet_count"));
-            this.favourites_count = MessageEntry.parseLong((Number) lazyGet(json, "favourites_count"));
+            this.favourite_count = MessageEntry.parseLong((Number) lazyGet(json, "favourites_count")); // inconsitency in naming, but twitter api defines so
             this.images = MessageEntry.parseArrayList(lazyGet(json, "images"));
             this.audios = MessageEntry.parseArrayList(lazyGet(json, "audio"));
             this.videos = MessageEntry.parseArrayList(lazyGet(json, "videos"));
@@ -859,12 +551,15 @@ public class TwitterScraper {
             this.screen_name = "";
             this.retweet_from = "";
             this.postId = "";
+            this.conversationID = "";
+            this.conversationUserIDs = new LinkedHashSet<>();
             this.canonical_id = "";
             this.parent = "";
             this.text = "";
             this.status_id_url = null;
+            this.reply_count = 0;
             this.retweet_count = 0;
-            this.favourites_count = 0;
+            this.favourite_count = 0;
             this.images = new HashSet<String>();
             this.audios = new HashSet<String>();
             this.videos = new HashSet<String>();
@@ -929,15 +624,8 @@ public class TwitterScraper {
         public void enrich() {
             if (this.enriched) return;
             this.moreData.classifier = Classifier.classify(this.text);
-            enrichData(this.text);
-            getLocation();
-
-            this.enriched = true;
-        }
-
-        public void enrichData(String inputText) {
-            if (inputText == null) inputText = "";
-            StringBuilder text = new StringBuilder(inputText);
+        
+            StringBuilder text = new StringBuilder(this.text);
             this.links = this.moreData.extractLinks(text.toString());
             text = new StringBuilder(MessageEntry.SPACEX_PATTERN.matcher(text).replaceAll(" ").trim());
             // Text's length without link
@@ -964,6 +652,8 @@ public class TwitterScraper {
             // Text's length without link, users and hashtags
             this.without_luh_len = text.length();
 
+            getLocation();
+            this.enriched = true;
         }
 
         /**
@@ -1059,16 +749,19 @@ public class TwitterScraper {
             // the tweet; the cleanup is a helper function which cleans mistakes from the past in scraping
             MessageEntry.TextLinkMap tlm = this.moreData.getText(iflinkexceedslength, urlstub, this.text, this.getLinks(), this.getPostId());
             this.put("text", tlm);
-            if (this.status_id_url != null) this.put("link", this.status_id_url.toExternalForm());
+            if (this.status_id_url != null) this.put("link", this.status_id_url.toExternalForm()); // this is the primary key for retrieval in elasticsearch
             this.put("id_str", this.postId);
+            this.put("conversation_id", this.conversationID);
+            this.put("conversation_user", this.conversationUserIDs);
             if (this.canonical_id != null) this.put("canonical_id", this.canonical_id);
             if (this.parent != null) this.put("parent", this.parent);
             this.put("source_type", this.source_type.toString());
             this.put("provider_type", this.provider_type.name());
             if (this.provider_hash != null && this.provider_hash.length() > 0) this.put("provider_hash", this.provider_hash);
+            this.put("reply_count", this.reply_count);
             this.put("retweet_count", this.retweet_count);
             // there is a slight inconsistency here in the plural naming but thats how it is noted in the twitter api
-            this.put("favourites_count", this.favourites_count);
+            this.put("favourites_count", this.favourite_count);
             this.put("place_name", this.place_name);
             this.put("place_id", this.place_id);
 
@@ -1130,6 +823,40 @@ public class TwitterScraper {
                         this.put("classifier_" + c.getKey().name() + "_probability",
                                 c.getValue().getProbability() == Float.POSITIVE_INFINITY
                                         ? Float.MAX_VALUE : c.getValue().getProbability());
+                    }
+                }
+            } else {
+                this.remove("text_length");
+                this.remove("place_context");
+                this.remove("place_country");
+                this.remove("place_country_code");
+                this.remove("place_country_center");
+                this.remove("location_point");
+                this.remove("location_radius");
+                this.remove("location_mark");
+                this.remove("location_source");
+                this.remove("hosts");
+                this.remove("hosts_count");
+                this.remove("links");
+                this.remove("links_count");
+                this.remove("unshorten");
+                this.remove("images");
+                this.remove("images_count");
+                this.remove("audio");
+                this.remove("audio_count");
+                this.remove("videos");
+                this.remove("videos_count");
+                this.remove("mentions");
+                this.remove("mentions_count");
+                this.remove("hashtags");
+                this.remove("hashtags_count");
+                this.remove("without_l_len");
+                this.remove("without_lu_len");
+                this.remove("without_luh_len");
+                if (this.moreData.classifier != null) {
+                    for (Map.Entry<Context, Classification<String, Category>> c: this.moreData.classifier.entrySet()) {
+                        this.remove("classifier_" + c.getKey().name());
+                        this.remove("classifier_" + c.getKey().name() + "_probability");
                     }
                 }
             }
@@ -1241,11 +968,11 @@ public class TwitterScraper {
         }
 
         public long getFavouritesCount() {
-            return this.favourites_count;
+            return this.favourite_count;
         }
 
         public void setFavouritesCount(long favourites_count) {
-            this.favourites_count = favourites_count;
+            this.favourite_count = favourites_count;
         }
 
         public String getPlaceName() {
@@ -1459,13 +1186,10 @@ public class TwitterScraper {
      */
     public static void main(String[] args) {
         //wget --no-check-certificate "https://twitter.com/search?q=eifel&src=typd&f=realtime"
-        ArrayList<String> filterList = new ArrayList<String>();
+        Set<String> filterList = new HashSet<String>();
         filterList.add("image");
         TwitterTimeline[] result = null;
-        if (args[0].startsWith("/"))
-            result = parse(new File(args[0]),Order.CREATED_AT, true, true);
-        else
-            result = TwitterScraper.search(args[0], filterList, Order.CREATED_AT, true, true);
+        result = search(args[0], filterList, Order.CREATED_AT, false, false);
         int all = 0;
         for (int x = 0; x < 2; x++) {
             if (x == 0) System.out.println("Timeline[0] - finished to be used:");

@@ -1,9 +1,7 @@
 #!/usr/bin/env sh
 cd `dirname $0`/..
 echo "loading latest code changes"
-git pull origin master
-echo "clean up"
-./gradlew clean
-echo "building loklak"
-./gradlew build
+git pull -r
+echo "assembling loklak"
+./gradlew assemble
 bin/restart.sh

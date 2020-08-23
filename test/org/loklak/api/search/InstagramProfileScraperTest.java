@@ -35,7 +35,7 @@ public class InstagramProfileScraperTest {
 		BufferedReader br = null;
 
 		try {
-			ClientConnection connection = new ClientConnection(url);
+			ClientConnection connection = new ClientConnection(url, "");
 			//Check Network issue
 			assertThat(connection.getStatusCode(), is(200));
 			br = instagramScraper.getHtml(connection);

@@ -1,6 +1,7 @@
 package org.loklak.harvester;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
@@ -12,7 +13,7 @@ public class RedirectUnshortenerTest {
 
     @Test
     public void testRedirectUnshortener() {
-        HashMap<String, String> shortlinkMap = new HashMap<>();
+        Map<String, String> shortlinkMap = new LinkedHashMap<>();
 
         shortlinkMap.put("https://goo.gl/r4pNHk", "https://www.youtube.com/watch?v=RRlOCHD-p8Q");
         shortlinkMap.put("http://tinyurl.com/loklak-server", "https://github.com/loklak/loklak_server/wiki");
@@ -21,13 +22,14 @@ public class RedirectUnshortenerTest {
         shortlinkMap.put("http://ow.ly/P9SX30ddSTI", "https://github.com/loklak/loklak_server/issues/1284");
         shortlinkMap.put("http://bit.do/blog-fossasia", "http://blog.fossasia.org/");
         shortlinkMap.put("http://fb.me/4lcXZsyyO", "https://www.facebook.com/permalink.php?story_fbid=1550262581900846&id=1381813572079082");
-        shortlinkMap.put("http://wp.me/sf2B5-shorten", "http://en.blog.wordpress.com/2009/08/14/shorten/");
+        shortlinkMap.put("http://wp.me/sf2B5-shorten", "https://en.blog.wordpress.com/2009/08/14/shorten/");
         shortlinkMap.put("https://is.gd/gyk3VT", "https://github.com/fossasia/");
         shortlinkMap.put("https://is.gd/Lros16", "https://twitter.com/lklknt");
 
         try {
-            for (HashMap.Entry<String, String> entry: shortlinkMap.entrySet()) {
+            for (Map.Entry<String, String> entry: shortlinkMap.entrySet()) {
                 String unshortenedURL = RedirectUnshortener.unShorten(entry.getKey());
+                DAO.log("expected: " + entry.getValue() + "; computed:" + unshortenedURL);
                 assertEquals(entry.getValue(), unshortenedURL);
             }
         } catch(Exception e) {
