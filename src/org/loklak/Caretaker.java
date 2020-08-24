@@ -107,7 +107,7 @@ public class Caretaker extends Thread {
             if (SuggestServlet.cache.size() > 100) SuggestServlet.cache.clear();
             
             // sleep a bit to prevent that the DoS limit fires at backend server
-            try {Thread.sleep(busy ? 500 : 5000);} catch (InterruptedException e) {}
+            try {Thread.sleep(busy ? 500 : 10000);} catch (InterruptedException e) {}
             if (!this.shallRun) break beat;
             busy = false;
             
@@ -165,32 +165,36 @@ public class Caretaker extends Thread {
                     try {
                         pendingQueries = LoklakServer.harvester.get_harvest_queries();
                     } catch (IOException e) {
+                        DAO.severe("FAIL SUGGESTIONS cannot get queries from backend: " + e.getMessage(), e);
+                        break hloop;
                     }
 
-                    // in case we have queries
-                    if (pendingQueries > 0) {
-                        Thread[] rts = new Thread[Math.min(pendingQueries, retrieval_forbackend_concurrency)];
-                        final AtomicInteger acccount = new AtomicInteger(0);
-                        for (int j = 0; j < rts.length; j++) {
-                            rts[j] = new Thread() {
-                                public void run() {
-                                    TwitterTimeline tl = LoklakServer.harvester.harvest_timeline();
-                                    if (tl != null && tl.getQuery() != null) {
-                                        /* Thread t = */ LoklakServer.harvester.push_timeline_to_backend(tl);
-                                    }
-                                    int count = tl == null ? 0 : tl.size();
-                                    acccount.addAndGet(count);
+                    // without queries we cannot do harvesting
+                    if (pendingQueries == 0) break hloop;
+                    
+                    // start harvesting
+                    Thread[] rts = new Thread[Math.min(pendingQueries, retrieval_forbackend_concurrency)];
+                    final AtomicInteger acccount = new AtomicInteger(0);
+                    for (int j = 0; j < rts.length; j++) {
+                        rts[j] = new Thread() {
+                            public void run() {
+                                TwitterTimeline tl = LoklakServer.harvester.harvest_timeline();
+                                if (tl != null && tl.getQuery() != null) {
+                                    /* Thread t = */ LoklakServer.harvester.push_timeline_to_backend(tl);
                                 }
-                            };
-                            rts[j].start();
-                            try {Thread.sleep(retrieval_forbackend_sleep_base + random.nextInt(retrieval_forbackend_sleep_randomoffset));} catch (InterruptedException e) {}
-                        }
-                        for (Thread t: rts) t.join();
-                        if (acccount.get() < 0) break hloop;
+                                int count = tl == null ? 0 : tl.size();
+                                acccount.addAndGet(count);
+                            }
+                        };
+                        rts[j].start();
                         try {Thread.sleep(retrieval_forbackend_sleep_base + random.nextInt(retrieval_forbackend_sleep_randomoffset));} catch (InterruptedException e) {}
                     }
+                    for (Thread t: rts) t.join();
+                    if (acccount.get() < 0) break hloop;
+                    try {Thread.sleep(retrieval_forbackend_sleep_base + random.nextInt(retrieval_forbackend_sleep_randomoffset));} catch (InterruptedException e) {}
+                
+                    busy = true;
                 }
-                busy = true;
             }
 
             // run some crawl steps

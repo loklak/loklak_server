@@ -104,7 +104,6 @@ import org.loklak.api.iot.EarthquakeServlet;
 import org.loklak.api.p2p.HelloService;
 import org.loklak.api.p2p.PeersServlet;
 import org.loklak.api.p2p.PushServlet;
-import org.loklak.api.search.ConsoleService;
 import org.loklak.api.search.EventBriteCrawlerService;
 import org.loklak.api.search.GenericScraper;
 import org.loklak.api.search.GithubProfileScraper;
@@ -607,7 +606,6 @@ public class LoklakServer {
                 HelloService.class,
 
                 // search
-                ConsoleService.class,
                 EventBriteCrawlerService.class,
                 MeetupsCrawlerService.class,
                 RSSReaderService.class,

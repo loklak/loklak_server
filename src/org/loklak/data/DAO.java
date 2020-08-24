@@ -1302,7 +1302,11 @@ public class DAO {
         ResultList<Map<String, Object>> result = elasticsearch_client.fuzzyquery(IndexName.queries.name(), "query", q, resultCount, sort_field, default_sort_type, sort_order, since, until, range_field);
         queries.setHits(result.getHits());
         for (Map<String, Object> map: result) {
-            queries.add(new QueryEntry(new JSONObject(map)));
+            QueryEntry qe = new QueryEntry(new JSONObject(map));
+            // check a flag value for queries that probably never get new messages
+            if (qe.getMessagePeriod() != QueryEntry.DAY_MILLIS) {
+                queries.add(qe);
+            }
         }
         return queries;
     }
@@ -1415,7 +1419,7 @@ public class DAO {
         	DAO.severe(e);
         }
 
-        if (recordQuery && Caretaker.acceptQuery4Retrieval(q)) {
+        if (recordQuery && Caretaker.acceptQuery4Retrieval(q) && tl.size() > 0) {
             if (qe == null) {
                 // a new query occurred
                 qe = new QueryEntry(q, timezoneOffset, tl.period(), SourceType.TWITTER, byUserQuery);
@@ -1550,6 +1554,7 @@ public class DAO {
             for (String peer: remote) testpeers.add(peer);
             return testpeers;
         }
+        /*
         if (frontPeerCache.size() == 0) {
             // add dynamically all peers that contacted myself
             for (Map<String, RemoteAccess> hmap: RemoteAccess.history.values()) {
@@ -1559,6 +1564,7 @@ public class DAO {
             }
         }
         testpeers.addAll(frontPeerCache);
+        */
         return getBestPeers(testpeers);
     }
 

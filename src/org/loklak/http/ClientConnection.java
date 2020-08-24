@@ -421,24 +421,21 @@ public class ClientConnection {
     }
 
     public static byte[] download(String source_url) throws IOException {
+        ClientConnection connection = new ClientConnection(source_url, "");
+        if (connection.inputStream == null) return null;
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        int count;
+        byte[] buffer = new byte[4096];
+        IOException ee = null;
         try {
-            ClientConnection connection = new ClientConnection(source_url, "");
-            if (connection.inputStream == null) return null;
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            int count;
-            byte[] buffer = new byte[4096];
-            try {
-                while ((count = connection.inputStream.read(buffer)) > 0) baos.write(buffer, 0, count);
-            } catch (IOException e) {
-            	DAO.severe(e);
-            } finally {
-                connection.close();
-            }
-            return baos.toByteArray();
+            while ((count = connection.inputStream.read(buffer)) > 0) baos.write(buffer, 0, count);
         } catch (IOException e) {
-        	DAO.severe(e);
-            return null;
+        	ee = e;
+        } finally {
+            connection.close();
         }
+        if (ee != null) throw ee;
+        return baos.toByteArray();
     }
 
     public int getStatusCode() {
