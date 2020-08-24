@@ -142,6 +142,7 @@ dependencies {
     compile 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.0'
     compile group: 'javax.xml.bind', name: 'jaxb-api', version: '2.4.+'
     compile group: 'org.jsoup', name: 'jsoup', version: '1.+'
+    compile group: 'io.minio', name: 'minio', version: '7.1.0'
 }
 
 tasks.withType(Javadoc) {
