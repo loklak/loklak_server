@@ -95,8 +95,8 @@ public class DumpImporter extends Thread {
                             while ((tweet = dumpReader.take()) != JsonStreamReader.POISON_JSON_MAP) {
                                 try {
                                     JSONObject json = tweet.getJSON();
+                                    if(!json.has("user")) continue;
                                     JSONObject user = (JSONObject) json.remove("user");
-                                    if (user == null) continue;
                                     UserEntry u = new UserEntry(user);
                                     TwitterTweet t = new TwitterTweet(json);
                                     // record user into search index
