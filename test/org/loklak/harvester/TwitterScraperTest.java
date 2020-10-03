@@ -2,6 +2,7 @@ package org.loklak.harvester;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Locale;
 import java.time.ZonedDateTime;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -46,7 +47,7 @@ public class TwitterScraperTest {
         String k;
 
         DateTimeFormatter input_format =
-                DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss zzz yyyy");
+                DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss zzz yyyy",new Locale("en"));
         DateTimeFormatter output_format =
                 DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 
