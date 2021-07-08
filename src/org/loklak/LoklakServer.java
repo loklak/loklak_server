@@ -138,6 +138,7 @@ import org.loklak.server.HttpsMode;
 import org.loklak.stream.StreamServlet;
 import org.loklak.tools.Browser;
 import org.loklak.tools.OS;
+import org.loklak.tools.DateParser;
 
 
 public class LoklakServer {
@@ -297,7 +298,7 @@ public class LoklakServer {
 
 
         // read upgrade interval
-        Caretaker.upgradeTime = Caretaker.startupTime + DAO.getConfig("upgradeInterval", 86400000);
+        Caretaker.upgradeTime = Caretaker.startupTime + DAO.getConfig("upgradeInterval", 24) * DateParser.HOUR_MILLIS;
 
         // if this is not headless, we can open a browser automatically
         Browser.openBrowser("http://127.0.0.1:" + httpPort + "/");
