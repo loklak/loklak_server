@@ -374,7 +374,10 @@ public class LoklakServer {
 
     private static void extract(JarFile jar, JarEntry file) throws IOException {
         Path workingDirectory = Paths.get("").toAbsolutePath();
-        File target = new File(workingDirectory.toString() + File.separator + file.getName());
+        File target = new File(workingDirectory.toString(), file.getName());
+        if (!target.toPath().normalize().startsWith(workingDirectory.toString())) {
+            throw new IOException("Bad zip entry");
+        }
 
         if (target.exists())
             return;
