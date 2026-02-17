@@ -30,7 +30,7 @@ import org.loklak.server.AbstractAPIHandler;
 import org.loklak.server.Authorization;
 import org.loklak.server.BaseUserRole;
 import org.loklak.server.Query;
-import org.loklak.susi.SusiThought;
+import org.loklak.objects.ServiceResponse;
 import org.loklak.tools.storage.JSONObjectWithDefault;
 
 import com.sun.syndication.feed.synd.SyndEntry;
@@ -62,7 +62,7 @@ public class RSSReaderService extends AbstractAPIHandler implements APIHandler {
 		return readRSS(url);
     }
 		
-    public static SusiThought readRSS(String url) {
+    public static ServiceResponse readRSS(String url) {
     	
 		SyndFeedInput input = new SyndFeedInput();
 		SyndFeed feed = null;
@@ -73,7 +73,7 @@ public class RSSReaderService extends AbstractAPIHandler implements APIHandler {
 			feed = input.build(xmlreader);
 		} catch (Exception e) {
 			e.printStackTrace();
-			return new SusiThought(); // fail
+			return new ServiceResponse(); // fail
 		}
 
 		@SuppressWarnings("unused")
@@ -101,7 +101,7 @@ public class RSSReaderService extends AbstractAPIHandler implements APIHandler {
 
 		totalEntries = i;
 
-		SusiThought json = new SusiThought();
+		ServiceResponse json = new ServiceResponse();
 		json.setData(jsonArray);
 		return json;
 	}

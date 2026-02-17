@@ -33,7 +33,7 @@ import org.loklak.server.AbstractAPIHandler;
 import org.loklak.server.Authorization;
 import org.loklak.server.BaseUserRole;
 import org.loklak.server.Query;
-import org.loklak.susi.SusiThought;
+import org.loklak.objects.ServiceResponse;
 import org.loklak.tools.storage.JSONObjectWithDefault;
 
 public class WikiGeoData extends AbstractAPIHandler implements APIHandler {
@@ -62,7 +62,7 @@ public class WikiGeoData extends AbstractAPIHandler implements APIHandler {
 		return wikiGeoData(place);
 	}
 
-	public static SusiThought wikiGeoData(String place) {
+	public static ServiceResponse wikiGeoData(String place) {
 
 		URL getCoordURL = null;
 
@@ -110,7 +110,7 @@ public class WikiGeoData extends AbstractAPIHandler implements APIHandler {
 		JSONArray jsonArray = new JSONArray();
 		jsonArray.put(wikiGeoResult);
 
-		SusiThought json = new SusiThought();
+		ServiceResponse json = new ServiceResponse();
 		json.setData(jsonArray);
 		return json;
 	}

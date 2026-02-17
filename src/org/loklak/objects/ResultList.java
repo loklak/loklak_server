@@ -23,7 +23,7 @@ import java.util.ArrayList;
 
 import org.json.JSONArray;
 import org.json.JSONException;
-import org.loklak.susi.SusiThought;
+import org.loklak.objects.ServiceResponse;
 
 public class ResultList<E> extends ArrayList<E> {
 
@@ -56,8 +56,8 @@ public class ResultList<E> extends ArrayList<E> {
         this.hits = -1;
     }
     
-    public SusiThought toSusi() throws JSONException {
-        SusiThought json = new SusiThought().setHits(this.size());
+    public ServiceResponse toSusi() throws JSONException {
+        ServiceResponse json = new ServiceResponse().setHits(this.size());
         JSONArray statuses = new JSONArray();
         for (E t: this) {
             if (t instanceof QueryEntry) {

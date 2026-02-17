@@ -43,7 +43,7 @@ import org.loklak.server.AbstractAPIHandler;
 import org.loklak.server.Authorization;
 import org.loklak.server.BaseUserRole;
 import org.loklak.server.Query;
-import org.loklak.susi.SusiThought;
+import org.loklak.objects.ServiceResponse;
 import org.loklak.tools.UTF8;
 import org.loklak.tools.storage.JSONObjectWithDefault;
 
@@ -77,9 +77,9 @@ public class TwitterAnalysisService extends AbstractAPIHandler implements APIHan
 		return showAnalysis(username, count);
 	}
 
-	public static SusiThought showAnalysis(String username, String count) {
+	public static ServiceResponse showAnalysis(String username, String count) {
 
-		SusiThought json = new SusiThought();
+		ServiceResponse json = new ServiceResponse();
 		JSONArray finalresultarray = new JSONArray();
 		JSONObject userresult = new JSONObject(true);
 		JSONObject frequencyresult = new JSONObject(true);

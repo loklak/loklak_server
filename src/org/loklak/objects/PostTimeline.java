@@ -31,7 +31,7 @@ import org.json.JSONObject;
 import org.loklak.data.IncomingMessageBuffer;
 import org.loklak.harvester.Post;
 import org.loklak.harvester.TwitterScraper.TwitterTweet;
-import org.loklak.susi.SusiThought;
+import org.loklak.objects.ServiceResponse;
 
 /**
  * A timeline2 is a structure which holds tweet for the purpose of presentation
@@ -162,11 +162,11 @@ public class PostTimeline extends BasicTimeline<Post> implements Iterable<Post> 
         for (Post t: other) this.addPost(t);
     }
 
-    public SusiThought toSusi(boolean withEnrichedData) throws JSONException {
-        return toSusi(withEnrichedData, new SusiThought());
+    public ServiceResponse toSusi(boolean withEnrichedData) throws JSONException {
+        return toSusi(withEnrichedData, new ServiceResponse());
     }
 
-    private SusiThought toSusi(boolean withEnrichedData, SusiThought json) throws JSONException {
+    private ServiceResponse toSusi(boolean withEnrichedData, ServiceResponse json) throws JSONException {
         UserEntry user;
         json.setQuery(this.query)
             .setHits(Math.max(this.hits, this.size()));
