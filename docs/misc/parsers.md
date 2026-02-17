@@ -13,7 +13,7 @@ It is implemented by making use of `ROME` Java framework.
 
 * Implementation: [loklak/loklak_server/src/org/loklak/api/search/RSSReaderService.java](https://github.com/loklak/loklak_server/blob/development/src/org/loklak/api/search/RSSReaderService.java)
 
-* Data format of `SusiThought` (extension of JSONObject) returned:
+* Data format of `ServiceResponse` (extension of JSONObject) returned:
 ```
 JSONObject jsonObject = new JSONObject();
 jsonObject.put("title", entry.getTitle().toString());
@@ -31,7 +31,7 @@ if (entry.getDescription() != null)
 * Console Service: [loklak/loklak_server/src/org/loklak/api/search/ConsoleService.java](https://github.com/loklak/loklak_server/blob/development/src/org/loklak/api/search/ConsoleService.java)<br>
 ```
 dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?rss\\h+?WHERE\\h+?url\\h??=\\h??'(.*?)'\\h??;"), (flow, matcher) -> {
-            SusiThought json = RSSReaderService.readRSS(matcher.group(2));
+            ServiceResponse json = RSSReaderService.readRSS(matcher.group(2));
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
             json.setData(transfer.conclude(json.getData()));
             return json;
@@ -279,7 +279,7 @@ This crawler parses the event details (name, description, date, time, location, 
 
 * Implementation: [loklak/loklak_server/src/org/loklak/api/search/EventBriteCrawlerService.java](https://github.com/loklak/loklak_server/blob/development/src/org/loklak/api/search/EventBriteCrawlerService.java)
 
-* Data Format of `SusiThought` (extension of JSONObject) returned:
+* Data Format of `ServiceResponse` (extension of JSONObject) returned:
 ```
         JSONArray jsonArray = new JSONArray();
 
@@ -323,14 +323,14 @@ This crawler parses the event details (name, description, date, time, location, 
 		org.put("organizer_twitter_account_link", organizerTwitterAccountLink);
 		jsonArray.put(org);
 		
-		SusiThought json = new SusiThought();
+		ServiceResponse json = new ServiceResponse();
 		json.setData(jsonArray);
 ```
 
 * Console Service: [loklak/loklak_server/src/org/loklak/api/search/ConsoleService.java](https://github.com/loklak/loklak_server/blob/development/src/org/loklak/api/search/ConsoleService.java)
 ```
  dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?eventbrite\\h+?WHERE\\h+?url\\h??=\\h??'(.*?)'\\h??;"), (flow, matcher) -> {
-            SusiThought json = EventBriteCrawlerService.crawlEventBrite(matcher.group(2));
+            ServiceResponse json = EventBriteCrawlerService.crawlEventBrite(matcher.group(2));
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
             json.setData(transfer.conclude(json.getData()));
             return json;
@@ -417,7 +417,7 @@ This scraper is intended to provide with all the information like name, agenda, 
 
 * Implementation: [loklak/loklak_server/src/org/loklak/api/search/MeetupsCrawlerService.java](https://github.com/loklak/loklak_server/blob/development/src/org/loklak/api/search/MeetupsCrawlerService.java)
 
-* Data Format of `SusiThought` (extension of JSONObject) returned:
+* Data Format of `ServiceResponse` (extension of JSONObject) returned:
 ```
 	JSONObject result = new JSONObject();
 	result.put("group_name", meetupGroupName);
@@ -434,14 +434,14 @@ This scraper is intended to provide with all the information like name, agenda, 
 	JSONArray meetupsCrawlerResultArray = new JSONArray();
 	meetupsCrawlerResultArray.put(result);
 	
-	SusiThought json = new SusiThought();
+	ServiceResponse json = new ServiceResponse();
 	json.setData(meetupsCrawlerResultArray);
 ```
 
 * Console Service: [loklak/loklak_server/src/org/loklak/api/search/ConsoleService.java](https://github.com/loklak/loklak_server/blob/development/src/org/loklak/api/search/ConsoleService.java)
 ```
 	dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?meetup\\h+?WHERE\\h+?url\\h??=\\h??'(.*?)'\\h??;"), (flow, matcher) -> {
-            SusiThought json = MeetupsCrawlerService.crawlMeetups(matcher.group(2));
+            ServiceResponse json = MeetupsCrawlerService.crawlMeetups(matcher.group(2));
             SusiTransfer transfer = new SusiTransfer(matcher.group(1));
             json.setData(transfer.conclude(json.getData()));
             return json;
@@ -520,7 +520,7 @@ This scraper is intended to provide with all the information like name, agenda, 
 ### Wordpress Crawler
 * Implementation: [loklak/loklak_server/src/org/loklak/api/search/WordpressCrawlerService.java](https://github.com/loklak/loklak_server/blob/development/src/org/loklak/api/search/WordpressCrawlerService.java)
 
-* Data Format of `SusiThought` (extension of JSONObject) returned:
+* Data Format of `ServiceResponse` (extension of JSONObject) returned:
 ```
 	JSONArray blog = new JSONArray();
 	
@@ -534,14 +534,14 @@ This scraper is intended to provide with all the information like name, agenda, 
 		blog.put(blogpost);
 	}
 	
-	SusiThought json = new SusiThought();
+	ServiceResponse json = new ServiceResponse();
 	json.setData(blog);
 ```
 
 * Console Service: [loklak/loklak_server/src/org/loklak/api/search/ConsoleService.java](https://github.com/loklak/loklak_server/blob/development/src/org/loklak/api/search/ConsoleService.java)
 ```
 	dbAccess.put(Pattern.compile("SELECT\\h+?(.*?)\\h+?FROM\\h+?wordpress\\h+?WHERE\\h+?url\\h??=\\h??'(.*?)'\\h??;"), (flow, matcher) -> {
-		SusiThought json = WordpressCrawlerService.crawlWordpress(matcher.group(2));
+		ServiceResponse json = WordpressCrawlerService.crawlWordpress(matcher.group(2));
 		SusiTransfer transfer = new SusiTransfer(matcher.group(1));
 		json.setData(transfer.conclude(json.getData()));
 		return json;

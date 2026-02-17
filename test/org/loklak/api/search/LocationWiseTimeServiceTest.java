@@ -2,7 +2,7 @@ package org.loklak.api.search;
 
 import org.junit.Test;
 import org.loklak.api.search.LocationWiseTimeService;
-import org.loklak.susi.SusiThought;
+import org.loklak.objects.ServiceResponse;
 import org.loklak.data.DAO;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -26,7 +26,7 @@ public class LocationWiseTimeServiceTest {
     @Test
     public void locationAndTimeTest() throws NullPointerException {
         LocationWiseTimeService locationWiseTimeService = new LocationWiseTimeService();
-        SusiThought susiThought = new SusiThought();
+        ServiceResponse susiThought = new ServiceResponse();
         try {
             susiThought = locationWiseTimeService.locationWiseTime("Chennai");
         } catch (NullPointerException e) {
@@ -45,7 +45,7 @@ public class LocationWiseTimeServiceTest {
     public void timePatternTest() throws NullPointerException {
         LocationWiseTimeService locationWiseTimeService = new LocationWiseTimeService();
         String timeRegex = "[0-5][0-9].[0-5][0-9]";
-        SusiThought susiThought = new SusiThought();
+        ServiceResponse susiThought = new ServiceResponse();
         try {
             susiThought = locationWiseTimeService.locationWiseTime("Chennai");
         } catch (NullPointerException e) {
@@ -78,7 +78,7 @@ public class LocationWiseTimeServiceTest {
         int newYorkHourOfDay = c.get(Calendar.HOUR_OF_DAY);
         int newYorkDayOfMonth = c.get(Calendar.DAY_OF_MONTH);
 
-        SusiThought susiThought = new SusiThought();
+        ServiceResponse susiThought = new ServiceResponse();
         try {
             susiThought = locationWiseTimeService.locationWiseTime("Chennai");
         } catch (NullPointerException e) {

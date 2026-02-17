@@ -33,7 +33,7 @@ import org.loklak.server.AbstractAPIHandler;
 import org.loklak.server.Authorization;
 import org.loklak.server.BaseUserRole;
 import org.loklak.server.Query;
-import org.loklak.susi.SusiThought;
+import org.loklak.objects.ServiceResponse;
 import org.loklak.tools.storage.JSONObjectWithDefault;
 
 public class TimeAndDateService extends AbstractAPIHandler implements APIHandler {
@@ -64,7 +64,7 @@ public class TimeAndDateService extends AbstractAPIHandler implements APIHandler
         return timeAndDate();
     }
 
-    public static SusiThought timeAndDate() {
+    public static ServiceResponse timeAndDate() {
 
         JSONObject timeAndDate = new JSONObject();
 
@@ -81,7 +81,7 @@ public class TimeAndDateService extends AbstractAPIHandler implements APIHandler
         JSONArray jsonArray = new JSONArray();
         jsonArray.put(timeAndDate);
 
-        SusiThought result = new SusiThought();
+        ServiceResponse result = new ServiceResponse();
         result.setData(jsonArray);
         return result;
     }

@@ -35,7 +35,7 @@ import org.loklak.server.AbstractAPIHandler;
 import org.loklak.server.Authorization;
 import org.loklak.server.BaseUserRole;
 import org.loklak.server.Query;
-import org.loklak.susi.SusiThought;
+import org.loklak.objects.ServiceResponse;
 import org.loklak.tools.storage.JSONObjectWithDefault;
 
 public class LocationWiseTimeService extends AbstractAPIHandler implements APIHandler {
@@ -65,7 +65,7 @@ public class LocationWiseTimeService extends AbstractAPIHandler implements APIHa
 		return locationWiseTime(query);
 	}
 
-	public static SusiThought locationWiseTime(String query) {
+	public static ServiceResponse locationWiseTime(String query) {
 		
 		Document html = null;
 
@@ -91,7 +91,7 @@ public class LocationWiseTimeService extends AbstractAPIHandler implements APIHa
 			i++;
 		}
 		
-		SusiThought json = new SusiThought();
+		ServiceResponse json = new ServiceResponse();
 		json.setData(arr);
 		return json;
 	}

@@ -1,7 +1,7 @@
 package org.loklak.api.search;
 
 import org.loklak.api.search.EventBriteCrawlerService;
-import org.loklak.susi.SusiThought;
+import org.loklak.objects.ServiceResponse;
 import org.junit.Test;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -27,7 +27,7 @@ public class EventBriteCrawlerServiceTest {
         EventBriteCrawlerService eventBriteCrawlerService = new EventBriteCrawlerService();
         String eventTestUrl = "https://www.eventbrite.com/e/testevent-tickets-46017636991";
         try {
-            SusiThought resultPage = new SusiThought();
+            ServiceResponse resultPage = new ServiceResponse();
             resultPage = eventBriteCrawlerService.crawlEventBrite(eventTestUrl);
             JSONArray jsonArray = resultPage.getData();
             JSONObject creator = jsonArray.getJSONObject(0).getJSONObject("creator");
@@ -94,7 +94,7 @@ public class EventBriteCrawlerServiceTest {
         EventBriteCrawlerService eventBriteCrawlerService = new EventBriteCrawlerService();
         String eventTestUrl = "https://www.eventbrite.com/e/testevent-tickets-46017636991";
         try {
-            SusiThought resultPage = new SusiThought();
+            ServiceResponse resultPage = new ServiceResponse();
             resultPage = eventBriteCrawlerService.crawlEventBrite(eventTestUrl);
             JSONArray jsonArray = resultPage.getData();
             JSONObject organizer_details = jsonArray.getJSONObject(1);
@@ -117,7 +117,7 @@ public class EventBriteCrawlerServiceTest {
         EventBriteCrawlerService eventBriteCrawlerService = new EventBriteCrawlerService();
         String eventTestUrl = "https://www.eventbrite.com/e/testevent-tickets-46017636991";
         try {
-            SusiThought resultPage = new SusiThought();
+            ServiceResponse resultPage = new ServiceResponse();
             resultPage = eventBriteCrawlerService.crawlEventBrite(eventTestUrl);
             JSONArray jsonArray = resultPage.getData();
             JSONArray microlocations = jsonArray.getJSONObject(2).getJSONArray("microlocations");

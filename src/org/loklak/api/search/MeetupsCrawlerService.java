@@ -31,7 +31,7 @@ import org.loklak.server.AbstractAPIHandler;
 import org.loklak.server.Authorization;
 import org.loklak.server.BaseUserRole;
 import org.loklak.server.Query;
-import org.loklak.susi.SusiThought;
+import org.loklak.objects.ServiceResponse;
 import org.loklak.tools.storage.JSONObjectWithDefault;
 
 import javax.servlet.http.HttpServletResponse;
@@ -62,7 +62,7 @@ public class MeetupsCrawlerService extends AbstractAPIHandler implements APIHand
 		return crawlMeetups(url);
 	}
 
-	public static SusiThought crawlMeetups(String url) {
+	public static ServiceResponse crawlMeetups(String url) {
 
 		Document meetupHTML = null;
 		String meetupGroupName = null;
@@ -166,7 +166,7 @@ public class MeetupsCrawlerService extends AbstractAPIHandler implements APIHand
 		JSONArray meetupsCrawlerResultArray = new JSONArray();
 		meetupsCrawlerResultArray.put(result);
 
-		SusiThought json = new SusiThought();
+		ServiceResponse json = new ServiceResponse();
 		json.setData(meetupsCrawlerResultArray);
 		return json;
 	}
